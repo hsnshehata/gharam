@@ -1,0 +1,369 @@
+body {
+  margin: 0;
+  font-family: 'Tajawal', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #0f3d3c; /* زيتي غامق */
+  color: #fff;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+/* ستايل الـ App */
+.App {
+  min-height: 100vh;
+  padding: 20px;
+}
+
+/* ستايل الـ Logo */
+.logo {
+  height: 40px !important; /* حجم اللوجو الافتراضي */
+}
+
+/* ستايل اللوجو في صفحة تسجيل الدخول */
+.login-logo {
+  height: 120px !important; /* 300% من 40px */
+}
+
+/* ستايل الـ Navbar */
+.navbar {
+  background-color: #1a5c5a !important; /* زيتي فاتح */
+  color: #fff !important;
+}
+
+.navbar-brand img.logo {
+  height: 40px !important; /* اللوجو في الـ navbar يظل 40px */
+}
+
+.navbar-nav .nav-link {
+  color: #fff !important;
+}
+
+.navbar-nav .nav-link:hover {
+  color: #98ff98 !important; /* منت جرين */
+}
+
+/* ستايل الأزرار */
+.btn-primary {
+  background-color: #98ff98 !important; /* منت جرين */
+  border-color: #98ff98 !important;
+  color: #000 !important;
+}
+
+.btn-primary:hover {
+  background-color: #78cc78 !important;
+  border-color: #78cc78 !important;
+}
+
+.btn-secondary {
+  background-color: #6c757d !important;
+  border-color: #6c757d !important;
+  color: #fff !important;
+}
+
+.btn-danger {
+  background-color: #dc3545 !important;
+  border-color: #dc3545 !important;
+}
+
+/* ستايل الـ Card */
+.card {
+  background-color: #1a5c5a !important; /* زيتي فاتح */
+  color: #fff !important;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.card-title {
+  color: #98ff98 !important; /* منت جرين */
+}
+
+/* ستايل الـ Modal */
+.modal-content {
+  background-color: #1a5c5a !important; /* زيتي فاتح */
+  color: #fff !important;
+  border: none !important;
+  border-radius: 10px;
+}
+
+.modal-header,
+.modal-footer {
+  border-color: #98ff98 !important; /* منت جرين */
+}
+
+/* ستايل الـ Alert */
+.alert {
+  border-radius: 10px;
+}
+
+.alert-success {
+  background-color: #98ff98 !important; /* منت جرين */
+  color: #000 !important;
+}
+
+.alert-danger {
+  background-color: #dc3545 !important;
+  color: #fff !important;
+}
+
+/* ستايل الـ Container */
+.container {
+  max-width: 1200px;
+}
+
+/* ستايل الـ Form */
+.form-label {
+  text-align: right;
+  color: #fff !important;
+}
+
+.form-control, .custom-select {
+  background-color: #2a7a78 !important; /* زيتي متوسط */
+  color: #fff !important;
+  border: 1px solid #98ff98 !important; /* منت جرين */
+  border-radius: 4px !important;
+  font-family: 'Tajawal', Arial, sans-serif !important;
+  font-size: 1rem !important;
+  height: 38px !important;
+  padding: 0.375rem 0.75rem !important;
+  line-height: 1.5 !important;
+  text-align: right !important;
+}
+
+.form-control:focus, .custom-select:focus {
+  background-color: #2a7a78 !important;
+  color: #fff !important;
+  border-color: #78cc78 !important; /* منت جرين فاتح */
+  box-shadow: 0 0 0 0.2rem rgba(120, 204, 120, 0.25) !important;
+}
+
+/* ستايل الـ react-select كدعم إضافي */
+.form-group div.booking-services-select .react-select__control {
+  background-color: #2a7a78 !important; /* زيتي متوسط */
+  color: #fff !important;
+  border: 1px solid #98ff98 !important; /* منت جرين */
+  border-radius: 4px !important;
+  font-family: 'Tajawal', Arial, sans-serif !important;
+  font-size: 1rem !important;
+  min-height: 38px !important;
+  padding: 0 !important;
+  line-height: 1.5 !important;
+  text-align: right !important;
+  direction: rtl !important;
+  box-shadow: none !important;
+}
+
+.form-group div.booking-services-select .react-select__control--is-focused {
+  border-color: #78cc78 !important;
+  box-shadow: 0 0 0 0.2rem rgba(120, 204, 120, 0.25) !important;
+}
+
+.form-group div.booking-services-select .react-select__value-container {
+  background-color: #2a7a78 !important;
+  color: #fff !important;
+  padding: 0.375rem 0.75rem !important;
+  min-height: 38px !important;
+}
+
+.form-group div.booking-services-select .react-select__input-container {
+  background-color: #2a7a78 !important;
+  color: #fff !important;
+  font-size: 1rem !important;
+}
+
+.form-group div.booking-services-select .react-select__input {
+  background-color: #2a7a78 !important;
+  color: #fff !important;
+  font-size: 1rem !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.form-group div.booking-services-select .react-select__indicators {
+  background-color: #2a7a78 !important;
+  color: #fff !important;
+}
+
+.form-group div.booking-services-select .react-select__indicator-separator {
+  background-color: #98ff98 !important;
+}
+
+.form-group div.booking-services-select .react-select__clear-indicator,
+.form-group div.booking-services-select .react-select__dropdown-indicator {
+  background-color: #2a7a78 !important;
+  color: #fff !important;
+}
+
+.form-group div.booking-services-select .react-select__clear-indicator:hover,
+.form-group div.booking-services-select .react-select__dropdown-indicator:hover {
+  color: #78cc78 !important;
+}
+
+.form-group div.booking-services-select .react-select__menu {
+  background-color: #2a7a78 !important;
+  color: #fff !important;
+  border: 1px solid #98ff98 !important;
+  border-radius: 4px !important;
+  font-size: 1rem !important;
+  z-index: 1000 !important;
+  direction: rtl !important;
+  text-align: right !important;
+}
+
+.form-group div.booking-services-select .react-select__menu-list {
+  background-color: #2a7a78 !important;
+  color: #fff !important;
+}
+
+.form-group div.booking-services-select .react-select__menu-portal {
+  background-color: #2a7a78 !important;
+  color: #fff !important;
+  z-index: 9999 !important;
+}
+
+.form-group div.booking-services-select .react-select__option {
+  background-color: #2a7a78 !important;
+  color: #fff !important;
+  font-family: 'Tajawal', Arial, sans-serif !important;
+  font-size: 1rem !important;
+  padding: 0.375rem 0.75rem !important;
+}
+
+.form-group div.booking-services-select .react-select__option--is-selected {
+  background-color: #98ff98 !important;
+  color: #000 !important;
+}
+
+.form-group div.booking-services-select .react-select__option--is-focused {
+  background-color: #78cc78 !important;
+  color: #000 !important;
+}
+
+.form-group div.booking-services-select .react-select__multi-value {
+  background-color: #98ff98 !important;
+  color: #000 !important;
+  border-radius: 3px !important;
+}
+
+.form-group div.booking-services-select .react-select__multi-value__label {
+  color: #000 !important;
+  font-size: 0.9rem !important;
+  padding: 2px 4px !important;
+}
+
+.form-group div.booking-services-select .react-select__multi-value__remove {
+  background-color: #98ff98 !important;
+  color: #000 !important;
+  padding: 2px !important;
+}
+
+.form-group div.booking-services-select .react-select__multi-value__remove:hover {
+  background-color: #78cc78 !important;
+  color: #000 !important;
+}
+
+/* ستايل الـ Tabs */
+.nav-tabs {
+  border-bottom: 1px solid #98ff98 !important;
+}
+
+.nav-tabs .nav-link {
+  background-color: #1a5c5a !important;
+  color: #fff !important;
+}
+
+.nav-tabs .nav-link.active {
+  background-color: #98ff98 !important;
+  color: #000 !important;
+  border-color: #98ff98 !important;
+}
+
+.nav-tabs .nav-link:hover {
+  background-color: #78cc78 !important;
+  color: #000 !important;
+}
+
+/* ستايل الـ Pagination */
+.pagination .page-link {
+  background-color: #1a5c5a !important;
+  color: #fff !important;
+  border: 1px solid #98ff98 !important;
+}
+
+.pagination .page-link:hover {
+  background-color: #78cc78 !important;
+  color: #000 !important;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #98ff98 !important;
+  color: #000 !important;
+  border-color: #98ff98 !important;
+}
+
+/* ستايل الـ Table */
+.table {
+  background-color: #1a5c5a !important;
+  color: #fff !important;
+}
+
+.table th,
+.table td {
+  border-color: #98ff98 !important;
+}
+
+.table thead th {
+  background-color: #2a7a78 !important;
+  color: #fff !important;
+}
+
+/* ستايل الطباعة */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .modal-body,
+  .modal-body * {
+    visibility: visible;
+  }
+  .modal {
+    position: absolute;
+    left: 0;
+    top: 0;
+    margin: 0;
+    padding: 0;
+    width: 80mm;
+  }
+  .modal-body {
+    font-size: 10px;
+    text-align: center;
+    color: #000 !important;
+    background-color: #fff !important;
+  }
+  .modal-footer,
+  .modal-header {
+    display: none;
+  }
+  a,
+  [href],
+  .modal-body::after,
+  .modal-body::before {
+    display: none !important;
+  }
+}
+
+/* رص الخانات جنب بعض */
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-right: -5px;
+  margin-left: -5px;
+}
+
+.form-row > .col,
+.form-row > [class*='col-'] {
+  padding-right: 5px;
+  padding-left: 5px;
+}
