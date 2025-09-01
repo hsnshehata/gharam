@@ -14,7 +14,7 @@ app.use(express.json());
 app.use((req, res, next) => {
   console.log(`Received request: ${req.method} ${req.path}`);
   // Skip invalid paths
-  if (req.path.includes('://') || req.path.includes('git.new')) {
+  if (req.path.includes('://') || req.path.includes('git.new') || req.path.includes('pathToRegexpError')) {
     console.log(`Skipping invalid path: ${req.path}`);
     return res.status(400).json({ msg: 'Invalid request path' });
   }
