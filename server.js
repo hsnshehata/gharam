@@ -15,7 +15,7 @@ app.use(express.json());
 // Middleware to block invalid requests
 app.use((req, res, next) => {
   const invalidPatterns = [
-    /:\/\/|git\.new|pathToRegexpError|\.git|\/wp-|\/wordpress|\/admin|\/login/i
+    /:\/\/|git\.new|pathToRegexpError|\.git|\/wp-|\/wordpress/i
   ];
   console.log(`Received request: ${req.method} ${req.path}`);
   if (invalidPatterns.some(pattern => pattern.test(req.path))) {
