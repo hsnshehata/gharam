@@ -275,7 +275,7 @@ function EmployeeDashboard({ user }) {
                 <Card.Text>
                   رقم الهاتف: {booking.clientPhone}<br />
                   المدفوع: {booking.deposit} جنيه<br />
-                  المتبقي: {booking.remaining} جنيه<brW
+                  المتبقي: {booking.remaining} جنيه<br />
                   رقم الوصل: {booking.receiptNumber}
                 </Card.Text>
                 <Button variant="primary" onClick={() => handleShowDetails(booking, 'booking')}>
