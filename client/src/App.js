@@ -16,10 +16,15 @@ import './App.css';
 function App() {
   const [user, setUser] = useState(null);
 
+  const handleLogout = () => {
+    localStorage.removeItem('token'); // إزالة التوكن من localStorage
+    setUser(null); // إزالة حالة المستخدم
+  };
+
   return (
     <Router>
       <div className="App">
-        {user && <Navbar user={user} />}
+        {user && <Navbar user={user} handleLogout={handleLogout} />}
         <Routes>
           <Route path="/login" element={<Login setUser={setUser} />} />
           <Route
