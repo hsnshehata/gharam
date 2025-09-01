@@ -162,19 +162,19 @@ function Dashboard({ user }) {
     const fetchData = async () => {
       try {
         const [summaryRes, bookingsRes, packagesRes, servicesRes, usersRes] = await Promise.all([
-          axios.get(`http://localhost:5000/api/dashboard/summary?date=${date}`, {
+          axios.get(`/api/dashboard/summary?date=${date}`, {
             headers: { 'x-auth-token': localStorage.getItem('token') }
           }),
-          axios.get(`http://localhost:5000/api/today-work?date=${date}`, {
+          axios.get(`/api/today-work?date=${date}`, {
             headers: { 'x-auth-token': localStorage.getItem('token') }
           }),
-          axios.get('http://localhost:5000/api/packages/packages', {
+          axios.get('/api/packages/packages', {
             headers: { 'x-auth-token': localStorage.getItem('token') }
           }),
-          axios.get('http://localhost:5000/api/packages/services', {
+          axios.get('/api/packages/services', {
             headers: { 'x-auth-token': localStorage.getItem('token') }
           }),
-          axios.get('http://localhost:5000/api/users', {
+          axios.get('/api/users', {
             headers: { 'x-auth-token': localStorage.getItem('token') }
           })
         ]);
@@ -199,7 +199,7 @@ function Dashboard({ user }) {
       const selectedIds = [bookingFormData.packageId, bookingFormData.hennaPackageId, bookingFormData.photographyPackageId].filter(id => id);
       if (selectedIds.length > 0) {
         try {
-          const res = await axios.get('http://localhost:5000/api/packages/services', {
+          const res = await axios.get('/api/packages/services', {
             headers: { 'x-auth-token': localStorage.getItem('token') }
           });
           const filteredServices = res.data.filter(srv => selectedIds.includes(srv.packageId?._id.toString()));
@@ -223,25 +223,19 @@ function Dashboard({ user }) {
       let tempTotal = 0;
       const selectedPkg = packages.find(pkg => pkg._id === bookingFormData.packageId);
       if (selectedPkg) tempTotal += selectedPkg.price;
-
       const hennaPkg = packages.find(pkg => pkg._id === bookingFormData.hennaPackageId);
       if (hennaPkg) tempTotal += hennaPkg.price;
-
       const photoPkg = packages.find(pkg => pkg._id === bookingFormData.photographyPackageId);
       if (photoPkg) tempTotal += photoPkg.price;
-
       bookingFormData.extraServices.forEach(id => {
         const srv = services.find(s => s._id === id.value);
         if (srv) tempTotal += srv.price;
       });
-
       bookingFormData.returnedServices.forEach(id => {
         const srv = selectedPackageServices.find(s => s.value === id.value);
         if (srv) tempTotal -= srv.price;
       });
-
       if (bookingFormData.hairStraightening === 'yes') tempTotal += parseFloat(bookingFormData.hairStraighteningPrice || 0);
-
       setTotal(tempTotal);
       setRemaining(tempTotal - bookingFormData.deposit);
     };
@@ -273,7 +267,7 @@ function Dashboard({ user }) {
     };
     try {
       if (editBooking) {
-        const res = await axios.put(`http://localhost:5000/api/bookings/${editBooking._id}`, submitData, {
+        const res = await axios.put(`/api/bookings/${editBooking._id}`, submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setBookings({
@@ -285,7 +279,7 @@ function Dashboard({ user }) {
         setCurrentReceipt({ ...res.data.booking, type: 'booking' });
         setShowReceiptModal(true);
       } else {
-        const res = await axios.post('http://localhost:5000/api/bookings', submitData, {
+        const res = await axios.post('/api/bookings', submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setBookings({
@@ -330,14 +324,14 @@ function Dashboard({ user }) {
     };
     try {
       if (editItem) {
-        const res = await axios.put(`http://localhost:5000/api/instant-services/${editItem._id}`, submitData, {
+        const res = await axios.put(`/api/instant-services/${editItem._id}`, submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setMessage('تم تعديل الخدمة الفورية بنجاح');
         setCurrentReceipt({ ...res.data.instantService, type: 'instant' });
         setShowReceiptModal(true);
       } else {
-        const res = await axios.post('http://localhost:5000/api/instant-services', submitData, {
+        const res = await axios.post('/api/instant-services', submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setMessage('تم إضافة الخدمة الفورية بنجاح');
@@ -371,7 +365,7 @@ function Dashboard({ user }) {
       }
     }
     try {
-      const res = await axios.post('http://localhost:5000/api/expenses-advances', expenseAdvanceFormData, {
+      const res = await axios.post('/api/expenses-advances', expenseAdvanceFormData, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setMessage(`تم إضافة ${res.data.type === 'expense' ? 'المصروف' : 'السلفة'} بنجاح`);
@@ -411,7 +405,7 @@ function Dashboard({ user }) {
       return;
     }
     try {
-      await axios.delete(`http://localhost:5000/api/bookings/${deleteItem._id}`, {
+      await axios.delete(`/api/bookings/${deleteItem._id}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setBookings({
@@ -435,7 +429,7 @@ function Dashboard({ user }) {
       return;
     }
     try {
-      const res = await axios.post(`http://localhost:5000/api/bookings/${bookingId}/installment`, { amount: parseFloat(installmentAmount) }, {
+      const res = await axios.post(`/api/bookings/${bookingId}/installment`, { amount: parseFloat(installmentAmount) }, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setBookings({
@@ -465,10 +459,10 @@ function Dashboard({ user }) {
   const handleSearch = async () => {
     try {
       const [summaryRes, bookingsRes] = await Promise.all([
-        axios.get(`http://localhost:5000/api/dashboard/summary?date=${date}`, {
+        axios.get(`/api/dashboard/summary?date=${date}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         }),
-        axios.get(`http://localhost:5000/api/today-work?date=${date}`, {
+        axios.get(`/api/today-work?date=${date}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         })
       ]);
@@ -515,7 +509,6 @@ function Dashboard({ user }) {
           </Button>
         </Col>
       </Row>
-
       <h3>حجوزات الميك آب</h3>
       {bookings.makeupBookings.length === 0 && <Alert variant="info">لا توجد حجوزات ميك آب لهذا اليوم</Alert>}
       <Row>
@@ -549,7 +542,6 @@ function Dashboard({ user }) {
           </Col>
         ))}
       </Row>
-
       <h3>حجوزات فرد الشعر</h3>
       {bookings.hairStraighteningBookings.length === 0 && <Alert variant="info">لا توجد حجوزات فرد شعر لهذا اليوم</Alert>}
       <Row>
@@ -583,7 +575,6 @@ function Dashboard({ user }) {
           </Col>
         ))}
       </Row>
-
       <h3>حجوزات التصوير</h3>
       {bookings.photographyBookings.length === 0 && <Alert variant="info">لا توجد حجوزات تصوير لهذا اليوم</Alert>}
       <Row>
@@ -617,7 +608,6 @@ function Dashboard({ user }) {
           </Col>
         ))}
       </Row>
-
       <Card className="mb-4">
         <Card.Body>
           <Card.Title>ملخص اليوم ({new Date(date).toLocaleDateString()})</Card.Title>
@@ -630,7 +620,6 @@ function Dashboard({ user }) {
           </Card.Text>
         </Card.Body>
       </Card>
-
       <Modal show={showBookingModal} onHide={() => setShowBookingModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>{editBooking ? 'تعديل حجز' : 'إنشاء حجز جديد'}</Modal.Title>
@@ -851,7 +840,6 @@ function Dashboard({ user }) {
           </Form>
         </Modal.Body>
       </Modal>
-
       <Modal show={showInstantServiceModal} onHide={() => setShowInstantServiceModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>{editItem ? 'تعديل خدمة فورية' : 'إنشاء خدمة فورية'}</Modal.Title>
@@ -909,7 +897,6 @@ function Dashboard({ user }) {
           </Form>
         </Modal.Body>
       </Modal>
-
       <Modal show={showExpenseAdvanceModal} onHide={() => setShowExpenseAdvanceModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>إضافة عملية جديدة</Modal.Title>
@@ -998,7 +985,6 @@ function Dashboard({ user }) {
           </Form>
         </Modal.Body>
       </Modal>
-
       <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>تأكيد الحذف</Modal.Title>
@@ -1009,7 +995,6 @@ function Dashboard({ user }) {
           <Button variant="danger" onClick={handleDelete}>حذف</Button>
         </Modal.Footer>
       </Modal>
-
       <Modal show={showInstallmentModal} onHide={() => setShowInstallmentModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>إضافة قسط</Modal.Title>
@@ -1030,7 +1015,6 @@ function Dashboard({ user }) {
           <Button variant="primary" onClick={() => handleAddInstallment(deleteItem?._id)}>حفظ</Button>
         </Modal.Footer>
       </Modal>
-
       <Modal show={showReceiptModal} onHide={() => setShowReceiptModal(false)} size="sm">
         <Modal.Header closeButton>
           <Modal.Title>وصل {currentReceipt?.type === 'booking' ? 'الحجز' : 'الخدمة الفورية'}</Modal.Title>
@@ -1043,7 +1027,6 @@ function Dashboard({ user }) {
           <Button variant="secondary" onClick={() => setShowReceiptModal(false)}>إغلاق</Button>
         </Modal.Footer>
       </Modal>
-
       <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>تفاصيل الحجز</Modal.Title>
