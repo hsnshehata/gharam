@@ -18,7 +18,7 @@ function ExpensesAdvances() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
-  const [showCreateModal, setShowCreateModal] = useState(false); // إضافة الـ state هنا
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Custom styles للـ react-select
   const customStyles = {
@@ -110,10 +110,10 @@ function ExpensesAdvances() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const usersRes = await axios.get('http://localhost:5000/api/users', {
+        const usersRes = await axios.get('/api/users', {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
-        const itemsRes = await axios.get(`http://localhost:5000/api/expenses-advances?page=${currentPage}&search=${search}`, {
+        const itemsRes = await axios.get(`/api/expenses-advances?page=${currentPage}&search=${search}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         console.log('Users response:', usersRes.data);
@@ -134,7 +134,6 @@ function ExpensesAdvances() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // فحص البيانات قبل الإرسال
     if (formData.type === 'expense' && (!formData.details || !formData.amount)) {
       setMessage('تفاصيل المصروف والمبلغ مطلوبة');
       return;
@@ -154,14 +153,14 @@ function ExpensesAdvances() {
     try {
       if (editItem) {
         console.log('Updating item with ID:', editItem._id, 'Type:', editItem.type);
-        const res = await axios.put(`http://localhost:5000/api/expenses-advances/${editItem._id}`, formData, {
+        const res = await axios.put(`/api/expenses-advances/${editItem._id}`, formData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         console.log('Update response:', res.data);
         setItems(items.map(i => (i._id === editItem._id ? { ...res.data.item, type: res.data.type } : i)));
         setMessage(`تم تعديل ${res.data.type === 'expense' ? 'المصروف' : 'السلفة'} بنجاح`);
       } else {
-        const res = await axios.post('http://localhost:5000/api/expenses-advances', formData, {
+        const res = await axios.post('/api/expenses-advances', formData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         console.log('Create response:', res.data);
@@ -197,7 +196,7 @@ function ExpensesAdvances() {
     }
     try {
       console.log('Deleting item with ID:', deleteItem._id, 'Type:', deleteItem.type);
-      await axios.delete(`http://localhost:5000/api/expenses-advances/${deleteItem._id}?type=${deleteItem.type}`, {
+      await axios.delete(`/api/expenses-advances/${deleteItem._id}?type=${deleteItem.type}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setItems(items.filter(i => i._id !== deleteItem._id));
@@ -220,7 +219,7 @@ function ExpensesAdvances() {
   const handleSearch = async () => {
     try {
       console.log('Searching with query:', search);
-      const res = await axios.get(`http://localhost:5000/api/expenses-advances?search=${search}`, {
+      const res = await axios.get(`/api/expenses-advances?search=${search}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       console.log('Search response:', res.data);
@@ -258,7 +257,6 @@ function ExpensesAdvances() {
         </Col>
       </Row>
       <Button variant="primary" onClick={handleSearch} className="mt-2">بحث</Button>
-
       <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>{editItem ? 'تعديل العملية' : 'إضافة عملية جديدة'}</Modal.Title>
@@ -346,7 +344,6 @@ function ExpensesAdvances() {
           </Form>
         </Modal.Body>
       </Modal>
-
       <h3>المصروفات والسلف</h3>
       <Row>
         {items.map(item => (
@@ -374,7 +371,6 @@ function ExpensesAdvances() {
           </Col>
         ))}
       </Row>
-
       <Pagination className="justify-content-center mt-4">
         {Array.from({ length: totalPages }, (_, i) => (
           <Pagination.Item key={i + 1} active={i + 1 === currentPage} onClick={() => setCurrentPage(i + 1)}>
@@ -382,7 +378,6 @@ function ExpensesAdvances() {
           </Pagination.Item>
         ))}
       </Pagination>
-
       <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>تأكيد الحذف</Modal.Title>
@@ -393,7 +388,6 @@ function ExpensesAdvances() {
           <Button variant="danger" onClick={handleDelete}>حذف</Button>
         </Modal.Footer>
       </Modal>
-
       <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>تفاصيل العملية</Modal.Title>
