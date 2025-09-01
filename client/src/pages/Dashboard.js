@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table } from 'react-bootstrap';
 import axios from 'axios';
 import Select from 'react-select';
-import QRCode from 'qrcode.react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faPrint, faEdit, faEye, faDollarSign, faTrash, faSearch } from '@fortawesome/free-solid-svg-icons';
 import ReceiptPrint from '../pages/ReceiptPrint';
