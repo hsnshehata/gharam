@@ -11,11 +11,13 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Middleware to block invalid requests
 app.use((req, res, next) => {
+  const invalidPaths = ['://', 'git.new', 'pathToRegexpError', '.git', '/wp-', '/wordpress', '/admin', '/login'];
   console.log(`Received request: ${req.method} ${req.path}`);
-  // Skip invalid paths
-  if (req.path.includes('://') || req.path.includes('git.new') || req.path.includes('pathToRegexpError')) {
-    console.log(`Skipping invalid path: ${req.path}`);
+  if (invalidPaths.some(invalid => req.path.includes(invalid))) {
+    console.log(`Blocking invalid path: ${req.path}`);
     return res.status(400).json({ msg: 'Invalid request path' });
   }
   next();
@@ -45,7 +47,7 @@ app.use('/api/dashboard', require('./server/routes/dashboard'));
 app.use('/api/today-work', require('./server/routes/todayWork'));
 console.log('Routes registered successfully');
 
-// Serve React app for all other routes in production
+// Serve React app for valid routes in production
 if (process.env.NODE_ENV === 'production') {
   app.get('*', (req, res) => {
     console.log(`Serving index.html for path: ${req.path}`);
