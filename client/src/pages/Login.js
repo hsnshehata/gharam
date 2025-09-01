@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form, Button, Container, Row, Col } from 'react-bootstrap';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +9,25 @@ function Login({ setUser }) {
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const navigate = useNavigate();
+
+  // فحص التوكن عند تحميل الصفحة
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      axios
+        .get('/api/auth/validate-token', {
+          headers: { 'x-auth-token': token },
+        })
+        .then((res) => {
+          setUser(res.data.user);
+          navigate(res.data.user.role === 'employee' ? '/employee-dashboard' : '/dashboard');
+        })
+        .catch((err) => {
+          console.error('Token validation error:', err.response?.data || err.message);
+          localStorage.removeItem('token'); // إزالة التوكن لو مش صالح
+        });
+    }
+  }, [setUser, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,12 +48,12 @@ function Login({ setUser }) {
       <Row className="justify-content-md-center">
         <Col md={6} className="text-center">
           <img src="/logo.png" alt="Logo" className="login-logo" style={{ width: '190px' }} />
-          <h2>مرحبا بك في لوحة الادارة والموظفين</h2>
+          <h2>لوحة الإدارة والتنفيذ</h2>
         </Col>
         <Col md={6}>
           <Form onSubmit={handleSubmit} className="login-form">
             <Form.Group className="mb-3">
-              <Form.Label>اسم المستخدم</Form.Label>
+              <Form.Label>اسم الموظف</Form.Label>
               <Form.Control
                 type="text"
                 value={username}
