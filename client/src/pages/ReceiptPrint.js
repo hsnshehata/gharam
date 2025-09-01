@@ -37,19 +37,17 @@ const ReceiptPrint = ({ data, type }) => {
                 position: absolute;
                 top: 0; /* البداية من أعلى الصفحة */
                 left: 50%;
-                transform: translateX(-50%); /* توسيط أفقي فقط */
-                width: 80mm;
-                margin: 0;
-                padding: 10mm;
-                font-size: 12px;
-                text-align: center;
+                transform: translateX(-50%); /* توسيط أفقي */
+                width: 80mm; /* عرض الوصل */
+                margin: 0; /* إزالة أي هوامش */
+                padding: 0; /* إزالة أي padding خارجي */
               }
               .receipt-content {
                 width: 80mm;
-                margin: 0 auto;
                 padding: 10mm;
                 font-size: 12px;
                 text-align: center;
+                margin: 0; /* التأكد من إزالة الهوامش */
               }
               .qr-code {
                 margin: 10mm auto;
