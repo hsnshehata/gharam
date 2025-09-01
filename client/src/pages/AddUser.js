@@ -16,7 +16,7 @@ function AddUser() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:5000/api/users', formData, {
+      const res = await axios.post('/api/users', formData, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setMessage(res.data.msg);
