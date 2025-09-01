@@ -29,13 +29,13 @@ function EmployeeDashboard({ user }) {
     const fetchData = async () => {
       try {
         const [bookingsRes, instantRes, pointsRes] = await Promise.all([
-          axios.get(`http://localhost:5000/api/today-work?date=${date}`, {
+          axios.get(`/api/today-work?date=${date}`, {
             headers: { 'x-auth-token': localStorage.getItem('token') }
           }),
-          axios.get(`http://localhost:5000/api/instant-services?date=${date}`, {
+          axios.get(`/api/instant-services?date=${date}`, {
             headers: { 'x-auth-token': localStorage.getItem('token') }
           }),
-          axios.get(`http://localhost:5000/api/users/points/summary`, {
+          axios.get(`/api/users/points/summary`, {
             headers: { 'x-auth-token': localStorage.getItem('token') }
           })
         ]);
@@ -77,7 +77,6 @@ function EmployeeDashboard({ user }) {
         setShowQrModal(false);
       });
     }
-
     return () => {
       if (qrCodeScanner.current) {
         try {
@@ -103,14 +102,13 @@ function EmployeeDashboard({ user }) {
     try {
       console.log('Searching for receipt:', searchValue);
       const [bookingRes, instantRes] = await Promise.all([
-        axios.get(`http://localhost:5000/api/bookings?receiptNumber=${searchValue}`, {
+        axios.get(`/api/bookings?receiptNumber=${searchValue}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         }),
-        axios.get(`http://localhost:5000/api/instant-services?receiptNumber=${searchValue}`, {
+        axios.get(`/api/instant-services?receiptNumber=${searchValue}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         })
       ]);
-
       if (bookingRes.data.bookings.length > 0) {
         const booking = bookingRes.data.bookings[0];
         console.log('Found booking:', booking);
@@ -133,15 +131,14 @@ function EmployeeDashboard({ user }) {
   const handleExecuteService = async (serviceId, type, recordId) => {
     try {
       console.log('Executing service:', { serviceId, type, recordId, employeeId: user.id });
-      const endpoint = type === 'booking' 
-        ? `http://localhost:5000/api/bookings/execute-service/${recordId}/${serviceId}`
-        : `http://localhost:5000/api/instant-services/execute-service/${recordId}/${serviceId}`;
+      const endpoint = type === 'booking'
+        ? `/api/bookings/execute-service/${recordId}/${serviceId}`
+        : `/api/instant-services/execute-service/${recordId}/${serviceId}`;
       const res = await axios.post(endpoint, { employeeId: user.id }, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       console.log('Execute service response:', res.data);
       setMessage(`تم تنفيذ الخدمة بنجاح وإضافة ${res.data.points} نقطة`);
-
       if (type === 'booking') {
         setPointsData(prev => ({
           ...prev,
@@ -159,8 +156,7 @@ function EmployeeDashboard({ user }) {
         }));
         setInstantServices(prev => prev.map(s => (s._id === recordId ? res.data.instantService : s)));
       }
-
-      const pointsRes = await axios.get(`http://localhost:5000/api/users/points/summary`, {
+      const pointsRes = await axios.get(`/api/users/points/summary`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       console.log('Updated points summary:', pointsRes.data);
@@ -214,7 +210,6 @@ function EmployeeDashboard({ user }) {
           </Form>
         </Col>
       </Row>
-
       <Card className="mb-4">
         <Card.Body>
           <Card.Title>ملخص النقاط</Card.Title>
@@ -225,7 +220,6 @@ function EmployeeDashboard({ user }) {
           </Card.Text>
         </Card.Body>
       </Card>
-
       <h3>حجوزات الميك آب</h3>
       {bookings.makeupBookings.length === 0 && <Alert variant="info">لا توجد حجوزات ميك آب لهذا اليوم</Alert>}
       <Row>
@@ -248,7 +242,6 @@ function EmployeeDashboard({ user }) {
           </Col>
         ))}
       </Row>
-
       <h3>حجوزات فرد الشعر</h3>
       {bookings.hairStraighteningBookings.length === 0 && <Alert variant="info">لا توجد حجوزات فرد شعر لهذا اليوم</Alert>}
       <Row>
@@ -271,7 +264,6 @@ function EmployeeDashboard({ user }) {
           </Col>
         ))}
       </Row>
-
       <h3>حجوزات التصوير</h3>
       {bookings.photographyBookings.length === 0 && <Alert variant="info">لا توجد حجوزات تصوير لهذا اليوم</Alert>}
       <Row>
@@ -283,7 +275,7 @@ function EmployeeDashboard({ user }) {
                 <Card.Text>
                   رقم الهاتف: {booking.clientPhone}<br />
                   المدفوع: {booking.deposit} جنيه<br />
-                  المتبقي: {booking.remaining} جنيه<br />
+                  المتبقي: {booking.remaining} جنيه<brW
                   رقم الوصل: {booking.receiptNumber}
                 </Card.Text>
                 <Button variant="primary" onClick={() => handleShowDetails(booking, 'booking')}>
@@ -294,7 +286,6 @@ function EmployeeDashboard({ user }) {
           </Col>
         ))}
       </Row>
-
       <h3>الخدمات الفورية</h3>
       {instantServices.length === 0 && <Alert variant="info">لا توجد خدمات فورية لهذا اليوم</Alert>}
       <Row>
@@ -321,7 +312,6 @@ function EmployeeDashboard({ user }) {
           );
         })}
       </Row>
-
       <Modal show={showQrModal} onHide={() => setShowQrModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>مسح الباركود</Modal.Title>
@@ -335,7 +325,6 @@ function EmployeeDashboard({ user }) {
           </Button>
         </Modal.Footer>
       </Modal>
-
       <Modal show={showPointsModal} onHide={() => setShowPointsModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>تفاصيل الوصل</Modal.Title>
