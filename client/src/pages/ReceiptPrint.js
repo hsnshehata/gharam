@@ -3,7 +3,10 @@ import QRCode from 'qrcode.react';
 import { Table } from 'react-bootstrap';
 
 const ReceiptPrint = ({ data, type }) => {
-  if (!data || !type) return null;
+  if (!data || !type) {
+    console.warn('ReceiptPrint: Missing data or type props');
+    return null;
+  }
 
   return (
     <div
@@ -67,13 +70,13 @@ const ReceiptPrint = ({ data, type }) => {
               </tr>
               {data.hennaPackage && (
                 <tr key={data.hennaPackage._id ? data.hennaPackage._id.toString() : 'henna-package'}>
-                  <td>{data.hennaPackage.name} (حنة)</td>
+                  <td>{data.hennaPackage.name || 'غير متوفر'}</td>
                   <td>{data.hennaPackage.price ? `${data.hennaPackage.price} جنيه` : 'غير متوفر'}</td>
                 </tr>
               )}
               {data.photographyPackage && (
                 <tr key={data.photographyPackage._id ? data.photographyPackage._id.toString() : 'photo-package'}>
-                  <td>{data.photographyPackage.name} (تصوير)</td>
+                  <td>{data.photographyPackage.name || 'غير متوفر'}</td>
                   <td>{data.photographyPackage.price ? `${data.photographyPackage.price} جنيه` : 'غير متوفر'}</td>
                 </tr>
               )}
