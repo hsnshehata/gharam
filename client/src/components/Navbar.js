@@ -1,8 +1,15 @@
 import React from 'react';
 import { Navbar as BootstrapNavbar, Nav } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
-function Navbar({ user }) {
+function Navbar({ user, handleLogout }) {
+  const navigate = useNavigate();
+
+  const onLogout = () => {
+    handleLogout(); // استدعاء دالة تسجيل الخروج من App.js
+    navigate('/login'); // إعادة التوجيه لصفحة تسجيل الدخول
+  };
+
   return (
     <BootstrapNavbar bg="dark" variant="dark" expand="lg" className="mb-4">
       <BootstrapNavbar.Brand>
@@ -22,7 +29,7 @@ function Navbar({ user }) {
               <Nav.Link as={Link} to="/daily-reports">التقارير اليومية</Nav.Link>
             </>
           )}
-          {(user.role === 'supervisor') && (
+          {user.role === 'supervisor' && (
             <>
               <Nav.Link as={Link} to="/dashboard">شغل إنهاردة</Nav.Link>
               <Nav.Link as={Link} to="/bookings">الحجوزات</Nav.Link>
@@ -35,9 +42,7 @@ function Navbar({ user }) {
               <Nav.Link as={Link} to="/employee-dashboard">لوحة الموظف</Nav.Link>
             </>
           )}
-          <Nav.Link onClick={() => { localStorage.removeItem('token'); window.location.href = '/login'; }}>
-            تسجيل الخروج
-          </Nav.Link>
+          <Nav.Link onClick={onLogout}>تسجيل الخروج</Nav.Link>
         </Nav>
       </BootstrapNavbar.Collapse>
     </BootstrapNavbar>
