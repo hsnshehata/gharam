@@ -30,7 +30,7 @@ function Users() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/users', {
+        const res = await axios.get('/api/users', {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setUsers(res.data);
@@ -48,7 +48,7 @@ function Users() {
       return;
     }
     try {
-      const res = await axios.post('http://localhost:5000/api/users', addFormData, {
+      const res = await axios.post('/api/users', addFormData, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setUsers([res.data.user, ...users]);
@@ -75,7 +75,7 @@ function Users() {
       if (editFormData.password) {
         updateData.password = editFormData.password;
       }
-      const res = await axios.put(`http://localhost:5000/api/users/${editItem._id}`, updateData, {
+      const res = await axios.put(`/api/users/${editItem._id}`, updateData, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setUsers(users.map(user => (user._id === editItem._id ? res.data.user : user)));
@@ -101,7 +101,7 @@ function Users() {
 
   const handleDelete = async () => {
     try {
-      await axios.delete(`http://localhost:5000/api/users/${deleteItem._id}`, {
+      await axios.delete(`/api/users/${deleteItem._id}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setUsers(users.filter(user => user._id !== deleteItem._id));
@@ -118,7 +118,7 @@ function Users() {
     <Container className="mt-5">
       <h2>الموظفين</h2>
       {message && <Alert variant={message.includes('خطأ') ? 'danger' : 'success'}>{message}</Alert>}
-      
+     
       <div className="mb-4">
         <h3>إضافة موظف</h3>
         <Form onSubmit={handleAddSubmit}>
@@ -205,7 +205,6 @@ function Users() {
           </Row>
         </Form>
       </div>
-
       <h3>قائمة الموظفين</h3>
       <Row>
         {users.map(user => (
@@ -231,7 +230,6 @@ function Users() {
           </Col>
         ))}
       </Row>
-
       <Modal show={editItem !== null} onHide={() => setEditItem(null)}>
         <Modal.Header closeButton>
           <Modal.Title>تعديل موظف</Modal.Title>
@@ -314,7 +312,6 @@ function Users() {
           </Form>
         </Modal.Body>
       </Modal>
-
       <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>تأكيد الحذف</Modal.Title>
