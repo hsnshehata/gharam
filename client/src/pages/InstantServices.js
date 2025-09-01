@@ -141,13 +141,13 @@ function InstantServices({ user }) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const srvRes = await axios.get('http://localhost:5000/api/packages/services', {
+        const srvRes = await axios.get('/api/packages/services', {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
-        const usersRes = await axios.get('http://localhost:5000/api/users', {
+        const usersRes = await axios.get('/api/users', {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
-        const instantRes = await axios.get(`http://localhost:5000/api/instant-services?page=${currentPage}&search=${searchNameReceipt}`, {
+        const instantRes = await axios.get(`/api/instant-services?page=${currentPage}&search=${searchNameReceipt}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         console.log('Services response:', srvRes.data);
@@ -189,7 +189,7 @@ function InstantServices({ user }) {
     };
     try {
       if (editItem) {
-        const res = await axios.put(`http://localhost:5000/api/instant-services/${editItem._id}`, submitData, {
+        const res = await axios.put(`/api/instant-services/${editItem._id}`, submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setInstantServices(instantServices.map(s => (s._id === editItem._id ? res.data.instantService : s)));
@@ -197,7 +197,7 @@ function InstantServices({ user }) {
         setCurrentReceipt(res.data.instantService);
         setShowReceiptModal(true);
       } else {
-        const res = await axios.post('http://localhost:5000/api/instant-services', submitData, {
+        const res = await axios.post('/api/instant-services', submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setInstantServices([res.data.instantService, ...instantServices]);
@@ -229,7 +229,7 @@ function InstantServices({ user }) {
 
   const handleDelete = async () => {
     try {
-      await axios.delete(`http://localhost:5000/api/instant-services/${deleteItem._id}`, {
+      await axios.delete(`/api/instant-services/${deleteItem._id}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setInstantServices(instantServices.filter(s => s._id !== deleteItem._id));
@@ -257,7 +257,7 @@ function InstantServices({ user }) {
 
   const handleSearch = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/instant-services?search=${searchNameReceipt}`, {
+      const res = await axios.get(`/api/instant-services?search=${searchNameReceipt}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       console.log('Search response:', res.data);
@@ -292,7 +292,6 @@ function InstantServices({ user }) {
         </Col>
       </Row>
       <Button variant="primary" onClick={handleSearch} className="mt-2">بحث</Button>
-
       <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>{editItem ? 'تعديل خدمة فورية' : 'إنشاء خدمة فورية'}</Modal.Title>
@@ -355,7 +354,6 @@ function InstantServices({ user }) {
           </Form>
         </Modal.Body>
       </Modal>
-
       <h3>الخدمات الفورية</h3>
       <Row>
         {instantServices.map(service => {
@@ -390,7 +388,6 @@ function InstantServices({ user }) {
           );
         })}
       </Row>
-
       <Pagination className="justify-content-center mt-4">
         {Array.from({ length: totalPages }, (_, i) => (
           <Pagination.Item
@@ -402,7 +399,6 @@ function InstantServices({ user }) {
           </Pagination.Item>
         ))}
       </Pagination>
-
       <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>تأكيد الحذف</Modal.Title>
@@ -413,7 +409,6 @@ function InstantServices({ user }) {
           <Button variant="danger" onClick={handleDelete}>حذف</Button>
         </Modal.Footer>
       </Modal>
-
       <Modal show={showReceiptModal} onHide={() => setShowReceiptModal(false)} size="sm">
         <Modal.Header closeButton>
           <Modal.Title>وصل الخدمة الفورية</Modal.Title>
@@ -426,7 +421,6 @@ function InstantServices({ user }) {
           <Button variant="secondary" onClick={() => setShowReceiptModal(false)}>إغلاق</Button>
         </Modal.Footer>
       </Modal>
-
       <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>تفاصيل الخدمة الفورية</Modal.Title>
