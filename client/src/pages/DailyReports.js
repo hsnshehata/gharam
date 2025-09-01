@@ -19,7 +19,7 @@ function DailyReports() {
   useEffect(() => {
     const fetchReport = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/reports/daily?date=${date}`, {
+        const res = await axios.get(`/api/reports/daily?date=${date}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         console.log('Report response:', res.data);
@@ -35,7 +35,7 @@ function DailyReports() {
 
   const handleSearch = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/reports/daily?date=${date}`, {
+      const res = await axios.get(`/api/reports/daily?date=${date}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       console.log('Search response:', res.data);
@@ -70,7 +70,6 @@ function DailyReports() {
           </Button>
         </Col>
       </Row>
-
       <Card className="mb-4">
         <Card.Body>
           <Card.Title>ملخص اليوم ({new Date(date).toLocaleDateString()})</Card.Title>
@@ -83,7 +82,6 @@ function DailyReports() {
           </Card.Text>
         </Card.Body>
       </Card>
-
       <h3>تفاصيل العمليات</h3>
       <Table striped bordered hover>
         <thead>
@@ -99,10 +97,10 @@ function DailyReports() {
           {operations.map((op, index) => (
             <tr key={index}>
               <td>
-                {op.type === 'booking' ? 'حجز' : 
-                 op.type === 'instantService' ? 'خدمة فورية' : 
-                 op.type === 'expense' ? 'مصروف' : 
-                 op.type === 'advance' ? 'سلفة' : 
+                {op.type === 'booking' ? 'حجز' :
+                 op.type === 'instantService' ? 'خدمة فورية' :
+                 op.type === 'expense' ? 'مصروف' :
+                 op.type === 'advance' ? 'سلفة' :
                  op.type === 'installment' ? 'قسط' : 'غير معروف'}
               </td>
               <td>{op.details}</td>
