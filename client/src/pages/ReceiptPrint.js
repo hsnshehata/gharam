@@ -1,5 +1,4 @@
 import React from 'react';
-import { Button } from 'react-bootstrap';
 import QRCode from 'qrcode.react';
 import { Table } from 'react-bootstrap';
 
@@ -8,10 +7,6 @@ const ReceiptPrint = ({ data, type }) => {
     console.warn('ReceiptPrint: Missing data or type props');
     return null;
   }
-
-  const handlePrint = () => {
-    window.print(); // فتح نافذة الطباعة
-  };
 
   return (
     <div className="receipt-container">
@@ -40,9 +35,9 @@ const ReceiptPrint = ({ data, type }) => {
               }
               .receipt-container {
                 position: absolute;
-                top: 0;
+                top: 0; /* البداية من أعلى الصفحة */
                 left: 50%;
-                transform: translateX(-50%); /* توسيط الوصل أفقيًا */
+                transform: translateX(-50%); /* توسيط أفقي فقط */
                 width: 80mm;
                 margin: 0;
                 padding: 10mm;
@@ -209,9 +204,6 @@ const ReceiptPrint = ({ data, type }) => {
             <QRCode value={data.barcode} size={80} />
           </div>
         )}
-        <Button variant="primary" onClick={handlePrint} style={{ marginTop: '10mm' }}>
-          طباعة الوصل
-        </Button>
       </div>
     </div>
   );
