@@ -17,7 +17,6 @@ const ReceiptPrint = ({ data, type }) => {
           color: '#000',
           fontWeight: 'bold',
           fontSize: '12px',
-          width: '80mm',
           padding: '10mm',
           textAlign: 'center',
           margin: '0 auto',
@@ -38,32 +37,27 @@ const ReceiptPrint = ({ data, type }) => {
                 top: 0; /* البداية من أعلى الصفحة */
                 left: 50%;
                 transform: translateX(-50%); /* توسيط أفقي */
-                width: 80mm; /* عرض الوصل */
                 margin: 0; /* إزالة أي هوامش */
                 padding: 0; /* إزالة أي padding خارجي */
               }
               .receipt-content {
-                width: 80mm;
                 padding: 10mm;
                 font-size: 12px;
                 text-align: center;
-                margin: 0; /* التأكد من إزالة الهوامش */
+                margin: 0; /* إزالة الهوامش */
               }
               .qr-code {
                 margin: 10mm auto;
               }
               table {
                 width: 100%;
+                max-width: 100%; /* التأكد إن الجدول يتكيف مع حجم الوصل */
                 border-collapse: collapse;
               }
               th, td {
                 border: 1px solid #000;
                 padding: 2mm;
                 font-size: 12px;
-              }
-              @page {
-                size: A4; /* تحديد حجم الصفحة كـ A4 */
-                margin: 0; /* إزالة الهوامش */
               }
             }
           `}
