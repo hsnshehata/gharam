@@ -13,8 +13,19 @@ app.use(cors());
 app.use(express.json());
 app.use((req, res, next) => {
   console.log(`Received request: ${req.method} ${req.path}`);
+  // Skip invalid paths
+  if (req.path.includes('://') || req.path.includes('git.new')) {
+    console.log(`Skipping invalid path: ${req.path}`);
+    return res.status(400).json({ msg: 'Invalid request path' });
+  }
   next();
 });
+
+// Serve static files first in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'client/build')));
+  console.log('Serving static files from client/build');
+}
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
@@ -34,10 +45,8 @@ app.use('/api/dashboard', require('./server/routes/dashboard'));
 app.use('/api/today-work', require('./server/routes/todayWork'));
 console.log('Routes registered successfully');
 
-// Serve React app
+// Serve React app for all other routes in production
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'client/build')));
-  console.log('Serving static files from client/build');
   app.get('*', (req, res) => {
     console.log(`Serving index.html for path: ${req.path}`);
     res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
