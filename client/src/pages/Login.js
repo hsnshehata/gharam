@@ -29,7 +29,7 @@ function Login({ setUser }) {
       <Row className="justify-content-md-center">
         <Col md={6} className="text-center">
           <img src="/logo.png" alt="Logo" className="login-logo" style={{ width: '190px' }} />
-          <h2>إمرحبا بك في لوحة الادارة والموظفين</h2>
+          <h2>مرحبا بك في لوحة الادارة والموظفين</h2>
         </Col>
         <Col md={6}>
           <Form onSubmit={handleSubmit} className="login-form">
