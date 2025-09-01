@@ -6,8 +6,12 @@ function Navbar({ user, handleLogout }) {
   const navigate = useNavigate();
 
   const onLogout = () => {
-    handleLogout(); // استدعاء دالة تسجيل الخروج من App.js
-    navigate('/login'); // إعادة التوجيه لصفحة تسجيل الدخول
+    if (handleLogout) {
+      handleLogout(); // استدعاء دالة تسجيل الخروج من App.js
+      navigate('/login'); // إعادة التوجيه لصفحة تسجيل الدخول
+    } else {
+      console.error('handleLogout is not defined');
+    }
   };
 
   return (
