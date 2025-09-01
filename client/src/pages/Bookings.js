@@ -33,7 +33,7 @@ function Bookings() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchNamePhone, setSearchNamePhone] = useState('');
   const [searchDate, setSearchDate] = useState('');
-  const receiptRef = useRef(null); // للتحكم في طباعة الوصل
+  const receiptRef = useRef(null);
 
   // Custom styles للـ react-select
   const customStyles = {
@@ -151,13 +151,13 @@ function Bookings() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const pkgRes = await axios.get('http://localhost:5000/api/packages/packages', {
+        const pkgRes = await axios.get('/api/packages/packages', {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
-        const srvRes = await axios.get('http://localhost:5000/api/packages/services', {
+        const srvRes = await axios.get('/api/packages/services', {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
-        const bookingsRes = await axios.get(`http://localhost:5000/api/bookings?page=${currentPage}`, {
+        const bookingsRes = await axios.get(`/api/bookings?page=${currentPage}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setPackages(pkgRes.data);
@@ -176,7 +176,7 @@ function Bookings() {
       const selectedIds = [formData.packageId, formData.hennaPackageId, formData.photographyPackageId].filter(id => id);
       if (selectedIds.length > 0) {
         try {
-          const res = await axios.get('http://localhost:5000/api/packages/services', {
+          const res = await axios.get('/api/packages/services', {
             headers: { 'x-auth-token': localStorage.getItem('token') }
           });
           const filteredServices = res.data.filter(srv => selectedIds.includes(srv.packageId?._id.toString()));
@@ -200,25 +200,19 @@ function Bookings() {
       let tempTotal = 0;
       const selectedPkg = packages.find(pkg => pkg._id === formData.packageId);
       if (selectedPkg) tempTotal += selectedPkg.price;
-
       const hennaPkg = packages.find(pkg => pkg._id === formData.hennaPackageId);
       if (hennaPkg) tempTotal += hennaPkg.price;
-
       const photoPkg = packages.find(pkg => pkg._id === formData.photographyPackageId);
       if (photoPkg) tempTotal += photoPkg.price;
-
       formData.extraServices.forEach(id => {
         const srv = services.find(s => s._id === id.value);
         if (srv) tempTotal += srv.price;
       });
-
       formData.returnedServices.forEach(id => {
         const srv = selectedPackageServices.find(s => s.value === id.value);
         if (srv) tempTotal -= srv.price;
       });
-
       if (formData.hairStraightening === 'yes') tempTotal += parseFloat(formData.hairStraighteningPrice || 0);
-
       setTotal(tempTotal);
       setRemaining(tempTotal - formData.deposit);
     };
@@ -235,7 +229,7 @@ function Bookings() {
     };
     try {
       if (editItem) {
-        const res = await axios.put(`http://localhost:5000/api/bookings/${editItem._id}`, submitData, {
+        const res = await axios.put(`/api/bookings/${editItem._id}`, submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setBookings(bookings.map(b => (b._id === editItem._id ? res.data.booking : b)));
@@ -243,7 +237,7 @@ function Bookings() {
         setCurrentReceipt(res.data.booking);
         setShowReceiptModal(true);
       } else {
-        const res = await axios.post('http://localhost:5000/api/bookings', submitData, {
+        const res = await axios.post('/api/bookings', submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setBookings([res.data.booking, ...bookings]);
@@ -286,7 +280,7 @@ function Bookings() {
 
   const handleDelete = async () => {
     try {
-      await axios.delete(`http://localhost:5000/api/bookings/${deleteItem._id}`, {
+      await axios.delete(`/api/bookings/${deleteItem._id}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setBookings(bookings.filter(b => b._id !== deleteItem._id));
@@ -301,7 +295,7 @@ function Bookings() {
 
   const handleAddInstallment = async (bookingId) => {
     try {
-      const res = await axios.post(`http://localhost:5000/api/bookings/${bookingId}/installment`, { amount: parseFloat(installmentAmount) }, {
+      const res = await axios.post(`/api/bookings/${bookingId}/installment`, { amount: parseFloat(installmentAmount) }, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setBookings(bookings.map(b => (b._id === bookingId ? res.data.booking : b)));
@@ -319,7 +313,7 @@ function Bookings() {
     document.body.innerHTML = printContent.innerHTML;
     window.print();
     document.body.innerHTML = originalContent;
-    window.location.reload(); // إعادة تحميل الصفحة لاستعادة المحتوى
+    window.location.reload();
   };
 
   const handleShowDetails = (booking) => {
@@ -329,7 +323,7 @@ function Bookings() {
 
   const handleSearch = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/bookings?search=${searchNamePhone}&date=${searchDate}`, {
+      const res = await axios.get(`/api/bookings?search=${searchNamePhone}&date=${searchDate}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setBookings(res.data.bookings);
@@ -387,7 +381,6 @@ function Bookings() {
         </Col>
       </Row>
       <Button variant="primary" onClick={handleSearch} className="mt-2">بحث</Button>
-
       <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>{editItem ? 'تعديل حجز' : 'إنشاء حجز جديد'}</Modal.Title>
@@ -606,7 +599,6 @@ function Bookings() {
           </Form>
         </Modal.Body>
       </Modal>
-
       <h3>الحجوزات</h3>
       <Row>
         {bookings.map(booking => (
@@ -642,7 +634,6 @@ function Bookings() {
           </Col>
         ))}
       </Row>
-
       <Pagination className="justify-content-center mt-4">
         {Array.from({ length: totalPages }, (_, i) => (
           <Pagination.Item key={i + 1} active={i + 1 === currentPage} onClick={() => setCurrentPage(i + 1)}>
@@ -650,7 +641,6 @@ function Bookings() {
           </Pagination.Item>
         ))}
       </Pagination>
-
       <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>تأكيد الحذف</Modal.Title>
@@ -661,7 +651,6 @@ function Bookings() {
           <Button variant="danger" onClick={handleDelete}>حذف</Button>
         </Modal.Footer>
       </Modal>
-
       <Modal show={showInstallmentModal} onHide={() => setShowInstallmentModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>إضافة قسط</Modal.Title>
@@ -682,7 +671,6 @@ function Bookings() {
           <Button variant="primary" onClick={() => handleAddInstallment(deleteItem._id)}>حفظ</Button>
         </Modal.Footer>
       </Modal>
-
       <Modal show={showReceiptModal} onHide={() => setShowReceiptModal(false)} size="sm">
         <Modal.Header closeButton className="no-print">
           <Modal.Title>وصل الحجز</Modal.Title>
@@ -695,7 +683,6 @@ function Bookings() {
           <Button variant="secondary" onClick={() => setShowReceiptModal(false)}>إغلاق</Button>
         </Modal.Footer>
       </Modal>
-
       <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>تفاصيل الحجز</Modal.Title>
