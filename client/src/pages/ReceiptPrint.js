@@ -16,11 +16,12 @@ const ReceiptPrint = ({ data, type }) => {
           backgroundColor: '#fff',
           color: '#000',
           fontWeight: 'bold',
-          fontSize: '12px',
+          fontSize: '16px', // زيادة حجم الخط
           padding: '10mm',
           textAlign: 'center',
           margin: '0 auto',
           fontFamily: 'Tajawal, Arial, sans-serif',
+          width: '100%', // عرض كامل للصفحة
         }}
       >
         <style>
@@ -35,34 +36,50 @@ const ReceiptPrint = ({ data, type }) => {
               .receipt-container {
                 position: absolute;
                 top: 0; /* البداية من أعلى الصفحة */
-                left: 50%;
-                transform: translateX(-50%); /* توسيط أفقي */
-                margin: 0; /* إزالة أي هوامش */
+                left: 0;
+                width: 210mm; /* عرض A4 كامل */
+                margin: 0 auto; /* توسيط أفقي */
                 padding: 0; /* إزالة أي padding خارجي */
+                display: flex;
+                justify-content: center; /* توسيط المحتوى أفقيًا */
               }
               .receipt-content {
+                width: 100%; /* عرض كامل */
+                max-width: 210mm; /* التأكد إن الوصل ما يتعداش عرض A4 */
                 padding: 10mm;
-                font-size: 12px;
+                font-size: 16px; /* حجم نص أكبر */
                 text-align: center;
-                margin: 0; /* إزالة الهوامش */
+                margin: 0 auto; /* توسيط أفقي */
               }
               .qr-code {
                 margin: 10mm auto;
               }
               table {
                 width: 100%;
-                max-width: 100%; /* التأكد إن الجدول يتكيف مع حجم الوصل */
+                max-width: 100%; /* الجدول ياخد عرض الوصل كامل */
                 border-collapse: collapse;
+                margin: 0 auto;
               }
               th, td {
                 border: 1px solid #000;
-                padding: 2mm;
-                font-size: 12px;
+                padding: 3mm; /* زيادة الـ padding عشان النص يكون أوضح */
+                font-size: 16px; /* حجم نص أكبر */
+              }
+              h5 {
+                font-size: 20px; /* حجم عنوان أكبر */
+              }
+              p {
+                font-size: 16px; /* حجم نص أكبر */
+                margin: 5mm 0;
+              }
+              @page {
+                size: A4; /* تحديد حجم الصفحة كـ A4 */
+                margin: 0; /* إزالة الهوامش */
               }
             }
           `}
         </style>
-        <img src="/logo.png" alt="Logo" style={{ height: '25mm', marginBottom: '10mm' }} />
+        <img src="/logo.png" alt="Logo" style={{ height: '30mm', marginBottom: '10mm' }} />
         <h5>Beauty Center</h5>
         {type === 'booking' ? (
           <>
@@ -193,7 +210,7 @@ const ReceiptPrint = ({ data, type }) => {
         )}
         {data.barcode && (
           <div className="qr-code">
-            <QRCode value={data.barcode} size={80} />
+            <QRCode value={data.barcode} size={100} /> {/* زيادة حجم الـ QR code */}
           </div>
         )}
       </div>
