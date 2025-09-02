@@ -24,8 +24,9 @@ function InstantServices({ user }) {
   const [totalPages, setTotalPages] = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchNameReceipt, setSearchNameReceipt] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // New loading state
 
-  // Custom styles للـ react-select
+  // Custom styles for react-select
   const customStyles = {
     control: (provided) => ({
       ...provided,
@@ -183,6 +184,8 @@ function InstantServices({ user }) {
       setMessage('الرجاء اختيار خدمة واحدة على الأقل');
       return;
     }
+    setIsLoading(true); // Start loading
+    setShowCreateModal(false); // Close modal immediately
     const submitData = {
       employeeId: formData.employeeId || null,
       services: formData.services.map(s => s.value)
@@ -207,10 +210,11 @@ function InstantServices({ user }) {
       }
       setFormData({ employeeId: '', services: [] });
       setEditItem(null);
-      setShowCreateModal(false);
     } catch (err) {
       console.error('Submit error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في إضافة/تعديل الخدمة الفورية');
+    } finally {
+      setIsLoading(false); // Stop loading
     }
   };
 
@@ -228,18 +232,20 @@ function InstantServices({ user }) {
   };
 
   const handleDelete = async () => {
+    setIsLoading(true); // Start loading
+    setShowDeleteModal(false); // Close modal immediately
     try {
       await axios.delete(`/api/instant-services/${deleteItem._id}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setInstantServices(instantServices.filter(s => s._id !== deleteItem._id));
       setMessage('تم حذف الخدمة الفورية بنجاح');
-      setShowDeleteModal(false);
       setDeleteItem(null);
     } catch (err) {
       console.error('Delete error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في الحذف');
-      setShowDeleteModal(false);
+    } finally {
+      setIsLoading(false); // Stop loading
     }
   };
 
@@ -256,6 +262,7 @@ function InstantServices({ user }) {
   };
 
   const handleSearch = async () => {
+    setIsLoading(true); // Start loading
     try {
       const res = await axios.get(`/api/instant-services?search=${searchNameReceipt}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -264,9 +271,12 @@ function InstantServices({ user }) {
       setInstantServices(res.data.instantServices);
       setCurrentPage(1);
       setTotalPages(res.data.pages);
+      setMessage('');
     } catch (err) {
       console.error('Search error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في البحث');
+    } finally {
+      setIsLoading(false); // Stop loading
     }
   };
 
@@ -274,7 +284,7 @@ function InstantServices({ user }) {
     <Container className="mt-5">
       <h2>إدارة الخدمات الفورية</h2>
       {message && <Alert variant={message.includes('خطأ') ? 'danger' : 'success'}>{message}</Alert>}
-      <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+      <Button variant="primary" onClick={() => setShowCreateModal(true)} disabled={isLoading}>
         <FontAwesomeIcon icon={faPlus} /> شغل جديد
       </Button>
       <Row className="mt-3">
@@ -287,11 +297,14 @@ function InstantServices({ user }) {
               onChange={(e) => setSearchNameReceipt(e.target.value)}
               placeholder="ابحث بالاسم أو رقم الوصل"
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              disabled={isLoading}
             />
           </Form.Group>
         </Col>
       </Row>
-      <Button variant="primary" onClick={handleSearch} className="mt-2">بحث</Button>
+      <Button variant="primary" onClick={handleSearch} className="mt-2" disabled={isLoading}>
+        {isLoading ? 'جاري البحث...' : 'بحث'}
+      </Button>
       <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>{editItem ? 'تعديل خدمة فورية' : 'إنشاء خدمة فورية'}</Modal.Title>
@@ -305,6 +318,7 @@ function InstantServices({ user }) {
                   as="select"
                   value={formData.employeeId}
                   onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
+                  disabled={isLoading}
                 >
                   <option value="">لا يوجد</option>
                   {users.map(user => (
@@ -329,6 +343,7 @@ function InstantServices({ user }) {
                   className="booking-services-select"
                   classNamePrefix="booking-services"
                   styles={customStyles}
+                  isDisabled={isLoading}
                 />
               </Form.Group>
             </Col>
@@ -338,7 +353,9 @@ function InstantServices({ user }) {
               </Form.Group>
             </Col>
             <Col md={12}>
-              <Button type="submit" className="mt-3">{editItem ? 'تعديل' : 'حفظ'}</Button>
+              <Button type="submit" className="mt-3" disabled={isLoading}>
+                {isLoading ? 'جاري الحفظ...' : (editItem ? 'تعديل' : 'حفظ')}
+              </Button>
               <Button
                 variant="secondary"
                 className="mt-3 ms-2"
@@ -347,6 +364,7 @@ function InstantServices({ user }) {
                   setEditItem(null);
                   setShowCreateModal(false);
                 }}
+                disabled={isLoading}
               >
                 إلغاء
               </Button>
@@ -370,16 +388,16 @@ function InstantServices({ user }) {
                     الإجمالي: {service.total} جنيه<br />
                     تاريخ: {new Date(service.createdAt).toLocaleDateString()}
                   </Card.Text>
-                  <Button variant="primary" className="me-2" onClick={() => handlePrint(service)}>
+                  <Button variant="primary" className="me-2" onClick={() => handlePrint(service)} disabled={isLoading}>
                     <FontAwesomeIcon icon={faPrint} />
                   </Button>
-                  <Button variant="primary" className="me-2" onClick={() => handleEdit(service)}>
+                  <Button variant="primary" className="me-2" onClick={() => handleEdit(service)} disabled={isLoading}>
                     <FontAwesomeIcon icon={faEdit} />
                   </Button>
-                  <Button variant="primary" className="me-2" onClick={() => handleShowDetails(service)}>
+                  <Button variant="primary" className="me-2" onClick={() => handleShowDetails(service)} disabled={isLoading}>
                     <FontAwesomeIcon icon={faEye} />
                   </Button>
-                  <Button variant="danger" onClick={() => { setDeleteItem(service); setShowDeleteModal(true); }}>
+                  <Button variant="danger" onClick={() => { setDeleteItem(service); setShowDeleteModal(true); }} disabled={isLoading}>
                     <FontAwesomeIcon icon={faTrash} />
                   </Button>
                 </Card.Body>
@@ -394,6 +412,7 @@ function InstantServices({ user }) {
             key={i + 1}
             active={i + 1 === currentPage}
             onClick={() => setCurrentPage(i + 1)}
+            disabled={isLoading}
           >
             {i + 1}
           </Pagination.Item>
@@ -405,8 +424,12 @@ function InstantServices({ user }) {
         </Modal.Header>
         <Modal.Body>هل أنت متأكد من حذف الخدمة الفورية؟</Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>إلغاء</Button>
-          <Button variant="danger" onClick={handleDelete}>حذف</Button>
+          <Button variant="secondary" onClick={() => setShowDeleteModal(false)} disabled={isLoading}>
+            إلغاء
+          </Button>
+          <Button variant="danger" onClick={handleDelete} disabled={isLoading}>
+            {isLoading ? 'جاري الحذف...' : 'حذف'}
+          </Button>
         </Modal.Footer>
       </Modal>
       <Modal show={showReceiptModal} onHide={() => setShowReceiptModal(false)} size="sm">
@@ -417,8 +440,12 @@ function InstantServices({ user }) {
           <ReceiptPrint data={currentReceipt} type="instant" />
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="primary" onClick={() => window.print()}>طباعة</Button>
-          <Button variant="secondary" onClick={() => setShowReceiptModal(false)}>إغلاق</Button>
+          <Button variant="primary" onClick={() => window.print()} disabled={isLoading}>
+            طباعة
+          </Button>
+          <Button variant="secondary" onClick={() => setShowReceiptModal(false)} disabled={isLoading}>
+            إغلاق
+          </Button>
         </Modal.Footer>
       </Modal>
       <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} size="lg">
@@ -460,7 +487,9 @@ function InstantServices({ user }) {
           )}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowDetailsModal(false)}>إغلاق</Button>
+          <Button variant="secondary" onClick={() => setShowDetailsModal(false)} disabled={isLoading}>
+            إغلاق
+          </Button>
         </Modal.Footer>
       </Modal>
     </Container>
