@@ -19,7 +19,7 @@ function ExpensesAdvances() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // New loading state
+  const [isLoading, setIsLoading] = useState(false);
 
   // Custom styles for react-select
   const customStyles = {
@@ -89,6 +89,26 @@ function ExpensesAdvances() {
       ...provided,
       backgroundColor: '#2a7a78',
       color: '#fff'
+    }),
+    clearIndicator: (provided) => ({
+      ...provided,
+      backgroundColor: '#2a7a78',
+      color: '#fff',
+      ':hover': {
+        color: '#78cc78'
+      }
+    }),
+    dropdownIndicator: (provided) => ({
+      ...provided,
+      backgroundColor: '#2a7a78',
+      color: '#fff',
+      ':hover': {
+        color: '#78cc78'
+      }
+    }),
+    indicatorSeparator: (provided) => ({
+      ...provided,
+      backgroundColor: '#98ff98'
     })
   };
 
@@ -115,8 +135,8 @@ function ExpensesAdvances() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true); // Start loading
-    setShowCreateModal(false); // Close modal immediately
+    setIsLoading(true);
+    setShowCreateModal(false);
     try {
       const res = await axios.post('/api/expenses-advances', formData, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -127,7 +147,7 @@ function ExpensesAdvances() {
     } catch (err) {
       setMessage(err.response?.data?.msg || 'خطأ في الإضافة');
     } finally {
-      setIsLoading(false); // Stop loading
+      setIsLoading(false);
     }
   };
 
@@ -143,8 +163,8 @@ function ExpensesAdvances() {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true); // Start loading
-    setEditItem(null); // Close modal immediately
+    setIsLoading(true);
+    setEditItem(null);
     try {
       const res = await axios.put(`/api/expenses-advances/${editItem._id}`, formData, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -155,20 +175,24 @@ function ExpensesAdvances() {
     } catch (err) {
       setMessage(err.response?.data?.msg || 'خطأ في التعديل');
     } finally {
-      setIsLoading(false); // Stop loading
+      setIsLoading(false);
     }
   };
 
   const handleDelete = async () => {
+    setIsLoading(true);
+    setShowDeleteModal(false);
     try {
       await axios.delete(`/api/expenses-advances/${deleteItem._id}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setItems(items.filter(item => item._id !== deleteItem._id));
-      setShowDeleteModal(false);
       setMessage('تم الحذف بنجاح');
+      setDeleteItem(null);
     } catch (err) {
       setMessage(err.response?.data?.msg || 'خطأ في الحذف');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -180,7 +204,7 @@ function ExpensesAdvances() {
   return (
     <Container className="mt-5">
       <h2>المصروفات والسلف</h2>
-      <Button className="mb-3" onClick={() => setShowCreateModal(true)}>
+      <Button className="mb-3" onClick={() => setShowCreateModal(true)} disabled={isLoading}>
         <FontAwesomeIcon icon={faPlus} /> إضافة مصروف/سلفة
       </Button>
       <Form.Group className="mb-3">
@@ -189,6 +213,7 @@ function ExpensesAdvances() {
           placeholder="ابحث باسم العميل أو رقم الوصل"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          disabled={isLoading}
         />
       </Form.Group>
       {message && <Alert variant={message.includes('خطأ') ? 'danger' : 'success'}>{message}</Alert>}
@@ -210,13 +235,13 @@ function ExpensesAdvances() {
                   التاريخ: {new Date(item.createdAt).toLocaleDateString()}<br />
                   أضيف بواسطة: {item.createdBy?.username || item.userId?.username || 'غير معروف'}
                 </Card.Text>
-                <Button variant="primary" className="me-2" onClick={() => handleEdit(item)}>
+                <Button variant="primary" className="me-2" onClick={() => handleEdit(item)} disabled={isLoading}>
                   <FontAwesomeIcon icon={faEdit} />
                 </Button>
-                <Button variant="primary" className="me-2" onClick={() => handleShowDetails(item)}>
+                <Button variant="primary" className="me-2" onClick={() => handleShowDetails(item)} disabled={isLoading}>
                   <FontAwesomeIcon icon={faEye} />
                 </Button>
-                <Button variant="danger" onClick={() => { setDeleteItem(item); setShowDeleteModal(true); }}>
+                <Button variant="danger" onClick={() => { setDeleteItem(item); setShowDeleteModal(true); }} disabled={isLoading}>
                   <FontAwesomeIcon icon={faTrash} />
                 </Button>
               </Card.Body>
@@ -224,9 +249,9 @@ function ExpensesAdvances() {
           </Col>
         ))}
       </Row>
-      <Pagination(find: const [currentPage, setCurrentPage] = useState(1);) className="justify-content-center mt-4">
+      <Pagination className="justify-content-center mt-4">
         {Array.from({ length: totalPages }, (_, i) => (
-          <Pagination.Item key={i + 1} active={i + 1 === currentPage} onClick={() => setCurrentPage(i + 1)}>
+          <Pagination.Item key={i + 1} active={i + 1 === currentPage} onClick={() => setCurrentPage(i + 1)} disabled={isLoading}>
             {i + 1}
           </Pagination.Item>
         ))}
@@ -243,6 +268,7 @@ function ExpensesAdvances() {
                 as="select"
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                disabled={isLoading}
               >
                 <option value="expense">مصروف</option>
                 <option value="advance">سلفة</option>
@@ -253,11 +279,12 @@ function ExpensesAdvances() {
                 <Form.Label>اختر الموظف</Form.Label>
                 <Select
                   options={users.map(user => ({ value: user._id, label: user.username }))}
-                  value={users.find(user => user._id === formData.userId) ? { value: formData.userId, label: users.find(user => user._id === formData.userId)?.username } : null}
+                  value={formData.userId ? { value: formData.userId, label: users.find(user => user._id === formData.userId)?.username || '' } : null}
                   onChange={(selected) => setFormData({ ...formData, userId: selected ? selected.value : '' })}
                   styles={customStyles}
                   placeholder="اختر الموظف"
                   isClearable
+                  isDisabled={isLoading}
                 />
               </Form.Group>
             )}
@@ -267,6 +294,7 @@ function ExpensesAdvances() {
                 type="text"
                 value={formData.details}
                 onChange={(e) => setFormData({ ...formData, details: e.target.value })}
+                disabled={isLoading}
               />
             </Form.Group>
             <Form.Group className="mb-3">
@@ -276,6 +304,7 @@ function ExpensesAdvances() {
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                 required
+                disabled={isLoading}
               />
             </Form.Group>
             <Button type="submit" disabled={isLoading}>
@@ -299,6 +328,7 @@ function ExpensesAdvances() {
                 as="select"
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                disabled={isLoading}
               >
                 <option value="expense">مصروف</option>
                 <option value="advance">سلفة</option>
@@ -309,11 +339,12 @@ function ExpensesAdvances() {
                 <Form.Label>اختر الموظف</Form.Label>
                 <Select
                   options={users.map(user => ({ value: user._id, label: user.username }))}
-                  value={users.find(user => user._id === formData.userId) ? { value: formData.userId, label: users.find(user => user._id === formData.userId)?.username } : null}
+                  value={formData.userId ? { value: formData.userId, label: users.find(user => user._id === formData.userId)?.username || '' } : null}
                   onChange={(selected) => setFormData({ ...formData, userId: selected ? selected.value : '' })}
                   styles={customStyles}
                   placeholder="اختر الموظف"
                   isClearable
+                  isDisabled={isLoading}
                 />
               </Form.Group>
             )}
@@ -323,6 +354,7 @@ function ExpensesAdvances() {
                 type="text"
                 value={formData.details}
                 onChange={(e) => setFormData({ ...formData, details: e.target.value })}
+                disabled={isLoading}
               />
             </Form.Group>
             <Form.Group className="mb-3">
@@ -332,6 +364,7 @@ function ExpensesAdvances() {
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                 required
+                disabled={isLoading}
               />
             </Form.Group>
             <Button type="submit" disabled={isLoading}>
@@ -349,8 +382,12 @@ function ExpensesAdvances() {
         </Modal.Header>
         <Modal.Body>هل أنت متأكد من حذف {deleteItem?.type === 'expense' ? 'المصروف' : 'السلفة'}؟</Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>إلغاء</Button>
-          <Button variant="danger" onClick={handleDelete}>حذف</Button>
+          <Button variant="secondary" onClick={() => setShowDeleteModal(false)} disabled={isLoading}>
+            إلغاء
+          </Button>
+          <Button variant="danger" onClick={handleDelete} disabled={isLoading}>
+            {isLoading ? 'جاري الحذف...' : 'حذف'}
+          </Button>
         </Modal.Footer>
       </Modal>
       <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} size="lg">
@@ -376,7 +413,9 @@ function ExpensesAdvances() {
           )}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowDetailsModal(false)}>إغلاق</Button>
+          <Button variant="secondary" onClick={() => setShowDetailsModal(false)} disabled={isLoading}>
+            إغلاق
+          </Button>
         </Modal.Footer>
       </Modal>
     </Container>
