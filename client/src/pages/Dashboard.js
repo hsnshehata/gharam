@@ -50,8 +50,9 @@ function Dashboard({ user }) {
   const [selectedPackageServices, setSelectedPackageServices] = useState([]);
   const [total, setTotal] = useState(0);
   const [remaining, setRemaining] = useState(0);
+  const [isLoading, setIsLoading] = useState(false); // New loading state
 
-  // Custom styles للـ react-select
+  // Custom styles for react-select
   const customStyles = {
     control: (provided) => ({
       ...provided,
@@ -255,6 +256,8 @@ function Dashboard({ user }) {
 
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    setShowBookingModal(false);
     const submitData = {
       ...bookingFormData,
       packageId: bookingFormData.packageId || null,
@@ -304,10 +307,11 @@ function Dashboard({ user }) {
         clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: 0
       });
       setEditBooking(null);
-      setShowBookingModal(false);
     } catch (err) {
       console.error('Booking submit error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في إضافة/تعديل الحجز');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -317,6 +321,8 @@ function Dashboard({ user }) {
       setMessage('الرجاء اختيار خدمة واحدة على الأقل');
       return;
     }
+    setIsLoading(true);
+    setShowInstantServiceModal(false);
     const submitData = {
       employeeId: instantServiceFormData.employeeId || null,
       services: instantServiceFormData.services.map(s => s.value)
@@ -339,10 +345,11 @@ function Dashboard({ user }) {
       }
       setInstantServiceFormData({ employeeId: '', services: [] });
       setEditItem(null);
-      setShowInstantServiceModal(false);
     } catch (err) {
       console.error('Instant service submit error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في إضافة/تعديل الخدمة الفورية');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -363,16 +370,19 @@ function Dashboard({ user }) {
         return;
       }
     }
+    setIsLoading(true);
+    setShowExpenseAdvanceModal(false);
     try {
       const res = await axios.post('/api/expenses-advances', expenseAdvanceFormData, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setMessage(`تم إضافة ${res.data.type === 'expense' ? 'المصروف' : 'السلفة'} بنجاح`);
       setExpenseAdvanceFormData({ type: 'expense', details: '', amount: 0, userId: '' });
-      setShowExpenseAdvanceModal(false);
     } catch (err) {
       console.error('Expense/Advance submit error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في إضافة العملية');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -403,6 +413,8 @@ function Dashboard({ user }) {
       setShowDeleteModal(false);
       return;
     }
+    setIsLoading(true);
+    setShowDeleteModal(false);
     try {
       await axios.delete(`/api/bookings/${deleteItem._id}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -413,12 +425,12 @@ function Dashboard({ user }) {
         photographyBookings: bookings.photographyBookings.filter(b => b._id !== deleteItem._id)
       });
       setMessage('تم حذف الحجز بنجاح');
-      setShowDeleteModal(false);
       setDeleteItem(null);
     } catch (err) {
       console.error('Delete error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في الحذف');
-      setShowDeleteModal(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -427,6 +439,8 @@ function Dashboard({ user }) {
       setMessage('خطأ: قيمة القسط أو رقم الحجز غير صالح');
       return;
     }
+    setIsLoading(true);
+    setShowInstallmentModal(false);
     try {
       const res = await axios.post(`/api/bookings/${bookingId}/installment`, { amount: parseFloat(installmentAmount) }, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -437,11 +451,12 @@ function Dashboard({ user }) {
         photographyBookings: bookings.photographyBookings.map(b => (b._id === bookingId ? res.data.booking : b))
       });
       setMessage('تم إضافة القسط بنجاح');
-      setShowInstallmentModal(false);
       setInstallmentAmount(0);
     } catch (err) {
       console.error('Installment error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في إضافة القسط');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -456,6 +471,7 @@ function Dashboard({ user }) {
   };
 
   const handleSearch = async () => {
+    setIsLoading(true);
     try {
       const [summaryRes, bookingsRes] = await Promise.all([
         axios.get(`/api/dashboard/summary?date=${date}`, {
@@ -474,6 +490,8 @@ function Dashboard({ user }) {
       console.error('Search error:', err.response?.data || err.message);
       setMessage('خطأ في البحث');
       setBookings({ makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -490,20 +508,21 @@ function Dashboard({ user }) {
               value={date}
               onChange={(e) => setDate(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              disabled={isLoading}
             />
           </Form.Group>
         </Col>
         <Col md={6} className="d-flex align-items-end">
-          <Button variant="primary" onClick={handleSearch} className="me-2">
-            <FontAwesomeIcon icon={faSearch} /> بحث
+          <Button variant="primary" onClick={handleSearch} className="me-2" disabled={isLoading}>
+            <FontAwesomeIcon icon={faSearch} /> {isLoading ? 'جاري البحث...' : 'بحث'}
           </Button>
-          <Button variant="primary" onClick={() => setShowBookingModal(true)} className="me-2">
+          <Button variant="primary" onClick={() => setShowBookingModal(true)} className="me-2" disabled={isLoading}>
             <FontAwesomeIcon icon={faPlus} /> إنشاء حجز جديد
           </Button>
-          <Button variant="primary" onClick={() => setShowInstantServiceModal(true)} className="me-2">
+          <Button variant="primary" onClick={() => setShowInstantServiceModal(true)} className="me-2" disabled={isLoading}>
             <FontAwesomeIcon icon={faPlus} /> شغل جديد
           </Button>
-          <Button variant="primary" onClick={() => setShowExpenseAdvanceModal(true)}>
+          <Button variant="primary" onClick={() => setShowExpenseAdvanceModal(true)} disabled={isLoading}>
             <FontAwesomeIcon icon={faPlus} /> إضافة مصروف/سلفة
           </Button>
         </Col>
@@ -521,19 +540,19 @@ function Dashboard({ user }) {
                   المدفوع: {booking.deposit} جنيه<br />
                   المتبقي: {booking.remaining} جنيه
                 </Card.Text>
-                <Button variant="primary" className="me-2" onClick={() => handlePrint(booking)}>
+                <Button variant="primary" className="me-2" onClick={() => handlePrint(booking)} disabled={isLoading}>
                   <FontAwesomeIcon icon={faPrint} />
                 </Button>
-                <Button variant="primary" className="me-2" onClick={() => handleBookingEdit(booking)}>
+                <Button variant="primary" className="me-2" onClick={() => handleBookingEdit(booking)} disabled={isLoading}>
                   <FontAwesomeIcon icon={faEdit} />
                 </Button>
-                <Button variant="primary" className="me-2" onClick={() => handleShowDetails(booking)}>
+                <Button variant="primary" className="me-2" onClick={() => handleShowDetails(booking)} disabled={isLoading}>
                   <FontAwesomeIcon icon={faEye} />
                 </Button>
-                <Button variant="primary" className="me-2" onClick={() => { setDeleteItem(booking); setShowInstallmentModal(true); }}>
+                <Button variant="primary" className="me-2" onClick={() => { setDeleteItem(booking); setShowInstallmentModal(true); }} disabled={isLoading}>
                   <FontAwesomeIcon icon={faDollarSign} />
                 </Button>
-                <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }}>
+                <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }} disabled={isLoading}>
                   <FontAwesomeIcon icon={faTrash} />
                 </Button>
               </Card.Body>
@@ -554,19 +573,19 @@ function Dashboard({ user }) {
                   المدفوع: {booking.deposit} جنيه<br />
                   المتبقي: {booking.remaining} جنيه
                 </Card.Text>
-                <Button variant="primary" className="me-2" onClick={() => handlePrint(booking)}>
+                <Button variant="primary" className="me-2" onClick={() => handlePrint(booking)} disabled={isLoading}>
                   <FontAwesomeIcon icon={faPrint} />
                 </Button>
-                <Button variant="primary" className="me-2" onClick={() => handleBookingEdit(booking)}>
+                <Button variant="primary" className="me-2" onClick={() => handleBookingEdit(booking)} disabled={isLoading}>
                   <FontAwesomeIcon icon={faEdit} />
                 </Button>
-                <Button variant="primary" className="me-2" onClick={() => handleShowDetails(booking)}>
+                <Button variant="primary" className="me-2" onClick={() => handleShowDetails(booking)} disabled={isLoading}>
                   <FontAwesomeIcon icon={faEye} />
                 </Button>
-                <Button variant="primary" className="me-2" onClick={() => { setDeleteItem(booking); setShowInstallmentModal(true); }}>
+                <Button variant="primary" className="me-2" onClick={() => { setDeleteItem(booking); setShowInstallmentModal(true); }} disabled={isLoading}>
                   <FontAwesomeIcon icon={faDollarSign} />
                 </Button>
-                <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }}>
+                <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }} disabled={isLoading}>
                   <FontAwesomeIcon icon={faTrash} />
                 </Button>
               </Card.Body>
@@ -587,19 +606,19 @@ function Dashboard({ user }) {
                   المدفوع: {booking.deposit} جنيه<br />
                   المتبقي: {booking.remaining} جنيه
                 </Card.Text>
-                <Button variant="primary" className="me-2" onClick={() => handlePrint(booking)}>
+                <Button variant="primary" className="me-2" onClick={() => handlePrint(booking)} disabled={isLoading}>
                   <FontAwesomeIcon icon={faPrint} />
                 </Button>
-                <Button variant="primary" className="me-2" onClick={() => handleBookingEdit(booking)}>
+                <Button variant="primary" className="me-2" onClick={() => handleBookingEdit(booking)} disabled={isLoading}>
                   <FontAwesomeIcon icon={faEdit} />
                 </Button>
-                <Button variant="primary" className="me-2" onClick={() => handleShowDetails(booking)}>
+                <Button variant="primary" className="me-2" onClick={() => handleShowDetails(booking)} disabled={isLoading}>
                   <FontAwesomeIcon icon={faEye} />
                 </Button>
-                <Button variant="primary" className="me-2" onClick={() => { setDeleteItem(booking); setShowInstallmentModal(true); }}>
+                <Button variant="primary" className="me-2" onClick={() => { setDeleteItem(booking); setShowInstallmentModal(true); }} disabled={isLoading}>
                   <FontAwesomeIcon icon={faDollarSign} />
                 </Button>
-                <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }}>
+                <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }} disabled={isLoading}>
                   <FontAwesomeIcon icon={faTrash} />
                 </Button>
               </Card.Body>
@@ -634,6 +653,7 @@ function Dashboard({ user }) {
                     value={bookingFormData.packageId}
                     onChange={(e) => setBookingFormData({ ...bookingFormData, packageId: e.target.value })}
                     required
+                    disabled={isLoading}
                   >
                     <option value="">اختر باكدج</option>
                     {packages.map(pkg => (
@@ -650,6 +670,7 @@ function Dashboard({ user }) {
                     value={bookingFormData.eventDate}
                     onChange={(e) => setBookingFormData({ ...bookingFormData, eventDate: e.target.value })}
                     required
+                    disabled={isLoading}
                   />
                 </Form.Group>
               </Col>
@@ -660,6 +681,7 @@ function Dashboard({ user }) {
                     as="select"
                     value={bookingFormData.hennaPackageId}
                     onChange={(e) => setBookingFormData({ ...bookingFormData, hennaPackageId: e.target.value })}
+                    disabled={isLoading}
                   >
                     <option value="">لا يوجد</option>
                     {packages.filter(pkg => pkg.type === 'makeup').map(pkg => (
@@ -677,6 +699,7 @@ function Dashboard({ user }) {
                       value={bookingFormData.hennaDate}
                       onChange={(e) => setBookingFormData({ ...bookingFormData, hennaDate: e.target.value })}
                       required
+                      disabled={isLoading}
                     />
                   </Form.Group>
                 </Col>
@@ -688,6 +711,7 @@ function Dashboard({ user }) {
                     as="select"
                     value={bookingFormData.photographyPackageId}
                     onChange={(e) => setBookingFormData({ ...bookingFormData, photographyPackageId: e.target.value })}
+                    disabled={isLoading}
                   >
                     <option value="">لا يوجد</option>
                     {packages.filter(pkg => pkg.type === 'photography').map(pkg => (
@@ -709,6 +733,7 @@ function Dashboard({ user }) {
                     className="booking-services-select"
                     classNamePrefix="booking-services"
                     styles={customStyles}
+                    isDisabled={isLoading}
                   />
                 </Form.Group>
               </Col>
@@ -725,6 +750,7 @@ function Dashboard({ user }) {
                     className="booking-services-select"
                     classNamePrefix="booking-services"
                     styles={customStyles}
+                    isDisabled={isLoading}
                   />
                 </Form.Group>
               </Col>
@@ -736,6 +762,7 @@ function Dashboard({ user }) {
                     value={bookingFormData.hairStraightening}
                     onChange={(e) => setBookingFormData({ ...bookingFormData, hairStraightening: e.target.value })}
                     className="custom-select"
+                    disabled={isLoading}
                   >
                     <option value="no">لا</option>
                     <option value="yes">نعم</option>
@@ -752,6 +779,7 @@ function Dashboard({ user }) {
                         value={bookingFormData.hairStraighteningPrice}
                         onChange={(e) => setBookingFormData({ ...bookingFormData, hairStraighteningPrice: e.target.value })}
                         required
+                        disabled={isLoading}
                       />
                     </Form.Group>
                   </Col>
@@ -763,6 +791,7 @@ function Dashboard({ user }) {
                         value={bookingFormData.hairStraighteningDate}
                         onChange={(e) => setBookingFormData({ ...bookingFormData, hairStraighteningDate: e.target.value })}
                         required
+                        disabled={isLoading}
                       />
                     </Form.Group>
                   </Col>
@@ -776,6 +805,7 @@ function Dashboard({ user }) {
                     value={bookingFormData.clientName}
                     onChange={(e) => setBookingFormData({ ...bookingFormData, clientName: e.target.value })}
                     required
+                    disabled={isLoading}
                   />
                 </Form.Group>
               </Col>
@@ -787,6 +817,7 @@ function Dashboard({ user }) {
                     value={bookingFormData.clientPhone}
                     onChange={(e) => setBookingFormData({ ...bookingFormData, clientPhone: e.target.value })}
                     required
+                    disabled={isLoading}
                   />
                 </Form.Group>
               </Col>
@@ -797,6 +828,7 @@ function Dashboard({ user }) {
                     type="text"
                     value={bookingFormData.city}
                     onChange={(e) => setBookingFormData({ ...bookingFormData, city: e.target.value })}
+                    disabled={isLoading}
                   />
                 </Form.Group>
               </Col>
@@ -808,6 +840,7 @@ function Dashboard({ user }) {
                     value={bookingFormData.deposit}
                     onChange={(e) => setBookingFormData({ ...bookingFormData, deposit: e.target.value })}
                     required
+                    disabled={isLoading}
                   />
                 </Form.Group>
               </Col>
@@ -822,7 +855,9 @@ function Dashboard({ user }) {
                 </Form.Group>
               </Col>
               <Col md={12}>
-                <Button type="submit" className="mt-3">{editBooking ? 'تعديل' : 'حفظ'}</Button>
+                <Button type="submit" className="mt-3" disabled={isLoading}>
+                  {isLoading ? 'جاري الحفظ...' : (editBooking ? 'تعديل' : 'حفظ')}
+                </Button>
                 <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
                   setBookingFormData({
                     packageId: '', hennaPackageId: '', photographyPackageId: '', extraServices: [], returnedServices: [],
@@ -831,7 +866,7 @@ function Dashboard({ user }) {
                   });
                   setEditBooking(null);
                   setShowBookingModal(false);
-                }}>
+                }} disabled={isLoading}>
                   إلغاء
                 </Button>
               </Col>
@@ -853,6 +888,7 @@ function Dashboard({ user }) {
                     as="select"
                     value={instantServiceFormData.employeeId}
                     onChange={(e) => setInstantServiceFormData({ ...instantServiceFormData, employeeId: e.target.value })}
+                    disabled={isLoading}
                   >
                     <option value="">لا يوجد</option>
                     {users.map(user => (
@@ -874,6 +910,7 @@ function Dashboard({ user }) {
                     className="booking-services-select"
                     classNamePrefix="booking-services"
                     styles={customStyles}
+                    isDisabled={isLoading}
                   />
                 </Form.Group>
               </Col>
@@ -883,12 +920,14 @@ function Dashboard({ user }) {
                 </Form.Group>
               </Col>
               <Col md={12}>
-                <Button type="submit" className="mt-3">{editItem ? 'تعديل' : 'حفظ'}</Button>
+                <Button type="submit" className="mt-3" disabled={isLoading}>
+                  {isLoading ? 'جاري الحفظ...' : (editItem ? 'تعديل' : 'حفظ')}
+                </Button>
                 <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
                   setInstantServiceFormData({ employeeId: '', services: [] });
                   setEditItem(null);
                   setShowInstantServiceModal(false);
-                }}>
+                }} disabled={isLoading}>
                   إلغاء
                 </Button>
               </Col>
@@ -910,6 +949,7 @@ function Dashboard({ user }) {
                     as="select"
                     value={expenseAdvanceFormData.type}
                     onChange={(e) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, type: e.target.value, details: '', userId: '' })}
+                    disabled={isLoading}
                   >
                     <option value="expense">مصروف</option>
                     <option value="advance">سلفة</option>
@@ -926,6 +966,7 @@ function Dashboard({ user }) {
                         value={expenseAdvanceFormData.details}
                         onChange={(e) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, details: e.target.value })}
                         required
+                        disabled={isLoading}
                       />
                     </Form.Group>
                   </Col>
@@ -937,6 +978,7 @@ function Dashboard({ user }) {
                         value={expenseAdvanceFormData.amount}
                         onChange={(e) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, amount: e.target.value })}
                         required
+                        disabled={isLoading}
                       />
                     </Form.Group>
                   </Col>
@@ -948,13 +990,15 @@ function Dashboard({ user }) {
                       <Form.Label>اسم الموظف</Form.Label>
                       <Select
                         options={users.map(user => ({ value: user._id, label: `${user.username} (المتبقي: ${user.remainingSalary} جنيه)` }))}
-                        value={users.find(u => u._id === expenseAdvanceFormData.userId) ? { value: expenseAdvanceFormData.userId, label: `${users.find(u => u._id === expenseAdvanceFormData.userId).username} (المتبقي: ${users.find(u => u._id === expenseAdvanceFormData.userId).remainingSalary} جنيه)` } : null}
+                        value={expenseAdvanceFormData.userId ? { value: expenseAdvanceFormData.userId, label: users.find(u => u._id === expenseAdvanceFormData.userId)?.username ? `${users.find(u => u._id === expenseAdvanceFormData.userId).username} (المتبقي: ${users.find(u => u._id === expenseAdvanceFormData.userId).remainingSalary} جنيه)` : '' } : null}
                         onChange={(selected) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, userId: selected ? selected.value : '' })}
                         isSearchable
                         placeholder="اختر الموظف..."
                         className="booking-services-select"
                         classNamePrefix="booking-services"
                         styles={customStyles}
+                        isClearable
+                        isDisabled={isLoading}
                       />
                     </Form.Group>
                   </Col>
@@ -966,17 +1010,20 @@ function Dashboard({ user }) {
                         value={expenseAdvanceFormData.amount}
                         onChange={(e) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, amount: e.target.value })}
                         required
+                        disabled={isLoading}
                       />
                     </Form.Group>
                   </Col>
                 </>
               )}
               <Col md={12}>
-                <Button type="submit" className="mt-3">حفظ</Button>
+                <Button type="submit" className="mt-3" disabled={isLoading}>
+                  {isLoading ? 'جاري الحفظ...' : 'حفظ'}
+                </Button>
                 <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
                   setExpenseAdvanceFormData({ type: 'expense', details: '', amount: 0, userId: '' });
                   setShowExpenseAdvanceModal(false);
-                }}>
+                }} disabled={isLoading}>
                   إلغاء
                 </Button>
               </Col>
@@ -990,8 +1037,12 @@ function Dashboard({ user }) {
         </Modal.Header>
         <Modal.Body>هل أنت متأكد من حذف الحجز؟</Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>إلغاء</Button>
-          <Button variant="danger" onClick={handleDelete}>حذف</Button>
+          <Button variant="secondary" onClick={() => setShowDeleteModal(false)} disabled={isLoading}>
+            إلغاء
+          </Button>
+          <Button variant="danger" onClick={handleDelete} disabled={isLoading}>
+            {isLoading ? 'جاري الحذف...' : 'حذف'}
+          </Button>
         </Modal.Footer>
       </Modal>
       <Modal show={showInstallmentModal} onHide={() => setShowInstallmentModal(false)}>
@@ -1006,12 +1057,17 @@ function Dashboard({ user }) {
               value={installmentAmount}
               onChange={(e) => setInstallmentAmount(e.target.value)}
               required
+              disabled={isLoading}
             />
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowInstallmentModal(false)}>إلغاء</Button>
-          <Button variant="primary" onClick={() => handleAddInstallment(deleteItem?._id)}>حفظ</Button>
+          <Button variant="secondary" onClick={() => setShowInstallmentModal(false)} disabled={isLoading}>
+            إلغاء
+          </Button>
+          <Button variant="primary" onClick={() => handleAddInstallment(deleteItem?._id)} disabled={isLoading}>
+            {isLoading ? 'جاري الحفظ...' : 'حفظ'}
+          </Button>
         </Modal.Footer>
       </Modal>
       <Modal show={showReceiptModal} onHide={() => setShowReceiptModal(false)} size="sm">
@@ -1022,8 +1078,12 @@ function Dashboard({ user }) {
           <ReceiptPrint data={currentReceipt} type={currentReceipt?.type || 'booking'} />
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="primary" onClick={() => window.print()}>طباعة</Button>
-          <Button variant="secondary" onClick={() => setShowReceiptModal(false)}>إغلاق</Button>
+          <Button variant="primary" onClick={() => window.print()} disabled={isLoading}>
+            طباعة
+          </Button>
+          <Button variant="secondary" onClick={() => setShowReceiptModal(false)} disabled={isLoading}>
+            إغلاق
+          </Button>
         </Modal.Footer>
       </Modal>
       <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} size="lg">
@@ -1113,7 +1173,9 @@ function Dashboard({ user }) {
           )}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowDetailsModal(false)}>إغلاق</Button>
+          <Button variant="secondary" onClick={() => setShowDetailsModal(false)} disabled={isLoading}>
+            إغلاق
+          </Button>
         </Modal.Footer>
       </Modal>
     </Container>
