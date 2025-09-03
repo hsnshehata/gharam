@@ -7,7 +7,7 @@ import { faEdit, faEye, faTrash, faPlus } from '@fortawesome/free-solid-svg-icon
 
 function ExpensesAdvances() {
   const [formData, setFormData] = useState({ type: 'expense', details: '', amount: 0, userId: '' });
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState([]); // Initialize as empty array
   const [users, setUsers] = useState([]);
   const [message, setMessage] = useState('');
   const [editItem, setEditItem] = useState(null);
@@ -20,6 +20,7 @@ function ExpensesAdvances() {
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDataLoading, setIsDataLoading] = useState(true); // New state for data loading
 
   // Custom styles for react-select
   const customStyles = {
@@ -114,6 +115,7 @@ function ExpensesAdvances() {
 
   useEffect(() => {
     const fetchData = async () => {
+      setIsDataLoading(true); // Start data loading
       try {
         const [itemsRes, usersRes] = await Promise.all([
           axios.get(`/api/expenses-advances?page=${currentPage}&search=${search}`, {
@@ -123,11 +125,14 @@ function ExpensesAdvances() {
             headers: { 'x-auth-token': localStorage.getItem('token') }
           })
         ]);
-        setItems(itemsRes.data.expensesAdvances);
-        setTotalPages(itemsRes.data.totalPages);
-        setUsers(usersRes.data);
+        setItems(itemsRes.data.expensesAdvances || []); // Ensure items is an array
+        setTotalPages(itemsRes.data.totalPages || 1);
+        setUsers(usersRes.data || []);
       } catch (err) {
         setMessage('خطأ في جلب البيانات');
+        setItems([]); // Fallback to empty array on error
+      } finally {
+        setIsDataLoading(false); // Stop data loading
       }
     };
     fetchData();
@@ -213,45 +218,51 @@ function ExpensesAdvances() {
           placeholder="ابحث باسم العميل أو رقم الوصل"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          disabled={isLoading}
+          disabled={isLoading || isDataLoading}
         />
       </Form.Group>
       {message && <Alert variant={message.includes('خطأ') ? 'danger' : 'success'}>{message}</Alert>}
-      <Row>
-        {items.map(item => (
-          <Col md={4} key={item._id} className="mb-3">
-            <Card>
-              <Card.Body>
-                <Card.Title>{item.type === 'expense' ? 'مصروف' : 'سلفة'}</Card.Title>
-                <Card.Text>
-                  التفاصيل: {item.details || 'غير محدد'}<br />
-                  المبلغ: {item.amount} جنيه<br />
-                  {item.type === 'advance' && (
-                    <>
-                      الموظف: {item.userId?.username || 'غير محدد'}<br />
-                      المتبقي من الراتب: {item.userId?.remainingSalary || 0} جنيه<br />
-                    </>
-                  )}
-                  التاريخ: {new Date(item.createdAt).toLocaleDateString()}<br />
-                  أضيف بواسطة: {item.createdBy?.username || item.userId?.username || 'غير معروف'}
-                </Card.Text>
-                <Button variant="primary" className="me-2" onClick={() => handleEdit(item)} disabled={isLoading}>
-                  <FontAwesomeIcon icon={faEdit} />
-                </Button>
-                <Button variant="primary" className="me-2" onClick={() => handleShowDetails(item)} disabled={isLoading}>
-                  <FontAwesomeIcon icon={faEye} />
-                </Button>
-                <Button variant="danger" onClick={() => { setDeleteItem(item); setShowDeleteModal(true); }} disabled={isLoading}>
-                  <FontAwesomeIcon icon={faTrash} />
-                </Button>
-              </Card.Body>
-            </Card>
-          </Col>
-        ))}
-      </Row>
+      {isDataLoading ? (
+        <Alert variant="info">جاري تحميل البيانات...</Alert>
+      ) : items.length === 0 ? (
+        <Alert variant="info">لا توجد مصروفات أو سلف متاحة</Alert>
+      ) : (
+        <Row>
+          {items.map(item => (
+            <Col md={4} key={item._id} className="mb-3">
+              <Card>
+                <Card.Body>
+                  <Card.Title>{item.type === 'expense' ? 'مصروف' : 'سلفة'}</Card.Title>
+                  <Card.Text>
+                    التفاصيل: {item.details || 'غير محدد'}<br />
+                    المبلغ: {item.amount} جنيه<br />
+                    {item.type === 'advance' && (
+                      <>
+                        الموظف: {item.userId?.username || 'غير محدد'}<br />
+                        المتبقي من الراتب: {item.userId?.remainingSalary || 0} جنيه<br />
+                      </>
+                    )}
+                    التاريخ: {new Date(item.createdAt).toLocaleDateString()}<br />
+                    أضيف بواسطة: {item.createdBy?.username || item.userId?.username || 'غير معروف'}
+                  </Card.Text>
+                  <Button variant="primary" className="me-2" onClick={() => handleEdit(item)} disabled={isLoading}>
+                    <FontAwesomeIcon icon={faEdit} />
+                  </Button>
+                  <Button variant="primary" className="me-2" onClick={() => handleShowDetails(item)} disabled={isLoading}>
+                    <FontAwesomeIcon icon={faEye} />
+                  </Button>
+                  <Button variant="danger" onClick={() => { setDeleteItem(item); setShowDeleteModal(true); }} disabled={isLoading}>
+                    <FontAwesomeIcon icon={faTrash} />
+                  </Button>
+                </Card.Body>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )}
       <Pagination className="justify-content-center mt-4">
         {Array.from({ length: totalPages }, (_, i) => (
-          <Pagination.Item key={i + 1} active={i + 1 === currentPage} onClick={() => setCurrentPage(i + 1)} disabled={isLoading}>
+          <Pagination.Item key={i + 1} active={i + 1 === currentPage} onClick={() => setCurrentPage(i + 1)} disabled={isLoading || isDataLoading}>
             {i + 1}
           </Pagination.Item>
         ))}
