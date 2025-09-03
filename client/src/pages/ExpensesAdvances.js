@@ -19,6 +19,7 @@ function ExpensesAdvances() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // New loading state
 
   // Custom styles للـ react-select
   const customStyles = {
@@ -149,7 +150,8 @@ function ExpensesAdvances() {
         return;
       }
     }
-    console.log('Submitting formData:', formData);
+    setIsLoading(true);
+    setShowCreateModal(false); // Close Modal immediately
     try {
       if (editItem) {
         console.log('Updating item with ID:', editItem._id, 'Type:', editItem.type);
@@ -169,10 +171,11 @@ function ExpensesAdvances() {
       }
       setFormData({ type: 'expense', details: '', amount: 0, userId: '' });
       setEditItem(null);
-      setShowCreateModal(false);
     } catch (err) {
       console.error('Submit error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في إضافة/تعديل العملية');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -194,6 +197,8 @@ function ExpensesAdvances() {
       setShowDeleteModal(false);
       return;
     }
+    setIsLoading(true);
+    setShowDeleteModal(false);
     try {
       console.log('Deleting item with ID:', deleteItem._id, 'Type:', deleteItem.type);
       await axios.delete(`/api/expenses-advances/${deleteItem._id}?type=${deleteItem.type}`, {
@@ -201,12 +206,12 @@ function ExpensesAdvances() {
       });
       setItems(items.filter(i => i._id !== deleteItem._id));
       setMessage(`تم حذف ${deleteItem.type === 'expense' ? 'المصروف' : 'السلفة'} بنجاح`);
-      setShowDeleteModal(false);
       setDeleteItem(null);
     } catch (err) {
       console.error('Delete error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في الحذف');
-      setShowDeleteModal(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -217,6 +222,7 @@ function ExpensesAdvances() {
   };
 
   const handleSearch = async () => {
+    setIsLoading(true);
     try {
       console.log('Searching with query:', search);
       const res = await axios.get(`/api/expenses-advances?search=${search}`, {
@@ -232,6 +238,8 @@ function ExpensesAdvances() {
     } catch (err) {
       console.error('Search error:', err.response?.data || err.message);
       setMessage('خطأ في البحث');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -239,7 +247,7 @@ function ExpensesAdvances() {
     <Container className="mt-5">
       <h2>إدارة المصروفات والسلف</h2>
       {message && <Alert variant={message.includes('خطأ') ? 'danger' : 'success'}>{message}</Alert>}
-      <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+      <Button variant="primary" onClick={() => setShowCreateModal(true)} disabled={isLoading}>
         <FontAwesomeIcon icon={faPlus} /> إضافة عملية جديدة
       </Button>
       <Row className="mt-3">
@@ -252,11 +260,14 @@ function ExpensesAdvances() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="ابحث بالاسم أو تفاصيل الصرف"
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              disabled={isLoading}
             />
           </Form.Group>
         </Col>
       </Row>
-      <Button variant="primary" onClick={handleSearch} className="mt-2">بحث</Button>
+      <Button variant="primary" onClick={handleSearch} className="mt-2" disabled={isLoading}>
+        {isLoading ? 'جاري البحث...' : 'بحث'}
+      </Button>
       <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>{editItem ? 'تعديل العملية' : 'إضافة عملية جديدة'}</Modal.Title>
@@ -270,6 +281,7 @@ function ExpensesAdvances() {
                   as="select"
                   value={formData.type}
                   onChange={(e) => setFormData({ ...formData, type: e.target.value, details: '', userId: '' })}
+                  disabled={isLoading}
                 >
                   <option value="expense">مصروف</option>
                   <option value="advance">سلفة</option>
@@ -286,6 +298,7 @@ function ExpensesAdvances() {
                       value={formData.details}
                       onChange={(e) => setFormData({ ...formData, details: e.target.value })}
                       required
+                      disabled={isLoading}
                     />
                   </Form.Group>
                 </Col>
@@ -297,6 +310,7 @@ function ExpensesAdvances() {
                       value={formData.amount}
                       onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                       required
+                      disabled={isLoading}
                     />
                   </Form.Group>
                 </Col>
@@ -308,13 +322,15 @@ function ExpensesAdvances() {
                     <Form.Label>اسم الموظف</Form.Label>
                     <Select
                       options={users.map(user => ({ value: user._id, label: `${user.username} (المتبقي: ${user.remainingSalary} جنيه)` }))}
-                      value={users.find(u => u._id === formData.userId) ? { value: formData.userId, label: `${users.find(u => u._id === formData.userId).username} (المتبقي: ${users.find(u => u._id === formData.userId).remainingSalary} جنيه)` } : null}
+                      value={formData.userId ? { value: formData.userId, label: users.find(u => u._id === formData.userId)?.username ? `${users.find(u => u._id === formData.userId).username} (المتبقي: ${users.find(u => u._id === formData.userId).remainingSalary} جنيه)` : '' } : null}
                       onChange={(selected) => setFormData({ ...formData, userId: selected ? selected.value : '' })}
                       isSearchable
+                      isClearable
                       placeholder="اختر الموظف..."
                       className="booking-services-select"
                       classNamePrefix="booking-services"
                       styles={customStyles}
+                      isDisabled={isLoading}
                     />
                   </Form.Group>
                 </Col>
@@ -326,18 +342,21 @@ function ExpensesAdvances() {
                       value={formData.amount}
                       onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                       required
+                      disabled={isLoading}
                     />
                   </Form.Group>
                 </Col>
               </>
             )}
             <Col md={12}>
-              <Button type="submit" className="mt-3">{editItem ? 'تعديل' : 'حفظ'}</Button>
+              <Button type="submit" className="mt-3" disabled={isLoading}>
+                {isLoading ? 'جاري الحفظ...' : (editItem ? 'تعديل' : 'حفظ')}
+              </Button>
               <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
                 setFormData({ type: 'expense', details: '', amount: 0, userId: '' });
                 setEditItem(null);
                 setShowCreateModal(false);
-              }}>
+              }} disabled={isLoading}>
                 إلغاء
               </Button>
             </Col>
@@ -357,13 +376,13 @@ function ExpensesAdvances() {
                   التاريخ: {new Date(item.createdAt).toLocaleDateString()}<br />
                   أضيف بواسطة: {item.createdBy?.username || item.userId?.username || 'غير معروف'}
                 </Card.Text>
-                <Button variant="primary" className="me-2" onClick={() => handleEdit(item)}>
+                <Button variant="primary" className="me-2" onClick={() => handleEdit(item)} disabled={isLoading}>
                   <FontAwesomeIcon icon={faEdit} />
                 </Button>
-                <Button variant="primary" className="me-2" onClick={() => handleShowDetails(item)}>
+                <Button variant="primary" className="me-2" onClick={() => handleShowDetails(item)} disabled={isLoading}>
                   <FontAwesomeIcon icon={faEye} />
                 </Button>
-                <Button variant="danger" onClick={() => { setDeleteItem(item); setShowDeleteModal(true); }}>
+                <Button variant="danger" onClick={() => { setDeleteItem(item); setShowDeleteModal(true); }} disabled={isLoading}>
                   <FontAwesomeIcon icon={faTrash} />
                 </Button>
               </Card.Body>
@@ -373,7 +392,7 @@ function ExpensesAdvances() {
       </Row>
       <Pagination className="justify-content-center mt-4">
         {Array.from({ length: totalPages }, (_, i) => (
-          <Pagination.Item key={i + 1} active={i + 1 === currentPage} onClick={() => setCurrentPage(i + 1)}>
+          <Pagination.Item key={i + 1} active={i + 1 === currentPage} onClick={() => setCurrentPage(i + 1)} disabled={isLoading}>
             {i + 1}
           </Pagination.Item>
         ))}
@@ -384,8 +403,12 @@ function ExpensesAdvances() {
         </Modal.Header>
         <Modal.Body>هل أنت متأكد من حذف {deleteItem?.type === 'expense' ? 'المصروف' : 'السلفة'}؟</Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>إلغاء</Button>
-          <Button variant="danger" onClick={handleDelete}>حذف</Button>
+          <Button variant="secondary" onClick={() => setShowDeleteModal(false)} disabled={isLoading}>
+            إلغاء
+          </Button>
+          <Button variant="danger" onClick={handleDelete} disabled={isLoading}>
+            {isLoading ? 'جاري الحذف...' : 'حذف'}
+          </Button>
         </Modal.Footer>
       </Modal>
       <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} size="lg">
@@ -411,7 +434,9 @@ function ExpensesAdvances() {
           )}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowDetailsModal(false)}>إغلاق</Button>
+          <Button variant="secondary" onClick={() => setShowDetailsModal(false)} disabled={isLoading}>
+            إغلاق
+          </Button>
         </Modal.Footer>
       </Modal>
     </Container>
