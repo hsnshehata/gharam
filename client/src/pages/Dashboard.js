@@ -53,6 +53,112 @@ function Dashboard({ user }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isUsersLoading, setIsUsersLoading] = useState(true);
 
+  // Custom styles for react-select
+  const customStyles = {
+    control: (provided) => ({
+      ...provided,
+      backgroundColor: '#2a7a78',
+      color: '#fff',
+      border: '1px solid #98ff98',
+      borderRadius: '4px',
+      fontFamily: 'Tajawal, Arial, sans-serif',
+      fontSize: '1rem',
+      minHeight: '38px',
+      padding: '0',
+      lineHeight: '1.5',
+      textAlign: 'right',
+      direction: 'rtl',
+      boxShadow: 'none'
+    }),
+    valueContainer: (provided) => ({
+      ...provided,
+      backgroundColor: '#2a7a78',
+      color: '#fff',
+      padding: '0.375rem 0.75rem',
+      minHeight: '38px'
+    }),
+    input: (provided) => ({
+      ...provided,
+      backgroundColor: '#2a7a78',
+      color: '#fff',
+      fontSize: '1rem'
+    }),
+    placeholder: (provided) => ({
+      ...provided,
+      color: '#fff',
+      fontSize: '1rem',
+      textAlign: 'right'
+    }),
+    singleValue: (provided) => ({
+      ...provided,
+      color: '#fff',
+      textAlign: 'right'
+    }),
+    multiValue: (provided) => ({
+      ...provided,
+      backgroundColor: '#98ff98',
+      color: '#000',
+      borderRadius: '3px'
+    }),
+    multiValueLabel: (provided) => ({
+      ...provided,
+      color: '#000',
+      fontSize: '0.9rem',
+      padding: '2px 4px'
+    }),
+    multiValueRemove: (provided) => ({
+      ...provided,
+      backgroundColor: '#98ff98',
+      color: '#000',
+      padding: '2px',
+      ':hover': { backgroundColor: '#78cc78', color: '#000' }
+    }),
+    menu: (provided) => ({
+      ...provided,
+      backgroundColor: '#2a7a78',
+      color: '#fff',
+      border: '1px solid #98ff98',
+      borderRadius: '4px',
+      zIndex: 1000,
+      direction: 'rtl',
+      textAlign: 'right'
+    }),
+    menuList: (provided) => ({
+      ...provided,
+      backgroundColor: '#2a7a78',
+      color: '#fff'
+    }),
+    option: (provided, state) => ({
+      ...provided,
+      backgroundColor: state.isSelected ? '#98ff98' : state.isFocused ? '#78cc78' : '#2a7a78',
+      color: state.isSelected || state.isFocused ? '#000' : '#fff',
+      fontFamily: 'Tajawal, Arial, sans-serif',
+      fontSize: '1rem',
+      padding: '0.375rem 0.75rem'
+    }),
+    indicatorsContainer: (provided) => ({
+      ...provided,
+      backgroundColor: '#2a7a78',
+      color: '#fff'
+    }),
+    clearIndicator: (provided) => ({
+      ...provided,
+      backgroundColor: '#2a7a78',
+      color: '#fff',
+      ':hover': { color: '#78cc78' }
+    }),
+    dropdownIndicator: (provided) => ({
+      ...provided,
+      backgroundColor: '#2a7a78',
+      color: '#fff',
+      ':hover': { color: '#78cc78' }
+    }),
+    indicatorSeparator: (provided) => ({
+      ...provided,
+      backgroundColor: '#98ff98'
+    })
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -76,6 +182,7 @@ function Dashboard({ user }) {
         ]);
         console.log('Dashboard summary response:', summaryRes.data);
         console.log('Today work response:', bookingsRes.data);
+        console.log('Users response:', usersRes.data);
         setSummary(summaryRes.data);
         setBookings(bookingsRes.data || { makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
         setPackages(packagesRes.data);
@@ -151,6 +258,16 @@ function Dashboard({ user }) {
     };
     calculateInstantServiceTotal();
   }, [instantServiceFormData.services, services]);
+
+  // Sync expenseAdvanceFormData.userId when editing
+  useEffect(() => {
+    if (editItem && editItem.type === 'advance') {
+      setExpenseAdvanceFormData(prev => ({
+        ...prev,
+        userId: editItem.userId?._id || ''
+      }));
+    }
+  }, [editItem]);
 
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
@@ -274,6 +391,7 @@ function Dashboard({ user }) {
       const res = await axios.post('/api/expenses-advances', expenseAdvanceFormData, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
+      console.log('Expense/Advance response:', res.data);
       setMessage(`تم إضافة ${res.data.type === 'expense' ? 'المصروف' : 'السلفة'} بنجاح`);
       // Update users state with new remainingSalary if advance
       if (expenseAdvanceFormData.type === 'advance' && res.data.updatedUser) {
@@ -930,10 +1048,15 @@ function Dashboard({ user }) {
                 <Button type="submit" className="mt-3" disabled={isLoading}>
                   {isLoading ? 'جاري الحفظ...' : 'حفظ'}
                 </Button>
-                <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
-                  setExpenseAdvanceFormData({ type: 'expense', details: '', amount: 0, userId: '' });
-                  setShowExpenseAdvanceModal(false);
-                }} disabled={isLoading}>
+                <Button
+                  variant="secondary"
+                  className="mt-3 ms-2"
+                  onClick={() => {
+                    setExpenseAdvanceFormData({ type: 'expense', details: '', amount: 0, userId: '' });
+                    setShowExpenseAdvanceModal(false);
+                  }}
+                  disabled={isLoading}
+                >
                   إلغاء
                 </Button>
               </Col>
