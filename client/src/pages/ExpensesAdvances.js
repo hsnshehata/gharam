@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Pagination } from 'react-bootstrap';
 import axios from 'axios';
 import Select from 'react-select';
@@ -20,6 +20,7 @@ function ExpensesAdvances() {
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUsersLoading, setIsUsersLoading] = useState(true); // Track users loading state
 
   // Custom styles للـ react-select
   const customStyles = {
@@ -111,6 +112,7 @@ function ExpensesAdvances() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setIsUsersLoading(true);
         const usersRes = await axios.get('/api/users', {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
@@ -128,6 +130,8 @@ function ExpensesAdvances() {
       } catch (err) {
         console.error('Fetch error:', err.response?.data || err.message);
         setMessage('خطأ في جلب البيانات');
+      } finally {
+        setIsUsersLoading(false);
       }
     };
     fetchData();
@@ -243,22 +247,24 @@ function ExpensesAdvances() {
     }
   };
 
-  // إنشاء userOptions مع فحص البيانات
-  const userOptions = users
-    .filter(user => user.username && user.remainingSalary !== undefined)
-    .map(user => ({
-      value: user._id,
-      label: `${user.username} (المتبقي: ${user.remainingSalary} جنيه)`
-    }));
+  // إنشاء userOptions مع فحص البيانات باستخدام useMemo
+  const userOptions = useMemo(() => {
+    return users
+      .filter(user => user.username && user.remainingSalary !== undefined)
+      .map(user => ({
+        value: user._id,
+        label: `${user.username} (المتبقي: ${user.remainingSalary} جنيه)`
+      }));
+  }, [users]);
 
   return (
     <Container className="mt-5">
       <h2>إدارة المصروفات والسلف</h2>
       {message && <Alert variant={message.includes('خطأ') ? 'danger' : 'success'}>{message}</Alert>}
-      {users.length === 0 && (
+      {!isUsersLoading && users.length === 0 && (
         <Alert variant="warning">لا يوجد موظفين متاحين لاختيار سلفة، أضف موظفين أولاً</Alert>
       )}
-      <Button variant="primary" onClick={() => setShowCreateModal(true)} disabled={isLoading || users.length === 0}>
+      <Button variant="primary" onClick={() => setShowCreateModal(true)} disabled={isLoading || isUsersLoading || users.length === 0}>
         <FontAwesomeIcon icon={faPlus} /> إضافة عملية جديدة
       </Button>
       <Row className="mt-3">
@@ -333,6 +339,7 @@ function ExpensesAdvances() {
                     <Form.Group>
                       <Form.Label>اسم الموظف</Form.Label>
                       <Select
+                        key={`user-select-${users.length}`} // Force re-render when users change
                         options={userOptions}
                         value={userOptions.find(option => option.value === formData.userId) || null}
                         onChange={(selected) => {
@@ -345,7 +352,7 @@ function ExpensesAdvances() {
                         className="booking-services-select"
                         classNamePrefix="booking-services"
                         styles={customStyles}
-                        isDisabled={isLoading}
+                        isDisabled={isLoading || isUsersLoading}
                       />
                     </Form.Group>
                   </Col>
