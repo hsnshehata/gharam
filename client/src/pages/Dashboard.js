@@ -1008,7 +1008,7 @@ function Dashboard({ user }) {
                       />
                     </Form.Group>
                   </Col>
-                  <Col md={6>
+                  <Col md={6}>
                     <Form.Group>
                       <Form.Label>المبلغ</Form.Label>
                       <Form.Control
