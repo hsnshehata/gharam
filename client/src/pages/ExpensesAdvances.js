@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Pagination } from 'react-bootstrap';
 import axios from 'axios';
-import Select from 'react-select';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faEye, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons';
 
@@ -20,94 +19,7 @@ function ExpensesAdvances() {
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isUsersLoading, setIsUsersLoading] = useState(true); // Track users loading state
-
-  // Custom styles للـ react-select
-  const customStyles = {
-    control: (provided) => ({
-      ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      border: '1px solid #98ff98',
-      borderRadius: '4px',
-      fontFamily: 'Tajawal, Arial, sans-serif',
-      fontSize: '1rem',
-      minHeight: '38px',
-      padding: '0',
-      lineHeight: '1.5',
-      textAlign: 'right',
-      direction: 'rtl',
-      boxShadow: 'none'
-    }),
-    valueContainer: (provided) => ({
-      ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      padding: '0.375rem 0.75rem',
-      minHeight: '38px'
-    }),
-    input: (provided) => ({
-      ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      fontSize: '1rem'
-    }),
-    placeholder: (provided) => ({
-      ...provided,
-      color: '#fff',
-      fontSize: '1rem',
-      textAlign: 'right'
-    }),
-    singleValue: (provided) => ({
-      ...provided,
-      color: '#fff',
-      textAlign: 'right'
-    }),
-    menu: (provided) => ({
-      ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      border: '1px solid #98ff98',
-      borderRadius: '4px',
-      zIndex: 1000,
-      direction: 'rtl',
-      textAlign: 'right'
-    }),
-    menuList: (provided) => ({
-      ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff'
-    }),
-    option: (provided, state) => ({
-      ...provided,
-      backgroundColor: state.isSelected ? '#98ff98' : state.isFocused ? '#78cc78' : '#2a7a78',
-      color: state.isSelected || state.isFocused ? '#000' : '#fff',
-      fontFamily: 'Tajawal, Arial, sans-serif',
-      fontSize: '1rem',
-      padding: '0.375rem 0.75rem'
-    }),
-    indicatorsContainer: (provided) => ({
-      ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff'
-    }),
-    clearIndicator: (provided) => ({
-      ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      ':hover': { color: '#78cc78' }
-    }),
-    dropdownIndicator: (provided) => ({
-      ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      ':hover': { color: '#78cc78' }
-    }),
-    indicatorSeparator: (provided) => ({
-      ...provided,
-      backgroundColor: '#98ff98'
-    })
-  };
+  const [isUsersLoading, setIsUsersLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -116,7 +28,7 @@ function ExpensesAdvances() {
         const usersRes = await axios.get('/api/users', {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
-        console.log('Users response:', usersRes.data); // Log للتأكد من البيانات
+        console.log('Users response:', usersRes.data);
         setUsers(usersRes.data);
         const itemsRes = await axios.get(`/api/expenses-advances?page=${currentPage}&search=${search}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -143,16 +55,9 @@ function ExpensesAdvances() {
       setMessage('تفاصيل المصروف والمبلغ مطلوبة');
       return;
     }
-    if (formData.type === 'advance') {
-      if (!formData.userId || !formData.amount) {
-        setMessage('اسم الموظف والمبلغ مطلوبين');
-        return;
-      }
-      const selectedUser = users.find(u => u._id === formData.userId);
-      if (selectedUser && parseFloat(formData.amount) > selectedUser.remainingSalary) {
-        setMessage('السلفة أكبر من المتبقي من الراتب');
-        return;
-      }
+    if (formData.type === 'advance' && (!formData.userId || !formData.amount)) {
+      setMessage('اسم الموظف والمبلغ مطلوبين');
+      return;
     }
     setIsLoading(true);
     setShowCreateModal(false); // Close Modal immediately
@@ -247,16 +152,6 @@ function ExpensesAdvances() {
     }
   };
 
-  // إنشاء userOptions مع فحص البيانات باستخدام useMemo
-  const userOptions = useMemo(() => {
-    return users
-      .filter(user => user.username && user.remainingSalary !== undefined)
-      .map(user => ({
-        value: user._id,
-        label: `${user.username} (المتبقي: ${user.remainingSalary} جنيه)`
-      }));
-  }, [users]);
-
   return (
     <Container className="mt-5">
       <h2>إدارة المصروفات والسلف</h2>
@@ -338,22 +233,23 @@ function ExpensesAdvances() {
                   <Col md={6}>
                     <Form.Group>
                       <Form.Label>اسم الموظف</Form.Label>
-                      <Select
-                        key={`user-select-${users.length}`} // Force re-render when users change
-                        options={userOptions}
-                        value={userOptions.find(option => option.value === formData.userId) || null}
-                        onChange={(selected) => {
-                          console.log('Selected user:', selected); // Log للتأكد من الاختيار
-                          setFormData({ ...formData, userId: selected ? selected.value : '' });
+                      <Form.Control
+                        as="select"
+                        value={formData.userId}
+                        onChange={(e) => {
+                          console.log('Selected user ID:', e.target.value);
+                          setFormData({ ...formData, userId: e.target.value });
                         }}
-                        isSearchable
-                        isClearable
-                        placeholder="اختر الموظف..."
-                        className="booking-services-select"
-                        classNamePrefix="booking-services"
-                        styles={customStyles}
-                        isDisabled={isLoading || isUsersLoading}
-                      />
+                        disabled={isLoading || isUsersLoading}
+                        required
+                      >
+                        <option value="">اختر الموظف</option>
+                        {users.map(user => (
+                          <option key={user._id} value={user._id}>
+                            {user.username} (المتبقي: {user.remainingSalary} جنيه)
+                          </option>
+                        ))}
+                      </Form.Control>
                     </Form.Group>
                   </Col>
                   <Col md={6}>
@@ -448,7 +344,7 @@ function ExpensesAdvances() {
             <div>
               <p>النوع: {currentDetails.type === 'expense' ? 'مصروف' : 'سلفة'}</p>
               {currentDetails.type === 'expense' ? (
-                <p>التفاصيل: {currentDetails.details || 'غير محدد'}</p>
+                <p>التفاصيل: ${currentDetails.details || 'غير محدد'}</p>
               ) : (
                 <>
                   <p>الموظف: {currentDetails.userId?.username || 'غير محدد'}</p>
