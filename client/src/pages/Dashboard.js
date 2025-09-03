@@ -495,6 +495,12 @@ function Dashboard({ user }) {
     }
   };
 
+  // تحسين عرض الـ Select
+  const userOptions = users.map(user => ({
+    value: user._id,
+    label: `${user.username} (المتبقي: ${user.remainingSalary} جنيه)`
+  }));
+
   return (
     <Container className="mt-5">
       <h2>شغل إنهاردة</h2>
@@ -989,8 +995,8 @@ function Dashboard({ user }) {
                     <Form.Group>
                       <Form.Label>اسم الموظف</Form.Label>
                       <Select
-                        options={users.map(user => ({ value: user._id, label: `${user.username} (المتبقي: ${user.remainingSalary} جنيه)` }))}
-                        value={expenseAdvanceFormData.userId ? { value: expenseAdvanceFormData.userId, label: users.find(u => u._id === expenseAdvanceFormData.userId)?.username ? `${users.find(u => u._id === expenseAdvanceFormData.userId).username} (المتبقي: ${users.find(u => u._id === expenseAdvanceFormData.userId).remainingSalary} جنيه)` : '' } : null}
+                        options={userOptions}
+                        value={userOptions.find(option => option.value === expenseAdvanceFormData.userId) || null}
                         onChange={(selected) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, userId: selected ? selected.value : '' })}
                         isSearchable
                         isClearable
@@ -1002,7 +1008,7 @@ function Dashboard({ user }) {
                       />
                     </Form.Group>
                   </Col>
-                  <Col md={6}>
+                  <Col md={6>
                     <Form.Group>
                       <Form.Label>المبلغ</Form.Label>
                       <Form.Control
