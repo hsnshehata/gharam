@@ -19,8 +19,8 @@ function ExpensesAdvances() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isDataLoading, setIsDataLoading] = useState(true); // New state for data loading
+  const [isLoading, setIsLoading] = useState(false); // For submit/delete actions
+  const [isDataLoading, setIsDataLoading] = useState(true); // For initial data loading
 
   // Custom styles for react-select
   const customStyles = {
@@ -115,7 +115,7 @@ function ExpensesAdvances() {
 
   useEffect(() => {
     const fetchData = async () => {
-      setIsDataLoading(true); // Start data loading
+      setIsDataLoading(true);
       try {
         const [itemsRes, usersRes] = await Promise.all([
           axios.get(`/api/expenses-advances?page=${currentPage}&search=${search}`, {
@@ -125,14 +125,14 @@ function ExpensesAdvances() {
             headers: { 'x-auth-token': localStorage.getItem('token') }
           })
         ]);
-        setItems(itemsRes.data.expensesAdvances || []); // Ensure items is an array
+        setItems(itemsRes.data.expensesAdvances || []);
         setTotalPages(itemsRes.data.totalPages || 1);
         setUsers(usersRes.data || []);
       } catch (err) {
         setMessage('خطأ في جلب البيانات');
-        setItems([]); // Fallback to empty array on error
+        setItems([]);
       } finally {
-        setIsDataLoading(false); // Stop data loading
+        setIsDataLoading(false);
       }
     };
     fetchData();
@@ -209,7 +209,7 @@ function ExpensesAdvances() {
   return (
     <Container className="mt-5">
       <h2>المصروفات والسلف</h2>
-      <Button className="mb-3" onClick={() => setShowCreateModal(true)} disabled={isLoading}>
+      <Button className="mb-3" onClick={() => setShowCreateModal(true)} disabled={isLoading || isDataLoading}>
         <FontAwesomeIcon icon={faPlus} /> إضافة مصروف/سلفة
       </Button>
       <Form.Group className="mb-3">
