@@ -19,7 +19,7 @@ function ExpensesAdvances() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // New loading state
+  const [isLoading, setIsLoading] = useState(false);
 
   // Custom styles للـ react-select
   const customStyles = {
@@ -243,6 +243,12 @@ function ExpensesAdvances() {
     }
   };
 
+  // تحسين عرض الـ Select
+  const userOptions = users.map(user => ({
+    value: user._id,
+    label: `${user.username} (المتبقي: ${user.remainingSalary} جنيه)`
+  }));
+
   return (
     <Container className="mt-5">
       <h2>إدارة المصروفات والسلف</h2>
@@ -321,8 +327,8 @@ function ExpensesAdvances() {
                   <Form.Group>
                     <Form.Label>اسم الموظف</Form.Label>
                     <Select
-                      options={users.map(user => ({ value: user._id, label: `${user.username} (المتبقي: ${user.remainingSalary} جنيه)` }))}
-                      value={formData.userId ? { value: formData.userId, label: users.find(u => u._id === formData.userId)?.username ? `${users.find(u => u._id === formData.userId).username} (المتبقي: ${users.find(u => u._id === formData.userId).remainingSalary} جنيه)` : '' } : null}
+                      options={userOptions}
+                      value={userOptions.find(option => option.value === formData.userId) || null}
                       onChange={(selected) => setFormData({ ...formData, userId: selected ? selected.value : '' })}
                       isSearchable
                       isClearable
@@ -372,7 +378,7 @@ function ExpensesAdvances() {
                 <Card.Title>{item.type === 'expense' ? 'مصروف' : 'سلفة'}</Card.Title>
                 <Card.Text>
                   {item.type === 'expense' ? `التفاصيل: ${item.details || 'غير محدد'}` : `الموظف: ${item.userId?.username || 'غير محدد'}`}<br />
-                  المبلغ: {item.amount || 0} جنيه<br />
+                  المبلغ: ${item.amount || 0} جنيه<br />
                   التاريخ: {new Date(item.createdAt).toLocaleDateString()}<br />
                   أضيف بواسطة: {item.createdBy?.username || item.userId?.username || 'غير معروف'}
                 </Card.Text>
