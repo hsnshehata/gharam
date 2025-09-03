@@ -55,28 +55,40 @@ function ExpensesAdvances() {
       setMessage('تفاصيل المصروف والمبلغ مطلوبة');
       return;
     }
-    if (formData.type === 'advance' && (!formData.userId || !formData.amount)) {
-      setMessage('اسم الموظف والمبلغ مطلوبين');
-      return;
+    if (formData.type === 'advance') {
+      if (!formData.userId || !formData.amount) {
+        setMessage('اسم الموظف والمبلغ مطلوبين');
+        return;
+      }
+      const selectedUser = users.find(u => u._id === formData.userId);
+      if (selectedUser && parseFloat(formData.amount) > selectedUser.remainingSalary) {
+        setMessage('السلفة أكبر من المتبقي من الراتب');
+        return;
+      }
     }
     setIsLoading(true);
     setShowCreateModal(false); // Close Modal immediately
     try {
+      let res;
       if (editItem) {
         console.log('Updating item with ID:', editItem._id, 'Type:', editItem.type);
-        const res = await axios.put(`/api/expenses-advances/${editItem._id}`, formData, {
+        res = await axios.put(`/api/expenses-advances/${editItem._id}`, formData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         console.log('Update response:', res.data);
         setItems(items.map(i => (i._id === editItem._id ? { ...res.data.item, type: res.data.type } : i)));
         setMessage(`تم تعديل ${res.data.type === 'expense' ? 'المصروف' : 'السلفة'} بنجاح`);
       } else {
-        const res = await axios.post('/api/expenses-advances', formData, {
+        res = await axios.post('/api/expenses-advances', formData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         console.log('Create response:', res.data);
         setItems([res.data.item, ...items].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
         setMessage(`تم إضافة ${res.data.type === 'expense' ? 'المصروف' : 'السلفة'} بنجاح`);
+      }
+      // Update users state with new remainingSalary if advance
+      if (formData.type === 'advance' && res.data.updatedUser) {
+        setUsers(users.map(u => (u._id === formData.userId ? { ...u, remainingSalary: res.data.updatedUser.remainingSalary } : u)));
       }
       setFormData({ type: 'expense', details: '', amount: 0, userId: '' });
       setEditItem(null);
@@ -110,10 +122,14 @@ function ExpensesAdvances() {
     setShowDeleteModal(false);
     try {
       console.log('Deleting item with ID:', deleteItem._id, 'Type:', deleteItem.type);
-      await axios.delete(`/api/expenses-advances/${deleteItem._id}?type=${deleteItem.type}`, {
+      const res = await axios.delete(`/api/expenses-advances/${deleteItem._id}?type=${deleteItem.type}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setItems(items.filter(i => i._id !== deleteItem._id));
+      // Update users state if advance was deleted
+      if (deleteItem.type === 'advance' && res.data.updatedUser) {
+        setUsers(users.map(u => (u._id === deleteItem.userId?._id ? { ...u, remainingSalary: res.data.updatedUser.remainingSalary } : u)));
+      }
       setMessage(`تم حذف ${deleteItem.type === 'expense' ? 'المصروف' : 'السلفة'} بنجاح`);
       setDeleteItem(null);
     } catch (err) {
@@ -234,7 +250,7 @@ function ExpensesAdvances() {
                     <Form.Group>
                       <Form.Label>اسم الموظف</Form.Label>
                       <Form.Control
-                        as="select"
+                        lawns="select"
                         value={formData.userId}
                         onChange={(e) => {
                           console.log('Selected user ID:', e.target.value);
@@ -298,7 +314,7 @@ function ExpensesAdvances() {
                   {item.type === 'expense' ? `التفاصيل: ${item.details || 'غير محدد'}` : `الموظف: ${item.userId?.username || 'غير محدد'}`}<br />
                   المبلغ: {item.amount || 0} جنيه<br />
                   التاريخ: {new Date(item.createdAt).toLocaleDateString()}<br />
-                  أضيف بواسطة: {item.createdBy?.username || item.userId?.username || 'غير معروف'}
+                  أضيف بواسطة: ${item.createdBy?.username || item.userId?.username || 'غير معروف'}
                 </Card.Text>
                 <Button variant="primary" className="me-2" onClick={() => handleEdit(item)} disabled={isLoading}>
                   <FontAwesomeIcon icon={faEdit} />
@@ -353,7 +369,7 @@ function ExpensesAdvances() {
               )}
               <p>المبلغ: {currentDetails.amount || 0} جنيه</p>
               <p>التاريخ: {new Date(currentDetails.createdAt).toLocaleDateString()}</p>
-              <p>أضيف بواسطة: {currentDetails.createdBy?.username || currentDetails.userId?.username || 'غير معروف'}</p>
+              <p>أضيف بواسطة: ${currentDetails.createdBy?.username || currentDetails.userId?.username || 'غير معروف'}</p>
             </div>
           )}
         </Modal.Body>
