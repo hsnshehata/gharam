@@ -114,12 +114,12 @@ function ExpensesAdvances() {
         const usersRes = await axios.get('/api/users', {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
+        console.log('Users response:', usersRes.data); // Log للتأكد من البيانات
+        setUsers(usersRes.data);
         const itemsRes = await axios.get(`/api/expenses-advances?page=${currentPage}&search=${search}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
-        console.log('Users response:', usersRes.data);
         console.log('Expenses/Advances response:', itemsRes.data);
-        setUsers(usersRes.data);
         setItems(itemsRes.data.items.map(item => ({
           ...item,
           type: item.type || (item.details ? 'expense' : 'advance')
@@ -243,17 +243,22 @@ function ExpensesAdvances() {
     }
   };
 
-  // تحسين عرض الـ Select
-  const userOptions = users.map(user => ({
-    value: user._id,
-    label: `${user.username} (المتبقي: ${user.remainingSalary} جنيه)`
-  }));
+  // إنشاء userOptions مع فحص البيانات
+  const userOptions = users
+    .filter(user => user.username && user.remainingSalary !== undefined)
+    .map(user => ({
+      value: user._id,
+      label: `${user.username} (المتبقي: ${user.remainingSalary} جنيه)`
+    }));
 
   return (
     <Container className="mt-5">
       <h2>إدارة المصروفات والسلف</h2>
       {message && <Alert variant={message.includes('خطأ') ? 'danger' : 'success'}>{message}</Alert>}
-      <Button variant="primary" onClick={() => setShowCreateModal(true)} disabled={isLoading}>
+      {users.length === 0 && (
+        <Alert variant="warning">لا يوجد موظفين متاحين لاختيار سلفة، أضف موظفين أولاً</Alert>
+      )}
+      <Button variant="primary" onClick={() => setShowCreateModal(true)} disabled={isLoading || users.length === 0}>
         <FontAwesomeIcon icon={faPlus} /> إضافة عملية جديدة
       </Button>
       <Row className="mt-3">
@@ -280,92 +285,102 @@ function ExpensesAdvances() {
         </Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleSubmit} className="form-row">
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label>نوع العملية</Form.Label>
-                <Form.Control
-                  as="select"
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value, details: '', userId: '' })}
+            <Row>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>نوع العملية</Form.Label>
+                  <Form.Control
+                    as="select"
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value, details: '', userId: '' })}
+                    disabled={isLoading}
+                  >
+                    <option value="expense">مصروف</option>
+                    <option value="advance">سلفة</option>
+                  </Form.Control>
+                </Form.Group>
+              </Col>
+              {formData.type === 'expense' ? (
+                <>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label>تفاصيل المصروف</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={formData.details}
+                        onChange={(e) => setFormData({ ...formData, details: e.target.value })}
+                        required
+                        disabled={isLoading}
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label>المبلغ</Form.Label>
+                      <Form.Control
+                        type="number"
+                        value={formData.amount}
+                        onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                        required
+                        disabled={isLoading}
+                      />
+                    </Form.Group>
+                  </Col>
+                </>
+              ) : (
+                <>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label>اسم الموظف</Form.Label>
+                      <Select
+                        options={userOptions}
+                        value={userOptions.find(option => option.value === formData.userId) || null}
+                        onChange={(selected) => {
+                          console.log('Selected user:', selected); // Log للتأكد من الاختيار
+                          setFormData({ ...formData, userId: selected ? selected.value : '' });
+                        }}
+                        isSearchable
+                        isClearable
+                        placeholder="اختر الموظف..."
+                        className="booking-services-select"
+                        classNamePrefix="booking-services"
+                        styles={customStyles}
+                        isDisabled={isLoading}
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label>المبلغ</Form.Label>
+                      <Form.Control
+                        type="number"
+                        value={formData.amount}
+                        onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                        required
+                        disabled={isLoading}
+                      />
+                    </Form.Group>
+                  </Col>
+                </>
+              )}
+              <Col md={12}>
+                <Button type="submit" className="mt-3" disabled={isLoading}>
+                  {isLoading ? 'جاري الحفظ...' : (editItem ? 'تعديل' : 'حفظ')}
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="mt-3 ms-2"
+                  onClick={() => {
+                    setFormData({ type: 'expense', details: '', amount: 0, userId: '' });
+                    setEditItem(null);
+                    setShowCreateModal(false);
+                  }}
                   disabled={isLoading}
                 >
-                  <option value="expense">مصروف</option>
-                  <option value="advance">سلفة</option>
-                </Form.Control>
-              </Form.Group>
-            </Col>
-            {formData.type === 'expense' ? (
-              <>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>تفاصيل المصروف</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={formData.details}
-                      onChange={(e) => setFormData({ ...formData, details: e.target.value })}
-                      required
-                      disabled={isLoading}
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>المبلغ</Form.Label>
-                    <Form.Control
-                      type="number"
-                      value={formData.amount}
-                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                      required
-                      disabled={isLoading}
-                    />
-                  </Form.Group>
-                </Col>
-              </>
-            ) : (
-              <>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>اسم الموظف</Form.Label>
-                    <Select
-                      options={userOptions}
-                      value={userOptions.find(option => option.value === formData.userId) || null}
-                      onChange={(selected) => setFormData({ ...formData, userId: selected ? selected.value : '' })}
-                      isSearchable
-                      isClearable
-                      placeholder="اختر الموظف..."
-                      className="booking-services-select"
-                      classNamePrefix="booking-services"
-                      styles={customStyles}
-                      isDisabled={isLoading}
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>المبلغ</Form.Label>
-                    <Form.Control
-                      type="number"
-                      value={formData.amount}
-                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                      required
-                      disabled={isLoading}
-                    />
-                  </Form.Group>
-                </Col>
-              </>
-            )}
-            <Col md={12}>
-              <Button type="submit" className="mt-3" disabled={isLoading}>
-                {isLoading ? 'جاري الحفظ...' : (editItem ? 'تعديل' : 'حفظ')}
-              </Button>
-              <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
-                setFormData({ type: 'expense', details: '', amount: 0, userId: '' });
-                setEditItem(null);
-                setShowCreateModal(false);
-              }} disabled={isLoading}>
-                إلغاء
-              </Button>
-            </Col>
+                  إلغاء
+                </Button>
+              </Col>
+            </Row>
           </Form>
         </Modal.Body>
       </Modal>
@@ -378,7 +393,7 @@ function ExpensesAdvances() {
                 <Card.Title>{item.type === 'expense' ? 'مصروف' : 'سلفة'}</Card.Title>
                 <Card.Text>
                   {item.type === 'expense' ? `التفاصيل: ${item.details || 'غير محدد'}` : `الموظف: ${item.userId?.username || 'غير محدد'}`}<br />
-                  المبلغ: ${item.amount || 0} جنيه<br />
+                  المبلغ: {item.amount || 0} جنيه<br />
                   التاريخ: {new Date(item.createdAt).toLocaleDateString()}<br />
                   أضيف بواسطة: {item.createdBy?.username || item.userId?.username || 'غير معروف'}
                 </Card.Text>
