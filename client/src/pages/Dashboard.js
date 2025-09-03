@@ -50,7 +50,7 @@ function Dashboard({ user }) {
   const [selectedPackageServices, setSelectedPackageServices] = useState([]);
   const [total, setTotal] = useState(0);
   const [remaining, setRemaining] = useState(0);
-  const [isLoading, setIsLoading] = useState(false); // New loading state
+  const [isLoading, setIsLoading] = useState(false);
 
   // Custom styles for react-select
   const customStyles = {
@@ -371,7 +371,7 @@ function Dashboard({ user }) {
       }
     }
     setIsLoading(true);
-    setShowExpenseAdvanceModal(false);
+    setShowExpenseAdvanceModal(false); // Close Modal immediately
     try {
       const res = await axios.post('/api/expenses-advances', expenseAdvanceFormData, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -993,11 +993,11 @@ function Dashboard({ user }) {
                         value={expenseAdvanceFormData.userId ? { value: expenseAdvanceFormData.userId, label: users.find(u => u._id === expenseAdvanceFormData.userId)?.username ? `${users.find(u => u._id === expenseAdvanceFormData.userId).username} (المتبقي: ${users.find(u => u._id === expenseAdvanceFormData.userId).remainingSalary} جنيه)` : '' } : null}
                         onChange={(selected) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, userId: selected ? selected.value : '' })}
                         isSearchable
+                        isClearable
                         placeholder="اختر الموظف..."
                         className="booking-services-select"
                         classNamePrefix="booking-services"
                         styles={customStyles}
-                        isClearable
                         isDisabled={isLoading}
                       />
                     </Form.Group>
