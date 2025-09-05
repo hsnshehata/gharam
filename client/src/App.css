@@ -338,6 +338,7 @@ code {
 @media print {
   body {
     visibility: hidden;
+    background-color: #fff !important; /* خلفية بيضاء للجسم أثناء الطباعة */
   }
   .receipt-container {
     visibility: visible;
@@ -350,6 +351,8 @@ code {
     break-inside: avoid; /* لدعم المتصفحات */
     width: 100%;
     height: auto;
+    background-color: #fff !important; /* خلفية بيضاء للوصل */
+    color: #000 !important; /* لون الكتابة أسود داكن */
   }
   /* إخفاء أي عناصر تانية غير الوصل */
   * {
@@ -357,5 +360,23 @@ code {
   }
   .receipt-container, .receipt-container * {
     visibility: visible;
+    color: #000 !important; /* كل النصوص سوداء داكنة */
+    background-color: #fff !important; /* كل العناصر بخلفية بيضاء */
+  }
+  /* التأكد من إن الجداول والنصوص واضحة */
+  .receipt-container h5,
+  .receipt-container p,
+  .receipt-container table,
+  .receipt-container th,
+  .receipt-container td {
+    color: #000 !important; /* لون أسود داكن */
+    background-color: #fff !important; /* خلفية بيضاء */
+    opacity: 1 !important; /* إزالة أي شفافية */
+  }
+  /* التأكد من إن حدود الجداول سوداء */
+  .receipt-container table,
+  .receipt-container th,
+  .receipt-container td {
+    border-color: #000 !important; /* حدود الجداول سوداء */
   }
 }
