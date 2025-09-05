@@ -333,3 +333,25 @@ code {
   font-weight: 700 !important; /* خط غامق (Bold) */
   color: #fff !important;
 }
+
+/* ستايل للطباعة عشان نمنع التكرار ونضمن صفحة واحدة */
+@media print {
+  body {
+    visibility: hidden;
+  }
+  .receipt-container {
+    visibility: visible;
+    position: absolute;
+    top: 0;
+    left: 0;
+    page-break-after: avoid; /* منع الفصل إلى صفحات متعددة غير ضروري */
+    break-after: avoid; /* لدعم المتصفحات */
+  }
+  /* إخفاء أي عناصر تانية غير الوصل */
+  * {
+    visibility: hidden;
+  }
+  .receipt-container, .receipt-container * {
+    visibility: visible;
+  }
+}
