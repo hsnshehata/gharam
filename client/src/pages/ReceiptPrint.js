@@ -9,12 +9,6 @@ const ReceiptPrint = ({ data, type }) => {
     return null;
   }
 
-  // لو النوع مش booking وما فيش باركود، نرجع null
-  if (type !== 'booking' && !data.barcode) {
-    console.warn('ReceiptPrint: Missing barcode for non-booking receipt');
-    return null;
-  }
-
   return (
     <div className="receipt-container">
       <div className="receipt-content">
@@ -238,10 +232,12 @@ const ReceiptPrint = ({ data, type }) => {
                 {data.total ? `${data.total} جنيه` : 'غير معروف'}
               </strong>
             </p>
-            <div className="qr-code">
-              <QRCode value={data.barcode} size={120} />
-            </div>
           </>
+        )}
+        {data.barcode && (
+          <div className="qr-code">
+            <QRCode value={data.barcode} size={120} />
+          </div>
         )}
       </div>
     </div>
