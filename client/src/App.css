@@ -166,7 +166,7 @@ code {
 }
 
 .form-group div.booking-services-select .react-select__input {
-  backgroundColor: #2a7a78 !important;
+  background-color: #2a7a78 !important;
   color: #fff !important;
   font-size: 1rem !important;
   border: none !important;
@@ -348,6 +348,8 @@ code {
     page-break-inside: avoid; /* منع تقسيم الوصل داخل الصفحة */
     break-after: avoid; /* لدعم المتصفحات */
     break-inside: avoid; /* لدعم المتصفحات */
+    width: 100%;
+    height: auto;
   }
   /* إخفاء أي عناصر تانية غير الوصل */
   * {
