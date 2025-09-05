@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Pagination, Table } from 'react-bootstrap';
 import axios from 'axios';
 import Select from 'react-select';
@@ -25,6 +25,8 @@ function InstantServices({ user }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchNameReceipt, setSearchNameReceipt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isUsersLoading, setIsUsersLoading] = useState(true);
+  const [isServicesLoading, setIsServicesLoading] = useState(true);
 
   // Custom styles for react-select
   const customStyles = {
@@ -139,38 +141,54 @@ function InstantServices({ user }) {
     })
   };
 
-  const fetchData = async () => {
-    try {
-      const srvRes = await axios.get('/api/packages/services', {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      const usersRes = await axios.get('/api/users', {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      const instantRes = await axios.get(`/api/instant-services?page=${currentPage}&search=${searchNameReceipt}`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      console.log('Services response:', srvRes.data);
-      console.log('Users response:', usersRes.data);
-      console.log('Instant services response:', instantRes.data);
-      setServices(srvRes.data);
-      setUsers(usersRes.data);
-      setInstantServices(instantRes.data.instantServices);
-      setTotalPages(instantRes.data.pages);
-    } catch (err) {
-      console.error('Fetch error:', err.response?.data || err.message);
-      setMessage('خطأ في جلب البيانات');
-    }
-  };
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        setIsUsersLoading(true);
+        setIsServicesLoading(true);
+        const [srvRes, usersRes, instantRes] = await Promise.all([
+          axios.get('/api/packages/services', {
+            headers: { 'x-auth-token': localStorage.getItem('token') }
+          }),
+          axios.get('/api/users', {
+            headers: { 'x-auth-token': localStorage.getItem('token') }
+          }),
+          axios.get(`/api/instant-services?page=${currentPage}&search=${searchNameReceipt}`, {
+            headers: { 'x-auth-token': localStorage.getItem('token') }
+          })
+        ]);
+        console.log('Services response:', srvRes.data);
+        console.log('Users response:', usersRes.data);
+        console.log('Instant services response:', instantRes.data);
+        setServices(srvRes.data);
+        setUsers(usersRes.data);
+        setInstantServices(instantRes.data.instantServices || []);
+        setTotalPages(instantRes.data.pages || 1);
+        setMessage(instantRes.data.instantServices.length === 0 ? 'لا توجد خدمات فورية' : '');
+      } catch (err) {
+        console.error('Fetch error:', err.response?.data || err.message);
+        setMessage('خطأ في جلب البيانات');
+      } finally {
+        setIsLoading(false);
+        setIsUsersLoading(false);
+        setIsServicesLoading(false);
+      }
+    };
+    fetchData();
+  }, [currentPage, searchNameReceipt]);
 
-  const calculateTotal = () => {
-    let tempTotal = 0;
-    formData.services.forEach(id => {
-      const srv = services.find(s => s._id === id.value);
-      if (srv) tempTotal += srv.price;
-    });
-    setTotal(tempTotal);
-  };
+  useEffect(() => {
+    const calculateTotal = () => {
+      let tempTotal = 0;
+      formData.services.forEach(id => {
+        const srv = services.find(s => s._id === id.value);
+        if (srv) tempTotal += srv.price;
+      });
+      setTotal(tempTotal);
+    };
+    calculateTotal();
+  }, [formData.services, services]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -270,10 +288,10 @@ function InstantServices({ user }) {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       console.log('Search response:', res.data);
-      setInstantServices(res.data.instantServices);
+      setInstantServices(res.data.instantServices || []);
       setCurrentPage(1);
-      setTotalPages(res.data.pages);
-      setMessage('');
+      setTotalPages(res.data.pages || 1);
+      setMessage(res.data.instantServices.length === 0 ? 'لا توجد خدمات فورية' : '');
     } catch (err) {
       console.error('Search error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في البحث');
@@ -286,7 +304,14 @@ function InstantServices({ user }) {
     <Container className="mt-5">
       <h2>إدارة الخدمات الفورية</h2>
       {message && <Alert variant={message.includes('خطأ') ? 'danger' : 'success'}>{message}</Alert>}
-      <Button variant="primary" onClick={() => setShowCreateModal(true)} disabled={isLoading}>
+      {(isUsersLoading || isServicesLoading) && <Alert variant="info">جاري جلب البيانات...</Alert>}
+      {!isUsersLoading && users.length === 0 && (
+        <Alert variant="warning">لا يوجد موظفين متاحين، أضف موظفين أولاً</Alert>
+      )}
+      {!isServicesLoading && services.length === 0 && (
+        <Alert variant="warning">لا توجد خدمات متاحة، أضف خدمات أولاً</Alert>
+      )}
+      <Button variant="primary" onClick={() => setShowCreateModal(true)} disabled={isLoading || isUsersLoading || isServicesLoading}>
         <FontAwesomeIcon icon={faPlus} /> شغل جديد
       </Button>
       <Row className="mt-3">
@@ -307,74 +332,10 @@ function InstantServices({ user }) {
       <Button variant="primary" onClick={handleSearch} className="mt-2" disabled={isLoading}>
         {isLoading ? 'جاري البحث...' : 'بحث'}
       </Button>
-      <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>{editItem ? 'تعديل خدمة فورية' : 'إنشاء خدمة فورية'}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleSubmit} className="form-row">
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label>اسم الموظف (اختياري)</Form.Label>
-                <Form.Control
-                  as="select"
-                  value={formData.employeeId}
-                  onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-                  disabled={isLoading}
-                >
-                  <option value="">لا يوجد</option>
-                  {users.map(user => (
-                    <option key={user._id} value={user._id}>{user.username}</option>
-                  ))}
-                </Form.Control>
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label>الخدمات</Form.Label>
-                <Select
-                  isMulti
-                  options={services.filter(srv => srv.type === 'instant').map(srv => ({
-                    value: srv._id,
-                    label: srv.name
-                  }))}
-                  value={formData.services}
-                  onChange={(selected) => setFormData({ ...formData, services: selected })}
-                  isSearchable
-                  placeholder="اختر الخدمات..."
-                  className="booking-services-select"
-                  classNamePrefix="booking-services"
-                  styles={customStyles}
-                  isDisabled={isLoading}
-                />
-              </Form.Group>
-            </Col>
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label>الإجمالي: {total} جنيه</Form.Label>
-              </Form.Group>
-            </Col>
-            <Col md={12}>
-              <Button type="submit" className="mt-3" disabled={isLoading}>
-                {isLoading ? 'جاري الحفظ...' : (editItem ? 'تعديل' : 'حفظ')}
-              </Button>
-              <Button
-                variant="secondary"
-                className="mt-3 ms-2"
-                onClick={() => {
-                  setFormData({ employeeId: '', services: [] });
-                  setEditItem(null);
-                  setShowCreateModal(false);
-                }}
-                disabled={isLoading}
-              >
-                إلغاء
-              </Button>
-            </Col>
-          </Form>
-        </Modal.Body>
-      </Modal>
       <h3>الخدمات الفورية</h3>
+      {instantServices.length === 0 && !isLoading && (
+        <Alert variant="info">لا توجد خدمات فورية لهذا اليوم</Alert>
+      )}
       <Row>
         {instantServices.map(service => {
           const executedService = service.services.find(srv => srv.executed && srv.executedBy);
@@ -420,6 +381,87 @@ function InstantServices({ user }) {
           </Pagination.Item>
         ))}
       </Pagination>
+      <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>{editItem ? 'تعديل خدمة فورية' : 'إنشاء خدمة فورية'}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleSubmit} className="form-row">
+            <Col md={6}>
+              <Form.Group>
+                <Form.Label>اسم الموظف (اختياري)</Form.Label>
+                <Form.Control
+                  as="select"
+                  value={formData.employeeId}
+                  onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
+                  disabled={isLoading || isUsersLoading}
+                >
+                  <option value="">لا يوجد</option>
+                  {users.map(user => (
+                    <option key={user._id} value={user._id}>{user.username}</option>
+                  ))}
+                </Form.Control>
+              </Form.Group>
+            </Col>
+            <Col md={6}>
+              <Form.Group>
+                <Form.Label>الخدمات</Form.Label>
+                <Select
+                  isMulti
+                  options={services.filter(srv => srv.type === 'instant').map(srv => ({
+                    value: srv._id,
+                    label: srv.name
+                  }))}
+                  value={formData.services}
+                  onChange={(selected) => setFormData({ ...formData, services: selected })}
+                  isSearchable
+                  placeholder="اختر الخدمات..."
+                  className="booking-services-select"
+                  classNamePrefix="booking-services"
+                  styles={customStyles}
+                  isDisabled={isLoading || isServicesLoading}
+                />
+              </Form.Group>
+            </Col>
+            <Col md={12}>
+              <Form.Group>
+                <Form.Label>الإجمالي: {total} جنيه</Form.Label>
+              </Form.Group>
+            </Col>
+            <Col md={12}>
+              <Button type="submit" className="mt-3" disabled={isLoading || isUsersLoading || isServicesLoading}>
+                {isLoading ? 'جاري الحفظ...' : (editItem ? 'تعديل' : 'حفظ')}
+              </Button>
+              <Button
+                variant="secondary"
+                className="mt-3 ms-2"
+                onClick={() => {
+                  setFormData({ employeeId: '', services: [] });
+                  setEditItem(null);
+                  setShowCreateModal(false);
+                }}
+                disabled={isLoading}
+              >
+                إلغاء
+              </Button>
+            </Col>
+          </Form>
+        </Modal.Body>
+      </Modal>
+      <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>تأكيد الحذف</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>هل أنت متأكد من حذف الخدمة الفورية؟</Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowDeleteModal(false)} disabled={isLoading}>
+            إلغاء
+          </Button>
+          <Button variant="danger" onClick={handleDelete} disabled={isLoading}>
+            {isLoading ? 'جاري الحذف...' : 'حذف'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
       <Modal show={showReceiptModal} onHide={() => setShowReceiptModal(false)} size="sm">
         <Modal.Header closeButton>
           <Modal.Title>وصل الخدمة الفورية</Modal.Title>
