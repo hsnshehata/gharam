@@ -166,7 +166,7 @@ code {
 }
 
 .form-group div.booking-services-select .react-select__input {
-  background-color: #2a7a78 !important;
+  backgroundColor: #2a7a78 !important;
   color: #fff !important;
   font-size: 1rem !important;
   border: none !important;
@@ -345,7 +345,9 @@ code {
     top: 0;
     left: 0;
     page-break-after: avoid; /* منع الفصل إلى صفحات متعددة غير ضروري */
+    page-break-inside: avoid; /* منع تقسيم الوصل داخل الصفحة */
     break-after: avoid; /* لدعم المتصفحات */
+    break-inside: avoid; /* لدعم المتصفحات */
   }
   /* إخفاء أي عناصر تانية غير الوصل */
   * {
