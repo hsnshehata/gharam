@@ -1,7 +1,7 @@
 import React from 'react';
 import QRCode from 'qrcode.react';
 import { Table } from 'react-bootstrap';
-import 'client/src/App.css';
+import '../App.css';
 
 const ReceiptPrint = ({ data, type }) => {
   if (!data || !type) {
