@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Pagination, Table } from 'react-bootstrap';
 import axios from 'axios';
 import Select from 'react-select';
@@ -139,55 +139,38 @@ function InstantServices({ user }) {
     })
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const srvRes = await axios.get('/api/packages/services', {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        const usersRes = await axios.get('/api/users', {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        const instantRes = await axios.get(`/api/instant-services?page=${currentPage}&search=${searchNameReceipt}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        console.log('Services response:', srvRes.data);
-        console.log('Users response:', usersRes.data);
-        console.log('Instant services response:', instantRes.data);
-        setServices(srvRes.data);
-        setUsers(usersRes.data);
-        setInstantServices(instantRes.data.instantServices);
-        setTotalPages(instantRes.data.pages);
-      } catch (err) {
-        console.error('Fetch error:', err.response?.data || err.message);
-        setMessage('خطأ في جلب البيانات');
-      }
-    };
-    fetchData();
-  }, [currentPage, searchNameReceipt]);
-
-  useEffect(() => {
-    const calculateTotal = () => {
-      let tempTotal = 0;
-      formData.services.forEach(id => {
-        const srv = services.find(s => s._id === id.value);
-        if (srv) tempTotal += srv.price;
+  const fetchData = async () => {
+    try {
+      const srvRes = await axios.get('/api/packages/services', {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
       });
-      setTotal(tempTotal);
-    };
-    calculateTotal();
-  }, [formData.services, services]);
-
-  // تحكم في الطباعة لمنع التكرار
-  useEffect(() => {
-    if (showReceiptModal && currentReceipt) {
-      // تأخير الطباعة لحد ما الـ Modal يترندر بالكامل
-      const timer = setTimeout(() => {
-        window.print();
-      }, 500);
-      return () => clearTimeout(timer);
+      const usersRes = await axios.get('/api/users', {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      const instantRes = await axios.get(`/api/instant-services?page=${currentPage}&search=${searchNameReceipt}`, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      console.log('Services response:', srvRes.data);
+      console.log('Users response:', usersRes.data);
+      console.log('Instant services response:', instantRes.data);
+      setServices(srvRes.data);
+      setUsers(usersRes.data);
+      setInstantServices(instantRes.data.instantServices);
+      setTotalPages(instantRes.data.pages);
+    } catch (err) {
+      console.error('Fetch error:', err.response?.data || err.message);
+      setMessage('خطأ في جلب البيانات');
     }
-  }, [showReceiptModal, currentReceipt]);
+  };
+
+  const calculateTotal = () => {
+    let tempTotal = 0;
+    formData.services.forEach(id => {
+      const srv = services.find(s => s._id === id.value);
+      if (srv) tempTotal += srv.price;
+    });
+    setTotal(tempTotal);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -217,7 +200,7 @@ function InstantServices({ user }) {
         setMessage('تم إضافة الخدمة الفورية بنجاح');
       }
       // التأكد من وجود barcode قبل فتح الـ Modal
-      if (res.data.instantService.barcode) {
+      if (res.data.instantService?.barcode) {
         setCurrentReceipt(res.data.instantService);
         setShowReceiptModal(true);
       } else {
@@ -266,7 +249,7 @@ function InstantServices({ user }) {
 
   const handlePrint = (service) => {
     console.log('Printing service:', service);
-    if (!service.barcode) {
+    if (!service?.barcode) {
       setMessage('خطأ: الوصل بدون باركود');
       return;
     }
@@ -443,7 +426,7 @@ function InstantServices({ user }) {
         </Modal.Header>
         <Modal.Body>
           {currentReceipt && (
-            <ReceiptPrint key={currentReceipt._id} data={currentReceipt} type="instant" />
+            <ReceiptPrint key={currentReceipt._id + '-' + Date.now()} data={currentReceipt} type="instant" />
           )}
         </Modal.Body>
         <Modal.Footer>
