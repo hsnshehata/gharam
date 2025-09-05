@@ -24,7 +24,7 @@ function InstantServices({ user }) {
   const [totalPages, setTotalPages] = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchNameReceipt, setSearchNameReceipt] = useState('');
-  const [isLoading, setIsLoading] = useState(false); // New loading state
+  const [isLoading, setIsLoading] = useState(false);
 
   // Custom styles for react-select
   const customStyles = {
@@ -178,35 +178,50 @@ function InstantServices({ user }) {
     calculateTotal();
   }, [formData.services, services]);
 
+  // تحكم في الطباعة لمنع التكرار
+  useEffect(() => {
+    if (showReceiptModal && currentReceipt) {
+      // تأخير الطباعة لحد ما الـ Modal يترندر بالكامل
+      const timer = setTimeout(() => {
+        window.print();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [showReceiptModal, currentReceipt]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.services.length) {
       setMessage('الرجاء اختيار خدمة واحدة على الأقل');
       return;
     }
-    setIsLoading(true); // Start loading
-    setShowCreateModal(false); // Close modal immediately
+    setIsLoading(true);
+    setShowCreateModal(false);
     const submitData = {
       employeeId: formData.employeeId || null,
       services: formData.services.map(s => s.value)
     };
     try {
+      let res;
       if (editItem) {
-        const res = await axios.put(`/api/instant-services/${editItem._id}`, submitData, {
+        res = await axios.put(`/api/instant-services/${editItem._id}`, submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setInstantServices(instantServices.map(s => (s._id === editItem._id ? res.data.instantService : s)));
         setMessage('تم تعديل الخدمة الفورية بنجاح');
-        setCurrentReceipt(res.data.instantService);
-        setShowReceiptModal(true);
       } else {
-        const res = await axios.post('/api/instant-services', submitData, {
+        res = await axios.post('/api/instant-services', submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setInstantServices([res.data.instantService, ...instantServices]);
         setMessage('تم إضافة الخدمة الفورية بنجاح');
+      }
+      // التأكد من وجود barcode قبل فتح الـ Modal
+      if (res.data.instantService.barcode) {
         setCurrentReceipt(res.data.instantService);
         setShowReceiptModal(true);
+      } else {
+        setMessage('خطأ: الوصل بدون باركود');
       }
       setFormData({ employeeId: '', services: [] });
       setEditItem(null);
@@ -214,7 +229,7 @@ function InstantServices({ user }) {
       console.error('Submit error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في إضافة/تعديل الخدمة الفورية');
     } finally {
-      setIsLoading(false); // Stop loading
+      setIsLoading(false);
     }
   };
 
@@ -232,8 +247,8 @@ function InstantServices({ user }) {
   };
 
   const handleDelete = async () => {
-    setIsLoading(true); // Start loading
-    setShowDeleteModal(false); // Close modal immediately
+    setIsLoading(true);
+    setShowDeleteModal(false);
     try {
       await axios.delete(`/api/instant-services/${deleteItem._id}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -245,12 +260,16 @@ function InstantServices({ user }) {
       console.error('Delete error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في الحذف');
     } finally {
-      setIsLoading(false); // Stop loading
+      setIsLoading(false);
     }
   };
 
   const handlePrint = (service) => {
     console.log('Printing service:', service);
+    if (!service.barcode) {
+      setMessage('خطأ: الوصل بدون باركود');
+      return;
+    }
     setCurrentReceipt(service);
     setShowReceiptModal(true);
   };
@@ -262,7 +281,7 @@ function InstantServices({ user }) {
   };
 
   const handleSearch = async () => {
-    setIsLoading(true); // Start loading
+    setIsLoading(true);
     try {
       const res = await axios.get(`/api/instant-services?search=${searchNameReceipt}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -276,7 +295,7 @@ function InstantServices({ user }) {
       console.error('Search error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في البحث');
     } finally {
-      setIsLoading(false); // Stop loading
+      setIsLoading(false);
     }
   };
 
@@ -418,26 +437,14 @@ function InstantServices({ user }) {
           </Pagination.Item>
         ))}
       </Pagination>
-      <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>تأكيد الحذف</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>هل أنت متأكد من حذف الخدمة الفورية؟</Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowDeleteModal(false)} disabled={isLoading}>
-            إلغاء
-          </Button>
-          <Button variant="danger" onClick={handleDelete} disabled={isLoading}>
-            {isLoading ? 'جاري الحذف...' : 'حذف'}
-          </Button>
-        </Modal.Footer>
-      </Modal>
       <Modal show={showReceiptModal} onHide={() => setShowReceiptModal(false)} size="sm">
         <Modal.Header closeButton>
           <Modal.Title>وصل الخدمة الفورية</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <ReceiptPrint data={currentReceipt} type="instant" />
+          {currentReceipt && (
+            <ReceiptPrint key={currentReceipt._id} data={currentReceipt} type="instant" />
+          )}
         </Modal.Body>
         <Modal.Footer>
           <Button variant="primary" onClick={() => window.print()} disabled={isLoading}>
