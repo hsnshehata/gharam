@@ -9,12 +9,17 @@ const ReceiptPrint = ({ data, type }) => {
     return null;
   }
 
+  // لو النوع مش booking وما فيش باركود، نرجع null
+  if (type !== 'booking' && !data.barcode) {
+    console.warn('ReceiptPrint: Missing barcode for non-booking receipt');
+    return null;
+  }
+
   return (
     <div className="receipt-container">
       <div className="receipt-content">
         <img src="/logo.png" alt="Logo" className="receipt-logo" />
         <h5>Beauty Center</h5>
-
         {type === 'booking' ? (
           <>
             <p>اسم العميل: {data.clientName || 'غير متوفر'}</p>
@@ -31,7 +36,6 @@ const ReceiptPrint = ({ data, type }) => {
                 {new Date(data.hennaDate).toLocaleDateString('ar-EG')}
               </p>
             )}
-
             <h6>تفاصيل الباكدجات:</h6>
             <Table bordered>
               <thead>
@@ -55,7 +59,6 @@ const ReceiptPrint = ({ data, type }) => {
                       : 'غير متوفر'}
                   </td>
                 </tr>
-
                 {data.hennaPackage && (
                   <tr
                     key={
@@ -72,7 +75,6 @@ const ReceiptPrint = ({ data, type }) => {
                     </td>
                   </tr>
                 )}
-
                 {data.photographyPackage && (
                   <tr
                     key={
@@ -91,7 +93,6 @@ const ReceiptPrint = ({ data, type }) => {
                 )}
               </tbody>
             </Table>
-
             {data.extraServices?.length > 0 && (
               <>
                 <h6>الخدمات الإضافية:</h6>
@@ -119,7 +120,6 @@ const ReceiptPrint = ({ data, type }) => {
                 </Table>
               </>
             )}
-
             {data.returnedServices?.length > 0 && (
               <>
                 <h6>الخدمات المرتجعة:</h6>
@@ -149,7 +149,6 @@ const ReceiptPrint = ({ data, type }) => {
                 </Table>
               </>
             )}
-
             {data.hairStraightening && (
               <>
                 <h6>فرد الشعر:</h6>
@@ -177,7 +176,6 @@ const ReceiptPrint = ({ data, type }) => {
                 </Table>
               </>
             )}
-
             <p>
               <strong>
                 الإجمالي:{' '}
@@ -207,7 +205,6 @@ const ReceiptPrint = ({ data, type }) => {
                 : 'غير متوفر'}
             </p>
             <p>الموظف: {data.employeeId ? data.employeeId.username : 'غير محدد'}</p>
-
             <h6>الخدمات:</h6>
             <Table bordered>
               <thead>
@@ -235,20 +232,16 @@ const ReceiptPrint = ({ data, type }) => {
                 )}
               </tbody>
             </Table>
-
             <p>
               <strong>
                 الإجمالي:{' '}
                 {data.total ? `${data.total} جنيه` : 'غير معروف'}
               </strong>
             </p>
+            <div className="qr-code">
+              <QRCode value={data.barcode} size={120} />
+            </div>
           </>
-        )}
-
-        {data.barcode && (
-          <div className="qr-code">
-            <QRCode value={data.barcode} size={120} />
-          </div>
         )}
       </div>
     </div>
