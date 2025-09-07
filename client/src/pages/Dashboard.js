@@ -3,7 +3,7 @@ import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table } from 're
 import axios from 'axios';
 import Select from 'react-select';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faPrint, faEdit, faEye, faDollarSign, faTrash, faSearch } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faTasks, faMoneyBill, faPrint, faEdit, faEye, faDollarSign, faTrash } from '@fortawesome/free-solid-svg-icons';
 import ReceiptPrint from '../pages/ReceiptPrint';
 
 function Dashboard({ user }) {
@@ -163,6 +163,7 @@ function Dashboard({ user }) {
     const fetchData = async () => {
       try {
         setIsUsersLoading(true);
+        setIsLoading(true);
         const [summaryRes, bookingsRes, packagesRes, servicesRes, usersRes] = await Promise.all([
           axios.get(`/api/dashboard/summary?date=${date}`, {
             headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -188,12 +189,14 @@ function Dashboard({ user }) {
         setPackages(packagesRes.data);
         setServices(servicesRes.data);
         setUsers(usersRes.data);
+        setMessage('');
       } catch (err) {
         console.error('Fetch error:', err.response?.data || err.message);
         setMessage('خطأ في جلب البيانات');
         setBookings({ makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
       } finally {
         setIsUsersLoading(false);
+        setIsLoading(false);
       }
     };
     fetchData();
@@ -259,7 +262,6 @@ function Dashboard({ user }) {
     calculateInstantServiceTotal();
   }, [instantServiceFormData.services, services]);
 
-  // Sync expenseAdvanceFormData.userId when editing
   useEffect(() => {
     if (editItem && editItem.type === 'advance') {
       setExpenseAdvanceFormData(prev => ({
@@ -386,14 +388,13 @@ function Dashboard({ user }) {
       }
     }
     setIsLoading(true);
-    setShowExpenseAdvanceModal(false); // Close Modal immediately
+    setShowExpenseAdvanceModal(false);
     try {
       const res = await axios.post('/api/expenses-advances', expenseAdvanceFormData, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       console.log('Expense/Advance response:', res.data);
       setMessage(`تم إضافة ${res.data.type === 'expense' ? 'المصروف' : 'السلفة'} بنجاح`);
-      // Update users state with new remainingSalary if advance
       if (expenseAdvanceFormData.type === 'advance' && res.data.updatedUser) {
         setUsers(users.map(u => (u._id === expenseAdvanceFormData.userId ? { ...u, remainingSalary: res.data.updatedUser.remainingSalary } : u)));
       }
@@ -490,727 +491,725 @@ function Dashboard({ user }) {
     setShowDetailsModal(true);
   };
 
-  const handleSearch = async () => {
-    setIsLoading(true);
-    try {
-      const [summaryRes, bookingsRes] = await Promise.all([
-        axios.get(`/api/dashboard/summary?date=${date}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        }),
-        axios.get(`/api/today-work?date=${date}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        })
-      ]);
-      console.log('Search summary response:', summaryRes.data);
-      console.log('Search today work response:', bookingsRes.data);
-      setSummary(summaryRes.data);
-      setBookings(bookingsRes.data || { makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
-      setMessage('');
-    } catch (err) {
-      console.error('Search error:', err.response?.data || err.message);
-      setMessage('خطأ في البحث');
-      setBookings({ makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
-    <Container className="mt-5">
-      <h2>شغل إنهاردة</h2>
-      {message && <Alert variant={message.includes('خطأ') ? 'danger' : 'success'}>{message}</Alert>}
-      {!isUsersLoading && users.length === 0 && (
-        <Alert variant="warning">لا يوجد موظفين متاحين لاختيار سلفة، أضف موظفين أولاً</Alert>
-      )}
-      <Row className="mb-3">
-        <Col md={6}>
-          <Form.Group>
-            <Form.Label>اختر التاريخ</Form.Label>
-            <Form.Control
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+    <Container className="mt-5 d-flex justify-content-center" style={{ maxWidth: '1200px' }}>
+      <div className="w-100">
+        <h2 className="text-center">شغل إنهاردة</h2>
+        {message && <Alert variant={message.includes('خطأ') ? 'danger' : 'success'}>{message}</Alert>}
+        {!isUsersLoading && users.length === 0 && (
+          <Alert variant="warning">لا يوجد موظفين متاحين لاختيار سلفة، أضف موظفين أولاً</Alert>
+        )}
+        <Row className="mb-3 justify-content-center">
+          <Col xs={12} md={4} className="d-flex justify-content-center mb-2">
+            <Button
+              variant="primary"
+              onClick={() => setShowBookingModal(true)}
               disabled={isLoading}
-            />
-          </Form.Group>
-        </Col>
-        <Col md={6} className="d-flex align-items-end">
-          <Button variant="primary" onClick={handleSearch} className="me-2" disabled={isLoading}>
-            <FontAwesomeIcon icon={faSearch} /> {isLoading ? 'جاري البحث...' : 'بحث'}
-          </Button>
-          <Button variant="primary" onClick={() => setShowBookingModal(true)} className="me-2" disabled={isLoading}>
-            <FontAwesomeIcon icon={faPlus} /> إنشاء حجز جديد
-          </Button>
-          <Button variant="primary" onClick={() => setShowInstantServiceModal(true)} className="me-2" disabled={isLoading}>
-            <FontAwesomeIcon icon={faPlus} /> شغل جديد
-          </Button>
-          <Button variant="primary" onClick={() => setShowExpenseAdvanceModal(true)} disabled={isLoading || isUsersLoading || users.length === 0}>
-            <FontAwesomeIcon icon={faPlus} /> إضافة مصروف/سلفة
-          </Button>
-        </Col>
-      </Row>
-      <h3>حجوزات الميك آب</h3>
-      {bookings.makeupBookings.length === 0 && <Alert variant="info">لا توجد حجوزات ميك آب لهذا اليوم</Alert>}
-      <Row>
-        {bookings.makeupBookings.map(booking => (
-          <Col md={4} key={booking._id} className="mb-3">
-            <Card>
-              <Card.Body>
-                <Card.Title>{booking.clientName} ({new Date(booking.eventDate).toDateString() === new Date(date).toDateString() ? 'زفاف/شبكة' : 'حنة'})</Card.Title>
-                <Card.Text>
-                  رقم الهاتف: {booking.clientPhone}<br />
-                  المدفوع: {booking.deposit} جنيه<br />
-                  المتبقي: {booking.remaining} جنيه
-                </Card.Text>
-                <Button variant="primary" className="me-2" onClick={() => handlePrint(booking)} disabled={isLoading}>
-                  <FontAwesomeIcon icon={faPrint} />
-                </Button>
-                <Button variant="primary" className="me-2" onClick={() => handleBookingEdit(booking)} disabled={isLoading}>
-                  <FontAwesomeIcon icon={faEdit} />
-                </Button>
-                <Button variant="primary" className="me-2" onClick={() => handleShowDetails(booking)} disabled={isLoading}>
-                  <FontAwesomeIcon icon={faEye} />
-                </Button>
-                <Button variant="primary" className="me-2" onClick={() => { setDeleteItem(booking); setShowInstallmentModal(true); }} disabled={isLoading}>
-                  <FontAwesomeIcon icon={faDollarSign} />
-                </Button>
-                <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }} disabled={isLoading}>
-                  <FontAwesomeIcon icon={faTrash} />
-                </Button>
-              </Card.Body>
-            </Card>
+              className="d-flex flex-column align-items-center"
+            >
+              <span>إنشاء حجز جديد</span>
+              <FontAwesomeIcon icon={faPlus} className="mt-2" />
+            </Button>
           </Col>
-        ))}
-      </Row>
-      <h3>حجوزات فرد الشعر</h3>
-      {bookings.hairStraighteningBookings.length === 0 && <Alert variant="info">لا توجد حجوزات فرد شعر لهذا اليوم</Alert>}
-      <Row>
-        {bookings.hairStraighteningBookings.map(booking => (
-          <Col md={4} key={booking._id} className="mb-3">
-            <Card>
-              <Card.Body>
-                <Card.Title>{booking.clientName}</Card.Title>
-                <Card.Text>
-                  رقم الهاتف: {booking.clientPhone}<br />
-                  المدفوع: {booking.deposit} جنيه<br />
-                  المتبقي: {booking.remaining} جنيه
-                </Card.Text>
-                <Button variant="primary" className="me-2" onClick={() => handlePrint(booking)} disabled={isLoading}>
-                  <FontAwesomeIcon icon={faPrint} />
-                </Button>
-                <Button variant="primary" className="me-2" onClick={() => handleBookingEdit(booking)} disabled={isLoading}>
-                  <FontAwesomeIcon icon={faEdit} />
-                </Button>
-                <Button variant="primary" className="me-2" onClick={() => handleShowDetails(booking)} disabled={isLoading}>
-                  <FontAwesomeIcon icon={faEye} />
-                </Button>
-                <Button variant="primary" className="me-2" onClick={() => { setDeleteItem(booking); setShowInstallmentModal(true); }} disabled={isLoading}>
-                  <FontAwesomeIcon icon={faDollarSign} />
-                </Button>
-                <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }} disabled={isLoading}>
-                  <FontAwesomeIcon icon={faTrash} />
-                </Button>
-              </Card.Body>
-            </Card>
+          <Col xs={12} md={4} className="d-flex justify-content-center mb-2">
+            <Button
+              variant="primary"
+              onClick={() => setShowInstantServiceModal(true)}
+              disabled={isLoading}
+              className="d-flex flex-column align-items-center"
+            >
+              <span>شغل جديد</span>
+              <FontAwesomeIcon icon={faTasks} className="mt-2" />
+            </Button>
           </Col>
-        ))}
-      </Row>
-      <h3>حجوزات التصوير</h3>
-      {bookings.photographyBookings.length === 0 && <Alert variant="info">لا توجد حجوزات تصوير لهذا اليوم</Alert>}
-      <Row>
-        {bookings.photographyBookings.map(booking => (
-          <Col md={4} key={booking._id} className="mb-3">
-            <Card>
-              <Card.Body>
-                <Card.Title>{booking.clientName} ({new Date(booking.eventDate).toDateString() === new Date(date).toDateString() ? 'زفاف/شبكة' : 'حنة'})</Card.Title>
-                <Card.Text>
-                  رقم الهاتف: {booking.clientPhone}<br />
-                  المدفوع: {booking.deposit} جنيه<br />
-                  المتبقي: {booking.remaining} جنيه
-                </Card.Text>
-                <Button variant="primary" className="me-2" onClick={() => handlePrint(booking)} disabled={isLoading}>
-                  <FontAwesomeIcon icon={faPrint} />
-                </Button>
-                <Button variant="primary" className="me-2" onClick={() => handleBookingEdit(booking)} disabled={isLoading}>
-                  <FontAwesomeIcon icon={faEdit} />
-                </Button>
-                <Button variant="primary" className="me-2" onClick={() => handleShowDetails(booking)} disabled={isLoading}>
-                  <FontAwesomeIcon icon={faEye} />
-                </Button>
-                <Button variant="primary" className="me-2" onClick={() => { setDeleteItem(booking); setShowInstallmentModal(true); }} disabled={isLoading}>
-                  <FontAwesomeIcon icon={faDollarSign} />
-                </Button>
-                <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }} disabled={isLoading}>
-                  <FontAwesomeIcon icon={faTrash} />
-                </Button>
-              </Card.Body>
-            </Card>
+          <Col xs={12} md={4} className="d-flex justify-content-center mb-2">
+            <Button
+              variant="primary"
+              onClick={() => setShowExpenseAdvanceModal(true)}
+              disabled={isLoading || isUsersLoading || users.length === 0}
+              className="d-flex flex-column align-items-center"
+            >
+              <span>إضافة مصروف/سلفة</span>
+              <FontAwesomeIcon icon={faMoneyBill} className="mt-2" />
+            </Button>
           </Col>
-        ))}
-      </Row>
-      <Card className="mb-4">
-        <Card.Body>
-          <Card.Title>ملخص اليوم ({new Date(date).toLocaleDateString()})</Card.Title>
-          <Card.Text>
-            إجمالي العربون: {summary.totalDeposit} جنيه<br />
-            إجمالي الخدمات الفورية: {summary.totalInstantServices} جنيه<br />
-            إجمالي المصروفات: {summary.totalExpenses} جنيه<br />
-            إجمالي السلف: {summary.totalAdvances} جنيه<br />
-            <strong>الصافي: {summary.net} جنيه</strong>
-          </Card.Text>
-        </Card.Body>
-      </Card>
-      <Modal show={showBookingModal} onHide={() => setShowBookingModal(false)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>{editBooking ? 'تعديل حجز' : 'إنشاء حجز جديد'}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleBookingSubmit} className="form-row">
-            <Row>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>نوع الباكدج</Form.Label>
-                  <Form.Control
-                    as="select"
-                    value={bookingFormData.packageId}
-                    onChange={(e) => setBookingFormData({ ...bookingFormData, packageId: e.target.value })}
-                    required
-                    disabled={isLoading}
-                  >
-                    <option value="">اختر باكدج</option>
-                    {packages.map(pkg => (
-                      <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
-                    ))}
-                  </Form.Control>
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>تاريخ المناسبة</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={bookingFormData.eventDate}
-                    onChange={(e) => setBookingFormData({ ...bookingFormData, eventDate: e.target.value })}
-                    required
-                    disabled={isLoading}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>باكدج حنة (اختياري)</Form.Label>
-                  <Form.Control
-                    as="select"
-                    value={bookingFormData.hennaPackageId}
-                    onChange={(e) => setBookingFormData({ ...bookingFormData, hennaPackageId: e.target.value })}
-                    disabled={isLoading}
-                  >
-                    <option value="">لا يوجد</option>
-                    {packages.filter(pkg => pkg.type === 'makeup').map(pkg => (
-                      <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
-                    ))}
-                  </Form.Control>
-                </Form.Group>
-              </Col>
-              {bookingFormData.hennaPackageId && (
+        </Row>
+        <Row className="mb-3 justify-content-center">
+          <Col md={6}>
+            <Form.Group>
+              <Form.Label>اختر التاريخ</Form.Label>
+              <Form.Control
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                disabled={isLoading}
+                placeholder="اختر التاريخ..."
+              />
+            </Form.Group>
+          </Col>
+        </Row>
+        <h3 className="text-center">حجوزات الميك آب</h3>
+        {bookings.makeupBookings.length === 0 && <Alert variant="info">لا توجد حجوزات ميك آب لهذا اليوم</Alert>}
+        <Row>
+          {bookings.makeupBookings.map(booking => (
+            <Col md={4} key={booking._id} className="mb-3">
+              <Card>
+                <Card.Body>
+                  <Card.Title>{booking.clientName} ({new Date(booking.eventDate).toDateString() === new Date(date).toDateString() ? 'زفاف/شبكة' : 'حنة'})</Card.Title>
+                  <Card.Text>
+                    رقم الهاتف: {booking.clientPhone}<br />
+                    المدفوع: {booking.deposit} جنيه<br />
+                    المتبقي: {booking.remaining} جنيه
+                  </Card.Text>
+                  <Button variant="primary" className="me-2" onClick={() => handlePrint(booking)} disabled={isLoading}>
+                    <FontAwesomeIcon icon={faPrint} />
+                  </Button>
+                  <Button variant="primary" className="me-2" onClick={() => handleBookingEdit(booking)} disabled={isLoading}>
+                    <FontAwesomeIcon icon={faEdit} />
+                  </Button>
+                  <Button variant="primary" className="me-2" onClick={() => handleShowDetails(booking)} disabled={isLoading}>
+                    <FontAwesomeIcon icon={faEye} />
+                  </Button>
+                  <Button variant="primary" className="me-2" onClick={() => { setDeleteItem(booking); setShowInstallmentModal(true); }} disabled={isLoading}>
+                    <FontAwesomeIcon icon={faDollarSign} />
+                  </Button>
+                  <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }} disabled={isLoading}>
+                    <FontAwesomeIcon icon={faTrash} />
+                  </Button>
+                </Card.Body>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+        <h3 className="text-center">حجوزات فرد الشعر</h3>
+        {bookings.hairStraighteningBookings.length === 0 && <Alert variant="info">لا توجد حجوزات فرد شعر لهذا اليوم</Alert>}
+        <Row>
+          {bookings.hairStraighteningBookings.map(booking => (
+            <Col md={4} key={booking._id} className="mb-3">
+              <Card>
+                <Card.Body>
+                  <Card.Title>{booking.clientName}</Card.Title>
+                  <Card.Text>
+                    رقم الهاتف: {booking.clientPhone}<br />
+                    المدفوع: {booking.deposit} جنيه<br />
+                    المتبقي: {booking.remaining} جنيه
+                  </Card.Text>
+                  <Button variant="primary" className="me-2" onClick={() => handlePrint(booking)} disabled={isLoading}>
+                    <FontAwesomeIcon icon={faPrint} />
+                  </Button>
+                  <Button variant="primary" className="me-2" onClick={() => handleBookingEdit(booking)} disabled={isLoading}>
+                    <FontAwesomeIcon icon={faEdit} />
+                  </Button>
+                  <Button variant="primary" className="me-2" onClick={() => handleShowDetails(booking)} disabled={isLoading}>
+                    <FontAwesomeIcon icon={faEye} />
+                  </Button>
+                  <Button variant="primary" className="me-2" onClick={() => { setDeleteItem(booking); setShowInstallmentModal(true); }} disabled={isLoading}>
+                    <FontAwesomeIcon icon={faDollarSign} />
+                  </Button>
+                  <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }} disabled={isLoading}>
+                    <FontAwesomeIcon icon={faTrash} />
+                  </Button>
+                </Card.Body>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+        <h3 className="text-center">حجوزات التصوير</h3>
+        {bookings.photographyBookings.length === 0 && <Alert variant="info">لا توجد حجوزات تصوير لهذا اليوم</Alert>}
+        <Row>
+          {bookings.photographyBookings.map(booking => (
+            <Col md={4} key={booking._id} className="mb-3">
+              <Card>
+                <Card.Body>
+                  <Card.Title>{booking.clientName} ({new Date(booking.eventDate).toDateString() === new Date(date).toDateString() ? 'زفاف/شبكة' : 'حنة'})</Card.Title>
+                  <Card.Text>
+                    رقم الهاتف: {booking.clientPhone}<br />
+                    المدفوع: {booking.deposit} جنيه<br />
+                    المتبقي: {booking.remaining} جنيه
+                  </Card.Text>
+                  <Button variant="primary" className="me-2" onClick={() => handlePrint(booking)} disabled={isLoading}>
+                    <FontAwesomeIcon icon={faPrint} />
+                  </Button>
+                  <Button variant="primary" className="me-2" onClick={() => handleBookingEdit(booking)} disabled={isLoading}>
+                    <FontAwesomeIcon icon={faEdit} />
+                  </Button>
+                  <Button variant="primary" className="me-2" onClick={() => handleShowDetails(booking)} disabled={isLoading}>
+                    <FontAwesomeIcon icon={faEye} />
+                  </Button>
+                  <Button variant="primary" className="me-2" onClick={() => { setDeleteItem(booking); setShowInstallmentModal(true); }} disabled={isLoading}>
+                    <FontAwesomeIcon icon={faDollarSign} />
+                  </Button>
+                  <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }} disabled={isLoading}>
+                    <FontAwesomeIcon icon={faTrash} />
+                  </Button>
+                </Card.Body>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+        <Card className="mb-4">
+          <Card.Body>
+            <Card.Title className="text-center">ملخص اليوم ({new Date(date).toLocaleDateString()})</Card.Title>
+            <Card.Text className="text-center">
+              إجمالي العربون: {summary.totalDeposit} جنيه<br />
+              إجمالي الخدمات الفورية: {summary.totalInstantServices} جنيه<br />
+              إجمالي المصروفات: {summary.totalExpenses} جنيه<br />
+              إجمالي السلف: {summary.totalAdvances} جنيه<br />
+              <strong>الصافي: {summary.net} جنيه</strong>
+            </Card.Text>
+          </Card.Body>
+        </Card>
+        <Modal show={showBookingModal} onHide={() => setShowBookingModal(false)} size="lg">
+          <Modal.Header closeButton>
+            <Modal.Title>{editBooking ? 'تعديل حجز' : 'إنشاء حجز جديد'}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form onSubmit={handleBookingSubmit} className="form-row">
+              <Row>
                 <Col md={6}>
                   <Form.Group>
-                    <Form.Label>تاريخ الحنة</Form.Label>
+                    <Form.Label>نوع الباكدج</Form.Label>
+                    <Form.Control
+                      as="select"
+                      value={bookingFormData.packageId}
+                      onChange={(e) => setBookingFormData({ ...bookingFormData, packageId: e.target.value })}
+                      required
+                      disabled={isLoading}
+                    >
+                      <option value="">اختر باكدج</option>
+                      {packages.map(pkg => (
+                        <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
+                      ))}
+                    </Form.Control>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>تاريخ المناسبة</Form.Label>
                     <Form.Control
                       type="date"
-                      value={bookingFormData.hennaDate}
-                      onChange={(e) => setBookingFormData({ ...bookingFormData, hennaDate: e.target.value })}
+                      value={bookingFormData.eventDate}
+                      onChange={(e) => setBookingFormData({ ...bookingFormData, eventDate: e.target.value })}
                       required
                       disabled={isLoading}
                     />
                   </Form.Group>
                 </Col>
-              )}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>باكدج تصوير (اختياري)</Form.Label>
-                  <Form.Control
-                    as="select"
-                    value={bookingFormData.photographyPackageId}
-                    onChange={(e) => setBookingFormData({ ...bookingFormData, photographyPackageId: e.target.value })}
-                    disabled={isLoading}
-                  >
-                    <option value="">لا يوجد</option>
-                    {packages.filter(pkg => pkg.type === 'photography').map(pkg => (
-                      <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
-                    ))}
-                  </Form.Control>
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>مرتجع من الباكدجات (اختياري)</Form.Label>
-                  <Select
-                    isMulti
-                    options={selectedPackageServices}
-                    value={bookingFormData.returnedServices}
-                    onChange={(selected) => setBookingFormData({ ...bookingFormData, returnedServices: selected })}
-                    isSearchable
-                    placeholder="اختر الخدمات..."
-                    className="booking-services-select"
-                    classNamePrefix="booking-services"
-                    styles={customStyles}
-                    isDisabled={isLoading}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>خدمات إضافية (اختياري)</Form.Label>
-                  <Select
-                    isMulti
-                    options={services.filter(srv => srv.type === 'instant').map(srv => ({ value: srv._id, label: srv.name, price: srv.price }))}
-                    value={bookingFormData.extraServices}
-                    onChange={(selected) => setBookingFormData({ ...bookingFormData, extraServices: selected })}
-                    isSearchable
-                    placeholder="اختر الخدمات..."
-                    className="booking-services-select"
-                    classNamePrefix="booking-services"
-                    styles={customStyles}
-                    isDisabled={isLoading}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>فرد شعر</Form.Label>
-                  <Form.Control
-                    as="select"
-                    value={bookingFormData.hairStraightening}
-                    onChange={(e) => setBookingFormData({ ...bookingFormData, hairStraightening: e.target.value })}
-                    className="custom-select"
-                    disabled={isLoading}
-                  >
-                    <option value="no">لا</option>
-                    <option value="yes">نعم</option>
-                  </Form.Control>
-                </Form.Group>
-              </Col>
-              {bookingFormData.hairStraightening === 'yes' && (
-                <>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>باكدج حنة (اختياري)</Form.Label>
+                    <Form.Control
+                      as="select"
+                      value={bookingFormData.hennaPackageId}
+                      onChange={(e) => setBookingFormData({ ...bookingFormData, hennaPackageId: e.target.value })}
+                      disabled={isLoading}
+                    >
+                      <option value="">لا يوجد</option>
+                      {packages.filter(pkg => pkg.type === 'makeup').map(pkg => (
+                        <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
+                      ))}
+                    </Form.Control>
+                  </Form.Group>
+                </Col>
+                {bookingFormData.hennaPackageId && (
                   <Col md={6}>
                     <Form.Group>
-                      <Form.Label>سعر فرد الشعر</Form.Label>
-                      <Form.Control
-                        type="number"
-                        value={bookingFormData.hairStraighteningPrice}
-                        onChange={(e) => setBookingFormData({ ...bookingFormData, hairStraighteningPrice: e.target.value })}
-                        required
-                        disabled={isLoading}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label>تاريخ فرد الشعر</Form.Label>
+                      <Form.Label>تاريخ الحنة</Form.Label>
                       <Form.Control
                         type="date"
-                        value={bookingFormData.hairStraighteningDate}
-                        onChange={(e) => setBookingFormData({ ...bookingFormData, hairStraighteningDate: e.target.value })}
+                        value={bookingFormData.hennaDate}
+                        onChange={(e) => setBookingFormData({ ...bookingFormData, hennaDate: e.target.value })}
                         required
                         disabled={isLoading}
                       />
                     </Form.Group>
                   </Col>
-                </>
-              )}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>اسم العميل</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={bookingFormData.clientName}
-                    onChange={(e) => setBookingFormData({ ...bookingFormData, clientName: e.target.value })}
-                    required
-                    disabled={isLoading}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>رقم الهاتف</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={bookingFormData.clientPhone}
-                    onChange={(e) => setBookingFormData({ ...bookingFormData, clientPhone: e.target.value })}
-                    required
-                    disabled={isLoading}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>المدينة</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={bookingFormData.city}
-                    onChange={(e) => setBookingFormData({ ...bookingFormData, city: e.target.value })}
-                    disabled={isLoading}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>العربون</Form.Label>
-                  <Form.Control
-                    type="number"
-                    value={bookingFormData.deposit}
-                    onChange={(e) => setBookingFormData({ ...bookingFormData, deposit: e.target.value })}
-                    required
-                    disabled={isLoading}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>الإجمالي: {total} جنيه</Form.Label>
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>المتبقي: {remaining} جنيه</Form.Label>
-                </Form.Group>
-              </Col>
-              <Col md={12}>
-                <Button type="submit" className="mt-3" disabled={isLoading}>
-                  {isLoading ? 'جاري الحفظ...' : (editBooking ? 'تعديل' : 'حفظ')}
-                </Button>
-                <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
-                  setBookingFormData({
-                    packageId: '', hennaPackageId: '', photographyPackageId: '', extraServices: [], returnedServices: [],
-                    hairStraightening: 'no', hairStraighteningPrice: 0, hairStraighteningDate: '',
-                    clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: 0
-                  });
-                  setEditBooking(null);
-                  setShowBookingModal(false);
-                }} disabled={isLoading}>
-                  إلغاء
-                </Button>
-              </Col>
-            </Row>
-          </Form>
-        </Modal.Body>
-      </Modal>
-      <Modal show={showInstantServiceModal} onHide={() => setShowInstantServiceModal(false)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>{editItem ? 'تعديل خدمة فورية' : 'إنشاء خدمة فورية'}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleInstantServiceSubmit} className="form-row">
-            <Row>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>اسم الموظف (اختياري)</Form.Label>
-                  <Form.Control
-                    as="select"
-                    value={instantServiceFormData.employeeId}
-                    onChange={(e) => setInstantServiceFormData({ ...instantServiceFormData, employeeId: e.target.value })}
+                )}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>باكدج تصوير (اختياري)</Form.Label>
+                    <Form.Control
+                      as="select"
+                      value={bookingFormData.photographyPackageId}
+                      onChange={(e) => setBookingFormData({ ...bookingFormData, photographyPackageId: e.target.value })}
+                      disabled={isLoading}
+                    >
+                      <option value="">لا يوجد</option>
+                      {packages.filter(pkg => pkg.type === 'photography').map(pkg => (
+                        <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
+                      ))}
+                    </Form.Control>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>مرتجع من الباكدجات (اختياري)</Form.Label>
+                    <Select
+                      isMulti
+                      options={selectedPackageServices}
+                      value={bookingFormData.returnedServices}
+                      onChange={(selected) => setBookingFormData({ ...bookingFormData, returnedServices: selected })}
+                      isSearchable
+                      placeholder="اختر الخدمات..."
+                      className="booking-services-select"
+                      classNamePrefix="booking-services"
+                      styles={customStyles}
+                      isDisabled={isLoading}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>خدمات إضافية (اختياري)</Form.Label>
+                    <Select
+                      isMulti
+                      options={services.filter(srv => srv.type === 'instant').map(srv => ({ value: srv._id, label: srv.name, price: srv.price }))}
+                      value={bookingFormData.extraServices}
+                      onChange={(selected) => setBookingFormData({ ...bookingFormData, extraServices: selected })}
+                      isSearchable
+                      placeholder="اختر الخدمات..."
+                      className="booking-services-select"
+                      classNamePrefix="booking-services"
+                      styles={customStyles}
+                      isDisabled={isLoading}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>فرد شعر</Form.Label>
+                    <Form.Control
+                      as="select"
+                      value={bookingFormData.hairStraightening}
+                      onChange={(e) => setBookingFormData({ ...bookingFormData, hairStraightening: e.target.value })}
+                      className="custom-select"
+                      disabled={isLoading}
+                    >
+                      <option value="no">لا</option>
+                      <option value="yes">نعم</option>
+                    </Form.Control>
+                  </Form.Group>
+                </Col>
+                {bookingFormData.hairStraightening === 'yes' && (
+                  <>
+                    <Col md={6}>
+                      <Form.Group>
+                        <Form.Label>سعر فرد الشعر</Form.Label>
+                        <Form.Control
+                          type="number"
+                          value={bookingFormData.hairStraighteningPrice}
+                          onChange={(e) => setBookingFormData({ ...bookingFormData, hairStraighteningPrice: e.target.value })}
+                          required
+                          disabled={isLoading}
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group>
+                        <Form.Label>تاريخ فرد الشعر</Form.Label>
+                        <Form.Control
+                          type="date"
+                          value={bookingFormData.hairStraighteningDate}
+                          onChange={(e) => setBookingFormData({ ...bookingFormData, hairStraighteningDate: e.target.value })}
+                          required
+                          disabled={isLoading}
+                        />
+                      </Form.Group>
+                    </Col>
+                  </>
+                )}
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>اسم العميل</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={bookingFormData.clientName}
+                      onChange={(e) => setBookingFormData({ ...bookingFormData, clientName: e.target.value })}
+                      required
+                      disabled={isLoading}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>رقم الهاتف</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={bookingFormData.clientPhone}
+                      onChange={(e) => setBookingFormData({ ...bookingFormData, clientPhone: e.target.value })}
+                      required
+                      disabled={isLoading}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>المدينة</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={bookingFormData.city}
+                      onChange={(e) => setBookingFormData({ ...bookingFormData, city: e.target.value })}
+                      disabled={isLoading}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>العربون</Form.Label>
+                    <Form.Control
+                      type="number"
+                      value={bookingFormData.deposit}
+                      onChange={(e) => setBookingFormData({ ...bookingFormData, deposit: e.target.value })}
+                      required
+                      disabled={isLoading}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>الإجمالي: {total} جنيه</Form.Label>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>المتبقي: {remaining} جنيه</Form.Label>
+                  </Form.Group>
+                </Col>
+                <Col md={12}>
+                  <Button type="submit" className="mt-3" disabled={isLoading}>
+                    {isLoading ? 'جاري الحفظ...' : (editBooking ? 'تعديل' : 'حفظ')}
+                  </Button>
+                  <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
+                    setBookingFormData({
+                      packageId: '', hennaPackageId: '', photographyPackageId: '', extraServices: [], returnedServices: [],
+                      hairStraightening: 'no', hairStraighteningPrice: 0, hairStraighteningDate: '',
+                      clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: 0
+                    });
+                    setEditBooking(null);
+                    setShowBookingModal(false);
+                  }} disabled={isLoading}>
+                    إلغاء
+                  </Button>
+                </Col>
+              </Row>
+            </Form>
+          </Modal.Body>
+        </Modal>
+        <Modal show={showInstantServiceModal} onHide={() => setShowInstantServiceModal(false)} size="lg">
+          <Modal.Header closeButton>
+            <Modal.Title>{editItem ? 'تعديل خدمة فورية' : 'إنشاء خدمة فورية'}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form onSubmit={handleInstantServiceSubmit} className="form-row">
+              <Row>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>اسم الموظف (اختياري)</Form.Label>
+                    <Form.Control
+                      as="select"
+                      value={instantServiceFormData.employeeId}
+                      onChange={(e) => setInstantServiceFormData({ ...instantServiceFormData, employeeId: e.target.value })}
+                      disabled={isLoading}
+                    >
+                      <option value="">لا يوجد</option>
+                      {users.map(user => (
+                        <option key={user._id} value={user._id}>{user.username}</option>
+                      ))}
+                    </Form.Control>
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>الخدمات</Form.Label>
+                    <Select
+                      isMulti
+                      options={services.filter(srv => srv.type === 'instant').map(srv => ({ value: srv._id, label: srv.name }))}
+                      value={instantServiceFormData.services}
+                      onChange={(selected) => setInstantServiceFormData({ ...instantServiceFormData, services: selected })}
+                      isSearchable
+                      placeholder="اختر الخدمات..."
+                      className="booking-services-select"
+                      classNamePrefix="booking-services"
+                      styles={customStyles}
+                      isDisabled={isLoading}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={12}>
+                  <Form.Group>
+                    <Form.Label>الإجمالي: {instantServiceTotal} جنيه</Form.Label>
+                  </Form.Group>
+                </Col>
+                <Col md={12}>
+                  <Button type="submit" className="mt-3" disabled={isLoading}>
+                    {isLoading ? 'جاري الحفظ...' : (editItem ? 'تعديل' : 'حفظ')}
+                  </Button>
+                  <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
+                    setInstantServiceFormData({ employeeId: '', services: [] });
+                    setEditItem(null);
+                    setShowInstantServiceModal(false);
+                  }} disabled={isLoading}>
+                    إلغاء
+                  </Button>
+                </Col>
+              </Row>
+            </Form>
+          </Modal.Body>
+        </Modal>
+        <Modal show={showExpenseAdvanceModal} onHide={() => setShowExpenseAdvanceModal(false)} size="lg">
+          <Modal.Header closeButton>
+            <Modal.Title>إضافة عملية جديدة</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form onSubmit={handleExpenseAdvanceSubmit} className="form-row">
+              <Row>
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>نوع العملية</Form.Label>
+                    <Form.Control
+                      as="select"
+                      value={expenseAdvanceFormData.type}
+                      onChange={(e) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, type: e.target.value, details: '', userId: '' })}
+                      disabled={isLoading}
+                    >
+                      <option value="expense">مصروف</option>
+                      <option value="advance">سلفة</option>
+                    </Form.Control>
+                  </Form.Group>
+                </Col>
+                {expenseAdvanceFormData.type === 'expense' ? (
+                  <>
+                    <Col md={6}>
+                      <Form.Group>
+                        <Form.Label>تفاصيل المصروف</Form.Label>
+                        <Form.Control
+                          type="text"
+                          value={expenseAdvanceFormData.details}
+                          onChange={(e) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, details: e.target.value })}
+                          required
+                          disabled={isLoading}
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group>
+                        <Form.Label>المبلغ</Form.Label>
+                        <Form.Control
+                          type="number"
+                          value={expenseAdvanceFormData.amount}
+                          onChange={(e) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, amount: e.target.value })}
+                          required
+                          disabled={isLoading}
+                        />
+                      </Form.Group>
+                    </Col>
+                  </>
+                ) : (
+                  <>
+                    <Col md={6}>
+                      <Form.Group>
+                        <Form.Label>اسم الموظف</Form.Label>
+                        <Form.Control
+                          as="select"
+                          value={expenseAdvanceFormData.userId}
+                          onChange={(e) => {
+                            console.log('Selected user ID:', e.target.value);
+                            setExpenseAdvanceFormData({ ...expenseAdvanceFormData, userId: e.target.value });
+                          }}
+                          disabled={isLoading || isUsersLoading}
+                          required
+                        >
+                          <option value="">اختر الموظف</option>
+                          {users.map(user => (
+                            <option key={user._id} value={user._id}>
+                              {user.username} (المتبقي: {user.remainingSalary} جنيه)
+                            </option>
+                          ))}
+                        </Form.Control>
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group>
+                        <Form.Label>المبلغ</Form.Label>
+                        <Form.Control
+                          type="number"
+                          value={expenseAdvanceFormData.amount}
+                          onChange={(e) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, amount: e.target.value })}
+                          required
+                          disabled={isLoading}
+                        />
+                      </Form.Group>
+                    </Col>
+                  </>
+                )}
+                <Col md={12}>
+                  <Button type="submit" className="mt-3" disabled={isLoading}>
+                    {isLoading ? 'جاري الحفظ...' : 'حفظ'}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="mt-3 ms-2"
+                    onClick={() => {
+                      setExpenseAdvanceFormData({ type: 'expense', details: '', amount: 0, userId: '' });
+                      setShowExpenseAdvanceModal(false);
+                    }}
                     disabled={isLoading}
                   >
-                    <option value="">لا يوجد</option>
-                    {users.map(user => (
-                      <option key={user._id} value={user._id}>{user.username}</option>
-                    ))}
-                  </Form.Control>
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>الخدمات</Form.Label>
-                  <Select
-                    isMulti
-                    options={services.filter(srv => srv.type === 'instant').map(srv => ({ value: srv._id, label: srv.name }))}
-                    value={instantServiceFormData.services}
-                    onChange={(selected) => setInstantServiceFormData({ ...instantServiceFormData, services: selected })}
-                    isSearchable
-                    placeholder="اختر الخدمات..."
-                    className="booking-services-select"
-                    classNamePrefix="booking-services"
-                    styles={customStyles}
-                    isDisabled={isLoading}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={12}>
-                <Form.Group>
-                  <Form.Label>الإجمالي: {instantServiceTotal} جنيه</Form.Label>
-                </Form.Group>
-              </Col>
-              <Col md={12}>
-                <Button type="submit" className="mt-3" disabled={isLoading}>
-                  {isLoading ? 'جاري الحفظ...' : (editItem ? 'تعديل' : 'حفظ')}
-                </Button>
-                <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
-                  setInstantServiceFormData({ employeeId: '', services: [] });
-                  setEditItem(null);
-                  setShowInstantServiceModal(false);
-                }} disabled={isLoading}>
-                  إلغاء
-                </Button>
-              </Col>
-            </Row>
-          </Form>
-        </Modal.Body>
-      </Modal>
-      <Modal show={showExpenseAdvanceModal} onHide={() => setShowExpenseAdvanceModal(false)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>إضافة عملية جديدة</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleExpenseAdvanceSubmit} className="form-row">
-            <Row>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>نوع العملية</Form.Label>
-                  <Form.Control
-                    as="select"
-                    value={expenseAdvanceFormData.type}
-                    onChange={(e) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, type: e.target.value, details: '', userId: '' })}
-                    disabled={isLoading}
-                  >
-                    <option value="expense">مصروف</option>
-                    <option value="advance">سلفة</option>
-                  </Form.Control>
-                </Form.Group>
-              </Col>
-              {expenseAdvanceFormData.type === 'expense' ? (
-                <>
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label>تفاصيل المصروف</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={expenseAdvanceFormData.details}
-                        onChange={(e) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, details: e.target.value })}
-                        required
-                        disabled={isLoading}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label>المبلغ</Form.Label>
-                      <Form.Control
-                        type="number"
-                        value={expenseAdvanceFormData.amount}
-                        onChange={(e) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, amount: e.target.value })}
-                        required
-                        disabled={isLoading}
-                      />
-                    </Form.Group>
-                  </Col>
-                </>
-              ) : (
-                <>
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label>اسم الموظف</Form.Label>
-                      <Form.Control
-                        as="select"
-                        value={expenseAdvanceFormData.userId}
-                        onChange={(e) => {
-                          console.log('Selected user ID:', e.target.value);
-                          setExpenseAdvanceFormData({ ...expenseAdvanceFormData, userId: e.target.value });
-                        }}
-                        disabled={isLoading || isUsersLoading}
-                        required
-                      >
-                        <option value="">اختر الموظف</option>
-                        {users.map(user => (
-                          <option key={user._id} value={user._id}>
-                            {user.username} (المتبقي: {user.remainingSalary} جنيه)
-                          </option>
+                    إلغاء
+                  </Button>
+                </Col>
+              </Row>
+            </Form>
+          </Modal.Body>
+        </Modal>
+        <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
+          <Modal.Header closeButton>
+            <Modal.Title>تأكيد الحذف</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>هل أنت متأكد من حذف الحجز؟</Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowDeleteModal(false)} disabled={isLoading}>
+              إلغاء
+            </Button>
+            <Button variant="danger" onClick={handleDelete} disabled={isLoading}>
+              {isLoading ? 'جاري الحذف...' : 'حذف'}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+        <Modal show={showInstallmentModal} onHide={() => setShowInstallmentModal(false)}>
+          <Modal.Header closeButton>
+            <Modal.Title>إضافة قسط</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <Form.Group>
+              <Form.Label>قيمة القسط</Form.Label>
+              <Form.Control
+                type="number"
+                value={installmentAmount}
+                onChange={(e) => setInstallmentAmount(e.target.value)}
+                required
+                disabled={isLoading}
+              />
+            </Form.Group>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowInstallmentModal(false)} disabled={isLoading}>
+              إلغاء
+            </Button>
+            <Button variant="primary" onClick={() => handleAddInstallment(deleteItem?._id)} disabled={isLoading}>
+              {isLoading ? 'جاري الحفظ...' : 'حفظ'}
+            </Button>
+          </Modal.Footer>
+        </Modal>
+        <Modal show={showReceiptModal} onHide={() => setShowReceiptModal(false)} size="sm">
+          <Modal.Header closeButton>
+            <Modal.Title>وصل {currentReceipt?.type === 'booking' ? 'الحجز' : 'الخدمة الفورية'}</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <ReceiptPrint data={currentReceipt} type={currentReceipt?.type || 'booking'} />
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="primary" onClick={() => window.print()} disabled={isLoading}>
+              طباعة
+            </Button>
+            <Button variant="secondary" onClick={() => setShowReceiptModal(false)} disabled={isLoading}>
+              إغلاق
+            </Button>
+          </Modal.Footer>
+        </Modal>
+        <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} size="lg">
+          <Modal.Header closeButton>
+            <Modal.Title>تفاصيل الحجز</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {currentDetails && (
+              <div>
+                <p>اسم العميل: {currentDetails.clientName}</p>
+                <p>رقم الهاتف: {currentDetails.clientPhone}</p>
+                <p>المدينة: {currentDetails.city || 'غير متوفر'}</p>
+                <p>تاريخ المناسبة: {new Date(currentDetails.eventDate).toLocaleDateString()}</p>
+                {currentDetails.hennaDate && <p>تاريخ الحنة: {new Date(currentDetails.hennaDate).toLocaleDateString()}</p>}
+                <p>الباكدج: {currentDetails.package?.name || 'غير محدد'}</p>
+                {currentDetails.hennaPackage && <p>باكدج حنة: {currentDetails.hennaPackage.name}</p>}
+                {currentDetails.photographyPackage && <p>باكدج تصوير: {currentDetails.photographyPackage.name}</p>}
+                {currentDetails.returnedServices.length > 0 && (
+                  <p>الخدمات المرتجعة: {currentDetails.returnedServices.map(srv => srv.name).join(', ')}</p>
+                )}
+                {currentDetails.extraServices.length > 0 && (
+                  <p>الخدمات الإضافية: {currentDetails.extraServices.map(srv => srv.name).join(', ')}</p>
+                )}
+                {currentDetails.hairStraightening && (
+                  <>
+                    <p>فرد شعر: نعم</p>
+                    <p>سعر فرد الشعر: {currentDetails.hairStraighteningPrice} جنيه</p>
+                    <p>تاريخ فرد الشعر: {new Date(currentDetails.hairStraighteningDate).toLocaleDateString()}</p>
+                  </>
+                )}
+                <p>الإجمالي: {currentDetails.total} جنيه</p>
+                <p>العربون: {currentDetails.deposit} جنيه</p>
+                <p>المتبقي: {currentDetails.remaining} جنيه</p>
+                {currentDetails.installments.length > 0 && (
+                  <>
+                    <h5 className="mt-3">عمليات الأقساط</h5>
+                    <Table striped bordered hover size="sm">
+                      <thead>
+                        <tr>
+                          <th>المبلغ</th>
+                          <th>التاريخ</th>
+                          <th>الموظف</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {currentDetails.installments.map((inst, index) => (
+                          <tr key={index}>
+                            <td>{inst.amount} جنيه</td>
+                            <td>{new Date(inst.date).toLocaleDateString()}</td>
+                            <td>{inst.employeeId?.username || 'غير معروف'}</td>
+                          </tr>
                         ))}
-                      </Form.Control>
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label>المبلغ</Form.Label>
-                      <Form.Control
-                        type="number"
-                        value={expenseAdvanceFormData.amount}
-                        onChange={(e) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, amount: e.target.value })}
-                        required
-                        disabled={isLoading}
-                      />
-                    </Form.Group>
-                  </Col>
-                </>
-              )}
-              <Col md={12}>
-                <Button type="submit" className="mt-3" disabled={isLoading}>
-                  {isLoading ? 'جاري الحفظ...' : 'حفظ'}
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="mt-3 ms-2"
-                  onClick={() => {
-                    setExpenseAdvanceFormData({ type: 'expense', details: '', amount: 0, userId: '' });
-                    setShowExpenseAdvanceModal(false);
-                  }}
-                  disabled={isLoading}
-                >
-                  إلغاء
-                </Button>
-              </Col>
-            </Row>
-          </Form>
-        </Modal.Body>
-      </Modal>
-      <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>تأكيد الحذف</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>هل أنت متأكد من حذف الحجز؟</Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowDeleteModal(false)} disabled={isLoading}>
-            إلغاء
-          </Button>
-          <Button variant="danger" onClick={handleDelete} disabled={isLoading}>
-            {isLoading ? 'جاري الحذف...' : 'حذف'}
-          </Button>
-        </Modal.Footer>
-      </Modal>
-      <Modal show={showInstallmentModal} onHide={() => setShowInstallmentModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>إضافة قسط</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form.Group>
-            <Form.Label>قيمة القسط</Form.Label>
-            <Form.Control
-              type="number"
-              value={installmentAmount}
-              onChange={(e) => setInstallmentAmount(e.target.value)}
-              required
-              disabled={isLoading}
-            />
-          </Form.Group>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowInstallmentModal(false)} disabled={isLoading}>
-            إلغاء
-          </Button>
-          <Button variant="primary" onClick={() => handleAddInstallment(deleteItem?._id)} disabled={isLoading}>
-            {isLoading ? 'جاري الحفظ...' : 'حفظ'}
-          </Button>
-        </Modal.Footer>
-      </Modal>
-      <Modal show={showReceiptModal} onHide={() => setShowReceiptModal(false)} size="sm">
-        <Modal.Header closeButton>
-          <Modal.Title>وصل {currentReceipt?.type === 'booking' ? 'الحجز' : 'الخدمة الفورية'}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <ReceiptPrint data={currentReceipt} type={currentReceipt?.type || 'booking'} />
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="primary" onClick={() => window.print()} disabled={isLoading}>
-            طباعة
-          </Button>
-          <Button variant="secondary" onClick={() => setShowReceiptModal(false)} disabled={isLoading}>
-            إغلاق
-          </Button>
-        </Modal.Footer>
-      </Modal>
-      <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>تفاصيل الحجز</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {currentDetails && (
-            <div>
-              <p>اسم العميل: {currentDetails.clientName}</p>
-              <p>رقم الهاتف: {currentDetails.clientPhone}</p>
-              <p>المدينة: {currentDetails.city || 'غير متوفر'}</p>
-              <p>تاريخ المناسبة: {new Date(currentDetails.eventDate).toLocaleDateString()}</p>
-              {currentDetails.hennaDate && <p>تاريخ الحنة: {new Date(currentDetails.hennaDate).toLocaleDateString()}</p>}
-              <p>الباكدج: {currentDetails.package?.name || 'غير محدد'}</p>
-              {currentDetails.hennaPackage && <p>باكدج حنة: {currentDetails.hennaPackage.name}</p>}
-              {currentDetails.photographyPackage && <p>باكدج تصوير: {currentDetails.photographyPackage.name}</p>}
-              {currentDetails.returnedServices.length > 0 && (
-                <p>الخدمات المرتجعة: {currentDetails.returnedServices.map(srv => srv.name).join(', ')}</p>
-              )}
-              {currentDetails.extraServices.length > 0 && (
-                <p>الخدمات الإضافية: {currentDetails.extraServices.map(srv => srv.name).join(', ')}</p>
-              )}
-              {currentDetails.hairStraightening && (
-                <>
-                  <p>فرد شعر: نعم</p>
-                  <p>سعر فرد الشعر: {currentDetails.hairStraighteningPrice} جنيه</p>
-                  <p>تاريخ فرد الشعر: {new Date(currentDetails.hairStraighteningDate).toLocaleDateString()}</p>
-                </>
-              )}
-              <p>الإجمالي: {currentDetails.total} جنيه</p>
-              <p>العربون: {currentDetails.deposit} جنيه</p>
-              <p>المتبقي: {currentDetails.remaining} جنيه</p>
-              {currentDetails.installments.length > 0 && (
-                <>
-                  <h5 className="mt-3">عمليات الأقساط</h5>
-                  <Table striped bordered hover size="sm">
-                    <thead>
-                      <tr>
-                        <th>المبلغ</th>
-                        <th>التاريخ</th>
-                        <th>الموظف</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {currentDetails.installments.map((inst, index) => (
-                        <tr key={index}>
-                          <td>{inst.amount} جنيه</td>
-                          <td>{new Date(inst.date).toLocaleDateString()}</td>
-                          <td>{inst.employeeId?.username || 'غير معروف'}</td>
+                      </tbody>
+                    </Table>
+                  </>
+                )}
+                {currentDetails.updates.length > 0 && (
+                  <>
+                    <h5 className="mt-3">سجل التعديلات</h5>
+                    <Table striped bordered hover size="sm">
+                      <thead>
+                        <tr>
+                          <th>التاريخ</th>
+                          <th>التغييرات</th>
+                          <th>الموظف</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                </>
-              )}
-              {currentDetails.updates.length > 0 && (
-                <>
-                  <h5 className="mt-3">سجل التعديلات</h5>
-                  <Table striped bordered hover size="sm">
-                    <thead>
-                      <tr>
-                        <th>التاريخ</th>
-                        <th>التغييرات</th>
-                        <th>الموظف</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {currentDetails.updates.map((update, index) => (
-                        <tr key={index}>
-                          <td>{new Date(update.date).toLocaleDateString()}</td>
-                          <td>
-                            {update.changes.created
-                              ? 'إنشاء الحجز'
-                              : Object.keys(update.changes).length > 0
-                              ? Object.entries(update.changes).map(([key, value]) => `${key}: ${value}`).join(', ')
-                              : 'غير معروف'}
-                          </td>
-                          <td>{update.employeeId?.username || 'غير معروف'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                </>
-              )}
-            </div>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowDetailsModal(false)} disabled={isLoading}>
-            إغلاق
-          </Button>
-        </Modal.Footer>
-      </Modal>
+                      </thead>
+                      <tbody>
+                        {currentDetails.updates.map((update, index) => (
+                          <tr key={index}>
+                            <td>{new Date(update.date).toLocaleDateString()}</td>
+                            <td>
+                              {update.changes.created
+                                ? 'إنشاء الحجز'
+                                : Object.keys(update.changes).length > 0
+                                ? Object.entries(update.changes).map(([key, value]) => `${key}: ${value}`).join(', ')
+                                : 'غير معروف'}
+                            </td>
+                            <td>{update.employeeId?.username || 'غير معروف'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  </>
+                )}
+              </div>
+            )}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={() => setShowDetailsModal(false)} disabled={isLoading}>
+              إغلاق
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      </div>
     </Container>
   );
 }
