@@ -134,7 +134,7 @@ function Bookings() {
     setIsLoading(true);
     try {
       const [bookingsRes, packagesRes, servicesRes] = await Promise.all([
-        axios.get(`/api/bookings?page=${currentPage}&namePhone=${encodeURIComponent(searchNamePhone)}&date=${searchDate}`, {
+        axios.get(`/api/bookings?page=${currentPage}&search=${encodeURIComponent(searchNamePhone)}&date=${searchDate}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         }),
         axios.get('/api/packages/packages', {
@@ -145,12 +145,13 @@ function Bookings() {
         })
       ]);
       setBookings(bookingsRes.data.bookings);
-      setTotalPages(bookingsRes.data.totalPages);
+      setTotalPages(bookingsRes.data.pages); // غيرت هنا لـ pages عشان يطابق الـ backend
       setPackages(packagesRes.data);
       setServices(servicesRes.data);
       setMessage('');
     } catch (err) {
-      setMessage('خطأ في جلب البيانات');
+      console.error('Fetch error:', err); // للـ debugging
+      setMessage('خطأ في جلب البيانات: ' + (err.response?.data?.msg || err.message));
     } finally {
       setIsLoading(false);
     }
@@ -231,6 +232,7 @@ function Bookings() {
               value={searchNamePhone}
               onChange={(e) => setSearchNamePhone(e.target.value)}
               disabled={isLoading}
+              placeholder="اكتب اسم العميل أو رقم الهاتف..."
             />
           </Form.Group>
         </Col>
@@ -248,6 +250,7 @@ function Bookings() {
       </Row>
       {message && <Alert variant={message.includes('خطأ') ? 'danger' : 'success'}>{message}</Alert>}
       {isLoading && <Alert variant="info">جاري جلب البيانات...</Alert>}
+      {bookings.length === 0 && !isLoading && <Alert variant="info">لا توجد حجوزات مطابقة للبحث</Alert>}
       <Row>
         {bookings.map(booking => (
           <Col md={4} key={booking._id} className="mb-3">
@@ -261,7 +264,7 @@ function Bookings() {
                   العربون: {booking.deposit} جنيه<br />
                   المتبقي: {booking.remaining} جنيه
                 </Card.Text>
-                <Button variant="primary" className="me-2" onClick={() => setCurrentReceipt(booking) || setShowReceiptModal(true)} disabled={isLoading}>
+                <Button variant="primary" className="me-2" onClick={() => { setCurrentReceipt(booking); setShowReceiptModal(true); }} disabled={isLoading}>
                   <FontAwesomeIcon icon={faPrint} />
                 </Button>
                 <Button variant="primary" className="me-2" onClick={() => handleShowDetails(booking)} disabled={isLoading}>
