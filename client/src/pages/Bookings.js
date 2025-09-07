@@ -4,7 +4,8 @@ import axios from 'axios';
 import Select from 'react-select';
 import ReceiptPrint from './ReceiptPrint';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPrint, faEdit, faEye, faDollarSign, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faPrint, faEdit, faEye, faDollarSign, faTrash } from '@fortawesome/free-solid-svg-icons';
+import debounce from 'lodash.debounce';
 
 function Bookings() {
   const [formData, setFormData] = useState({
@@ -30,10 +31,9 @@ function Bookings() {
   const [currentDetails, setCurrentDetails] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchNamePhone, setSearchNamePhone] = useState('');
   const [searchDate, setSearchDate] = useState('');
-  const [isLoading, setIsLoading] = useState(false); // New loading state
+  const [isLoading, setIsLoading] = useState(false);
   const receiptRef = useRef(null);
 
   // Custom styles for react-select
@@ -129,57 +129,42 @@ function Bookings() {
     })
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [bookingsRes, packagesRes, servicesRes] = await Promise.all([
-          axios.get(`/api/bookings?page=${currentPage}&namePhone=${searchNamePhone}&date=${searchDate}`, {
-            headers: { 'x-auth-token': localStorage.getItem('token') }
-          }),
-          axios.get('/api/packages/packages', {
-            headers: { 'x-auth-token': localStorage.getItem('token') }
-          }),
-          axios.get('/api/packages/services', {
-            headers: { 'x-auth-token': localStorage.getItem('token') }
-          })
-        ]);
-        setBookings(bookingsRes.data.bookings);
-        setTotalPages(bookingsRes.data.totalPages);
-        setPackages(packagesRes.data);
-        setServices(servicesRes.data);
-      } catch (err) {
-        setMessage('خطأ في جلب البيانات');
-      }
-    };
-    fetchData();
-  }, [currentPage, searchNamePhone, searchDate]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true); // Start loading
-    setShowCreateModal(false); // Close modal immediately
+  // Debounced fetch function
+  const debouncedFetchData = debounce(async () => {
+    setIsLoading(true);
     try {
-      const res = await axios.post('/api/bookings', formData, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      setBookings([res.data.booking, ...bookings]);
-      setMessage(res.data.msg || 'تمت إضافة الحجز بنجاح');
-      setFormData({
-        packageId: '', hennaPackageId: '', photographyPackageId: '', returnedServices: [],
-        extraServices: [], hairStraightening: 'no', hairStraighteningPrice: 0,
-        hairStraighteningDate: '', clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: 0
-      });
+      const [bookingsRes, packagesRes, servicesRes] = await Promise.all([
+        axios.get(`/api/bookings?page=${currentPage}&namePhone=${encodeURIComponent(searchNamePhone)}&date=${searchDate}`, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        }),
+        axios.get('/api/packages/packages', {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        }),
+        axios.get('/api/packages/services', {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        })
+      ]);
+      setBookings(bookingsRes.data.bookings);
+      setTotalPages(bookingsRes.data.totalPages);
+      setPackages(packagesRes.data);
+      setServices(servicesRes.data);
+      setMessage('');
     } catch (err) {
-      setMessage(err.response?.data?.msg || 'خطأ في إضافة الحجز');
+      setMessage('خطأ في جلب البيانات');
     } finally {
-      setIsLoading(false); // Stop loading
+      setIsLoading(false);
     }
-  };
+  }, 500);
+
+  useEffect(() => {
+    debouncedFetchData();
+    return () => debouncedFetchData.cancel(); // Cleanup debounce on unmount
+  }, [currentPage, searchNamePhone, searchDate]);
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true); // Start loading
-    setEditItem(null); // Close modal immediately
+    setIsLoading(true);
+    setEditItem(null);
     try {
       const res = await axios.put(`/api/bookings/${editItem._id}`, formData, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -194,7 +179,7 @@ function Bookings() {
     } catch (err) {
       setMessage(err.response?.data?.msg || 'خطأ في تعديل الحجز');
     } finally {
-      setIsLoading(false); // Stop loading
+      setIsLoading(false);
     }
   };
 
@@ -218,8 +203,8 @@ function Bookings() {
 
   const handleInstallmentSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true); // Start loading
-    setShowInstallmentModal(false); // Close modal immediately
+    setIsLoading(true);
+    setShowInstallmentModal(false);
     try {
       const res = await axios.post(`/api/bookings/${editItem._id}/installments`, { amount: installmentAmount }, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -230,16 +215,13 @@ function Bookings() {
     } catch (err) {
       setMessage(err.response?.data?.msg || 'خطأ في إضافة القسط');
     } finally {
-      setIsLoading(false); // Stop loading
+      setIsLoading(false);
     }
   };
 
   return (
     <Container className="mt-5">
       <h2>الحجوزات</h2>
-      <Button className="mb-3" onClick={() => setShowCreateModal(true)}>
-        <FontAwesomeIcon icon={faPlus} /> إضافة حجز
-      </Button>
       <Row className="mb-3">
         <Col md={6}>
           <Form.Group>
@@ -248,6 +230,7 @@ function Bookings() {
               type="text"
               value={searchNamePhone}
               onChange={(e) => setSearchNamePhone(e.target.value)}
+              disabled={isLoading}
             />
           </Form.Group>
         </Col>
@@ -258,11 +241,13 @@ function Bookings() {
               type="date"
               value={searchDate}
               onChange={(e) => setSearchDate(e.target.value)}
+              disabled={isLoading}
             />
           </Form.Group>
         </Col>
       </Row>
       {message && <Alert variant={message.includes('خطأ') ? 'danger' : 'success'}>{message}</Alert>}
+      {isLoading && <Alert variant="info">جاري جلب البيانات...</Alert>}
       <Row>
         {bookings.map(booking => (
           <Col md={4} key={booking._id} className="mb-3">
@@ -276,19 +261,19 @@ function Bookings() {
                   العربون: {booking.deposit} جنيه<br />
                   المتبقي: {booking.remaining} جنيه
                 </Card.Text>
-                <Button variant="primary" className="me-2" onClick={() => setCurrentReceipt(booking) || setShowReceiptModal(true)}>
+                <Button variant="primary" className="me-2" onClick={() => setCurrentReceipt(booking) || setShowReceiptModal(true)} disabled={isLoading}>
                   <FontAwesomeIcon icon={faPrint} />
                 </Button>
-                <Button variant="primary" className="me-2" onClick={() => handleShowDetails(booking)}>
+                <Button variant="primary" className="me-2" onClick={() => handleShowDetails(booking)} disabled={isLoading}>
                   <FontAwesomeIcon icon={faEye} />
                 </Button>
-                <Button variant="primary" className="me-2" onClick={() => { setEditItem(booking); setFormData({ ...booking }); }}>
+                <Button variant="primary" className="me-2" onClick={() => { setEditItem(booking); setFormData({ ...booking }); }} disabled={isLoading}>
                   <FontAwesomeIcon icon={faEdit} />
                 </Button>
-                <Button variant="primary" className="me-2" onClick={() => { setEditItem(booking); setShowInstallmentModal(true); }}>
+                <Button variant="primary" className="me-2" onClick={() => { setEditItem(booking); setShowInstallmentModal(true); }} disabled={isLoading}>
                   <FontAwesomeIcon icon={faDollarSign} />
                 </Button>
-                <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }}>
+                <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }} disabled={isLoading}>
                   <FontAwesomeIcon icon={faTrash} />
                 </Button>
               </Card.Body>
@@ -303,196 +288,6 @@ function Bookings() {
           </Pagination.Item>
         ))}
       </Pagination>
-      <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>إضافة حجز</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleSubmit}>
-            <Row>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>اسم العميل</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={formData.clientName}
-                    onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>رقم الهاتف</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={formData.clientPhone}
-                    onChange={(e) => setFormData({ ...formData, clientPhone: e.target.value })}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>المدينة</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>تاريخ المناسبة</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={formData.eventDate}
-                    onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>باكدج الميك اب</Form.Label>
-                  <Select
-                    options={packages.filter(pkg => pkg.type === 'makeup').map(pkg => ({ value: pkg._id, label: pkg.name }))}
-                    value={packages.find(pkg => pkg._id === formData.packageId) ? { value: formData.packageId, label: packages.find(pkg => pkg._id === formData.packageId).name } : null}
-                    onChange={(selected) => setFormData({ ...formData, packageId: selected ? selected.value : '' })}
-                    styles={customStyles}
-                    placeholder="اختر الباكدج"
-                    isClearable
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>باكدج الحنة</Form.Label>
-                  <Select
-                    options={packages.filter(pkg => pkg.type === 'henna').map(pkg => ({ value: pkg._id, label: pkg.name }))}
-                    value={packages.find(pkg => pkg._id === formData.hennaPackageId) ? { value: formData.hennaPackageId, label: packages.find(pkg => pkg._id === formData.hennaPackageId).name } : null}
-                    onChange={(selected) => setFormData({ ...formData, hennaPackageId: selected ? selected.value : '' })}
-                    styles={customStyles}
-                    placeholder="اختر الباكدج"
-                    isClearable
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>باكدج التصوير</Form.Label>
-                  <Select
-                    options={packages.filter(pkg => pkg.type === 'photography').map(pkg => ({ value: pkg._id, label: pkg.name }))}
-                    value={packages.find(pkg => pkg._id === formData.photographyPackageId) ? { value: formData.photographyPackageId, label: packages.find(pkg => pkg._id === formData.photographyPackageId).name } : null}
-                    onChange={(selected) => setFormData({ ...formData, photographyPackageId: selected ? selected.value : '' })}
-                    styles={customStyles}
-                    placeholder="اختر الباكدج"
-                    isClearable
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>تاريخ الحنة</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={formData.hennaDate}
-                    onChange={(e) => setFormData({ ...formData, hennaDate: e.target.value })}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>فرد شعر</Form.Label>
-                  <Form.Control
-                    as="select"
-                    value={formData.hairStraightening}
-                    onChange={(e) => setFormData({ ...formData, hairStraightening: e.target.value })}
-                  >
-                    <option value="no">لا</option>
-                    <option value="yes">نعم</option>
-                  </Form.Control>
-                </Form.Group>
-              </Col>
-              {formData.hairStraightening === 'yes' && (
-                <>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>سعر فرد الشعر</Form.Label>
-                      <Form.Control
-                        type="number"
-                        value={formData.hairStraighteningPrice}
-                        onChange={(e) => setFormData({ ...formData, hairStraighteningPrice: e.target.value })}
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>تاريخ فرد الشعر</Form.Label>
-                      <Form.Control
-                        type="date"
-                        value={formData.hairStraighteningDate}
-                        onChange={(e) => setFormData({ ...formData, hairStraighteningDate: e.target.value })}
-                      />
-                    </Form.Group>
-                  </Col>
-                </>
-              )}
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>الخدمات الإضافية</Form.Label>
-                  <Select
-                    isMulti
-                    options={services.filter(srv => srv.type === 'instant').map(srv => ({ value: srv._id, label: srv.name }))}
-                    value={formData.extraServices.map(srv => ({ value: srv._id, label: srv.name }))}
-                    onChange={(selected) => setFormData({ ...formData, extraServices: selected ? selected.map(s => ({ _id: s.value, name: s.label })) : [] })}
-                    styles={customStyles}
-                    placeholder="اختر الخدمات"
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>الخدمات المرتجعة</Form.Label>
-                  <Select
-                    isMulti
-                    options={selectedPackageServices.map(srv => ({ value: srv._id, label: srv.name }))}
-                    value={formData.returnedServices.map(srv => ({ value: srv._id, label: srv.name }))}
-                    onChange={(selected) => setFormData({ ...formData, returnedServices: selected ? selected.map(s => ({ _id: s.value, name: s.label })) : [] })}
-                    styles={customStyles}
-                    placeholder="اختر الخدمات"
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group className="mb-3">
-                  <Form.Label>العربون</Form.Label>
-                  <Form.Control
-                    type="number"
-                    value={formData.deposit}
-                    onChange={(e) => setFormData({ ...formData, deposit: e.target.value })}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={12}>
-                <p>الإجمالي: {total} جنيه</p>
-                <p>المتبقي: {remaining} جنيه</p>
-              </Col>
-              <Col md={12}>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? 'جاري الحفظ...' : 'حفظ'}
-                </Button>
-                <Button variant="secondary" className="ms-2" onClick={() => setShowCreateModal(false)} disabled={isLoading}>
-                  إلغاء
-                </Button>
-              </Col>
-            </Row>
-          </Form>
-        </Modal.Body>
-      </Modal>
       <Modal show={editItem} onHide={() => setEditItem(null)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>تعديل الحجز</Modal.Title>
@@ -508,6 +303,7 @@ function Bookings() {
                     value={formData.clientName}
                     onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
                     required
+                    disabled={isLoading}
                   />
                 </Form.Group>
               </Col>
@@ -519,6 +315,7 @@ function Bookings() {
                     value={formData.clientPhone}
                     onChange={(e) => setFormData({ ...formData, clientPhone: e.target.value })}
                     required
+                    disabled={isLoading}
                   />
                 </Form.Group>
               </Col>
@@ -530,6 +327,7 @@ function Bookings() {
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                     required
+                    disabled={isLoading}
                   />
                 </Form.Group>
               </Col>
@@ -541,6 +339,7 @@ function Bookings() {
                     value={formData.eventDate}
                     onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
                     required
+                    disabled={isLoading}
                   />
                 </Form.Group>
               </Col>
@@ -554,6 +353,7 @@ function Bookings() {
                     styles={customStyles}
                     placeholder="اختر الباكدج"
                     isClearable
+                    isDisabled={isLoading}
                   />
                 </Form.Group>
               </Col>
@@ -567,6 +367,7 @@ function Bookings() {
                     styles={customStyles}
                     placeholder="اختر الباكدج"
                     isClearable
+                    isDisabled={isLoading}
                   />
                 </Form.Group>
               </Col>
@@ -580,6 +381,7 @@ function Bookings() {
                     styles={customStyles}
                     placeholder="اختر الباكدج"
                     isClearable
+                    isDisabled={isLoading}
                   />
                 </Form.Group>
               </Col>
@@ -590,6 +392,7 @@ function Bookings() {
                     type="date"
                     value={formData.hennaDate}
                     onChange={(e) => setFormData({ ...formData, hennaDate: e.target.value })}
+                    disabled={isLoading}
                   />
                 </Form.Group>
               </Col>
@@ -600,6 +403,7 @@ function Bookings() {
                     as="select"
                     value={formData.hairStraightening}
                     onChange={(e) => setFormData({ ...formData, hairStraightening: e.target.value })}
+                    disabled={isLoading}
                   >
                     <option value="no">لا</option>
                     <option value="yes">نعم</option>
@@ -615,6 +419,7 @@ function Bookings() {
                         type="number"
                         value={formData.hairStraighteningPrice}
                         onChange={(e) => setFormData({ ...formData, hairStraighteningPrice: e.target.value })}
+                        disabled={isLoading}
                       />
                     </Form.Group>
                   </Col>
@@ -625,6 +430,7 @@ function Bookings() {
                         type="date"
                         value={formData.hairStraighteningDate}
                         onChange={(e) => setFormData({ ...formData, hairStraighteningDate: e.target.value })}
+                        disabled={isLoading}
                       />
                     </Form.Group>
                   </Col>
@@ -640,6 +446,7 @@ function Bookings() {
                     onChange={(selected) => setFormData({ ...formData, extraServices: selected ? selected.map(s => ({ _id: s.value, name: s.label })) : [] })}
                     styles={customStyles}
                     placeholder="اختر الخدمات"
+                    isDisabled={isLoading}
                   />
                 </Form.Group>
               </Col>
@@ -653,6 +460,7 @@ function Bookings() {
                     onChange={(selected) => setFormData({ ...formData, returnedServices: selected ? selected.map(s => ({ _id: s.value, name: s.label })) : [] })}
                     styles={customStyles}
                     placeholder="اختر الخدمات"
+                    isDisabled={isLoading}
                   />
                 </Form.Group>
               </Col>
@@ -664,6 +472,7 @@ function Bookings() {
                     value={formData.deposit}
                     onChange={(e) => setFormData({ ...formData, deposit: e.target.value })}
                     required
+                    disabled={isLoading}
                   />
                 </Form.Group>
               </Col>
@@ -696,6 +505,7 @@ function Bookings() {
                 value={installmentAmount}
                 onChange={(e) => setInstallmentAmount(e.target.value)}
                 required
+                disabled={isLoading}
               />
             </Form.Group>
             <Button type="submit" disabled={isLoading}>
@@ -715,8 +525,12 @@ function Bookings() {
           <ReceiptPrint data={currentReceipt} type="booking" ref={receiptRef} />
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="primary" onClick={() => window.print()}>طباعة</Button>
-          <Button variant="secondary" onClick={() => setShowReceiptModal(false)}>إغلاق</Button>
+          <Button variant="primary" onClick={() => window.print()} disabled={isLoading}>
+            طباعة
+          </Button>
+          <Button variant="secondary" onClick={() => setShowReceiptModal(false)} disabled={isLoading}>
+            إغلاق
+          </Button>
         </Modal.Footer>
       </Modal>
       <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
@@ -725,8 +539,12 @@ function Bookings() {
         </Modal.Header>
         <Modal.Body>هل أنت متأكد من حذف الحجز؟</Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>إلغاء</Button>
-          <Button variant="danger" onClick={handleDelete}>حذف</Button>
+          <Button variant="secondary" onClick={() => setShowDeleteModal(false)} disabled={isLoading}>
+            إلغاء
+          </Button>
+          <Button variant="danger" onClick={handleDelete} disabled={isLoading}>
+            حذف
+          </Button>
         </Modal.Footer>
       </Modal>
       <Modal show={showDetailsModal} onHide={() => setShowDetailsModal(false)} size="lg">
@@ -824,7 +642,9 @@ function Bookings() {
           )}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowDetailsModal(false)}>إغلاق</Button>
+          <Button variant="secondary" onClick={() => setShowDetailsModal(false)} disabled={isLoading}>
+            إغلاق
+          </Button>
         </Modal.Footer>
       </Modal>
     </Container>
