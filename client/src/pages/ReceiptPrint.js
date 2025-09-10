@@ -2,15 +2,13 @@ import React from 'react';
 import QRCode from 'qrcode.react';
 import { Table } from 'react-bootstrap';
 import '../App.css';
-
 const ReceiptPrint = ({ data, type }) => {
   if (!data || !type) {
     console.warn('ReceiptPrint: Missing data or type props');
     return null;
   }
-
   return (
-    <div className="receipt-container">
+    <div className="receipt-container" style={{ pageBreakInside: 'avoid' }}>
       <div className="receipt-content">
         <img src="/logo.png" alt="Logo" className="receipt-logo" />
         <h5>Beauty Center</h5>
@@ -243,5 +241,4 @@ const ReceiptPrint = ({ data, type }) => {
     </div>
   );
 };
-
 export default ReceiptPrint;
