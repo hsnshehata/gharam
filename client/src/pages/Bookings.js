@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Pagination, Table } from 'react-bootstrap';
 import axios from 'axios';
 import Select from 'react-select';
 import ReceiptPrint from './ReceiptPrint';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPrint, faEdit, faEye, faDollarSign, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faPrint, faEdit, faEye, faDollarSign, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons';
 import debounce from 'lodash.debounce';
-import { useReactToPrint } from 'react-to-print';
 
 function Bookings() {
   const [formData, setFormData] = useState({
@@ -22,10 +21,12 @@ function Bookings() {
   const [remaining, setRemaining] = useState(0);
   const [message, setMessage] = useState('');
   const [editItem, setEditItem] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteItem, setDeleteItem] = useState(null);
   const [showInstallmentModal, setShowInstallmentModal] = useState(false);
   const [installmentAmount, setInstallmentAmount] = useState(0);
+  const [currentReceipt, setCurrentReceipt] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [currentDetails, setCurrentDetails] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -33,19 +34,6 @@ function Bookings() {
   const [searchNamePhone, setSearchNamePhone] = useState('');
   const [searchDate, setSearchDate] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [currentReceipt, setCurrentReceipt] = useState(null);
-  const receiptRef = useRef(null);
-
-  const handlePrint = useReactToPrint({
-    content: () => receiptRef.current,
-    pageStyle: `
-      @page { size: 80mm auto; margin: 0; }
-      @media print {
-        body { margin: 0; padding: 0; }
-        .receipt-container { width: 80mm; font-size: 12px; }
-      }
-    `
-  });
 
   // Custom styles for react-select
   const customStyles = {
@@ -174,6 +162,30 @@ function Bookings() {
   }, [currentPage, searchNamePhone, searchDate]);
 
   useEffect(() => {
+    const calculateSelectedPackageServices = async () => {
+      const selectedIds = [formData.packageId, formData.hennaPackageId, formData.photographyPackageId].filter(id => id);
+      if (selectedIds.length > 0) {
+        try {
+          const res = await axios.get('/api/packages/services', {
+            headers: { 'x-auth-token': localStorage.getItem('token') }
+          });
+          const filteredServices = res.data.filter(srv => selectedIds.includes(srv.packageId?._id.toString()));
+          setSelectedPackageServices(filteredServices.map(srv => ({
+            value: srv._id,
+            label: `${srv.name} (${srv.packageId.name})`,
+            price: srv.price
+          })));
+        } catch (err) {
+          console.error('Fetch package services error:', err.response?.data || err.message);
+        }
+      } else {
+        setSelectedPackageServices([]);
+      }
+    };
+    calculateSelectedPackageServices();
+  }, [formData.packageId, formData.hennaPackageId, formData.photographyPackageId]);
+
+  useEffect(() => {
     const calculateTotal = () => {
       let tempTotal = 0;
       const selectedPkg = packages.find(pkg => pkg._id === formData.packageId);
@@ -187,7 +199,7 @@ function Bookings() {
         if (service) tempTotal += service.price;
       });
       formData.returnedServices.forEach(srv => {
-        const service = services.find(s => s._id === srv._id);
+        const service = selectedPackageServices.find(s => s.value === srv._id);
         if (service) tempTotal -= service.price;
       });
       if (formData.hairStraightening === 'yes') tempTotal += parseFloat(formData.hairStraighteningPrice || 0);
@@ -195,13 +207,40 @@ function Bookings() {
       setRemaining(tempTotal - formData.deposit);
     };
     calculateTotal();
-  }, [formData, packages, services]);
+  }, [formData, packages, services, selectedPackageServices]);
 
-  useEffect(() => {
-    if (currentReceipt && currentReceipt.barcode) {
-      setTimeout(() => handlePrint(), 100);
+  const handleCreateSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setShowCreateModal(false);
+    const submitData = {
+      ...formData,
+      packageId: formData.packageId || null,
+      hennaPackageId: formData.hennaPackageId || null,
+      photographyPackageId: formData.photographyPackageId || null,
+      extraServices: formData.extraServices.map(s => s._id),
+      returnedServices: formData.returnedServices.map(s => s._id),
+      hairStraightening: formData.hairStraightening === 'yes'
+    };
+    try {
+      const res = await axios.post('/api/bookings', submitData, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      setBookings([res.data.booking, ...bookings]);
+      setMessage('تم إضافة الحجز بنجاح');
+      setCurrentReceipt({ ...res.data.booking, type: 'booking' });
+      window.print(); // طباعة الوصل أوتوماتيك بعد الإضافة
+      setFormData({
+        packageId: '', hennaPackageId: '', photographyPackageId: '', returnedServices: [],
+        extraServices: [], hairStraightening: 'no', hairStraighteningPrice: 0,
+        hairStraighteningDate: '', clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: 0
+      });
+    } catch (err) {
+      setMessage(err.response?.data?.msg || 'خطأ في إضافة الحجز');
+    } finally {
+      setIsLoading(false);
     }
-  }, [currentReceipt]);
+  };
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
@@ -210,8 +249,12 @@ function Bookings() {
     try {
       const submitData = {
         ...formData,
+        packageId: formData.packageId || null,
+        hennaPackageId: formData.hennaPackageId || null,
+        photographyPackageId: formData.photographyPackageId || null,
         extraServices: formData.extraServices.map(s => s._id),
-        returnedServices: formData.returnedServices.map(s => s._id)
+        returnedServices: formData.returnedServices.map(s => s._id),
+        hairStraightening: formData.hairStraightening === 'yes'
       };
       const res = await axios.put(`/api/bookings/${editItem._id}`, submitData, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -219,6 +262,7 @@ function Bookings() {
       setBookings(bookings.map(booking => (booking._id === editItem._id ? res.data.booking : booking)));
       setMessage('تم تعديل الحجز بنجاح');
       setCurrentReceipt({ ...res.data.booking, type: 'booking' });
+      window.print(); // طباعة الوصل أوتوماتيك بعد التعديل
       setFormData({
         packageId: '', hennaPackageId: '', photographyPackageId: '', returnedServices: [],
         extraServices: [], hairStraightening: 'no', hairStraighteningPrice: 0,
@@ -254,12 +298,11 @@ function Bookings() {
     setIsLoading(true);
     setShowInstallmentModal(false);
     try {
-      const res = await axios.post(`/api/bookings/${editItem._id}/installments`, { amount: parseFloat(installmentAmount) }, {
+      const res = await axios.post(`/api/bookings/${editItem._id}/installments`, { amount: installmentAmount }, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setBookings(bookings.map(booking => (booking._id === editItem._id ? res.data.booking : booking)));
       setMessage('تم إضافة القسط بنجاح');
-      setCurrentReceipt({ ...res.data.booking, type: 'booking' });
       setInstallmentAmount(0);
     } catch (err) {
       setMessage(err.response?.data?.msg || 'خطأ في إضافة القسط');
@@ -268,17 +311,22 @@ function Bookings() {
     }
   };
 
-  const handlePrintBooking = (booking) => {
-    if (!booking?.barcode) {
-      setMessage('خطأ: الوصل بدون باركود');
-      return;
-    }
+  const handlePrint = (booking) => {
     setCurrentReceipt({ ...booking, type: 'booking' });
+    window.print(); // طباعة مباشرة
   };
 
   return (
     <Container className="mt-5">
       <h2>الحجوزات</h2>
+      <Button
+        variant="primary"
+        onClick={() => setShowCreateModal(true)}
+        disabled={isLoading}
+        className="mb-3"
+      >
+        <FontAwesomeIcon icon={faPlus} /> إنشاء حجز جديد
+      </Button>
       <Row className="mb-3">
         <Col md={6}>
           <Form.Group>
@@ -320,13 +368,13 @@ function Bookings() {
                   العربون: {booking.deposit} جنيه<br />
                   المتبقي: {booking.remaining} جنيه
                 </Card.Text>
-                <Button variant="primary" className="me-2" onClick={() => handlePrintBooking(booking)} disabled={isLoading}>
+                <Button variant="primary" className="me-2" onClick={() => handlePrint(booking)} disabled={isLoading}>
                   <FontAwesomeIcon icon={faPrint} />
                 </Button>
                 <Button variant="primary" className="me-2" onClick={() => handleShowDetails(booking)} disabled={isLoading}>
                   <FontAwesomeIcon icon={faEye} />
                 </Button>
-                <Button variant="primary" className="me-2" onClick={() => { setEditItem(booking); setFormData({ ...booking }); }} disabled={isLoading}>
+                <Button variant="primary" className="me-2" onClick={() => { setEditItem(booking); setFormData({ ...booking }); setShowCreateModal(true); }} disabled={isLoading}>
                   <FontAwesomeIcon icon={faEdit} />
                 </Button>
                 <Button variant="primary" className="me-2" onClick={() => { setEditItem(booking); setShowInstallmentModal(true); }} disabled={isLoading}>
@@ -347,17 +395,18 @@ function Bookings() {
           </Pagination.Item>
         ))}
       </Pagination>
-      <div style={{ display: 'none' }}>
-        {currentReceipt && (
-          <ReceiptPrint ref={receiptRef} data={currentReceipt} type="booking" />
-        )}
-      </div>
-      <Modal show={editItem} onHide={() => setEditItem(null)} size="lg">
+      {/* إضافة الوصل كـ div مخفي للطباعة */}
+      {currentReceipt && (
+        <div className="printable" style={{ display: 'none' }}>
+          <ReceiptPrint data={currentReceipt} type="booking" />
+        </div>
+      )}
+      <Modal show={showCreateModal} onHide={() => { setShowCreateModal(false); setEditItem(null); setFormData({ packageId: '', hennaPackageId: '', photographyPackageId: '', returnedServices: [], extraServices: [], hairStraightening: 'no', hairStraighteningPrice: 0, hairStraighteningDate: '', clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: 0 }); }} size="lg">
         <Modal.Header closeButton>
-          <Modal.Title>تعديل الحجز</Modal.Title>
+          <Modal.Title>{editItem ? 'تعديل الحجز' : 'إنشاء حجز جديد'}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Form onSubmit={handleEditSubmit}>
+          <Form onSubmit={editItem ? handleEditSubmit : handleCreateSubmit}>
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3">
@@ -546,9 +595,9 @@ function Bookings() {
               </Col>
               <Col md={12}>
                 <Button type="submit" disabled={isLoading}>
-                  {isLoading ? 'جاري التعديل...' : 'تعديل'}
+                  {isLoading ? 'جاري الحفظ...' : (editItem ? 'تعديل' : 'حفظ')}
                 </Button>
-                <Button variant="secondary" className="ms-2" onClick={() => setEditItem(null)} disabled={isLoading}>
+                <Button variant="secondary" className="ms-2" onClick={() => { setShowCreateModal(false); setEditItem(null); setFormData({ packageId: '', hennaPackageId: '', photographyPackageId: '', returnedServices: [], extraServices: [], hairStraightening: 'no', hairStraighteningPrice: 0, hairStraighteningDate: '', clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: 0 }); }} disabled={isLoading}>
                   إلغاء
                 </Button>
               </Col>
