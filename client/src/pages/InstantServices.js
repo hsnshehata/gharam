@@ -16,7 +16,6 @@ function InstantServices({ user }) {
   const [editItem, setEditItem] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteItem, setDeleteItem] = useState(null);
-  const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [currentReceipt, setCurrentReceipt] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [currentDetails, setCurrentDetails] = useState(null);
@@ -217,10 +216,10 @@ function InstantServices({ user }) {
         setInstantServices([res.data.instantService, ...instantServices]);
         setMessage('تم إضافة الخدمة الفورية بنجاح');
       }
-      // التأكد من وجود barcode قبل فتح الـ Modal
+      // التأكد من وجود barcode قبل الطباعة
       if (res.data.instantService?.barcode) {
         setCurrentReceipt(res.data.instantService);
-        setShowReceiptModal(true);
+        window.print(); // طباعة الوصل أوتوماتيك
       } else {
         setMessage('خطأ: الوصل بدون باركود');
       }
@@ -272,7 +271,7 @@ function InstantServices({ user }) {
       return;
     }
     setCurrentReceipt(service);
-    setShowReceiptModal(true);
+    window.print(); // طباعة مباشرة
   };
 
   const handleShowDetails = (service) => {
@@ -381,70 +380,78 @@ function InstantServices({ user }) {
           </Pagination.Item>
         ))}
       </Pagination>
+      {/* إضافة الوصل كـ div مخفي للطباعة */}
+      {currentReceipt && (
+        <div className="printable" style={{ display: 'none' }}>
+          <ReceiptPrint key={currentReceipt._id + '-' + Date.now()} data={currentReceipt} type="instant" />
+        </div>
+      )}
       <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>{editItem ? 'تعديل خدمة فورية' : 'إنشاء خدمة فورية'}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleSubmit} className="form-row">
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label>اسم الموظف (اختياري)</Form.Label>
-                <Form.Control
-                  as="select"
-                  value={formData.employeeId}
-                  onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-                  disabled={isLoading || isUsersLoading}
+            <Row>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>اسم الموظف (اختياري)</Form.Label>
+                  <Form.Control
+                    as="select"
+                    value={formData.employeeId}
+                    onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
+                    disabled={isLoading || isUsersLoading}
+                  >
+                    <option value="">لا يوجد</option>
+                    {users.map(user => (
+                      <option key={user._id} value={user._id}>{user.username}</option>
+                    ))}
+                  </Form.Control>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>الخدمات</Form.Label>
+                  <Select
+                    isMulti
+                    options={services.filter(srv => srv.type === 'instant').map(srv => ({
+                      value: srv._id,
+                      label: srv.name
+                    }))}
+                    value={formData.services}
+                    onChange={(selected) => setFormData({ ...formData, services: selected })}
+                    isSearchable
+                    placeholder="اختر الخدمات..."
+                    className="booking-services-select"
+                    classNamePrefix="booking-services"
+                    styles={customStyles}
+                    isDisabled={isLoading || isServicesLoading}
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={12}>
+                <Form.Group>
+                  <Form.Label>الإجمالي: {total} جنيه</Form.Label>
+                </Form.Group>
+              </Col>
+              <Col md={12}>
+                <Button type="submit" className="mt-3" disabled={isLoading || isUsersLoading || isServicesLoading}>
+                  {isLoading ? 'جاري الحفظ...' : (editItem ? 'تعديل' : 'حفظ')}
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="mt-3 ms-2"
+                  onClick={() => {
+                    setFormData({ employeeId: '', services: [] });
+                    setEditItem(null);
+                    setShowCreateModal(false);
+                  }}
+                  disabled={isLoading}
                 >
-                  <option value="">لا يوجد</option>
-                  {users.map(user => (
-                    <option key={user._id} value={user._id}>{user.username}</option>
-                  ))}
-                </Form.Control>
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label>الخدمات</Form.Label>
-                <Select
-                  isMulti
-                  options={services.filter(srv => srv.type === 'instant').map(srv => ({
-                    value: srv._id,
-                    label: srv.name
-                  }))}
-                  value={formData.services}
-                  onChange={(selected) => setFormData({ ...formData, services: selected })}
-                  isSearchable
-                  placeholder="اختر الخدمات..."
-                  className="booking-services-select"
-                  classNamePrefix="booking-services"
-                  styles={customStyles}
-                  isDisabled={isLoading || isServicesLoading}
-                />
-              </Form.Group>
-            </Col>
-            <Col md={12}>
-              <Form.Group>
-                <Form.Label>الإجمالي: {total} جنيه</Form.Label>
-              </Form.Group>
-            </Col>
-            <Col md={12}>
-              <Button type="submit" className="mt-3" disabled={isLoading || isUsersLoading || isServicesLoading}>
-                {isLoading ? 'جاري الحفظ...' : (editItem ? 'تعديل' : 'حفظ')}
-              </Button>
-              <Button
-                variant="secondary"
-                className="mt-3 ms-2"
-                onClick={() => {
-                  setFormData({ employeeId: '', services: [] });
-                  setEditItem(null);
-                  setShowCreateModal(false);
-                }}
-                disabled={isLoading}
-              >
-                إلغاء
-              </Button>
-            </Col>
+                  إلغاء
+                </Button>
+              </Col>
+            </Row>
           </Form>
         </Modal.Body>
       </Modal>
@@ -459,24 +466,6 @@ function InstantServices({ user }) {
           </Button>
           <Button variant="danger" onClick={handleDelete} disabled={isLoading}>
             {isLoading ? 'جاري الحذف...' : 'حذف'}
-          </Button>
-        </Modal.Footer>
-      </Modal>
-      <Modal show={showReceiptModal} onHide={() => setShowReceiptModal(false)} size="sm">
-        <Modal.Header closeButton>
-          <Modal.Title>وصل الخدمة الفورية</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {currentReceipt && (
-            <ReceiptPrint key={currentReceipt._id + '-' + Date.now()} data={currentReceipt} type="instant" />
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="primary" onClick={() => window.print()} disabled={isLoading}>
-            طباعة
-          </Button>
-          <Button variant="secondary" onClick={() => setShowReceiptModal(false)} disabled={isLoading}>
-            إغلاق
           </Button>
         </Modal.Footer>
       </Modal>
