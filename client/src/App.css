@@ -103,7 +103,7 @@ code {
   background-color: #2a7a78 !important; /* زيتي متوسط */
   color: #fff !important;
   border: 1px solid #98ff98 !important; /* منت جرين */
-  borderRadius: 4px !important;
+  border-radius: 4px !important;
   font-family: 'Tajawal', Arial, sans-serif !important;
   font-size: 1rem !important;
   height: 38px !important;
@@ -299,9 +299,10 @@ code {
 /* ستايل للطباعة عشان نمنع التكرار ونضمن صفحة واحدة */
 @media print {
   body {
-    visibility: hidden;
+    visibility: hidden !important;
     background-color: #fff !important; /* خلفية بيضاء للجسم أثناء الطباعة */
     -webkit-print-color-adjust: exact !important; /* لضمان الألوان */
+    print-color-adjust: exact !important; /* لدعم المتصفحات الحديثة */
   }
   .printable {
     visibility: visible !important;
@@ -309,7 +310,7 @@ code {
     top: 0 !important;
     left: 0 !important;
     width: 100% !important;
-    height: auto !important;
+    min-height: 200px !important; /* ضمان ارتفاع كافي */
     page-break-inside: avoid !important; /* منع التقسيم عبر صفحات */
     page-break-after: avoid !important;
     break-inside: avoid !important;
@@ -320,6 +321,7 @@ code {
     color: #000 !important; /* كل الكلام أسود */
     background-color: #fff !important;
     page-break-inside: avoid !important; /* منع التكرار أو التقسيم */
+    width: 100% !important;
   }
   /* التأكد من إن الجداول والنصوص واضحة */
   .receipt-container h5,
@@ -339,7 +341,7 @@ code {
   }
   /* إخفاء أي عناصر تانية غير الوصل */
   * {
-    visibility: hidden;
+    visibility: hidden !important;
   }
   .printable,
   .printable * {
