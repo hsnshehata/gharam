@@ -288,6 +288,7 @@ function Dashboard({ user }) {
         const res = await axios.put(`/api/bookings/${editBooking._id}`, submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
+        console.log('Booking update response:', res.data); // Log للتحقق من البيانات
         setBookings({
           makeupBookings: bookings.makeupBookings.map(b => (b._id === editBooking._id ? res.data.booking : b)),
           hairStraighteningBookings: bookings.hairStraighteningBookings.map(b => (b._id === editBooking._id ? res.data.booking : b)),
@@ -295,11 +296,15 @@ function Dashboard({ user }) {
         });
         setMessage('تم تعديل الحجز بنجاح');
         setCurrentReceipt({ ...res.data.booking, type: 'booking' });
-        window.print(); // طباعة الوصل أوتوماتيك بعد التعديل
+        setTimeout(() => {
+          console.log('Printing booking receipt:', { ...res.data.booking, type: 'booking' });
+          window.print(); // طباعة الوصل بعد تأخير صغير
+        }, 100);
       } else {
         const res = await axios.post('/api/bookings', submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
+        console.log('Booking create response:', res.data); // Log للتحقق من البيانات
         setBookings({
           makeupBookings: [...bookings.makeupBookings, res.data.booking].filter(b =>
             (b.package?.type === 'makeup' && new Date(b.eventDate).toDateString() === new Date(date).toDateString()) ||
@@ -315,7 +320,10 @@ function Dashboard({ user }) {
         });
         setMessage('تم إضافة الحجز بنجاح');
         setCurrentReceipt({ ...res.data.booking, type: 'booking' });
-        window.print(); // طباعة الوصل أوتوماتيك بعد الإضافة
+        setTimeout(() => {
+          console.log('Printing booking receipt:', { ...res.data.booking, type: 'booking' });
+          window.print(); // طباعة الوصل بعد تأخير صغير
+        }, 100);
       }
       setBookingFormData({
         packageId: '', hennaPackageId: '', photographyPackageId: '', extraServices: [], returnedServices: [],
@@ -348,16 +356,24 @@ function Dashboard({ user }) {
         const res = await axios.put(`/api/instant-services/${editItem._id}`, submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
+        console.log('Instant service update response:', res.data); // Log للتحقق من البيانات
         setMessage('تم تعديل الخدمة الفورية بنجاح');
         setCurrentReceipt({ ...res.data.instantService, type: 'instant' });
-        window.print(); // طباعة الوصل أوتوماتيك بعد التعديل
+        setTimeout(() => {
+          console.log('Printing instant service receipt:', { ...res.data.instantService, type: 'instant' });
+          window.print(); // طباعة الوصل بعد تأخير صغير
+        }, 100);
       } else {
         const res = await axios.post('/api/instant-services', submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
+        console.log('Instant service create response:', res.data); // Log للتحقق من البيانات
         setMessage('تم إضافة الخدمة الفورية بنجاح');
         setCurrentReceipt({ ...res.data.instantService, type: 'instant' });
-        window.print(); // طباعة الوصل أوتوماتيك بعد الإضافة
+        setTimeout(() => {
+          console.log('Printing instant service receipt:', { ...res.data.instantService, type: 'instant' });
+          window.print(); // طباعة الوصل بعد تأخير صغير
+        }, 100);
       }
       setInstantServiceFormData({ employeeId: '', services: [] });
       setEditItem(null);
@@ -481,8 +497,12 @@ function Dashboard({ user }) {
   };
 
   const handlePrint = (booking) => {
+    console.log('Manual print triggered for booking:', booking); // Log للتحقق من البيانات
     setCurrentReceipt({ ...booking, type: 'booking' });
-    window.print(); // طباعة مباشرة
+    setTimeout(() => {
+      console.log('Printing manually:', { ...booking, type: 'booking' });
+      window.print(); // طباعة مباشرة بعد تأخير صغير
+    }, 100);
   };
 
   const handleShowDetails = (booking) => {
@@ -660,7 +680,7 @@ function Dashboard({ user }) {
         </Card>
         {/* إضافة الوصل كـ div مخفي للطباعة */}
         {currentReceipt && (
-          <div className="printable" style={{ display: 'none' }}>
+          <div className="printable" style={{ display: 'none' }} key={currentReceipt._id + '-' + currentReceipt.type}>
             <ReceiptPrint data={currentReceipt} type={currentReceipt.type || 'booking'} />
           </div>
         )}
