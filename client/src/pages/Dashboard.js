@@ -27,7 +27,6 @@ function Dashboard({ user }) {
   const [showInstantServiceModal, setShowInstantServiceModal] = useState(false);
   const [showExpenseAdvanceModal, setShowExpenseAdvanceModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showInstallmentModal, setShowInstallmentModal] = useState(false);
   const [currentReceipt, setCurrentReceipt] = useState(null);
@@ -296,7 +295,7 @@ function Dashboard({ user }) {
         });
         setMessage('تم تعديل الحجز بنجاح');
         setCurrentReceipt({ ...res.data.booking, type: 'booking' });
-        setShowReceiptModal(true);
+        window.print(); // طباعة الوصل أوتوماتيك بعد التعديل
       } else {
         const res = await axios.post('/api/bookings', submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -316,7 +315,7 @@ function Dashboard({ user }) {
         });
         setMessage('تم إضافة الحجز بنجاح');
         setCurrentReceipt({ ...res.data.booking, type: 'booking' });
-        setShowReceiptModal(true);
+        window.print(); // طباعة الوصل أوتوماتيك بعد الإضافة
       }
       setBookingFormData({
         packageId: '', hennaPackageId: '', photographyPackageId: '', extraServices: [], returnedServices: [],
@@ -351,14 +350,14 @@ function Dashboard({ user }) {
         });
         setMessage('تم تعديل الخدمة الفورية بنجاح');
         setCurrentReceipt({ ...res.data.instantService, type: 'instant' });
-        setShowReceiptModal(true);
+        window.print(); // طباعة الوصل أوتوماتيك بعد التعديل
       } else {
         const res = await axios.post('/api/instant-services', submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setMessage('تم إضافة الخدمة الفورية بنجاح');
         setCurrentReceipt({ ...res.data.instantService, type: 'instant' });
-        setShowReceiptModal(true);
+        window.print(); // طباعة الوصل أوتوماتيك بعد الإضافة
       }
       setInstantServiceFormData({ employeeId: '', services: [] });
       setEditItem(null);
@@ -483,7 +482,7 @@ function Dashboard({ user }) {
 
   const handlePrint = (booking) => {
     setCurrentReceipt({ ...booking, type: 'booking' });
-    setShowReceiptModal(true);
+    window.print(); // طباعة مباشرة
   };
 
   const handleShowDetails = (booking) => {
@@ -659,6 +658,12 @@ function Dashboard({ user }) {
             </Card.Text>
           </Card.Body>
         </Card>
+        {/* إضافة الوصل كـ div مخفي للطباعة */}
+        {currentReceipt && (
+          <div className="printable" style={{ display: 'none' }}>
+            <ReceiptPrint data={currentReceipt} type={currentReceipt.type || 'booking'} />
+          </div>
+        )}
         <Modal show={showBookingModal} onHide={() => setShowBookingModal(false)} size="lg">
           <Modal.Header closeButton>
             <Modal.Title>{editBooking ? 'تعديل حجز' : 'إنشاء حجز جديد'}</Modal.Title>
@@ -1098,22 +1103,6 @@ function Dashboard({ user }) {
             </Button>
             <Button variant="primary" onClick={() => handleAddInstallment(deleteItem?._id)} disabled={isLoading}>
               {isLoading ? 'جاري الحفظ...' : 'حفظ'}
-            </Button>
-          </Modal.Footer>
-        </Modal>
-        <Modal show={showReceiptModal} onHide={() => setShowReceiptModal(false)} size="sm">
-          <Modal.Header closeButton>
-            <Modal.Title>وصل {currentReceipt?.type === 'booking' ? 'الحجز' : 'الخدمة الفورية'}</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <ReceiptPrint data={currentReceipt} type={currentReceipt?.type || 'booking'} />
-          </Modal.Body>
-          <Modal.Footer>
-            <Button variant="primary" onClick={() => window.print()} disabled={isLoading}>
-              طباعة
-            </Button>
-            <Button variant="secondary" onClick={() => setShowReceiptModal(false)} disabled={isLoading}>
-              إغلاق
             </Button>
           </Modal.Footer>
         </Modal>
