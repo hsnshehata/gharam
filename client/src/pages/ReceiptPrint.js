@@ -1,12 +1,25 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import QRCode from 'qrcode.react';
 import { Table } from 'react-bootstrap';
 import '../App.css';
+
 const ReceiptPrint = ({ data, type }) => {
+  useEffect(() => {
+    console.log('ReceiptPrint data:', data); // للتحقق من البيانات اللي بتوصل
+    console.log('ReceiptPrint type:', type);
+  }, [data, type]);
+
   if (!data || !type) {
     console.warn('ReceiptPrint: Missing data or type props');
-    return null;
+    return (
+      <div className="receipt-container" style={{ pageBreakInside: 'avoid' }}>
+        <div className="receipt-content">
+          <p>خطأ: لا توجد بيانات للطباعة</p>
+        </div>
+      </div>
+    );
   }
+
   return (
     <div className="receipt-container" style={{ pageBreakInside: 'avoid' }}>
       <div className="receipt-content">
@@ -241,4 +254,5 @@ const ReceiptPrint = ({ data, type }) => {
     </div>
   );
 };
+
 export default ReceiptPrint;
