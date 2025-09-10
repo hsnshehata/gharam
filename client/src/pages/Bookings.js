@@ -6,6 +6,7 @@ import ReceiptPrint from './ReceiptPrint';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPrint, faEdit, faEye, faDollarSign, faTrash } from '@fortawesome/free-solid-svg-icons';
 import debounce from 'lodash.debounce';
+import { useReactToPrint } from 'react-to-print';
 
 function Bookings() {
   const [formData, setFormData] = useState({
@@ -25,8 +26,6 @@ function Bookings() {
   const [deleteItem, setDeleteItem] = useState(null);
   const [showInstallmentModal, setShowInstallmentModal] = useState(false);
   const [installmentAmount, setInstallmentAmount] = useState(0);
-  const [showReceiptModal, setShowReceiptModal] = useState(false);
-  const [currentReceipt, setCurrentReceipt] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [currentDetails, setCurrentDetails] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -34,7 +33,19 @@ function Bookings() {
   const [searchNamePhone, setSearchNamePhone] = useState('');
   const [searchDate, setSearchDate] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [currentReceipt, setCurrentReceipt] = useState(null);
   const receiptRef = useRef(null);
+
+  const handlePrint = useReactToPrint({
+    content: () => receiptRef.current,
+    pageStyle: `
+      @page { size: 80mm auto; margin: 0; }
+      @media print {
+        body { margin: 0; padding: 0; }
+        .receipt-container { width: 80mm; font-size: 12px; }
+      }
+    `
+  });
 
   // Custom styles for react-select
   const customStyles = {
@@ -145,12 +156,12 @@ function Bookings() {
         })
       ]);
       setBookings(bookingsRes.data.bookings);
-      setTotalPages(bookingsRes.data.pages); // غيرت هنا لـ pages عشان يطابق الـ backend
+      setTotalPages(bookingsRes.data.pages);
       setPackages(packagesRes.data);
       setServices(servicesRes.data);
       setMessage('');
     } catch (err) {
-      console.error('Fetch error:', err); // للـ debugging
+      console.error('Fetch error:', err);
       setMessage('خطأ في جلب البيانات: ' + (err.response?.data?.msg || err.message));
     } finally {
       setIsLoading(false);
@@ -159,19 +170,55 @@ function Bookings() {
 
   useEffect(() => {
     debouncedFetchData();
-    return () => debouncedFetchData.cancel(); // Cleanup debounce on unmount
+    return () => debouncedFetchData.cancel();
   }, [currentPage, searchNamePhone, searchDate]);
+
+  useEffect(() => {
+    const calculateTotal = () => {
+      let tempTotal = 0;
+      const selectedPkg = packages.find(pkg => pkg._id === formData.packageId);
+      if (selectedPkg) tempTotal += selectedPkg.price;
+      const hennaPkg = packages.find(pkg => pkg._id === formData.hennaPackageId);
+      if (hennaPkg) tempTotal += hennaPkg.price;
+      const photoPkg = packages.find(pkg => pkg._id === formData.photographyPackageId);
+      if (photoPkg) tempTotal += photoPkg.price;
+      formData.extraServices.forEach(srv => {
+        const service = services.find(s => s._id === srv._id);
+        if (service) tempTotal += service.price;
+      });
+      formData.returnedServices.forEach(srv => {
+        const service = services.find(s => s._id === srv._id);
+        if (service) tempTotal -= service.price;
+      });
+      if (formData.hairStraightening === 'yes') tempTotal += parseFloat(formData.hairStraighteningPrice || 0);
+      setTotal(tempTotal);
+      setRemaining(tempTotal - formData.deposit);
+    };
+    calculateTotal();
+  }, [formData, packages, services]);
+
+  useEffect(() => {
+    if (currentReceipt && currentReceipt.barcode) {
+      setTimeout(() => handlePrint(), 100);
+    }
+  }, [currentReceipt]);
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setEditItem(null);
     try {
-      const res = await axios.put(`/api/bookings/${editItem._id}`, formData, {
+      const submitData = {
+        ...formData,
+        extraServices: formData.extraServices.map(s => s._id),
+        returnedServices: formData.returnedServices.map(s => s._id)
+      };
+      const res = await axios.put(`/api/bookings/${editItem._id}`, submitData, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setBookings(bookings.map(booking => (booking._id === editItem._id ? res.data.booking : booking)));
       setMessage('تم تعديل الحجز بنجاح');
+      setCurrentReceipt({ ...res.data.booking, type: 'booking' });
       setFormData({
         packageId: '', hennaPackageId: '', photographyPackageId: '', returnedServices: [],
         extraServices: [], hairStraightening: 'no', hairStraighteningPrice: 0,
@@ -207,17 +254,26 @@ function Bookings() {
     setIsLoading(true);
     setShowInstallmentModal(false);
     try {
-      const res = await axios.post(`/api/bookings/${editItem._id}/installments`, { amount: installmentAmount }, {
+      const res = await axios.post(`/api/bookings/${editItem._id}/installments`, { amount: parseFloat(installmentAmount) }, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setBookings(bookings.map(booking => (booking._id === editItem._id ? res.data.booking : booking)));
       setMessage('تم إضافة القسط بنجاح');
+      setCurrentReceipt({ ...res.data.booking, type: 'booking' });
       setInstallmentAmount(0);
     } catch (err) {
       setMessage(err.response?.data?.msg || 'خطأ في إضافة القسط');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePrintBooking = (booking) => {
+    if (!booking?.barcode) {
+      setMessage('خطأ: الوصل بدون باركود');
+      return;
+    }
+    setCurrentReceipt({ ...booking, type: 'booking' });
   };
 
   return (
@@ -264,7 +320,7 @@ function Bookings() {
                   العربون: {booking.deposit} جنيه<br />
                   المتبقي: {booking.remaining} جنيه
                 </Card.Text>
-                <Button variant="primary" className="me-2" onClick={() => { setCurrentReceipt(booking); setShowReceiptModal(true); }} disabled={isLoading}>
+                <Button variant="primary" className="me-2" onClick={() => handlePrintBooking(booking)} disabled={isLoading}>
                   <FontAwesomeIcon icon={faPrint} />
                 </Button>
                 <Button variant="primary" className="me-2" onClick={() => handleShowDetails(booking)} disabled={isLoading}>
@@ -291,6 +347,11 @@ function Bookings() {
           </Pagination.Item>
         ))}
       </Pagination>
+      <div style={{ display: 'none' }}>
+        {currentReceipt && (
+          <ReceiptPrint ref={receiptRef} data={currentReceipt} type="booking" />
+        )}
+      </div>
       <Modal show={editItem} onHide={() => setEditItem(null)} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>تعديل الحجز</Modal.Title>
@@ -519,22 +580,6 @@ function Bookings() {
             </Button>
           </Form>
         </Modal.Body>
-      </Modal>
-      <Modal show={showReceiptModal} onHide={() => setShowReceiptModal(false)} size="sm">
-        <Modal.Header closeButton>
-          <Modal.Title>وصل الحجز</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <ReceiptPrint data={currentReceipt} type="booking" ref={receiptRef} />
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="primary" onClick={() => window.print()} disabled={isLoading}>
-            طباعة
-          </Button>
-          <Button variant="secondary" onClick={() => setShowReceiptModal(false)} disabled={isLoading}>
-            إغلاق
-          </Button>
-        </Modal.Footer>
       </Modal>
       <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
         <Modal.Header closeButton>
