@@ -7,14 +7,17 @@ body {
   background-color: #0f3d3c; /* زيتي غامق */
   color: #fff;
 }
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
+
 /* ستايل الـ App */
 .App {
   min-height: 100vh;
   padding: 20px;
 }
+
 /* ستايل الـ Navbar */
 .navbar {
   background-color: #1a5c5a !important; /* زيتي فاتح */
@@ -29,6 +32,7 @@ code {
 .navbar-nav .nav-link:hover {
   color: #98ff98 !important; /* منت جرين */
 }
+
 /* ستايل الأزرار */
 .btn-primary {
   background-color: #98ff98 !important; /* منت جرين */
@@ -48,6 +52,7 @@ code {
   background-color: #dc3545 !important;
   border-color: #dc3545 !important;
 }
+
 /* ستايل الـ Card */
 .card {
   background-color: #1a5c5a !important; /* زيتي فاتح */
@@ -58,6 +63,7 @@ code {
 .card-title {
   color: #98ff98 !important; /* منت جرين */
 }
+
 /* ستايل الـ Modal */
 .modal-content {
   background-color: #1a5c5a !important; /* زيتي فاتح */
@@ -69,6 +75,7 @@ code {
 .modal-footer {
   border-color: #98ff98 !important; /* منت جرين */
 }
+
 /* ستايل الـ Alert */
 .alert {
   border-radius: 10px;
@@ -81,10 +88,12 @@ code {
   background-color: #dc3545 !important;
   color: #fff !important;
 }
+
 /* ستايل الـ Container */
 .container {
   max-width: 1200px;
 }
+
 /* ستايل الـ Form */
 .form-label {
   text-align: right;
@@ -94,7 +103,7 @@ code {
   background-color: #2a7a78 !important; /* زيتي متوسط */
   color: #fff !important;
   border: 1px solid #98ff98 !important; /* منت جرين */
-  border-radius: 4px !important;
+  borderRadius: 4px !important;
   font-family: 'Tajawal', Arial, sans-serif !important;
   font-size: 1rem !important;
   height: 38px !important;
@@ -108,6 +117,7 @@ code {
   border-color: #78cc78 !important; /* منت جرين فاتح */
   box-shadow: 0 0 0 0.2rem rgba(120, 204, 120, 0.25) !important;
 }
+
 /* ستايل الـ react-select */
 .form-group div.booking-services-select .react-select__control {
   background-color: #2a7a78 !important; /* زيتي متوسط */
@@ -167,7 +177,7 @@ code {
   border: 1px solid #98ff98 !important;
   border-radius: 4px !important;
   font-size: 1rem !important;
-  z-index: 1000 !important;
+  zIndex: 1000 !important;
   direction: rtl !important;
   text-align: right !important;
 }
@@ -209,7 +219,7 @@ code {
   background-color: #78cc78 !important;
   color: #000 !important;
 }
-}
+
 /* ستايل الـ Tabs */
 .nav-tabs {
   border-bottom: 1px solid #98ff98 !important;
@@ -227,6 +237,7 @@ code {
   background-color: #78cc78 !important;
   color: #000 !important;
 }
+
 /* ستايل الـ Pagination */
 .pagination .page-link {
   background-color: #1a5c5a !important;
@@ -242,6 +253,7 @@ code {
   color: #000 !important;
   border-color: #98ff98 !important;
 }
+
 /* ستايل الـ Table */
 .table {
   background-color: #1a5c5a !important;
@@ -255,6 +267,7 @@ code {
   background-color: #2a7a78 !important;
   color: #fff !important;
 }
+
 /* رص الخانات جنب بعض */
 .form-row {
   display: flex;
@@ -267,12 +280,14 @@ code {
   padding-right: 5px;
   padding-left: 5px;
 }
+
 /* ستايل اللوجو */
 .receipt-logo {
   width: 190px;
   height: 120px;
   object-fit: contain; /* Ensures the logo scales properly without distortion */
 }
+
 /* ستايل الـ receipt-container لتغيير الخط */
 .receipt-container {
   font-family: 'Tajawal', Arial, sans-serif !important;
@@ -280,6 +295,7 @@ code {
   font-weight: 700 !important; /* خط غامق (Bold) */
   color: #fff !important;
 }
+
 /* ستايل للطباعة عشان نمنع التكرار ونضمن صفحة واحدة */
 @media print {
   body {
@@ -325,7 +341,8 @@ code {
   * {
     visibility: hidden;
   }
-  .printable, .printable * {
+  .printable,
+  .printable * {
     visibility: visible !important;
     color: #000 !important; /* كل النصوص سوداء داكنة */
     background-color: #fff !important; /* كل العناصر بخلفية بيضاء */
