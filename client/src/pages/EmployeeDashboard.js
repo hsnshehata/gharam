@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table } from 'react-bootstrap';
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -52,7 +52,7 @@ function EmployeeDashboard({ user }) {
       }
     };
     fetchData();
-  }, [date]);
+  }, [date, showToast]);
 
   useEffect(() => {
     if (showQrModal) {
@@ -89,7 +89,7 @@ function EmployeeDashboard({ user }) {
         }
       }
     };
-  }, [showQrModal]);
+  }, [showQrModal, handleReceiptSearch, showToast]);
 
   const handleReceiptSubmit = async (e) => {
     e.preventDefault();
@@ -100,7 +100,7 @@ function EmployeeDashboard({ user }) {
     await handleReceiptSearch(receiptNumber);
   };
 
-  const handleReceiptSearch = async (searchValue) => {
+  const handleReceiptSearch = useCallback(async (searchValue) => {
     try {
       console.log('Searching for receipt:', searchValue);
       const [bookingRes, instantRes] = await Promise.all([
@@ -129,7 +129,7 @@ function EmployeeDashboard({ user }) {
       console.error('Receipt search error:', err.response?.data || err.message);
       showToast(err.response?.data?.msg || 'خطأ في البحث عن الوصل', 'danger');
     }
-  };
+  }, [showToast]);
 
   const handleExecuteService = async (serviceId, type, recordId) => {
     try {

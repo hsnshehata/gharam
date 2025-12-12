@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Container, Row, Col, Card, Alert, Form, Button, Table, Spinner, Badge, Modal } from 'react-bootstrap';
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -40,7 +40,7 @@ function HallSupervision() {
     return 'غير معروف';
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [bookingsRes, instantRes, usersRes] = await Promise.all([
@@ -63,12 +63,11 @@ function HallSupervision() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [date, showToast]);
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date]);
+  }, [loadData]);
 
   useEffect(() => {
     if (showQrModal) {
@@ -105,7 +104,7 @@ function HallSupervision() {
         }
       }
     };
-  }, [showQrModal]);
+  }, [showQrModal, handleReceiptSearch, showToast]);
 
   const handleAssignChange = (key, value) => {
     setAssignments(prev => ({ ...prev, [key]: value }));
@@ -124,7 +123,7 @@ function HallSupervision() {
     setShowQrModal(true);
   };
 
-  const handleReceiptSearch = async (searchValue) => {
+  const handleReceiptSearch = useCallback(async (searchValue) => {
     try {
       const [bookingRes, instantRes] = await Promise.all([
         axios.get(`/api/bookings?receiptNumber=${searchValue}`, {
@@ -151,7 +150,7 @@ function HallSupervision() {
       console.error('Receipt search error:', err.response?.data || err.message);
       showToast(err.response?.data?.msg || 'خطأ في البحث عن الوصل', 'danger');
     }
-  };
+  }, [showToast]);
 
   const updateBookingState = (updatedBooking) => {
     setBookings(prev => ({

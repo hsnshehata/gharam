@@ -201,7 +201,7 @@ function Dashboard({ user }) {
       setMessage('خطأ في جلب البيانات');
       setBookings({ makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
     }
-  }, [date]);
+  }, [date, setMessage]);
 
   useEffect(() => {
     loadDashboardData();
