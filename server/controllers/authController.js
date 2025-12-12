@@ -12,7 +12,8 @@ exports.register = async (req, res) => {
     await user.save();
 
     const payload = { user: { id: user.id, role: user.role } };
-    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+    // إبقاء الجلسة أطول: 10 أيام
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '10d' });
 
     res.json({ token, user: { id: user.id, username, role } });
   } catch (err) {
@@ -31,7 +32,8 @@ exports.login = async (req, res) => {
     if (!isMatch) return res.status(400).json({ msg: 'Invalid credentials' });
 
     const payload = { user: { id: user.id, role: user.role } };
-    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+    // إبقاء الجلسة أطول: 10 أيام
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '10d' });
 
     res.json({ token, user: { id: user.id, username, role: user.role } });
   } catch (err) {
