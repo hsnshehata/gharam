@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table } from 'react-bootstrap';
 import axios from 'axios';
+import { getPackages, getServices } from '../utils/apiCache';
 import Select from 'react-select';
-import QRCode from 'qrcode.react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faPrint, faEdit, faEye, faDollarSign, faTrash, faSearch } from '@fortawesome/free-solid-svg-icons';
-import ReceiptPrint from '../pages/ReceiptPrint';
+import { faPlus, faPrint, faEdit, faEye, faDollarSign, faTrash } from '@fortawesome/free-solid-svg-icons';
+import ReceiptPrint, { printReceiptElement } from '../pages/ReceiptPrint';
+import { Link } from 'react-router-dom';
+import { useToast } from '../components/ToastProvider';
 
 function Dashboard({ user }) {
   const [summary, setSummary] = useState({
@@ -23,7 +25,13 @@ function Dashboard({ user }) {
     photographyBookings: []
   });
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [message, setMessage] = useState('');
+  const { showToast } = useToast();
+  const setMessage = (msg) => {
+    if (!msg) return;
+    const text = msg.toString();
+    const variant = text.includes('خطأ') ? 'danger' : text.includes('مطلوبة') ? 'warning' : 'success';
+    showToast(msg, variant);
+  };
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showInstantServiceModal, setShowInstantServiceModal] = useState(false);
   const [showExpenseAdvanceModal, setShowExpenseAdvanceModal] = useState(false);
@@ -52,13 +60,13 @@ function Dashboard({ user }) {
   const [total, setTotal] = useState(0);
   const [remaining, setRemaining] = useState(0);
 
-  // Custom styles للـ react-select
+  // Custom styles للـ react-select — neutralized to use CSS variables (black/white theme)
   const customStyles = {
     control: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      border: '1px solid #98ff98',
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
+      border: '1px solid var(--border)',
       borderRadius: '4px',
       fontFamily: 'Tajawal, Arial, sans-serif',
       fontSize: '1rem',
@@ -71,52 +79,55 @@ function Dashboard({ user }) {
     }),
     valueContainer: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
       padding: '0.375rem 0.75rem',
       minHeight: '38px'
     }),
     input: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
       fontSize: '1rem'
     }),
     placeholder: (provided) => ({
       ...provided,
-      color: '#fff',
+      color: 'var(--muted)',
       fontSize: '1rem',
       textAlign: 'right'
     }),
     singleValue: (provided) => ({
       ...provided,
-      color: '#fff',
-      textAlign: 'right'
+      color: 'var(--text)',
+      textAlign: 'right',
+      opacity: 1,
+      position: 'relative',
+      zIndex: 2
     }),
     multiValue: (provided) => ({
       ...provided,
-      backgroundColor: '#98ff98',
-      color: '#000',
+      backgroundColor: 'var(--surface)',
+      color: 'var(--text)',
       borderRadius: '3px'
     }),
     multiValueLabel: (provided) => ({
       ...provided,
-      color: '#000',
+      color: 'var(--text)',
       fontSize: '0.9rem',
       padding: '2px 4px'
     }),
     multiValueRemove: (provided) => ({
       ...provided,
-      backgroundColor: '#98ff98',
-      color: '#000',
+      backgroundColor: 'var(--surface)',
+      color: 'var(--text)',
       padding: '2px',
-      ':hover': { backgroundColor: '#78cc78', color: '#000' }
+      ':hover': { backgroundColor: 'var(--border)', color: 'var(--text)' }
     }),
     menu: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      border: '1px solid #98ff98',
+      backgroundColor: 'var(--surface)',
+      color: 'var(--text)',
+      border: '1px solid var(--border)',
       borderRadius: '4px',
       zIndex: 1000,
       direction: 'rtl',
@@ -124,75 +135,73 @@ function Dashboard({ user }) {
     }),
     menuList: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff'
+      backgroundColor: 'var(--surface)',
+      color: 'var(--text)'
     }),
     option: (provided, state) => ({
       ...provided,
-      backgroundColor: state.isSelected ? '#98ff98' : state.isFocused ? '#78cc78' : '#2a7a78',
-      color: state.isSelected || state.isFocused ? '#000' : '#fff',
+      backgroundColor: state.isSelected ? 'var(--text)' : state.isFocused ? 'var(--border)' : 'var(--bg)',
+      color: state.isSelected ? 'var(--bg)' : 'var(--text)',
       fontFamily: 'Tajawal, Arial, sans-serif',
       fontSize: '1rem',
       padding: '0.375rem 0.75rem'
     }),
     indicatorsContainer: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff'
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)'
     }),
     clearIndicator: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      ':hover': { color: '#78cc78' }
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
+      ':hover': { color: 'var(--muted)' }
     }),
     dropdownIndicator: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      ':hover': { color: '#78cc78' }
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
+      ':hover': { color: 'var(--muted)' }
     }),
     indicatorSeparator: (provided) => ({
       ...provided,
-      backgroundColor: '#98ff98'
+      backgroundColor: 'var(--border)'
     })
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [summaryRes, bookingsRes, packagesRes, servicesRes, usersRes] = await Promise.all([
-          axios.get(`http://localhost:5000/api/dashboard/summary?date=${date}`, {
-            headers: { 'x-auth-token': localStorage.getItem('token') }
-          }),
-          axios.get(`http://localhost:5000/api/today-work?date=${date}`, {
-            headers: { 'x-auth-token': localStorage.getItem('token') }
-          }),
-          axios.get('http://localhost:5000/api/packages/packages', {
-            headers: { 'x-auth-token': localStorage.getItem('token') }
-          }),
-          axios.get('http://localhost:5000/api/packages/services', {
-            headers: { 'x-auth-token': localStorage.getItem('token') }
-          }),
-          axios.get('http://localhost:5000/api/users', {
-            headers: { 'x-auth-token': localStorage.getItem('token') }
-          })
-        ]);
-        console.log('Dashboard summary response:', summaryRes.data);
-        console.log('Today work response:', bookingsRes.data);
-        setSummary(summaryRes.data);
-        setBookings(bookingsRes.data || { makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
-        setPackages(packagesRes.data);
-        setServices(servicesRes.data);
-        setUsers(usersRes.data);
-      } catch (err) {
-        console.error('Fetch error:', err.response?.data || err.message);
-        setMessage('خطأ في جلب البيانات');
-        setBookings({ makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
-      }
-    };
-    fetchData();
+  const userOptions = useMemo(() => (
+    users.map(user => ({
+      value: user._id?.toString(),
+      label: `${user.username} (المتبقي: ${user.remainingSalary} جنيه)`
+    }))
+  ), [users]);
+
+  // تحميل البيانات حسب التاريخ الحالي لإعادة الاستخدام بعد أي عملية ناجحة
+  const loadDashboardData = useCallback(async () => {
+    try {
+      const [summaryRes, bookingsRes, packagesData, servicesData, usersRes] = await Promise.all([
+        axios.get(`http://localhost:5000/api/dashboard/summary?date=${date}`, { headers: { 'x-auth-token': localStorage.getItem('token') } }),
+        axios.get(`http://localhost:5000/api/today-work?date=${date}`, { headers: { 'x-auth-token': localStorage.getItem('token') } }),
+        getPackages(),
+        getServices(),
+        axios.get('http://localhost:5000/api/users', { headers: { 'x-auth-token': localStorage.getItem('token') } })
+      ]);
+      setSummary(summaryRes.data);
+      setBookings(bookingsRes.data || { makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
+      setPackages(packagesData);
+      setServices(servicesData);
+      setUsers(usersRes.data.map(u => ({ ...u, _id: u._id?.toString() })));
+      // no inline alert; do nothing
+    } catch (err) {
+      console.error('Fetch error:', err.response?.data || err.message);
+      setMessage('خطأ في جلب البيانات');
+      setBookings({ makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
+    }
   }, [date]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   useEffect(() => {
     const calculateSelectedPackageServices = async () => {
@@ -276,34 +285,18 @@ function Dashboard({ user }) {
         const res = await axios.put(`http://localhost:5000/api/bookings/${editBooking._id}`, submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
-        setBookings({
-          makeupBookings: bookings.makeupBookings.map(b => (b._id === editBooking._id ? res.data.booking : b)),
-          hairStraighteningBookings: bookings.hairStraighteningBookings.map(b => (b._id === editBooking._id ? res.data.booking : b)),
-          photographyBookings: bookings.photographyBookings.map(b => (b._id === editBooking._id ? res.data.booking : b))
-        });
         setMessage('تم تعديل الحجز بنجاح');
         setCurrentReceipt({ ...res.data.booking, type: 'booking' });
         setShowReceiptModal(true);
+        loadDashboardData();
       } else {
         const res = await axios.post('http://localhost:5000/api/bookings', submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
-        setBookings({
-          makeupBookings: [...bookings.makeupBookings, res.data.booking].filter(b =>
-            (b.package?.type === 'makeup' && new Date(b.eventDate).toDateString() === new Date(date).toDateString()) ||
-            (b.hennaPackage && new Date(b.hennaDate).toDateString() === new Date(date).toDateString())
-          ),
-          hairStraighteningBookings: [...bookings.hairStraighteningBookings, res.data.booking].filter(b =>
-            b.hairStraightening && new Date(b.hairStraighteningDate).toDateString() === new Date(date).toDateString()
-          ),
-          photographyBookings: [...bookings.photographyBookings, res.data.booking].filter(b =>
-            (b.photographyPackage && new Date(b.eventDate).toDateString() === new Date(date).toDateString()) ||
-            (b.photographyPackage && new Date(b.hennaDate).toDateString() === new Date(date).toDateString())
-          )
-        });
         setMessage('تم إضافة الحجز بنجاح');
         setCurrentReceipt({ ...res.data.booking, type: 'booking' });
         setShowReceiptModal(true);
+        loadDashboardData();
       }
       setBookingFormData({
         packageId: '', hennaPackageId: '', photographyPackageId: '', extraServices: [], returnedServices: [],
@@ -336,6 +329,7 @@ function Dashboard({ user }) {
         setMessage('تم تعديل الخدمة الفورية بنجاح');
         setCurrentReceipt({ ...res.data.instantService, type: 'instant' });
         setShowReceiptModal(true);
+        loadDashboardData();
       } else {
         const res = await axios.post('http://localhost:5000/api/instant-services', submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -343,6 +337,7 @@ function Dashboard({ user }) {
         setMessage('تم إضافة الخدمة الفورية بنجاح');
         setCurrentReceipt({ ...res.data.instantService, type: 'instant' });
         setShowReceiptModal(true);
+        loadDashboardData();
       }
       setInstantServiceFormData({ employeeId: '', services: [] });
       setEditItem(null);
@@ -359,14 +354,18 @@ function Dashboard({ user }) {
       setMessage('تفاصيل المصروف والمبلغ مطلوبة');
       return;
     }
-    if (expenseAdvanceFormData.type === 'advance') {
+    if (expenseAdvanceFormData.type === 'advance' || expenseAdvanceFormData.type === 'deduction') {
       if (!expenseAdvanceFormData.userId || !expenseAdvanceFormData.amount) {
         setMessage('اسم الموظف والمبلغ مطلوبين');
         return;
       }
+      if (expenseAdvanceFormData.type === 'deduction' && !expenseAdvanceFormData.details) {
+        setMessage('سبب الخصم مطلوب');
+        return;
+      }
       const selectedUser = users.find(u => u._id === expenseAdvanceFormData.userId);
       if (selectedUser && parseFloat(expenseAdvanceFormData.amount) > selectedUser.remainingSalary) {
-        setMessage('السلفة أكبر من المتبقي من الراتب');
+        setMessage(expenseAdvanceFormData.type === 'advance' ? 'السلفة أكبر من المتبقي من الراتب' : 'الخصم أكبر من المتبقي من الراتب');
         return;
       }
     }
@@ -374,9 +373,11 @@ function Dashboard({ user }) {
       const res = await axios.post('http://localhost:5000/api/expenses-advances', expenseAdvanceFormData, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
-      setMessage(`تم إضافة ${res.data.type === 'expense' ? 'المصروف' : 'السلفة'} بنجاح`);
+      const typeLabel = res.data.type === 'expense' ? 'المصروف' : res.data.type === 'advance' ? 'السلفة' : 'الخصم الإداري';
+      setMessage(`تم إضافة ${typeLabel} بنجاح`);
       setExpenseAdvanceFormData({ type: 'expense', details: '', amount: 0, userId: '' });
       setShowExpenseAdvanceModal(false);
+      loadDashboardData();
     } catch (err) {
       console.error('Expense/Advance submit error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في إضافة العملية');
@@ -414,14 +415,10 @@ function Dashboard({ user }) {
       await axios.delete(`http://localhost:5000/api/bookings/${deleteItem._id}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
-      setBookings({
-        makeupBookings: bookings.makeupBookings.filter(b => b._id !== deleteItem._id),
-        hairStraighteningBookings: bookings.hairStraighteningBookings.filter(b => b._id !== deleteItem._id),
-        photographyBookings: bookings.photographyBookings.filter(b => b._id !== deleteItem._id)
-      });
       setMessage('تم حذف الحجز بنجاح');
       setShowDeleteModal(false);
       setDeleteItem(null);
+      loadDashboardData();
     } catch (err) {
       console.error('Delete error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في الحذف');
@@ -446,6 +443,7 @@ function Dashboard({ user }) {
       setMessage('تم إضافة القسط بنجاح');
       setShowInstallmentModal(false);
       setInstallmentAmount(0);
+      loadDashboardData();
     } catch (err) {
       console.error('Installment error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في إضافة القسط');
@@ -457,73 +455,94 @@ function Dashboard({ user }) {
     setShowReceiptModal(true);
   };
 
+  const handlePrintReceipt = () => {
+    let visible = null;
+    const modal = document.querySelector('.modal.show');
+    if (modal) {
+      const list = modal.querySelectorAll('.receipt-content');
+      if (list.length) visible = list[list.length - 1];
+    }
+    if (!visible) visible = document.querySelector('.receipt-content');
+    if (!visible) return;
+
+    printReceiptElement(visible);
+  };
+
   const handleShowDetails = (booking) => {
     setCurrentDetails(booking);
     setShowDetailsModal(true);
   };
 
-  const handleSearch = async () => {
-    try {
-      const [summaryRes, bookingsRes] = await Promise.all([
-        axios.get(`http://localhost:5000/api/dashboard/summary?date=${date}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        }),
-        axios.get(`http://localhost:5000/api/today-work?date=${date}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        })
-      ]);
-      console.log('Search summary response:', summaryRes.data);
-      console.log('Search today work response:', bookingsRes.data);
-      setSummary(summaryRes.data);
-      setBookings(bookingsRes.data || { makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
-      setMessage('');
-    } catch (err) {
-      console.error('Search error:', err.response?.data || err.message);
-      setMessage('خطأ في البحث');
-      setBookings({ makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
-    }
-  };
-
   return (
     <Container className="mt-5">
-      <h2>شغل إنهاردة</h2>
-      {message && <Alert variant={message.includes('خطأ') ? 'danger' : 'success'}>{message}</Alert>}
-      <Row className="mb-3">
-        <Col md={6}>
-          <Form.Group>
+      <div className="dashboard-hero card p-4 mb-4">
+        <div className="hero-copy">
+          <p className="eyebrow">لوحة اليوم</p>
+          <h2 className="hero-title">شغل إنهاردة</h2>
+          <p className="hero-sub">تابع الحجوزات والخدمات الفورية والمصاريف في لمحة واحدة.</p>
+          <div className="metric-pills mt-3">
+            <div className="metric-pill">
+              <span>عدد الحجوزات الجديدة</span>
+              <strong>{summary.bookingCount}</strong>
+            </div>
+            <div className="metric-pill">
+              <span>حجوزات ميك آب</span>
+              <strong>{bookings.makeupBookings?.length || 0}</strong>
+            </div>
+            <div className="metric-pill">
+              <span>حجوزات تصوير</span>
+              <strong>{bookings.photographyBookings?.length || 0}</strong>
+            </div>
+            <div className="metric-pill">
+              <span>الصافي</span>
+              <strong>{summary.net} ج</strong>
+            </div>
+          </div>
+        </div>
+        <div className="hero-actions">
+          <Form.Group className="mb-3">
             <Form.Label>اختر التاريخ</Form.Label>
             <Form.Control
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             />
           </Form.Group>
-        </Col>
-        <Col md={6} className="d-flex align-items-end">
-          <Button variant="primary" onClick={handleSearch} className="me-2">
-            <FontAwesomeIcon icon={faSearch} /> بحث
-          </Button>
-          <Button variant="primary" onClick={() => setShowBookingModal(true)} className="me-2">
-            <FontAwesomeIcon icon={faPlus} /> إنشاء حجز جديد
-          </Button>
-          <Button variant="primary" onClick={() => setShowInstantServiceModal(true)} className="me-2">
-            <FontAwesomeIcon icon={faPlus} /> شغل جديد
-          </Button>
-          <Button variant="primary" onClick={() => setShowExpenseAdvanceModal(true)}>
-            <FontAwesomeIcon icon={faPlus} /> إضافة مصروف/سلفة
-          </Button>
-        </Col>
-      </Row>
+          <div className="hero-buttons">
+            <Button variant="primary" onClick={() => setShowBookingModal(true)}>
+              <FontAwesomeIcon icon={faPlus} /> إنشاء حجز
+            </Button>
+            <Button variant="primary" onClick={() => setShowInstantServiceModal(true)}>
+              <FontAwesomeIcon icon={faPlus} /> شغل جديد
+            </Button>
+            <Button variant="primary" onClick={() => setShowExpenseAdvanceModal(true)}>
+              <FontAwesomeIcon icon={faPlus} /> مصروف/سلفة
+            </Button>
+            <Button as={Link} to="/hall-supervision" variant="secondary">
+              اشراف الصالة
+            </Button>
+          </div>
+        </div>
+      </div>
 
-      <h3>حجوزات الميك آب</h3>
+
+      <div className="d-flex align-items-center">
+        <h3 className="mb-0">حجوزات الميك آب</h3>
+        <small className="text-muted ms-3">إجمالي الحجوزات اليوم: {bookings.makeupBookings.length}</small>
+      </div>
       {bookings.makeupBookings.length === 0 && <Alert variant="info">لا توجد حجوزات ميك آب لهذا اليوم</Alert>}
       <Row>
-        {bookings.makeupBookings.map(booking => (
+        {bookings.makeupBookings.map((booking, idx) => (
           <Col md={4} key={booking._id} className="mb-3">
             <Card>
               <Card.Body>
-                <Card.Title>{booking.clientName} ({new Date(booking.eventDate).toDateString() === new Date(date).toDateString() ? 'زفاف/شبكة' : 'حنة'})</Card.Title>
+                <Card.Title>
+                  <span className="me-2">{idx + 1}.</span>
+                  {booking.clientName} ({new Date(booking.eventDate).toDateString() === new Date(date).toDateString() ? 'زفاف/شبكة' : 'حنة'})
+                  {Number(booking.remaining) === 0 && (
+                    <span className="badge bg-success ms-2">مدفوع بالكامل</span>
+                  )}
+                </Card.Title>
                 <Card.Text>
                   رقم الهاتف: {booking.clientPhone}<br />
                   المدفوع: {booking.deposit} جنيه<br />
@@ -550,14 +569,23 @@ function Dashboard({ user }) {
         ))}
       </Row>
 
-      <h3>حجوزات فرد الشعر</h3>
+      <div className="d-flex align-items-center">
+        <h3 className="mb-0">حجوزات فرد الشعر</h3>
+        <small className="text-muted ms-3">إجمالي الحجوزات اليوم: {bookings.hairStraighteningBookings.length}</small>
+      </div>
       {bookings.hairStraighteningBookings.length === 0 && <Alert variant="info">لا توجد حجوزات فرد شعر لهذا اليوم</Alert>}
       <Row>
-        {bookings.hairStraighteningBookings.map(booking => (
+        {bookings.hairStraighteningBookings.map((booking, idx) => (
           <Col md={4} key={booking._id} className="mb-3">
             <Card>
               <Card.Body>
-                <Card.Title>{booking.clientName}</Card.Title>
+                <Card.Title>
+                  <span className="me-2">{idx + 1}.</span>
+                  {booking.clientName}
+                  {Number(booking.remaining) === 0 && (
+                    <span className="badge bg-success ms-2">مدفوع بالكامل</span>
+                  )}
+                </Card.Title>
                 <Card.Text>
                   رقم الهاتف: {booking.clientPhone}<br />
                   المدفوع: {booking.deposit} جنيه<br />
@@ -584,14 +612,23 @@ function Dashboard({ user }) {
         ))}
       </Row>
 
-      <h3>حجوزات التصوير</h3>
+      <div className="d-flex align-items-center">
+        <h3 className="mb-0">حجوزات التصوير</h3>
+        <small className="text-muted ms-3">إجمالي الحجوزات اليوم: {bookings.photographyBookings.length}</small>
+      </div>
       {bookings.photographyBookings.length === 0 && <Alert variant="info">لا توجد حجوزات تصوير لهذا اليوم</Alert>}
       <Row>
-        {bookings.photographyBookings.map(booking => (
+        {bookings.photographyBookings.map((booking, idx) => (
           <Col md={4} key={booking._id} className="mb-3">
             <Card>
               <Card.Body>
-                <Card.Title>{booking.clientName} ({new Date(booking.eventDate).toDateString() === new Date(date).toDateString() ? 'زفاف/شبكة' : 'حنة'})</Card.Title>
+                <Card.Title>
+                  <span className="me-2">{idx + 1}.</span>
+                  {booking.clientName} ({new Date(booking.eventDate).toDateString() === new Date(date).toDateString() ? 'زفاف/شبكة' : 'حنة'})
+                  {Number(booking.remaining) === 0 && (
+                    <span className="badge bg-success ms-2">مدفوع بالكامل</span>
+                  )}
+                </Card.Title>
                 <Card.Text>
                   رقم الهاتف: {booking.clientPhone}<br />
                   المدفوع: {booking.deposit} جنيه<br />
@@ -927,6 +964,7 @@ function Dashboard({ user }) {
                   >
                     <option value="expense">مصروف</option>
                     <option value="advance">سلفة</option>
+                    <option value="deduction">خصم إداري</option>
                   </Form.Control>
                 </Form.Group>
               </Col>
@@ -955,19 +993,19 @@ function Dashboard({ user }) {
                     </Form.Group>
                   </Col>
                 </>
-              ) : (
+              ) : expenseAdvanceFormData.type === 'advance' ? (
                 <>
                   <Col md={6}>
                     <Form.Group>
                       <Form.Label>اسم الموظف</Form.Label>
                       <Select
-                        options={users.map(user => ({ value: user._id, label: `${user.username} (المتبقي: ${user.remainingSalary} جنيه)` }))}
-                        value={users.find(u => u._id === expenseAdvanceFormData.userId) ? { value: expenseAdvanceFormData.userId, label: `${users.find(u => u._id === expenseAdvanceFormData.userId).username} (المتبقي: ${users.find(u => u._id === expenseAdvanceFormData.userId).remainingSalary} جنيه)` } : null}
-                        onChange={(selected) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, userId: selected ? selected.value : '' })}
+                        options={userOptions}
+                        value={userOptions.find(opt => opt.value === expenseAdvanceFormData.userId?.toString()) || null}
+                        onChange={(selected) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, userId: selected ? selected.value.toString() : '' })}
                         isSearchable
                         placeholder="اختر الموظف..."
                         className="booking-services-select"
-                        classNamePrefix="booking-services"
+                        classNamePrefix="react-select"
                         styles={customStyles}
                       />
                     </Form.Group>
@@ -979,6 +1017,46 @@ function Dashboard({ user }) {
                         type="number"
                         value={expenseAdvanceFormData.amount}
                         onChange={(e) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, amount: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                </>
+              ) : (
+                <>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label>اسم الموظف</Form.Label>
+                      <Select
+                        options={userOptions}
+                        value={userOptions.find(opt => opt.value === expenseAdvanceFormData.userId?.toString()) || null}
+                        onChange={(selected) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, userId: selected ? selected.value.toString() : '' })}
+                        isSearchable
+                        placeholder="اختر الموظف..."
+                        className="booking-services-select"
+                        classNamePrefix="react-select"
+                        styles={customStyles}
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label>المبلغ</Form.Label>
+                      <Form.Control
+                        type="number"
+                        value={expenseAdvanceFormData.amount}
+                        onChange={(e) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, amount: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={12}>
+                    <Form.Group>
+                      <Form.Label>سبب الخصم</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={expenseAdvanceFormData.details}
+                        onChange={(e) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, details: e.target.value })}
                         required
                       />
                     </Form.Group>
@@ -1038,8 +1116,8 @@ function Dashboard({ user }) {
         <Modal.Body>
           <ReceiptPrint data={currentReceipt} type={currentReceipt?.type || 'booking'} />
         </Modal.Body>
-        <Modal.Footer>
-          <Button variant="primary" onClick={() => window.print()}>طباعة</Button>
+          <Modal.Footer>
+          <Button variant="primary" onClick={handlePrintReceipt}>طباعة</Button>
           <Button variant="secondary" onClick={() => setShowReceiptModal(false)}>إغلاق</Button>
         </Modal.Footer>
       </Modal>

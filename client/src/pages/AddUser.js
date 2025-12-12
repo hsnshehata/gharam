@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Form, Button, Container, Alert } from 'react-bootstrap';
 import axios from 'axios';
+import { useToast } from '../components/ToastProvider';
 
 function AddUser() {
   const [formData, setFormData] = useState({
@@ -11,7 +12,12 @@ function AddUser() {
     monthlySalary: 0,
     phone: ''
   });
-  const [message, setMessage] = useState('');
+  const { showToast } = useToast();
+  const setMessage = (msg) => {
+    if (!msg) return;
+    const variant = msg.includes('خطأ') ? 'danger' : 'success';
+    showToast(msg, variant);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,7 +35,7 @@ function AddUser() {
   return (
     <Container className="mt-5">
       <h2>إضافة موظف</h2>
-      {message && <Alert variant={message.includes('خطأ') ? 'danger' : 'success'}>{message}</Alert>}
+      {/* التنبيهات أصبحت عبر التوست */}
       <Form onSubmit={handleSubmit}>
         <Form.Group>
           <Form.Label>اسم المستخدم</Form.Label>

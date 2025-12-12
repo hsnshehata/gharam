@@ -218,12 +218,18 @@ exports.addInstallment = async (req, res) => {
   const { amount } = req.body;
   const employeeId = req.user.id;
 
+  const installmentAmount = Number(amount) || 0;
+  if (installmentAmount <= 0) {
+    return res.status(400).json({ msg: 'Invalid installment amount' });
+  }
+
   try {
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ msg: 'Booking not found' });
-    booking.installments.push({ amount, date: new Date(), employeeId });
-    booking.deposit += amount;
-    booking.remaining -= amount;
+
+    booking.installments.push({ amount: installmentAmount, date: new Date(), employeeId });
+    booking.remaining = Math.max(booking.remaining - installmentAmount, 0);
+
     await booking.save();
     const populatedBooking = await Booking.findById(booking._id)
       .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy');
@@ -272,18 +278,23 @@ exports.getBookings = async (req, res) => {
 
 exports.executeService = async (req, res) => {
   const { id, serviceId } = req.params;
-  const employeeId = req.user.id;
+  const employeeId = req.body.employeeId || req.user.id;
 
   try {
     const booking = await Booking.findById(id);
     if (!booking) return res.status(404).json({ msg: 'Booking not found' });
 
+    const user = await User.findById(employeeId);
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+
     let points = 0;
+    let serviceName = 'غير معروف';
     if (serviceId === 'hairStraightening') {
       if (booking.hairStraightening && !booking.hairStraighteningExecuted) {
         booking.hairStraighteningExecuted = true;
         booking.hairStraighteningExecutedBy = employeeId;
         points = booking.hairStraighteningPrice * 0.15;
+        serviceName = 'فرد الشعر';
       } else {
         return res.status(400).json({ msg: 'Hair straightening already executed or not applicable' });
       }
@@ -294,16 +305,19 @@ exports.executeService = async (req, res) => {
       service.executed = true;
       service.executedBy = employeeId;
       points = service.price * 0.15;
+      serviceName = service.name || 'خدمة باكدج';
     }
 
-    // إضافة النقاط للموظف
+    // إضافة النقاط للموظف مع اسم الخدمة ورقم الوصل
     await User.findByIdAndUpdate(employeeId, {
       $push: {
         points: {
           amount: points,
           date: new Date(),
           bookingId: id,
-          serviceId: serviceId === 'hairStraightening' ? null : serviceId
+          serviceId: serviceId === 'hairStraightening' ? null : serviceId,
+          serviceName,
+          receiptNumber: booking.receiptNumber || null
         }
       }
     });
@@ -312,6 +326,62 @@ exports.executeService = async (req, res) => {
     const populatedBooking = await Booking.findById(booking._id)
       .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy packageServices.executedBy hairStraighteningExecutedBy');
     res.json({ msg: 'Service executed successfully', booking: populatedBooking, points });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+// إعادة الخدمة لحالة غير منفذة وإلغاء النقاط من الموظف السابق
+exports.resetService = async (req, res) => {
+  const { id, serviceId } = req.params;
+
+  try {
+    const booking = await Booking.findById(id);
+    if (!booking) return res.status(404).json({ msg: 'Booking not found' });
+
+    let oldEmployeeId = null;
+    let points = 0;
+
+    if (serviceId === 'hairStraightening') {
+      if (!booking.hairStraighteningExecuted || !booking.hairStraighteningExecutedBy) {
+        return res.status(400).json({ msg: 'Hair straightening is not executed to reset' });
+      }
+      oldEmployeeId = booking.hairStraighteningExecutedBy;
+      points = booking.hairStraighteningPrice * 0.15;
+      booking.hairStraighteningExecuted = false;
+      booking.hairStraighteningExecutedBy = null;
+    } else {
+      const service = booking.packageServices.find(srv => srv._id.toString() === serviceId);
+      if (!service) return res.status(404).json({ msg: 'Service not found' });
+      if (!service.executed || !service.executedBy) {
+        return res.status(400).json({ msg: 'Service is not executed to reset' });
+      }
+      oldEmployeeId = service.executedBy;
+      points = service.price * 0.15;
+      service.executed = false;
+      service.executedBy = null;
+    }
+
+    if (oldEmployeeId) {
+      await User.updateOne(
+        { _id: oldEmployeeId },
+        {
+          $pull: {
+            points: {
+              bookingId: id,
+              serviceId: serviceId === 'hairStraightening' ? null : serviceId
+            }
+          }
+        }
+      );
+    }
+
+    await booking.save();
+    const populatedBooking = await Booking.findById(booking._id)
+      .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy packageServices.executedBy hairStraighteningExecutedBy');
+
+    res.json({ msg: 'Service reset successfully', booking: populatedBooking, removedPoints: points });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Server error' });

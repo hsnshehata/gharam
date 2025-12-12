@@ -2,15 +2,15 @@
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
-  background-color: #f4f4f4;
+  background-color: var(--bg);
   direction: rtl;
 }
 
 .instant-service-form {
-  background-color: #fff;
+  background-color: var(--surface);
   padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px var(--shadow);
   margin-bottom: 20px;
 }
 
@@ -22,12 +22,12 @@
   display: block;
   margin-bottom: 5px;
   font-weight: bold;
-  color: #304b54;
+  color: var(--text);
 }
 
 .submit-btn {
-  background-color: #1cb7a4;
-  color: #fff;
+  background-color: var(--btn-bg);
+  color: var(--btn-text);
   padding: 10px 20px;
   border: none;
   border-radius: 5px;
@@ -36,7 +36,7 @@
 }
 
 .submit-btn:hover {
-  background-color: #179d8c;
+  background-color: var(--btn-bg-hover);
 }
 
 .cards-container {
@@ -46,15 +46,15 @@
 }
 
 .card {
-  background-color: #fff;
+  background-color: var(--surface);
   padding: 15px;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px var(--shadow);
 }
 
 .card p {
   margin: 5px 0;
-  color: #304b54;
+  color: var(--text);
 }
 
 .card-actions {
@@ -64,8 +64,8 @@
 }
 
 .card-actions button {
-  background-color: #1cb7a4;
-  color: #fff;
+  background-color: var(--btn-bg);
+  color: var(--btn-text);
   border: none;
   padding: 8px;
   border-radius: 5px;
@@ -73,7 +73,7 @@
 }
 
 .card-actions button:hover {
-  background-color: #179d8c;
+  background-color: var(--btn-bg-hover);
 }
 
 .pagination {
@@ -84,8 +84,8 @@
 }
 
 .pagination button {
-  background-color: #304b54;
-  color: #fff;
+  background-color: var(--btn-bg);
+  color: var(--btn-text);
   border: none;
   padding: 8px 12px;
   border-radius: 5px;
@@ -93,9 +93,9 @@
 }
 
 .pagination button.active {
-  background-color: #1cb7a4;
+  background-color: var(--btn-bg-hover);
 }
 
 .pagination button:hover {
-  background-color: #179d8c;
+  background-color: var(--btn-bg-hover);
 }

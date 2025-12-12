@@ -2,6 +2,44 @@ import React from 'react';
 import QRCode from 'qrcode.react';
 import { Table } from 'react-bootstrap';
 
+// وظيفة موحدة لطباعه وصل واحد بس عن طريق نسخ العنصر لعناصر الطباعة وعزل باقي الصفحة
+export const printReceiptElement = (element) => {
+  if (!element) return;
+
+  const clone = element.cloneNode(true);
+  clone.classList.add('print-active');
+
+  const logo = clone.querySelector('img[src="/logo.png"]');
+  if (logo) logo.src = `${window.location.origin}/logo.png`;
+
+  const printContainer = document.createElement('div');
+  printContainer.id = 'receipt-print-container';
+  printContainer.appendChild(clone);
+
+  const style = document.createElement('style');
+  style.setAttribute('data-print-style', 'receipt-only');
+  style.textContent = `
+    @media print {
+      @page { size: 80mm auto; margin: 0; }
+      body * { visibility: hidden !important; }
+      #receipt-print-container, #receipt-print-container * { visibility: visible !important; }
+      #receipt-print-container { position: absolute; top: 0; left: 0; width: 80mm; margin: 0 auto; padding: 10mm; font-size: 13px; text-align: center; }
+    }
+  `;
+
+  document.body.appendChild(printContainer);
+  document.head.appendChild(style);
+
+  const cleanup = () => {
+    if (printContainer.parentNode) document.body.removeChild(printContainer);
+    if (style.parentNode) document.head.removeChild(style);
+    window.onafterprint = null;
+  };
+
+  window.onafterprint = cleanup;
+  window.print();
+};
+
 const ReceiptPrint = ({ data, type }) => {
   if (!data || !type) return null;
 
@@ -23,24 +61,16 @@ const ReceiptPrint = ({ data, type }) => {
       <style>
         {`
           @media print {
-            .receipt-content {
-              width: 80mm;
-              margin: 0 auto;
-              padding: 10mm;
-              font-size: 12px;
-              text-align: center;
-            }
-            .qr-code {
-              margin: 10mm auto;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-            }
-            th, td {
-              border: 1px solid #000;
-              padding: 2mm;
-            }
+            @page { size: 80mm auto; margin: 0; }
+            body { margin: 0; padding: 0; width: 80mm; }
+            /* اخفي كل حاجة وقت الطباعة إلا الوصل النشط */
+            body * { visibility: hidden !important; }
+            .receipt-content.print-active, .receipt-content.print-active * { visibility: visible !important; }
+            .receipt-content.print-active { position: absolute; left: 0; top: 0; width: 80mm; margin: 0 auto; padding: 10mm; font-size: 13px; text-align: center; }
+            .qr-code { margin: 10mm auto; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #000; padding: 2mm; }
+            img { max-width: 100%; height: auto; }
           }
         `}
       </style>
@@ -61,18 +91,18 @@ const ReceiptPrint = ({ data, type }) => {
               </tr>
             </thead>
             <tbody>
-              <tr key={data.package?._id ? data.package._id.toString() : 'package-main'}>
+              <tr key={data.package?._id ? `pkg-main-${data.package._id.toString()}` : 'pkg-main'}>
                 <td>{data.package?.name || 'غير متوفر'}</td>
                 <td>{data.package?.price ? `${data.package.price} جنيه` : 'غير متوفر'}</td>
               </tr>
               {data.hennaPackage && (
-                <tr key={data.hennaPackage._id ? data.hennaPackage._id.toString() : 'henna-package'}>
+                <tr key={data.hennaPackage._id ? `pkg-henna-${data.hennaPackage._id.toString()}` : 'pkg-henna'}>
                   <td>{data.hennaPackage.name} (حنة)</td>
                   <td>{data.hennaPackage.price ? `${data.hennaPackage.price} جنيه` : 'غير متوفر'}</td>
                 </tr>
               )}
               {data.photographyPackage && (
-                <tr key={data.photographyPackage._id ? data.photographyPackage._id.toString() : 'photo-package'}>
+                <tr key={data.photographyPackage._id ? `pkg-photo-${data.photographyPackage._id.toString()}` : 'pkg-photo'}>
                   <td>{data.photographyPackage.name} (تصوير)</td>
                   <td>{data.photographyPackage.price ? `${data.photographyPackage.price} جنيه` : 'غير متوفر'}</td>
                 </tr>
@@ -91,7 +121,7 @@ const ReceiptPrint = ({ data, type }) => {
                 </thead>
                 <tbody>
                   {data.extraServices.map((srv, index) => (
-                    <tr key={srv._id ? srv._id.toString() : `extra-service-${index}`}>
+                    <tr key={srv._id ? `extra-${srv._id.toString()}` : `extra-service-${index}`}>
                       <td>{srv.name || 'غير معروف'}</td>
                       <td>{srv.price ? `${srv.price} جنيه` : 'غير معروف'}</td>
                     </tr>
@@ -112,7 +142,7 @@ const ReceiptPrint = ({ data, type }) => {
                 </thead>
                 <tbody>
                   {data.returnedServices.map((srv, index) => (
-                    <tr key={srv._id ? srv._id.toString() : `returned-service-${index}`}>
+                    <tr key={srv._id ? `returned-${srv._id.toString()}` : `returned-service-${index}`}>
                       <td>{srv.name || 'غير معروف'}</td>
                       <td>{srv.price ? `-${srv.price} جنيه` : 'غير معروف'}</td>
                     </tr>
@@ -175,7 +205,7 @@ const ReceiptPrint = ({ data, type }) => {
       )}
       {data.barcode && (
         <div className="qr-code">
-          <QRCode value={data.barcode} size={80} />
+          <QRCode value={data.barcode} size={80} renderAs="svg" />
         </div>
       )}
     </div>

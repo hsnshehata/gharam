@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Alert, Button, Form, Modal, Pagination, Table } from 'react-bootstrap';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Container, Row, Col, Card, Button, Form, Modal, Pagination, Table } from 'react-bootstrap';
 import axios from 'axios';
+import { getServices } from '../utils/apiCache';
 import Select from 'react-select';
-import ReceiptPrint from './ReceiptPrint';
+import ReceiptPrint, { printReceiptElement } from './ReceiptPrint';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPrint, faEdit, faEye, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { useToast } from '../components/ToastProvider';
 
 function InstantServices({ user }) {
   const [formData, setFormData] = useState({ employeeId: '', services: [] });
@@ -12,7 +14,13 @@ function InstantServices({ user }) {
   const [users, setUsers] = useState([]);
   const [services, setServices] = useState([]);
   const [total, setTotal] = useState(0);
-  const [message, setMessage] = useState('');
+  const { showToast } = useToast();
+  const setMessage = useCallback((msg) => {
+    if (!msg) return;
+    const text = msg.toString();
+    const variant = text.includes('خطأ') ? 'danger' : text.includes('مطلوب') ? 'warning' : 'success';
+    showToast(msg, variant);
+  }, [showToast]);
   const [editItem, setEditItem] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteItem, setDeleteItem] = useState(null);
@@ -25,13 +33,13 @@ function InstantServices({ user }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchNameReceipt, setSearchNameReceipt] = useState('');
 
-  // Custom styles للـ react-select
+  // Custom styles للـ react-select — neutralized to use CSS variables (black/white theme)
   const customStyles = {
     control: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      border: '1px solid #98ff98',
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
+      border: '1px solid var(--border)',
       borderRadius: '4px',
       fontFamily: 'Tajawal, Arial, sans-serif',
       fontSize: '1rem',
@@ -44,55 +52,55 @@ function InstantServices({ user }) {
     }),
     valueContainer: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
       padding: '0.375rem 0.75rem',
       minHeight: '38px'
     }),
     input: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
       fontSize: '1rem'
     }),
     placeholder: (provided) => ({
       ...provided,
-      color: '#fff',
+      color: 'var(--muted)',
       fontSize: '1rem',
       textAlign: 'right'
     }),
     singleValue: (provided) => ({
       ...provided,
-      color: '#fff',
+      color: 'var(--text)',
       textAlign: 'right'
     }),
     multiValue: (provided) => ({
       ...provided,
-      backgroundColor: '#98ff98',
-      color: '#000',
+      backgroundColor: 'var(--surface)',
+      color: 'var(--text)',
       borderRadius: '3px'
     }),
     multiValueLabel: (provided) => ({
       ...provided,
-      color: '#000',
+      color: 'var(--text)',
       fontSize: '0.9rem',
       padding: '2px 4px'
     }),
     multiValueRemove: (provided) => ({
       ...provided,
-      backgroundColor: '#98ff98',
-      color: '#000',
+      backgroundColor: 'var(--surface)',
+      color: 'var(--text)',
       padding: '2px',
       ':hover': {
-        backgroundColor: '#78cc78',
-        color: '#000'
+        backgroundColor: 'var(--border)',
+        color: 'var(--text)'
       }
     }),
     menu: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      border: '1px solid #98ff98',
+      backgroundColor: 'var(--surface)',
+      color: 'var(--text)',
+      border: '1px solid var(--border)',
       borderRadius: '4px',
       zIndex: 1000,
       direction: 'rtl',
@@ -100,60 +108,56 @@ function InstantServices({ user }) {
     }),
     menuList: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff'
+      backgroundColor: 'var(--surface)',
+      color: 'var(--text)'
     }),
     option: (provided, state) => ({
       ...provided,
-      backgroundColor: state.isSelected ? '#98ff98' : state.isFocused ? '#78cc78' : '#2a7a78',
-      color: state.isSelected || state.isFocused ? '#000' : '#fff',
+      backgroundColor: state.isSelected ? 'var(--text)' : state.isFocused ? 'var(--border)' : 'var(--bg)',
+      color: state.isSelected ? 'var(--bg)' : 'var(--text)',
       fontFamily: 'Tajawal, Arial, sans-serif',
       fontSize: '1rem',
       padding: '0.375rem 0.75rem'
     }),
     indicatorsContainer: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff'
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)'
     }),
     clearIndicator: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
       ':hover': {
-        color: '#78cc78'
+        color: 'var(--muted)'
       }
     }),
     dropdownIndicator: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
       ':hover': {
-        color: '#78cc78'
+        color: 'var(--muted)'
       }
     }),
     indicatorSeparator: (provided) => ({
       ...provided,
-      backgroundColor: '#98ff98'
+      backgroundColor: 'var(--border)'
     })
   };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const srvRes = await axios.get('http://localhost:5000/api/packages/services', {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        const usersRes = await axios.get('http://localhost:5000/api/users', {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        const instantRes = await axios.get(`http://localhost:5000/api/instant-services?page=${currentPage}&search=${searchNameReceipt}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        console.log('Services response:', srvRes.data);
+        const [servicesData, usersRes, instantRes] = await Promise.all([
+          getServices(),
+          axios.get('http://localhost:5000/api/users', { headers: { 'x-auth-token': localStorage.getItem('token') } }),
+          axios.get(`http://localhost:5000/api/instant-services?page=${currentPage}&search=${searchNameReceipt}`, { headers: { 'x-auth-token': localStorage.getItem('token') } })
+        ]);
+        console.log('Services response:', servicesData);
         console.log('Users response:', usersRes.data);
         console.log('Instant services response:', instantRes.data);
-        setServices(srvRes.data);
+        setServices(servicesData);
         setUsers(usersRes.data);
         setInstantServices(instantRes.data.instantServices);
         setTotalPages(instantRes.data.pages);
@@ -163,7 +167,7 @@ function InstantServices({ user }) {
       }
     };
     fetchData();
-  }, [currentPage, searchNameReceipt]);
+  }, [currentPage, searchNameReceipt, setMessage]);
 
   useEffect(() => {
     const calculateTotal = () => {
@@ -249,6 +253,19 @@ function InstantServices({ user }) {
     setShowReceiptModal(true);
   };
 
+  const handlePrintReceipt = () => {
+    let visible = null;
+    const modal = document.querySelector('.modal.show');
+    if (modal) {
+      const list = modal.querySelectorAll('.receipt-content');
+      if (list.length) visible = list[list.length - 1];
+    }
+    if (!visible) visible = document.querySelector('.receipt-content');
+    if (!visible) return;
+
+    printReceiptElement(visible);
+  };
+
   const handleShowDetails = (service) => {
     console.log('Showing details for service:', service);
     setCurrentDetails(service);
@@ -273,7 +290,7 @@ function InstantServices({ user }) {
   return (
     <Container className="mt-5">
       <h2>إدارة الخدمات الفورية</h2>
-      {message && <Alert variant={message.includes('خطأ') ? 'danger' : 'success'}>{message}</Alert>}
+      {/* التنبيهات أصبحت عبر التوست */}
       <Button variant="primary" onClick={() => setShowCreateModal(true)}>
         <FontAwesomeIcon icon={faPlus} /> شغل جديد
       </Button>
@@ -422,7 +439,7 @@ function InstantServices({ user }) {
           <ReceiptPrint data={currentReceipt} type="instant" />
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="primary" onClick={() => window.print()}>طباعة</Button>
+          <Button variant="primary" onClick={handlePrintReceipt}>طباعة</Button>
           <Button variant="secondary" onClick={() => setShowReceiptModal(false)}>إغلاق</Button>
         </Modal.Footer>
       </Modal>

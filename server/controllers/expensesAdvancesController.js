@@ -1,5 +1,6 @@
 const Expense = require('../models/Expense');
 const Advance = require('../models/Advance');
+const Deduction = require('../models/Deduction');
 const User = require('../models/User');
 const mongoose = require('mongoose');
 
@@ -8,7 +9,7 @@ exports.addExpenseAdvance = async (req, res) => {
   const creatorId = req.user.id;
 
   try {
-    if (!type || !['expense', 'advance'].includes(type)) {
+    if (!type || !['expense', 'advance', 'deduction'].includes(type)) {
       return res.status(400).json({ msg: 'نوع العملية غير صالح' });
     }
 
@@ -39,6 +40,25 @@ exports.addExpenseAdvance = async (req, res) => {
 
       const populatedAdvance = await Advance.findById(advance._id).populate('userId createdBy', 'username remainingSalary');
       return res.json({ msg: 'تم إضافة السلفة بنجاح', item: populatedAdvance, type: 'advance' });
+    } else if (type === 'deduction') {
+      if (!userId || !amount || amount <= 0 || !details) {
+        return res.status(400).json({ msg: 'اسم الموظف، المبلغ وسبب الخصم مطلوبة ويجب أن يكون المبلغ أكبر من صفر' });
+      }
+      if (!mongoose.isValidObjectId(userId)) {
+        return res.status(400).json({ msg: 'معرف الموظف غير صالح' });
+      }
+      const user = await User.findById(userId);
+      if (!user) return res.status(404).json({ msg: 'الموظف غير موجود' });
+      if (user.remainingSalary < amount) return res.status(400).json({ msg: 'الخصم أكبر من المتبقي من الراتب' });
+
+      const deduction = new Deduction({ userId, amount, reason: details, createdBy: creatorId });
+      await deduction.save();
+
+      // خصم المبلغ من الراتب المتبقي فقط
+      await User.updateOne({ _id: userId }, { $set: { remainingSalary: user.remainingSalary - amount } });
+
+      const populatedDeduction = await Deduction.findById(deduction._id).populate('userId createdBy', 'username remainingSalary');
+      return res.json({ msg: 'تم إضافة الخصم الإداري بنجاح', item: populatedDeduction, type: 'deduction' });
     }
   } catch (err) {
     console.error('Error in addExpenseAdvance:', err);
@@ -51,7 +71,7 @@ exports.updateExpenseAdvance = async (req, res) => {
   const creatorId = req.user.id;
 
   try {
-    if (!type || !['expense', 'advance'].includes(type)) {
+    if (!type || !['expense', 'advance', 'deduction'].includes(type)) {
       return res.status(400).json({ msg: 'نوع العملية غير صالح' });
     }
     if (!mongoose.isValidObjectId(req.params.id)) {
@@ -102,6 +122,36 @@ exports.updateExpenseAdvance = async (req, res) => {
       await User.updateOne({ _id: userId }, { $set: { remainingSalary: user.remainingSalary - amount } });
 
       return res.json({ msg: 'تم تعديل السلفة بنجاح', item: advance, type: 'advance' });
+    } else if (type === 'deduction') {
+      if (!userId || !amount || amount <= 0 || !details) {
+        return res.status(400).json({ msg: 'اسم الموظف، المبلغ وسبب الخصم مطلوبة ويجب أن يكون المبلغ أكبر من صفر' });
+      }
+      if (!mongoose.isValidObjectId(userId)) {
+        return res.status(400).json({ msg: 'معرف الموظف غير صالح' });
+      }
+
+      const oldDeduction = await Deduction.findById(req.params.id);
+      if (!oldDeduction) return res.status(404).json({ msg: 'الخصم غير موجود' });
+
+      // استرجاع الرصيد للموظف القديم
+      const oldUser = await User.findById(oldDeduction.userId);
+      if (oldUser) {
+        await User.updateOne({ _id: oldDeduction.userId }, { $set: { remainingSalary: oldUser.remainingSalary + oldDeduction.amount } });
+      }
+
+      const user = await User.findById(userId || oldDeduction.userId);
+      if (!user) return res.status(404).json({ msg: 'الموظف غير موجود' });
+      if (user.remainingSalary < amount) return res.status(400).json({ msg: 'الخصم أكبر من المتبقي من الراتب' });
+
+      const deduction = await Deduction.findByIdAndUpdate(
+        req.params.id,
+        { userId, amount, reason: details, createdBy: creatorId },
+        { new: true }
+      ).populate('userId createdBy', 'username remainingSalary');
+
+      await User.updateOne({ _id: userId }, { $set: { remainingSalary: user.remainingSalary - amount } });
+
+      return res.json({ msg: 'تم تعديل الخصم الإداري بنجاح', item: deduction, type: 'deduction' });
     }
   } catch (err) {
     console.error('Error in updateExpenseAdvance:', err);
@@ -113,7 +163,7 @@ exports.deleteExpenseAdvance = async (req, res) => {
   const { type } = req.query;
 
   try {
-    if (!type || !['expense', 'advance'].includes(type)) {
+    if (!type || !['expense', 'advance', 'deduction'].includes(type)) {
       return res.status(400).json({ msg: 'نوع العملية غير صالح' });
     }
     if (!mongoose.isValidObjectId(req.params.id)) {
@@ -138,6 +188,17 @@ exports.deleteExpenseAdvance = async (req, res) => {
 
       await Advance.findByIdAndDelete(req.params.id);
       return res.json({ msg: 'تم حذف السلفة بنجاح', type: 'advance' });
+    } else if (type === 'deduction') {
+      const deduction = await Deduction.findById(req.params.id);
+      if (!deduction) return res.status(404).json({ msg: 'الخصم غير موجود' });
+
+      const user = await User.findById(deduction.userId);
+      if (user) {
+        await User.updateOne({ _id: deduction.userId }, { $set: { remainingSalary: user.remainingSalary + deduction.amount } });
+      }
+
+      await Deduction.findByIdAndDelete(req.params.id);
+      return res.json({ msg: 'تم حذف الخصم الإداري بنجاح', type: 'deduction' });
     }
   } catch (err) {
     console.error('Error in deleteExpenseAdvance:', err);
@@ -151,6 +212,7 @@ exports.getExpensesAdvances = async (req, res) => {
   try {
     let expensesQuery = {};
     let advancesQuery = {};
+    let deductionsQuery = {};
 
     if (search) {
       const users = await User.find({ username: { $regex: search, $options: 'i' } }).select('_id');
@@ -168,6 +230,13 @@ exports.getExpensesAdvances = async (req, res) => {
           { createdBy: { $in: userIds } }
         ]
       };
+      deductionsQuery = {
+        $or: [
+          { userId: { $in: userIds } },
+          { createdBy: { $in: userIds } },
+          { reason: { $regex: search, $options: 'i' } }
+        ]
+      };
     }
 
     const expenses = await Expense.find(expensesQuery)
@@ -182,13 +251,21 @@ exports.getExpensesAdvances = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
 
+    const deductions = await Deduction.find(deductionsQuery)
+      .populate('userId createdBy', 'username remainingSalary')
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+
     const totalExpenses = await Expense.countDocuments(expensesQuery);
     const totalAdvances = await Advance.countDocuments(advancesQuery);
-    const total = totalExpenses + totalAdvances;
+    const totalDeductions = await Deduction.countDocuments(deductionsQuery);
+    const total = totalExpenses + totalAdvances + totalDeductions;
 
     const items = [
       ...expenses.map(item => ({ ...item._doc, type: 'expense' })),
-      ...advances.map(item => ({ ...item._doc, type: 'advance' }))
+      ...advances.map(item => ({ ...item._doc, type: 'advance' })),
+      ...deductions.map(item => ({ ...item._doc, type: 'deduction', details: item.reason }))
     ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .slice(0, parseInt(limit));
 

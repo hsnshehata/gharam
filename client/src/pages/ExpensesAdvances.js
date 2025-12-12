@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Pagination } from 'react-bootstrap';
 import axios from 'axios';
 import Select from 'react-select';
@@ -20,13 +20,20 @@ function ExpensesAdvances() {
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false); // إضافة الـ state هنا
 
-  // Custom styles للـ react-select
+  const userOptions = useMemo(() => (
+    users.map(user => ({
+      value: user._id?.toString(),
+      label: `${user.username} (المتبقي: ${user.remainingSalary} جنيه)`
+    }))
+  ), [users]);
+
+  // Custom styles للـ react-select — neutralized to use CSS variables (black/white theme)
   const customStyles = {
     control: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      border: '1px solid #98ff98',
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
+      border: '1px solid var(--border)',
       borderRadius: '4px',
       fontFamily: 'Tajawal, Arial, sans-serif',
       fontSize: '1rem',
@@ -39,33 +46,36 @@ function ExpensesAdvances() {
     }),
     valueContainer: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
       padding: '0.375rem 0.75rem',
       minHeight: '38px'
     }),
     input: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
       fontSize: '1rem'
     }),
     placeholder: (provided) => ({
       ...provided,
-      color: '#fff',
+      color: 'var(--muted)',
       fontSize: '1rem',
       textAlign: 'right'
     }),
     singleValue: (provided) => ({
       ...provided,
-      color: '#fff',
-      textAlign: 'right'
+      color: 'var(--text)',
+      textAlign: 'right',
+      opacity: 1,
+      position: 'relative',
+      zIndex: 2
     }),
     menu: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      border: '1px solid #98ff98',
+      backgroundColor: 'var(--surface)',
+      color: 'var(--text)',
+      border: '1px solid var(--border)',
       borderRadius: '4px',
       zIndex: 1000,
       direction: 'rtl',
@@ -73,37 +83,37 @@ function ExpensesAdvances() {
     }),
     menuList: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff'
+      backgroundColor: 'var(--surface)',
+      color: 'var(--text)'
     }),
     option: (provided, state) => ({
       ...provided,
-      backgroundColor: state.isSelected ? '#98ff98' : state.isFocused ? '#78cc78' : '#2a7a78',
-      color: state.isSelected || state.isFocused ? '#000' : '#fff',
+      backgroundColor: state.isSelected ? 'var(--text)' : state.isFocused ? 'var(--border)' : 'var(--bg)',
+      color: state.isSelected ? 'var(--bg)' : 'var(--text)',
       fontFamily: 'Tajawal, Arial, sans-serif',
       fontSize: '1rem',
       padding: '0.375rem 0.75rem'
     }),
     indicatorsContainer: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff'
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)'
     }),
     clearIndicator: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      ':hover': { color: '#78cc78' }
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
+      ':hover': { color: 'var(--muted)' }
     }),
     dropdownIndicator: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      ':hover': { color: '#78cc78' }
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
+      ':hover': { color: 'var(--muted)' }
     }),
     indicatorSeparator: (provided) => ({
       ...provided,
-      backgroundColor: '#98ff98'
+      backgroundColor: 'var(--border)'
     })
   };
 
@@ -118,7 +128,7 @@ function ExpensesAdvances() {
         });
         console.log('Users response:', usersRes.data);
         console.log('Expenses/Advances response:', itemsRes.data);
-        setUsers(usersRes.data);
+        setUsers(usersRes.data.map(u => ({ ...u, _id: u._id?.toString() })));
         setItems(itemsRes.data.items.map(item => ({
           ...item,
           type: item.type || (item.details ? 'expense' : 'advance')
@@ -139,14 +149,18 @@ function ExpensesAdvances() {
       setMessage('تفاصيل المصروف والمبلغ مطلوبة');
       return;
     }
-    if (formData.type === 'advance') {
+    if (formData.type === 'advance' || formData.type === 'deduction') {
       if (!formData.userId || !formData.amount) {
         setMessage('اسم الموظف والمبلغ مطلوبين');
         return;
       }
+      if (formData.type === 'deduction' && !formData.details) {
+        setMessage('سبب الخصم مطلوب');
+        return;
+      }
       const selectedUser = users.find(u => u._id === formData.userId);
       if (selectedUser && parseFloat(formData.amount) > selectedUser.remainingSalary) {
-        setMessage('السلفة أكبر من المتبقي من الراتب');
+        setMessage(formData.type === 'advance' ? 'السلفة أكبر من المتبقي من الراتب' : 'الخصم أكبر من المتبقي من الراتب');
         return;
       }
     }
@@ -159,14 +173,16 @@ function ExpensesAdvances() {
         });
         console.log('Update response:', res.data);
         setItems(items.map(i => (i._id === editItem._id ? { ...res.data.item, type: res.data.type } : i)));
-        setMessage(`تم تعديل ${res.data.type === 'expense' ? 'المصروف' : 'السلفة'} بنجاح`);
+        const typeLabel = res.data.type === 'expense' ? 'المصروف' : res.data.type === 'advance' ? 'السلفة' : 'الخصم الإداري';
+        setMessage(`تم تعديل ${typeLabel} بنجاح`);
       } else {
         const res = await axios.post('http://localhost:5000/api/expenses-advances', formData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         console.log('Create response:', res.data);
         setItems([res.data.item, ...items].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
-        setMessage(`تم إضافة ${res.data.type === 'expense' ? 'المصروف' : 'السلفة'} بنجاح`);
+        const typeLabel = res.data.type === 'expense' ? 'المصروف' : res.data.type === 'advance' ? 'السلفة' : 'الخصم الإداري';
+        setMessage(`تم إضافة ${typeLabel} بنجاح`);
       }
       setFormData({ type: 'expense', details: '', amount: 0, userId: '' });
       setEditItem(null);
@@ -184,7 +200,7 @@ function ExpensesAdvances() {
       type: item.type || (item.details ? 'expense' : 'advance'),
       details: item.details || '',
       amount: item.amount || 0,
-      userId: item.userId?._id || ''
+      userId: item.userId?._id?.toString() || ''
     });
     setShowCreateModal(true);
   };
@@ -201,7 +217,8 @@ function ExpensesAdvances() {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setItems(items.filter(i => i._id !== deleteItem._id));
-      setMessage(`تم حذف ${deleteItem.type === 'expense' ? 'المصروف' : 'السلفة'} بنجاح`);
+      const typeLabel = deleteItem.type === 'expense' ? 'المصروف' : deleteItem.type === 'advance' ? 'السلفة' : 'الخصم الإداري';
+      setMessage(`تم حذف ${typeLabel} بنجاح`);
       setShowDeleteModal(false);
       setDeleteItem(null);
     } catch (err) {
@@ -271,14 +288,15 @@ function ExpensesAdvances() {
                 <Form.Control
                   as="select"
                   value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value, details: '', userId: '' })}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value, details: '', userId: '' })}
                 >
                   <option value="expense">مصروف</option>
                   <option value="advance">سلفة</option>
+                    <option value="deduction">خصم إداري</option>
                 </Form.Control>
               </Form.Group>
             </Col>
-            {formData.type === 'expense' ? (
+              {formData.type === 'expense' ? (
               <>
                 <Col md={6}>
                   <Form.Group>
@@ -303,19 +321,19 @@ function ExpensesAdvances() {
                   </Form.Group>
                 </Col>
               </>
-            ) : (
+              ) : formData.type === 'advance' ? (
               <>
                 <Col md={6}>
                   <Form.Group>
                     <Form.Label>اسم الموظف</Form.Label>
                     <Select
-                      options={users.map(user => ({ value: user._id, label: `${user.username} (المتبقي: ${user.remainingSalary} جنيه)` }))}
-                      value={users.find(u => u._id === formData.userId) ? { value: formData.userId, label: `${users.find(u => u._id === formData.userId).username} (المتبقي: ${users.find(u => u._id === formData.userId).remainingSalary} جنيه)` } : null}
-                      onChange={(selected) => setFormData({ ...formData, userId: selected ? selected.value : '' })}
+                      options={userOptions}
+                      value={userOptions.find(opt => opt.value === formData.userId?.toString()) || null}
+                      onChange={(selected) => setFormData({ ...formData, userId: selected ? selected.value.toString() : '' })}
                       isSearchable
                       placeholder="اختر الموظف..."
                       className="booking-services-select"
-                      classNamePrefix="booking-services"
+                      classNamePrefix="react-select"
                       styles={customStyles}
                     />
                   </Form.Group>
@@ -332,6 +350,46 @@ function ExpensesAdvances() {
                   </Form.Group>
                 </Col>
               </>
+              ) : (
+                <>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label>اسم الموظف</Form.Label>
+                      <Select
+                        options={userOptions}
+                        value={userOptions.find(opt => opt.value === formData.userId?.toString()) || null}
+                        onChange={(selected) => setFormData({ ...formData, userId: selected ? selected.value.toString() : '' })}
+                        isSearchable
+                        placeholder="اختر الموظف..."
+                        className="booking-services-select"
+                        classNamePrefix="react-select"
+                        styles={customStyles}
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label>المبلغ</Form.Label>
+                      <Form.Control
+                        type="number"
+                        value={formData.amount}
+                        onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={12}>
+                    <Form.Group>
+                      <Form.Label>سبب الخصم</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={formData.details}
+                        onChange={(e) => setFormData({ ...formData, details: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                </>
             )}
             <Col md={12}>
               <Button type="submit" className="mt-3">{editItem ? 'تعديل' : 'حفظ'}</Button>
@@ -353,9 +411,15 @@ function ExpensesAdvances() {
           <Col md={4} key={item._id} className="mb-3">
             <Card>
               <Card.Body>
-                <Card.Title>{item.type === 'expense' ? 'مصروف' : 'سلفة'}</Card.Title>
+                <Card.Title>
+                  {item.type === 'expense' ? 'مصروف' : item.type === 'advance' ? 'سلفة' : 'خصم إداري'}
+                </Card.Title>
                 <Card.Text>
-                  {item.type === 'expense' ? `التفاصيل: ${item.details || 'غير محدد'}` : `الموظف: ${item.userId?.username || 'غير محدد'}`}<br />
+                  {item.type === 'expense'
+                    ? `التفاصيل: ${item.details || 'غير محدد'}`
+                    : `الموظف: ${item.userId?.username || 'غير محدد'}`}
+                  <br />
+                  {item.type === 'deduction' && `سبب الخصم: ${item.details || 'غير محدد'}`}<br />
                   المبلغ: {item.amount || 0} جنيه<br />
                   التاريخ: {new Date(item.createdAt).toLocaleDateString()}<br />
                   أضيف بواسطة: {item.createdBy?.username || item.userId?.username || 'غير معروف'}
@@ -404,9 +468,15 @@ function ExpensesAdvances() {
               <p>النوع: {currentDetails.type === 'expense' ? 'مصروف' : 'سلفة'}</p>
               {currentDetails.type === 'expense' ? (
                 <p>التفاصيل: {currentDetails.details || 'غير محدد'}</p>
+              ) : currentDetails.type === 'advance' ? (
+                <>
+                  <p>الموظف: {currentDetails.userId?.username || 'غير محدد'}</p>
+                  <p>المتبقي من الراتب: {currentDetails.userId?.remainingSalary || 0} جنيه</p>
+                </>
               ) : (
                 <>
                   <p>الموظف: {currentDetails.userId?.username || 'غير محدد'}</p>
+                  <p>سبب الخصم: {currentDetails.details || 'غير محدد'}</p>
                   <p>المتبقي من الراتب: {currentDetails.userId?.remainingSalary || 0} جنيه</p>
                 </>
               )}

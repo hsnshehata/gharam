@@ -74,6 +74,7 @@ function Users() {
       };
       if (editFormData.password) {
         updateData.password = editFormData.password;
+        updateData.confirmPassword = editFormData.confirmPassword;
       }
       const res = await axios.put(`http://localhost:5000/api/users/${editItem._id}`, updateData, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -166,6 +167,7 @@ function Users() {
                 >
                   <option value="admin">أدمن</option>
                   <option value="supervisor">مشرف</option>
+                  <option value="hallSupervisor">مشرف صالة</option>
                   <option value="employee">موظف</option>
                 </Form.Control>
               </Form.Group>
@@ -214,10 +216,10 @@ function Users() {
               <Card.Body>
                 <Card.Title>{user.username}</Card.Title>
                 <Card.Text>
-                  الدور: {user.role === 'admin' ? 'أدمن' : user.role === 'supervisor' ? 'مشرف' : 'موظف'}<br />
+                  الدور: {user.role === 'admin' ? 'أدمن' : user.role === 'supervisor' ? 'مشرف' : user.role === 'hallSupervisor' ? 'مشرف صالة' : 'موظف'}<br />
                   الراتب الشهري: {user.monthlySalary} جنيه<br />
                   رقم الهاتف: {user.phone || 'غير متوفر'}<br />
-                  النقاط: {user.points.reduce((sum, point) => sum + point.amount, 0)}<br />
+                  النقاط: {(user.points || []).reduce((sum, point) => sum + point.amount, 0)}<br />
                   تاريخ الإضافة: {new Date(user.createdAt).toLocaleDateString()}
                 </Card.Text>
                 <Button variant="primary" className="me-2" onClick={() => handleEdit(user)}>
@@ -280,6 +282,7 @@ function Users() {
                   >
                     <option value="admin">أدمن</option>
                     <option value="supervisor">مشرف</option>
+                    <option value="hallSupervisor">مشرف صالة</option>
                     <option value="employee">موظف</option>
                   </Form.Control>
                 </Form.Group>

@@ -4,6 +4,7 @@ import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faCheck, faQrcode } from '@fortawesome/free-solid-svg-icons';
 import { Html5Qrcode } from 'html5-qrcode';
+import { useToast } from '../components/ToastProvider';
 
 function EmployeeDashboard({ user }) {
   const [bookings, setBookings] = useState({
@@ -14,7 +15,6 @@ function EmployeeDashboard({ user }) {
   const [instantServices, setInstantServices] = useState([]);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [receiptNumber, setReceiptNumber] = useState('');
-  const [message, setMessage] = useState('');
   const [showPointsModal, setShowPointsModal] = useState(false);
   const [pointsData, setPointsData] = useState(null);
   const [showQrModal, setShowQrModal] = useState(false);
@@ -24,6 +24,7 @@ function EmployeeDashboard({ user }) {
     highestMonth: { points: 0, month: '' }
   });
   const qrCodeScanner = useRef(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,7 +48,7 @@ function EmployeeDashboard({ user }) {
         setPointsSummary(pointsRes.data);
       } catch (err) {
         console.error('Fetch error:', err.response?.data || err.message);
-        setMessage('خطأ في جلب البيانات');
+        showToast('خطأ في جلب البيانات', 'danger');
       }
     };
     fetchData();
@@ -68,12 +69,12 @@ function EmployeeDashboard({ user }) {
         (error) => {
           if (!error.includes('NotFoundException')) {
             console.error('QR scan error:', error);
-            setMessage('خطأ في مسح الباركود: تأكد من إذن الكاميرا أو وضوح الباركود');
+            showToast('خطأ في مسح الباركود: تأكد من إذن الكاميرا أو وضوح الباركود', 'danger');
           }
         }
       ).catch((err) => {
         console.error('Start error:', err);
-        setMessage('خطأ في تشغيل الكاميرا: تأكد من إذن الكاميرا');
+        showToast('خطأ في تشغيل الكاميرا: تأكد من إذن الكاميرا', 'danger');
         setShowQrModal(false);
       });
     }
@@ -93,7 +94,7 @@ function EmployeeDashboard({ user }) {
   const handleReceiptSubmit = async (e) => {
     e.preventDefault();
     if (!receiptNumber) {
-      setMessage('الرجاء إدخال رقم الوصل');
+      showToast('الرجاء إدخال رقم الوصل', 'warning');
       return;
     }
     await handleReceiptSearch(receiptNumber);
@@ -122,11 +123,11 @@ function EmployeeDashboard({ user }) {
         setPointsData({ type: 'instant', data: instantService });
         setShowPointsModal(true);
       } else {
-        setMessage('لم يتم العثور على حجز أو خدمة فورية بهذا الرقم');
+        showToast('لم يتم العثور على حجز أو خدمة فورية بهذا الرقم', 'warning');
       }
     } catch (err) {
       console.error('Receipt search error:', err.response?.data || err.message);
-      setMessage(err.response?.data?.msg || 'خطأ في البحث عن الوصل');
+      showToast(err.response?.data?.msg || 'خطأ في البحث عن الوصل', 'danger');
     }
   };
 
@@ -140,7 +141,7 @@ function EmployeeDashboard({ user }) {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       console.log('Execute service response:', res.data);
-      setMessage(`تم تنفيذ الخدمة بنجاح وإضافة ${res.data.points} نقطة`);
+      showToast(`تم تنفيذ الخدمة بنجاح وإضافة ${res.data.points} نقطة`, 'success');
 
       if (type === 'booking') {
         setPointsData(prev => ({
@@ -167,7 +168,7 @@ function EmployeeDashboard({ user }) {
       setPointsSummary(pointsRes.data);
     } catch (err) {
       console.error('Execute service error:', err.response?.data || err.message);
-      setMessage(err.response?.data?.msg || 'خطأ في تنفيذ الخدمة');
+      showToast(err.response?.data?.msg || 'خطأ في تنفيذ الخدمة', 'danger');
     }
   };
 
@@ -184,7 +185,6 @@ function EmployeeDashboard({ user }) {
   return (
     <Container className="mt-5">
       <h2>لوحة الموظف</h2>
-      {message && <Alert variant={message.includes('خطأ') ? 'danger' : 'success'}>{message}</Alert>}
       <Row className="mb-3">
         <Col md={6}>
           <Form.Group>
@@ -233,7 +233,12 @@ function EmployeeDashboard({ user }) {
           <Col md={4} key={booking._id} className="mb-3">
             <Card>
               <Card.Body>
-                <Card.Title>{booking.clientName} ({new Date(booking.eventDate).toDateString() === new Date(date).toDateString() ? 'زفاف/شبكة' : 'حنة'})</Card.Title>
+                <Card.Title>
+                  {booking.clientName} ({new Date(booking.eventDate).toDateString() === new Date(date).toDateString() ? 'زفاف/شبكة' : 'حنة'})
+                  {Number(booking.remaining) === 0 && (
+                    <span className="badge bg-success ms-2">مدفوع بالكامل</span>
+                  )}
+                </Card.Title>
                 <Card.Text>
                   رقم الهاتف: {booking.clientPhone}<br />
                   المدفوع: {booking.deposit} جنيه<br />
@@ -256,7 +261,12 @@ function EmployeeDashboard({ user }) {
           <Col md={4} key={booking._id} className="mb-3">
             <Card>
               <Card.Body>
-                <Card.Title>{booking.clientName}</Card.Title>
+                <Card.Title>
+                  {booking.clientName}
+                  {Number(booking.remaining) === 0 && (
+                    <span className="badge bg-success ms-2">مدفوع بالكامل</span>
+                  )}
+                </Card.Title>
                 <Card.Text>
                   رقم الهاتف: {booking.clientPhone}<br />
                   المدفوع: {booking.deposit} جنيه<br />
@@ -279,7 +289,12 @@ function EmployeeDashboard({ user }) {
           <Col md={4} key={booking._id} className="mb-3">
             <Card>
               <Card.Body>
-                <Card.Title>{booking.clientName} ({new Date(booking.eventDate).toDateString() === new Date(date).toDateString() ? 'زفاف/شبكة' : 'حنة'})</Card.Title>
+                <Card.Title>
+                  {booking.clientName} ({new Date(booking.eventDate).toDateString() === new Date(date).toDateString() ? 'زفاف/شبكة' : 'حنة'})
+                  {Number(booking.remaining) === 0 && (
+                    <span className="badge bg-success ms-2">مدفوع بالكامل</span>
+                  )}
+                </Card.Title>
                 <Card.Text>
                   رقم الهاتف: {booking.clientPhone}<br />
                   المدفوع: {booking.deposit} جنيه<br />

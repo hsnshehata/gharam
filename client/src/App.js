@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { Spinner } from 'react-bootstrap';
 import Login from './pages/Login';
 import Users from './pages/Users';
 import Bookings from './pages/Bookings';
@@ -10,17 +11,60 @@ import PackagesServices from './pages/PackagesServices';
 import DailyReports from './pages/DailyReports';
 import Dashboard from './pages/Dashboard';
 import EmployeeDashboard from './pages/EmployeeDashboard';
+import EmployeeReports from './pages/EmployeeReports';
+import HallSupervision from './pages/HallSupervision';
 import Navbar from './components/Navbar';
+import { ToastProvider } from './components/ToastProvider';
 import './App.css';
 
 function App() {
   const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  React.useEffect(() => {
+    const loadUser = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setAuthLoading(false);
+        return;
+      }
+      try {
+        const res = await fetch('http://localhost:5000/api/auth/me', {
+          headers: { 'x-auth-token': token }
+        });
+        if (!res.ok) {
+          // token invalid or expired
+          localStorage.removeItem('token');
+          setAuthLoading(false);
+          return;
+        }
+        const data = await res.json();
+        setUser(data.user);
+      } catch (err) {
+        console.error('Failed to load user:', err);
+        localStorage.removeItem('token');
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+    loadUser();
+  }, []);
 
   return (
     <Router>
+      <ToastProvider>
       <div className="App">
-        {user && <Navbar user={user} />}
-        <Routes>
+        {authLoading ? (
+          // while checking auth, render centered spinner to indicate loading
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80vh' }}>
+            <Spinner animation="border" role="status" variant="primary">
+              <span className="visually-hidden">جارٍ التحقق...</span>
+            </Spinner>
+          </div>
+        ) : (
+          <>
+            {user && <Navbar user={user} setUser={setUser} />}
+            <Routes>
           <Route path="/login" element={<Login setUser={setUser} />} />
           <Route
             path="/users"
@@ -47,16 +91,27 @@ function App() {
             element={user && user.role === 'admin' ? <DailyReports /> : <Navigate to="/login" />}
           />
           <Route
+            path="/employee-reports"
+            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <EmployeeReports /> : <Navigate to="/login" />}
+          />
+          <Route
             path="/dashboard"
             element={user && (user.role === 'admin' || user.role === 'supervisor') ? <Dashboard user={user} /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/hall-supervision"
+            element={user && (user.role === 'admin' || user.role === 'supervisor' || user.role === 'hallSupervisor') ? <HallSupervision /> : <Navigate to="/login" />}
           />
           <Route
             path="/employee-dashboard"
             element={user && user.role === 'employee' ? <EmployeeDashboard user={user} /> : <Navigate to="/login" />}
           />
           <Route path="/" element={<Navigate to="/login" />} />
-        </Routes>
+            </Routes>
+          </>
+        )}
       </div>
+      </ToastProvider>
     </Router>
   );
 }

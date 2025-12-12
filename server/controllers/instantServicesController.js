@@ -52,14 +52,20 @@ exports.addInstantService = async (req, res) => {
         await User.findByIdAndUpdate(employeeId, { $set: { points: [] } });
       }
       await User.findByIdAndUpdate(employeeId, {
-        $push: {
-          points: formattedServices.map(srv => ({
-            amount: srv.price * 0.15,
-            date: new Date(),
-            bookingId: null,
-            serviceId: srv._id
-          }))
-        }
+          $push: {
+            points: {
+              $each: formattedServices.map(srv => ({
+                amount: srv.price * 0.15,
+                date: new Date(),
+                bookingId: null,
+                serviceId: srv._id,
+                serviceName: srv.name,
+                instantServiceId: instantService._id,
+                receiptNumber
+              })),
+              $position: 0
+            }
+          }
       });
       console.log(`Points added to user ${employeeId}: ${totalPoints}`);
     }
@@ -129,14 +135,19 @@ exports.updateInstantService = async (req, res) => {
         await User.findByIdAndUpdate(employeeId, { $set: { points: [] } });
       }
       await User.findByIdAndUpdate(employeeId, {
-        $push: {
-          points: formattedServices.map(srv => ({
-            amount: srv.price * 0.15,
-            date: new Date(),
-            bookingId: null,
-            serviceId: srv._id
-          }))
-        }
+          $push: {
+            points: {
+              $each: formattedServices.map(srv => ({
+                amount: srv.price * 0.15,
+                date: new Date(),
+                bookingId: null,
+                serviceId: srv._id,
+                serviceName: srv.name,
+                instantServiceId: instantService._id,
+                receiptNumber: instantService.receiptNumber
+              }))
+            }
+          }
       });
       console.log(`Points added to user ${employeeId}: ${totalPoints}`);
     }
@@ -251,7 +262,10 @@ exports.executeService = async (req, res) => {
           amount: points,
           date: new Date(),
           bookingId: null,
-          serviceId
+          serviceId,
+          serviceName: service.name || 'خدمة فورية',
+          instantServiceId: instantService._id,
+          receiptNumber: instantService.receiptNumber || null
         }
       }
     });
@@ -265,6 +279,55 @@ exports.executeService = async (req, res) => {
     return res.json({ msg: 'تم تنفيذ الخدمة بنجاح', instantService: populatedService, points });
   } catch (err) {
     console.error('Error in executeService:', err);
+    return res.status(500).json({ msg: 'خطأ في السيرفر' });
+  }
+};
+
+// إعادة خدمة فورية لحالة غير منفذة وإزالة النقاط من الموظف السابق
+exports.resetService = async (req, res) => {
+  const { id, serviceId } = req.params;
+
+  try {
+    const instantService = await InstantService.findById(id);
+    if (!instantService) {
+      return res.status(404).json({ msg: 'الخدمة الفورية غير موجودة' });
+    }
+
+    const service = instantService.services.find(srv => srv._id === serviceId);
+    if (!service) {
+      return res.status(404).json({ msg: 'الخدمة غير موجودة' });
+    }
+    if (!service.executed || !service.executedBy) {
+      return res.status(400).json({ msg: 'الخدمة ليست منفذة لإلغائها' });
+    }
+
+    const oldEmployeeId = service.executedBy;
+    const points = service.price * 0.15;
+
+    await User.updateOne(
+      { _id: oldEmployeeId },
+      {
+        $pull: {
+          points: {
+            instantServiceId: id,
+            serviceId
+          }
+        }
+      }
+    );
+
+    service.executed = false;
+    service.executedBy = null;
+
+    await instantService.save();
+
+    const populatedService = await InstantService.findById(id)
+      .populate('employeeId', 'username')
+      .populate('services.executedBy', 'username');
+
+    return res.json({ msg: 'تم سحب التكليف وإلغاء النقاط', instantService: populatedService, removedPoints: points });
+  } catch (err) {
+    console.error('Error in resetService:', err);
     return res.status(500).json({ msg: 'خطأ في السيرفر' });
   }
 };

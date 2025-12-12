@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Container, Row, Col, Card, Alert, Button, Form, Modal, Pagination, Table } from 'react-bootstrap';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Container, Row, Col, Card, Button, Form, Modal, Pagination, Table } from 'react-bootstrap';
 import axios from 'axios';
+import { getPackages, getServices } from '../utils/apiCache';
 import Select from 'react-select';
-import ReceiptPrint from './ReceiptPrint';
+import ReceiptPrint, { printReceiptElement } from './ReceiptPrint';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPrint, faEdit, faEye, faDollarSign, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faPrint, faEdit, faEye, faDollarSign, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { useToast } from '../components/ToastProvider';
 
 function Bookings() {
   const [formData, setFormData] = useState({
@@ -16,10 +18,16 @@ function Bookings() {
   const [packages, setPackages] = useState([]);
   const [services, setServices] = useState([]);
   const [selectedPackageServices, setSelectedPackageServices] = useState([]);
-  const [total, setTotal] = useState(0);
-  const [remaining, setRemaining] = useState(0);
-  const [message, setMessage] = useState('');
   const [editItem, setEditItem] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  
+  const { showToast } = useToast();
+  const setMessage = useCallback((msg) => {
+    if (!msg) return;
+    const text = msg.toString();
+    const variant = text.includes('خطأ') ? 'danger' : text.includes('مطلوب') ? 'warning' : 'success';
+    showToast(msg, variant);
+  }, [showToast]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteItem, setDeleteItem] = useState(null);
   const [showInstallmentModal, setShowInstallmentModal] = useState(false);
@@ -30,18 +38,18 @@ function Bookings() {
   const [currentDetails, setCurrentDetails] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  
   const [searchNamePhone, setSearchNamePhone] = useState('');
   const [searchDate, setSearchDate] = useState('');
   const receiptRef = useRef(null); // للتحكم في طباعة الوصل
 
-  // Custom styles للـ react-select
+  // Custom styles للـ react-select — neutralized to use CSS variables (black/white theme)
   const customStyles = {
     control: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      border: '1px solid #98ff98',
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
+      border: '1px solid var(--border)',
       borderRadius: '4px',
       fontFamily: 'Tajawal, Arial, sans-serif',
       fontSize: '1rem',
@@ -54,55 +62,52 @@ function Bookings() {
     }),
     valueContainer: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
       padding: '0.375rem 0.75rem',
       minHeight: '38px'
     }),
     input: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
       fontSize: '1rem'
     }),
     placeholder: (provided) => ({
       ...provided,
-      color: '#fff',
+      color: 'var(--muted)',
       fontSize: '1rem',
       textAlign: 'right'
     }),
     singleValue: (provided) => ({
       ...provided,
-      color: '#fff',
+      color: 'var(--text)',
       textAlign: 'right'
     }),
     multiValue: (provided) => ({
       ...provided,
-      backgroundColor: '#98ff98',
-      color: '#000',
+      backgroundColor: 'var(--surface)',
+      color: 'var(--text)',
       borderRadius: '3px'
     }),
     multiValueLabel: (provided) => ({
       ...provided,
-      color: '#000',
+      color: 'var(--text)',
       fontSize: '0.9rem',
       padding: '2px 4px'
     }),
     multiValueRemove: (provided) => ({
       ...provided,
-      backgroundColor: '#98ff98',
-      color: '#000',
+      backgroundColor: 'var(--surface)',
+      color: 'var(--text)',
       padding: '2px',
-      ':hover': {
-        backgroundColor: '#78cc78',
-        color: '#000'
-      }
+      ':hover': { backgroundColor: 'var(--border)', color: 'var(--text)' }
     }),
     menu: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      border: '1px solid #98ff98',
+      backgroundColor: 'var(--surface)',
+      color: 'var(--text)',
+      border: '1px solid var(--border)',
       borderRadius: '4px',
       zIndex: 1000,
       direction: 'rtl',
@@ -110,58 +115,68 @@ function Bookings() {
     }),
     menuList: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff'
+      backgroundColor: 'var(--surface)',
+      color: 'var(--text)'
     }),
     option: (provided, state) => ({
       ...provided,
-      backgroundColor: state.isSelected ? '#98ff98' : state.isFocused ? '#78cc78' : '#2a7a78',
-      color: state.isSelected || state.isFocused ? '#000' : '#fff',
+      backgroundColor: state.isSelected ? 'var(--text)' : state.isFocused ? 'var(--border)' : 'var(--bg)',
+      color: state.isSelected ? 'var(--bg)' : 'var(--text)',
       fontFamily: 'Tajawal, Arial, sans-serif',
       fontSize: '1rem',
       padding: '0.375rem 0.75rem'
     }),
     indicatorsContainer: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff'
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)'
     }),
     clearIndicator: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      ':hover': {
-        color: '#78cc78'
-      }
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
+      ':hover': { color: 'var(--muted)' }
     }),
     dropdownIndicator: (provided) => ({
       ...provided,
-      backgroundColor: '#2a7a78',
-      color: '#fff',
-      ':hover': {
-        color: '#78cc78'
-      }
+      backgroundColor: 'var(--bg)',
+      color: 'var(--text)',
+      ':hover': { color: 'var(--muted)' }
     }),
     indicatorSeparator: (provided) => ({
       ...provided,
-      backgroundColor: '#98ff98'
+      backgroundColor: 'var(--border)'
     })
   };
 
   useEffect(() => {
+    // compute selected package services from already-loaded `services` state
+    const selectedIds = [formData.packageId, formData.hennaPackageId, formData.photographyPackageId].filter(id => id);
+    if (selectedIds.length > 0 && services && services.length) {
+      const filteredServices = services.filter(srv => selectedIds.includes(srv.packageId?._id.toString()));
+      setSelectedPackageServices(filteredServices.map(srv => ({
+        value: srv._id,
+        label: `${srv.name} (${srv.packageId?.name})`,
+        price: srv.price
+      })));
+    } else {
+      setSelectedPackageServices([]);
+    }
+  }, [formData.packageId, formData.hennaPackageId, formData.photographyPackageId, services]);
+
+  // total/remaining calculation removed — these values are computed where needed
+
+  useEffect(() => {
     const fetchData = async () => {
       try {
-        const pkgRes = await axios.get('http://localhost:5000/api/packages/packages', {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        const srvRes = await axios.get('http://localhost:5000/api/packages/services', {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        const bookingsRes = await axios.get(`http://localhost:5000/api/bookings?page=${currentPage}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        setPackages(pkgRes.data);
-        setServices(srvRes.data);
+        // fetch packages/services from cache (or network) and bookings in parallel
+        const [pkgData, srvData, bookingsRes] = await Promise.all([
+          getPackages(),
+          getServices(),
+          axios.get(`http://localhost:5000/api/bookings?page=${currentPage}`, { headers: { 'x-auth-token': localStorage.getItem('token') } })
+        ]);
+        setPackages(pkgData);
+        setServices(srvData);
         setBookings(bookingsRes.data.bookings);
         setTotalPages(bookingsRes.data.pages);
       } catch (err) {
@@ -169,120 +184,11 @@ function Bookings() {
       }
     };
     fetchData();
-  }, [currentPage]);
+  }, [currentPage, setMessage]);
 
-  useEffect(() => {
-    const calculateSelectedPackageServices = async () => {
-      const selectedIds = [formData.packageId, formData.hennaPackageId, formData.photographyPackageId].filter(id => id);
-      if (selectedIds.length > 0) {
-        try {
-          const res = await axios.get('http://localhost:5000/api/packages/services', {
-            headers: { 'x-auth-token': localStorage.getItem('token') }
-          });
-          const filteredServices = res.data.filter(srv => selectedIds.includes(srv.packageId?._id.toString()));
-          setSelectedPackageServices(filteredServices.map(srv => ({
-            value: srv._id,
-            label: `${srv.name} (${srv.packageId.name})`,
-            price: srv.price
-          })));
-        } catch (err) {
-          console.error(err);
-        }
-      } else {
-        setSelectedPackageServices([]);
-      }
-    };
-    calculateSelectedPackageServices();
-  }, [formData.packageId, formData.hennaPackageId, formData.photographyPackageId]);
+  // create/edit handlers removed from this page per requirements
 
-  useEffect(() => {
-    const calculateTotal = () => {
-      let tempTotal = 0;
-      const selectedPkg = packages.find(pkg => pkg._id === formData.packageId);
-      if (selectedPkg) tempTotal += selectedPkg.price;
-
-      const hennaPkg = packages.find(pkg => pkg._id === formData.hennaPackageId);
-      if (hennaPkg) tempTotal += hennaPkg.price;
-
-      const photoPkg = packages.find(pkg => pkg._id === formData.photographyPackageId);
-      if (photoPkg) tempTotal += photoPkg.price;
-
-      formData.extraServices.forEach(id => {
-        const srv = services.find(s => s._id === id.value);
-        if (srv) tempTotal += srv.price;
-      });
-
-      formData.returnedServices.forEach(id => {
-        const srv = selectedPackageServices.find(s => s.value === id.value);
-        if (srv) tempTotal -= srv.price;
-      });
-
-      if (formData.hairStraightening === 'yes') tempTotal += parseFloat(formData.hairStraighteningPrice || 0);
-
-      setTotal(tempTotal);
-      setRemaining(tempTotal - formData.deposit);
-    };
-    calculateTotal();
-  }, [formData, packages, services, selectedPackageServices]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const submitData = {
-      ...formData,
-      returnedServices: formData.returnedServices.map(s => s.value),
-      extraServices: formData.extraServices.map(s => s.value),
-      hairStraightening: formData.hairStraightening === 'yes'
-    };
-    try {
-      if (editItem) {
-        const res = await axios.put(`http://localhost:5000/api/bookings/${editItem._id}`, submitData, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        setBookings(bookings.map(b => (b._id === editItem._id ? res.data.booking : b)));
-        setMessage('تم تعديل الحجز بنجاح');
-        setCurrentReceipt(res.data.booking);
-        setShowReceiptModal(true);
-      } else {
-        const res = await axios.post('http://localhost:5000/api/bookings', submitData, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        setBookings([res.data.booking, ...bookings]);
-        setMessage('تم إضافة الحجز بنجاح');
-        setCurrentReceipt(res.data.booking);
-        setShowReceiptModal(true);
-      }
-      setFormData({
-        packageId: '', hennaPackageId: '', photographyPackageId: '', returnedServices: [],
-        extraServices: [], hairStraightening: 'no', hairStraighteningPrice: 0,
-        hairStraighteningDate: '', clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: 0
-      });
-      setEditItem(null);
-      setShowCreateModal(false);
-    } catch (err) {
-      setMessage('خطأ في إضافة/تعديل الحجز');
-    }
-  };
-
-  const handleEdit = (booking) => {
-    setEditItem(booking);
-    setFormData({
-      packageId: booking.package._id,
-      hennaPackageId: booking.hennaPackage?._id || '',
-      photographyPackageId: booking.photographyPackage?._id || '',
-      returnedServices: booking.returnedServices.map(srv => ({ value: srv._id, label: `${srv.name} (${srv.packageId.name})` })),
-      extraServices: booking.extraServices.map(srv => ({ value: srv._id, label: srv.name })),
-      hairStraightening: booking.hairStraightening ? 'yes' : 'no',
-      hairStraighteningPrice: booking.hairStraighteningPrice,
-      hairStraighteningDate: booking.hairStraighteningDate ? booking.hairStraighteningDate.split('T')[0] : '',
-      clientName: booking.clientName,
-      clientPhone: booking.clientPhone,
-      city: booking.city,
-      eventDate: booking.eventDate.split('T')[0],
-      hennaDate: booking.hennaDate ? booking.hennaDate.split('T')[0] : '',
-      deposit: booking.deposit
-    });
-    setShowCreateModal(true);
-  };
+  // edit handler removed — editing via modal removed from this page
 
   const handleDelete = async () => {
     try {
@@ -296,6 +202,59 @@ function Bookings() {
     } catch (err) {
       setMessage('خطأ في الحذف');
       setShowDeleteModal(false);
+    }
+  };
+
+  const handleEdit = (booking) => {
+    setEditItem(booking);
+    setFormData({
+      packageId: booking.package?._id || '',
+      hennaPackageId: booking.hennaPackage?._id || '',
+      photographyPackageId: booking.photographyPackage?._id || '',
+      returnedServices: booking.returnedServices?.map(srv => ({ value: srv._id, label: `${srv.name} (${srv.packageId?.name})` })) || [],
+      extraServices: booking.extraServices?.map(srv => ({ value: srv._id, label: srv.name })) || [],
+      hairStraightening: booking.hairStraightening ? 'yes' : 'no',
+      hairStraighteningPrice: booking.hairStraighteningPrice || 0,
+      hairStraighteningDate: booking.hairStraighteningDate ? booking.hairStraighteningDate.split('T')[0] : '',
+      clientName: booking.clientName || '',
+      clientPhone: booking.clientPhone || '',
+      city: booking.city || '',
+      eventDate: booking.eventDate ? booking.eventDate.split('T')[0] : '',
+      hennaDate: booking.hennaDate ? booking.hennaDate.split('T')[0] : '',
+      deposit: booking.deposit || 0
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editItem) return;
+    const submitData = {
+      clientName: formData.clientName,
+      clientPhone: formData.clientPhone,
+      city: formData.city,
+      eventDate: formData.eventDate,
+      hennaDate: formData.hennaDate,
+      deposit: parseFloat(formData.deposit) || 0,
+      packageId: formData.packageId,
+      hennaPackageId: formData.hennaPackageId,
+      photographyPackageId: formData.photographyPackageId,
+      extraServices: formData.extraServices.map(s => s.value),
+      returnedServices: formData.returnedServices.map(s => s.value),
+      hairStraightening: formData.hairStraightening === 'yes',
+      hairStraighteningPrice: parseFloat(formData.hairStraighteningPrice) || 0,
+      hairStraighteningDate: formData.hairStraighteningDate || ''
+    };
+    try {
+      const res = await axios.put(`http://localhost:5000/api/bookings/${editItem._id}`, submitData, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      setBookings(bookings.map(b => (b._id === editItem._id ? res.data.booking : b)));
+      setMessage('تم تعديل الحجز بنجاح');
+      setShowEditModal(false);
+      setEditItem(null);
+    } catch (err) {
+      setMessage('خطأ في تعديل الحجز');
     }
   };
 
@@ -314,12 +273,9 @@ function Bookings() {
   };
 
   const handlePrint = () => {
-    const printContent = receiptRef.current;
-    const originalContent = document.body.innerHTML;
-    document.body.innerHTML = printContent.innerHTML;
-    window.print();
-    document.body.innerHTML = originalContent;
-    window.location.reload(); // إعادة تحميل الصفحة لاستعادة المحتوى
+    if (!receiptRef.current) return;
+    const target = receiptRef.current.querySelector('.receipt-content') || receiptRef.current;
+    printReceiptElement(target);
   };
 
   const handleShowDetails = (booking) => {
@@ -342,27 +298,10 @@ function Bookings() {
 
   return (
     <Container className="mt-5">
-      <style>
-        {`
-          @media print {
-            .no-print {
-              display: none !important;
-            }
-            .receipt-content {
-              width: 80mm;
-              margin: 0 auto;
-              padding: 10mm;
-              font-size: 12px;
-              text-align: center;
-            }
-          }
-        `}
-      </style>
+      <style>{``}</style>
       <h2>إدارة الحجوزات</h2>
-      {message && <Alert variant={message.includes('خطأ') ? 'danger' : 'success'}>{message}</Alert>}
-      <Button variant="primary" onClick={() => setShowCreateModal(true)}>
-        <FontAwesomeIcon icon={faPlus} /> إنشاء حجز جديد
-      </Button>
+      {/* التنبيهات أصبحت عبر التوست */}
+      {/* إنشاء حجز جديد أزيل من صفحة الإدارة */}
       <Row className="mt-3">
         <Col md={6}>
           <Form.Group>
@@ -388,232 +327,19 @@ function Bookings() {
       </Row>
       <Button variant="primary" onClick={handleSearch} className="mt-2">بحث</Button>
 
-      <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>{editItem ? 'تعديل حجز' : 'إنشاء حجز جديد'}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleSubmit} className="form-row">
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label>نوع الباكدج</Form.Label>
-                <Form.Control
-                  as="select"
-                  value={formData.packageId}
-                  onChange={(e) => setFormData({ ...formData, packageId: e.target.value })}
-                  required
-                >
-                  <option value="">اختر باكدج</option>
-                  {packages.map(pkg => (
-                    <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
-                  ))}
-                </Form.Control>
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label>تاريخ المناسبة</Form.Label>
-                <Form.Control
-                  type="date"
-                  value={formData.eventDate}
-                  onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
-                  required
-                />
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label>باكدج حنة (اختياري)</Form.Label>
-                <Form.Control
-                  as="select"
-                  value={formData.hennaPackageId}
-                  onChange={(e) => setFormData({ ...formData, hennaPackageId: e.target.value })}
-                >
-                  <option value="">لا يوجد</option>
-                  {packages.filter(pkg => pkg.type === 'makeup').map(pkg => (
-                    <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
-                  ))}
-                </Form.Control>
-              </Form.Group>
-            </Col>
-            {formData.hennaPackageId && (
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>تاريخ الحنة</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={formData.hennaDate}
-                    onChange={(e) => setFormData({ ...formData, hennaDate: e.target.value })}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-            )}
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label>باكدج تصوير (اختياري)</Form.Label>
-                <Form.Control
-                  as="select"
-                  value={formData.photographyPackageId}
-                  onChange={(e) => setFormData({ ...formData, photographyPackageId: e.target.value })}
-                >
-                  <option value="">لا يوجد</option>
-                  {packages.filter(pkg => pkg.type === 'photography').map(pkg => (
-                    <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
-                  ))}
-                </Form.Control>
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label>مرتجع من الباكدجات (اختياري)</Form.Label>
-                <Select
-                  isMulti
-                  options={selectedPackageServices}
-                  value={formData.returnedServices}
-                  onChange={(selected) => setFormData({ ...formData, returnedServices: selected })}
-                  isSearchable
-                  placeholder="اختر الخدمات..."
-                  className="booking-services-select"
-                  classNamePrefix="booking-services"
-                  styles={customStyles}
-                />
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label>خدمات إضافية (اختياري)</Form.Label>
-                <Select
-                  isMulti
-                  options={services.filter(srv => srv.type === 'instant').map(srv => ({ value: srv._id, label: srv.name, price: srv.price }))}
-                  value={formData.extraServices}
-                  onChange={(selected) => setFormData({ ...formData, extraServices: selected })}
-                  isSearchable
-                  placeholder="اختر الخدمات..."
-                  className="booking-services-select"
-                  classNamePrefix="booking-services"
-                  styles={customStyles}
-                />
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label>فرد شعر</Form.Label>
-                <Form.Control
-                  as="select"
-                  value={formData.hairStraightening}
-                  onChange={(e) => setFormData({ ...formData, hairStraightening: e.target.value })}
-                  className="custom-select"
-                >
-                  <option value="no">لا</option>
-                  <option value="yes">نعم</option>
-                </Form.Control>
-              </Form.Group>
-            </Col>
-            {formData.hairStraightening === 'yes' && (
-              <>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>سعر فرد الشعر</Form.Label>
-                    <Form.Control
-                      type="number"
-                      value={formData.hairStraighteningPrice}
-                      onChange={(e) => setFormData({ ...formData, hairStraighteningPrice: e.target.value })}
-                      required
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>تاريخ فرد الشعر</Form.Label>
-                    <Form.Control
-                      type="date"
-                      value={formData.hairStraighteningDate}
-                      onChange={(e) => setFormData({ ...formData, hairStraighteningDate: e.target.value })}
-                      required
-                    />
-                  </Form.Group>
-                </Col>
-              </>
-            )}
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label>اسم العميل</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={formData.clientName}
-                  onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                  required
-                />
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label>رقم الهاتف</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={formData.clientPhone}
-                  onChange={(e) => setFormData({ ...formData, clientPhone: e.target.value })}
-                  required
-                />
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label>المدينة</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                />
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label>العربون</Form.Label>
-                <Form.Control
-                  type="number"
-                  value={formData.deposit}
-                  onChange={(e) => setFormData({ ...formData, deposit: e.target.value })}
-                  required
-                />
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label>الإجمالي: {total} جنيه</Form.Label>
-              </Form.Group>
-            </Col>
-            <Col md={6}>
-              <Form.Group>
-                <Form.Label>المتبقي: {remaining} جنيه</Form.Label>
-              </Form.Group>
-            </Col>
-            <Col md={12}>
-              <Button type="submit" className="mt-3">{editItem ? 'تعديل' : 'حفظ'}</Button>
-              <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
-                setFormData({
-                  packageId: '', hennaPackageId: '', photographyPackageId: '', returnedServices: [],
-                  extraServices: [], hairStraightening: 'no', hairStraighteningPrice: 0,
-                  hairStraighteningDate: '', clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: 0
-                });
-                setEditItem(null);
-                setShowCreateModal(false);
-              }}>
-                إلغاء
-              </Button>
-            </Col>
-          </Form>
-        </Modal.Body>
-      </Modal>
-
       <h3>الحجوزات</h3>
       <Row>
-        {bookings.map(booking => (
+        {bookings.map((booking, idx) => (
           <Col md={4} key={booking._id} className="mb-3">
             <Card>
               <Card.Body>
-                <Card.Title>{booking.clientName}</Card.Title>
+                <Card.Title>
+                  <span className="me-2">{idx + 1}.</span>
+                  {booking.clientName}
+                  {Number(booking.remaining) === 0 && (
+                    <span className="badge bg-success ms-2">مدفوع بالكامل</span>
+                  )}
+                </Card.Title>
                 <Card.Text>
                   تاريخ المناسبة: {new Date(booking.eventDate).toLocaleDateString()}<br />
                   العربون: {booking.deposit} جنيه<br />
@@ -651,6 +377,203 @@ function Bookings() {
         ))}
       </Pagination>
 
+      {/* Edit booking modal */}
+      <Modal show={showEditModal} onHide={() => { setShowEditModal(false); setEditItem(null); }} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>تعديل الحجز</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleEditSubmit} className="form-row">
+            <Row>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>نوع الباكدج</Form.Label>
+                  <Form.Control
+                    as="select"
+                    value={formData.packageId}
+                    onChange={(e) => setFormData({ ...formData, packageId: e.target.value })}
+                    required
+                  >
+                    <option value="">اختر باكدج</option>
+                    {packages.map(pkg => (
+                      <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
+                    ))}
+                  </Form.Control>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>تاريخ المناسبة</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={formData.eventDate}
+                    onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
+                    required
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>باكدج حنة (اختياري)</Form.Label>
+                  <Form.Control
+                    as="select"
+                    value={formData.hennaPackageId}
+                    onChange={(e) => setFormData({ ...formData, hennaPackageId: e.target.value })}
+                  >
+                    <option value="">لا يوجد</option>
+                    {packages.filter(pkg => pkg.type === 'makeup').map(pkg => (
+                      <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
+                    ))}
+                  </Form.Control>
+                </Form.Group>
+              </Col>
+              {formData.hennaPackageId && (
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>تاريخ الحنة</Form.Label>
+                    <Form.Control
+                      type="date"
+                      value={formData.hennaDate}
+                      onChange={(e) => setFormData({ ...formData, hennaDate: e.target.value })}
+                      required
+                    />
+                  </Form.Group>
+                </Col>
+              )}
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>باكدج تصوير (اختياري)</Form.Label>
+                  <Form.Control
+                    as="select"
+                    value={formData.photographyPackageId}
+                    onChange={(e) => setFormData({ ...formData, photographyPackageId: e.target.value })}
+                  >
+                    <option value="">لا يوجد</option>
+                    {packages.filter(pkg => pkg.type === 'photography').map(pkg => (
+                      <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
+                    ))}
+                  </Form.Control>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>مرتجع من الباكدجات (اختياري)</Form.Label>
+                  <Select
+                    isMulti
+                    options={selectedPackageServices}
+                    value={formData.returnedServices}
+                    onChange={(selected) => setFormData({ ...formData, returnedServices: selected })}
+                    isSearchable
+                    placeholder="اختر الخدمات..."
+                    className="booking-services-select"
+                    classNamePrefix="booking-services"
+                    styles={customStyles}
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>خدمات إضافية (اختياري)</Form.Label>
+                  <Select
+                    isMulti
+                    options={services.filter(srv => srv.type === 'instant').map(srv => ({ value: srv._id, label: srv.name, price: srv.price }))}
+                    value={formData.extraServices}
+                    onChange={(selected) => setFormData({ ...formData, extraServices: selected })}
+                    isSearchable
+                    placeholder="اختر الخدمات..."
+                    className="booking-services-select"
+                    classNamePrefix="booking-services"
+                    styles={customStyles}
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>فرد شعر</Form.Label>
+                  <Form.Control
+                    as="select"
+                    value={formData.hairStraightening}
+                    onChange={(e) => setFormData({ ...formData, hairStraightening: e.target.value })}
+                    className="custom-select"
+                  >
+                    <option value="no">لا</option>
+                    <option value="yes">نعم</option>
+                  </Form.Control>
+                </Form.Group>
+              </Col>
+              {formData.hairStraightening === 'yes' && (
+                <>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label>سعر فرد الشعر</Form.Label>
+                      <Form.Control
+                        type="number"
+                        value={formData.hairStraighteningPrice}
+                        onChange={(e) => setFormData({ ...formData, hairStraighteningPrice: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label>تاريخ فرد الشعر</Form.Label>
+                      <Form.Control
+                        type="date"
+                        value={formData.hairStraighteningDate}
+                        onChange={(e) => setFormData({ ...formData, hairStraighteningDate: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                </>
+              )}
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>اسم العميل</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.clientName}
+                    onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+                    required
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>رقم الهاتف</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.clientPhone}
+                    onChange={(e) => setFormData({ ...formData, clientPhone: e.target.value })}
+                    required
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>المدينة</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>العربون</Form.Label>
+                  <Form.Control type="number" value={formData.deposit} onChange={(e) => setFormData({ ...formData, deposit: e.target.value })} />
+                </Form.Group>
+              </Col>
+              <Col md={12} className="mt-3">
+                <Button type="submit" className="me-2">حفظ التعديلات</Button>
+                <Button variant="secondary" onClick={() => { setShowEditModal(false); setEditItem(null); }}>إلغاء</Button>
+              </Col>
+            </Row>
+          </Form>
+        </Modal.Body>
+      </Modal>
+
       <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>تأكيد الحذف</Modal.Title>
@@ -687,7 +610,7 @@ function Bookings() {
         <Modal.Header closeButton className="no-print">
           <Modal.Title>وصل الحجز</Modal.Title>
         </Modal.Header>
-        <Modal.Body ref={receiptRef} className="receipt-content">
+        <Modal.Body ref={receiptRef}>
           <ReceiptPrint data={currentReceipt} type="booking" />
         </Modal.Body>
         <Modal.Footer className="no-print">
