@@ -132,12 +132,17 @@ function EmployeeDashboard({ user }) {
   };
 
   const handleExecuteService = async (serviceId, type, recordId) => {
+    const employeeId = user?._id || user?.id;
+    if (!employeeId) {
+      showToast('حساب الموظف غير محدد، سجل دخول تاني وحاول', 'danger');
+      return;
+    }
     try {
-      console.log('Executing service:', { serviceId, type, recordId, employeeId: user.id });
+      console.log('Executing service:', { serviceId, type, recordId, employeeId });
       const endpoint = type === 'booking' 
         ? `/api/bookings/execute-service/${recordId}/${serviceId}`
         : `/api/instant-services/execute-service/${recordId}/${serviceId}`;
-      const res = await axios.post(endpoint, { employeeId: user.id }, {
+      const res = await axios.post(endpoint, { employeeId }, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       console.log('Execute service response:', res.data);
