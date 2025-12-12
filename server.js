@@ -38,7 +38,8 @@ console.log('Routes registered successfully');
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, 'client/build')));
   console.log('Serving static files from client/build');
-  app.get('*', (req, res) => {
+  // Express 5 uses path-to-regexp v8 which errors on string "*"; regex avoids that.
+  app.get(/.*/, (req, res) => {
     console.log(`Serving index.html for path: ${req.path}`);
     res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
   });
