@@ -380,23 +380,22 @@ function Dashboard({ user }) {
         setMessage(expenseAdvanceFormData.type === 'advance' ? 'السلفة أكبر من المتبقي من الراتب' : 'الخصم أكبر من المتبقي من الراتب');
         return;
       }
-      if (expenseSubmitting) return;
-      setExpenseSubmitting(true);
-      setShowExpenseAdvanceModal(false);
     }
+    if (expenseSubmitting) return;
+    setExpenseSubmitting(true);
+    setShowExpenseAdvanceModal(false);
     try {
       const res = await axios.post('/api/expenses-advances', expenseAdvanceFormData, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       const typeLabel = res.data.type === 'expense' ? 'المصروف' : res.data.type === 'advance' ? 'السلفة' : 'الخصم الإداري';
       setMessage(`تم إضافة ${typeLabel} بنجاح`);
-      setShowExpenseAdvanceModal(false);
       loadDashboardData();
     } catch (err) {
       console.error('Expense/Advance submit error:', err.response?.data || err.message);
-      } finally {
-        setExpenseSubmitting(false);
       setMessage(err.response?.data?.msg || 'خطأ في إضافة العملية');
+    } finally {
+      setExpenseSubmitting(false);
     }
   };
 
