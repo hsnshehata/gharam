@@ -44,13 +44,13 @@ function HallSupervision() {
     setLoading(true);
     try {
       const [bookingsRes, instantRes, usersRes] = await Promise.all([
-        axios.get(`http://localhost:5000/api/today-work?date=${date}`, {
+        axios.get(`/api/today-work?date=${date}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         }),
-        axios.get(`http://localhost:5000/api/instant-services?date=${date}`, {
+        axios.get(`/api/instant-services?date=${date}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         }),
-        axios.get('http://localhost:5000/api/users', {
+        axios.get('/api/users', {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         })
       ]);
@@ -127,10 +127,10 @@ function HallSupervision() {
   const handleReceiptSearch = async (searchValue) => {
     try {
       const [bookingRes, instantRes] = await Promise.all([
-        axios.get(`http://localhost:5000/api/bookings?receiptNumber=${searchValue}`, {
+        axios.get(`/api/bookings?receiptNumber=${searchValue}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         }),
-        axios.get(`http://localhost:5000/api/instant-services?receiptNumber=${searchValue}`, {
+        axios.get(`/api/instant-services?receiptNumber=${searchValue}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         })
       ]);
@@ -170,8 +170,8 @@ function HallSupervision() {
     }
     try {
       const endpoint = type === 'booking'
-        ? `http://localhost:5000/api/bookings/execute-service/${recordId}/${serviceId}`
-        : `http://localhost:5000/api/instant-services/execute-service/${recordId}/${serviceId}`;
+        ? `/api/bookings/execute-service/${recordId}/${serviceId}`
+        : `/api/instant-services/execute-service/${recordId}/${serviceId}`;
       const res = await axios.post(endpoint, { employeeId }, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
@@ -191,8 +191,8 @@ function HallSupervision() {
   const handleReset = async (type, recordId, serviceId) => {
     try {
       const endpoint = type === 'booking'
-        ? `http://localhost:5000/api/bookings/reset-service/${recordId}/${serviceId}`
-        : `http://localhost:5000/api/instant-services/reset-service/${recordId}/${serviceId}`;
+        ? `/api/bookings/reset-service/${recordId}/${serviceId}`
+        : `/api/instant-services/reset-service/${recordId}/${serviceId}`;
       const res = await axios.post(endpoint, {}, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });

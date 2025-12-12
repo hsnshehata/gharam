@@ -120,10 +120,10 @@ function ExpensesAdvances() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const usersRes = await axios.get('http://localhost:5000/api/users', {
+        const usersRes = await axios.get('/api/users', {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
-        const itemsRes = await axios.get(`http://localhost:5000/api/expenses-advances?page=${currentPage}&search=${search}`, {
+        const itemsRes = await axios.get(`/api/expenses-advances?page=${currentPage}&search=${search}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         console.log('Users response:', usersRes.data);
@@ -168,7 +168,7 @@ function ExpensesAdvances() {
     try {
       if (editItem) {
         console.log('Updating item with ID:', editItem._id, 'Type:', editItem.type);
-        const res = await axios.put(`http://localhost:5000/api/expenses-advances/${editItem._id}`, formData, {
+        const res = await axios.put(`/api/expenses-advances/${editItem._id}`, formData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         console.log('Update response:', res.data);
@@ -176,7 +176,7 @@ function ExpensesAdvances() {
         const typeLabel = res.data.type === 'expense' ? 'المصروف' : res.data.type === 'advance' ? 'السلفة' : 'الخصم الإداري';
         setMessage(`تم تعديل ${typeLabel} بنجاح`);
       } else {
-        const res = await axios.post('http://localhost:5000/api/expenses-advances', formData, {
+        const res = await axios.post('/api/expenses-advances', formData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         console.log('Create response:', res.data);
@@ -213,7 +213,7 @@ function ExpensesAdvances() {
     }
     try {
       console.log('Deleting item with ID:', deleteItem._id, 'Type:', deleteItem.type);
-      await axios.delete(`http://localhost:5000/api/expenses-advances/${deleteItem._id}?type=${deleteItem.type}`, {
+      await axios.delete(`/api/expenses-advances/${deleteItem._id}?type=${deleteItem.type}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setItems(items.filter(i => i._id !== deleteItem._id));
@@ -237,7 +237,7 @@ function ExpensesAdvances() {
   const handleSearch = async () => {
     try {
       console.log('Searching with query:', search);
-      const res = await axios.get(`http://localhost:5000/api/expenses-advances?search=${search}`, {
+      const res = await axios.get(`/api/expenses-advances?search=${search}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       console.log('Search response:', res.data);

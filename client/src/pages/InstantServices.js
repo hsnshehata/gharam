@@ -151,8 +151,8 @@ function InstantServices({ user }) {
       try {
         const [servicesData, usersRes, instantRes] = await Promise.all([
           getServices(),
-          axios.get('http://localhost:5000/api/users', { headers: { 'x-auth-token': localStorage.getItem('token') } }),
-          axios.get(`http://localhost:5000/api/instant-services?page=${currentPage}&search=${searchNameReceipt}`, { headers: { 'x-auth-token': localStorage.getItem('token') } })
+          axios.get('/api/users', { headers: { 'x-auth-token': localStorage.getItem('token') } }),
+          axios.get(`/api/instant-services?page=${currentPage}&search=${searchNameReceipt}`, { headers: { 'x-auth-token': localStorage.getItem('token') } })
         ]);
         console.log('Services response:', servicesData);
         console.log('Users response:', usersRes.data);
@@ -193,7 +193,7 @@ function InstantServices({ user }) {
     };
     try {
       if (editItem) {
-        const res = await axios.put(`http://localhost:5000/api/instant-services/${editItem._id}`, submitData, {
+        const res = await axios.put(`/api/instant-services/${editItem._id}`, submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setInstantServices(instantServices.map(s => (s._id === editItem._id ? res.data.instantService : s)));
@@ -201,7 +201,7 @@ function InstantServices({ user }) {
         setCurrentReceipt(res.data.instantService);
         setShowReceiptModal(true);
       } else {
-        const res = await axios.post('http://localhost:5000/api/instant-services', submitData, {
+        const res = await axios.post('/api/instant-services', submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setInstantServices([res.data.instantService, ...instantServices]);
@@ -233,7 +233,7 @@ function InstantServices({ user }) {
 
   const handleDelete = async () => {
     try {
-      await axios.delete(`http://localhost:5000/api/instant-services/${deleteItem._id}`, {
+      await axios.delete(`/api/instant-services/${deleteItem._id}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setInstantServices(instantServices.filter(s => s._id !== deleteItem._id));
@@ -274,7 +274,7 @@ function InstantServices({ user }) {
 
   const handleSearch = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/instant-services?search=${searchNameReceipt}`, {
+      const res = await axios.get(`/api/instant-services?search=${searchNameReceipt}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       console.log('Search response:', res.data);

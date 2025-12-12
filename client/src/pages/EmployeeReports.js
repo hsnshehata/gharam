@@ -19,7 +19,7 @@ function EmployeeReports() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await axios.get('http://localhost:5000/api/users', {
+        const res = await axios.get('/api/users', {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setUsers(res.data.map(u => ({ ...u, _id: u._id?.toString() })));
@@ -38,7 +38,7 @@ function EmployeeReports() {
     setLoading(true);
     setMessage('');
     try {
-      const res = await axios.get('http://localhost:5000/api/reports/employee', {
+      const res = await axios.get('/api/reports/employee', {
         params: { userId: selectedUser, from: fromDate || undefined, to: toDate || undefined },
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });

@@ -15,10 +15,10 @@ function PackagesServices() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const pkgRes = await axios.get('http://localhost:5000/api/packages/packages', {
+        const pkgRes = await axios.get('/api/packages/packages', {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
-        const srvRes = await axios.get('http://localhost:5000/api/packages/services', {
+        const srvRes = await axios.get('/api/packages/services', {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setPackages(pkgRes.data);
@@ -34,14 +34,14 @@ function PackagesServices() {
     e.preventDefault();
     try {
       if (editItem) {
-        const res = await axios.put(`http://localhost:5000/api/packages/package/${editItem._id}`, packageForm, {
+        const res = await axios.put(`/api/packages/package/${editItem._id}`, packageForm, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setPackages(packages.map(pkg => (pkg._id === editItem._id ? res.data.pkg : pkg)));
         setMessage('تم تعديل الباكدج بنجاح');
         setEditItem(null);
       } else {
-        const res = await axios.post('http://localhost:5000/api/packages/package', packageForm, {
+        const res = await axios.post('/api/packages/package', packageForm, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setPackages([...packages, res.data.pkg]);
@@ -57,14 +57,14 @@ function PackagesServices() {
     e.preventDefault();
     try {
       if (editItem) {
-        const res = await axios.put(`http://localhost:5000/api/packages/service/${editItem._id}`, serviceForm, {
+        const res = await axios.put(`/api/packages/service/${editItem._id}`, serviceForm, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setServices(services.map(srv => (srv._id === editItem._id ? res.data.service : srv)));
         setMessage('تم تعديل الخدمة بنجاح');
         setEditItem(null);
       } else {
-        const res = await axios.post('http://localhost:5000/api/packages/service', serviceForm, {
+        const res = await axios.post('/api/packages/service', serviceForm, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setServices([...services, res.data.service]);
@@ -89,13 +89,13 @@ function PackagesServices() {
   const handleDelete = async () => {
     try {
       if (deleteItem.type === 'package') {
-        await axios.delete(`http://localhost:5000/api/packages/package/${deleteItem._id}`, {
+        await axios.delete(`/api/packages/package/${deleteItem._id}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setPackages(packages.filter(pkg => pkg._id !== deleteItem._id));
         setMessage('تم حذف الباكدج بنجاح');
       } else {
-        await axios.delete(`http://localhost:5000/api/packages/service/${deleteItem._id}`, {
+        await axios.delete(`/api/packages/service/${deleteItem._id}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setServices(services.filter(srv => srv._id !== deleteItem._id));

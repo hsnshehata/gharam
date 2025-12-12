@@ -173,7 +173,7 @@ function Bookings() {
         const [pkgData, srvData, bookingsRes] = await Promise.all([
           getPackages(),
           getServices(),
-          axios.get(`http://localhost:5000/api/bookings?page=${currentPage}`, { headers: { 'x-auth-token': localStorage.getItem('token') } })
+          axios.get(`/api/bookings?page=${currentPage}`, { headers: { 'x-auth-token': localStorage.getItem('token') } })
         ]);
         setPackages(pkgData);
         setServices(srvData);
@@ -192,7 +192,7 @@ function Bookings() {
 
   const handleDelete = async () => {
     try {
-      await axios.delete(`http://localhost:5000/api/bookings/${deleteItem._id}`, {
+      await axios.delete(`/api/bookings/${deleteItem._id}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setBookings(bookings.filter(b => b._id !== deleteItem._id));
@@ -246,7 +246,7 @@ function Bookings() {
       hairStraighteningDate: formData.hairStraighteningDate || ''
     };
     try {
-      const res = await axios.put(`http://localhost:5000/api/bookings/${editItem._id}`, submitData, {
+      const res = await axios.put(`/api/bookings/${editItem._id}`, submitData, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setBookings(bookings.map(b => (b._id === editItem._id ? res.data.booking : b)));
@@ -260,7 +260,7 @@ function Bookings() {
 
   const handleAddInstallment = async (bookingId) => {
     try {
-      const res = await axios.post(`http://localhost:5000/api/bookings/${bookingId}/installment`, { amount: parseFloat(installmentAmount) }, {
+      const res = await axios.post(`/api/bookings/${bookingId}/installment`, { amount: parseFloat(installmentAmount) }, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setBookings(bookings.map(b => (b._id === bookingId ? res.data.booking : b)));
@@ -285,7 +285,7 @@ function Bookings() {
 
   const handleSearch = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/bookings?search=${searchNamePhone}&date=${searchDate}`, {
+      const res = await axios.get(`/api/bookings?search=${searchNamePhone}&date=${searchDate}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setBookings(res.data.bookings);

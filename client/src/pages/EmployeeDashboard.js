@@ -30,13 +30,13 @@ function EmployeeDashboard({ user }) {
     const fetchData = async () => {
       try {
         const [bookingsRes, instantRes, pointsRes] = await Promise.all([
-          axios.get(`http://localhost:5000/api/today-work?date=${date}`, {
+          axios.get(`/api/today-work?date=${date}`, {
             headers: { 'x-auth-token': localStorage.getItem('token') }
           }),
-          axios.get(`http://localhost:5000/api/instant-services?date=${date}`, {
+          axios.get(`/api/instant-services?date=${date}`, {
             headers: { 'x-auth-token': localStorage.getItem('token') }
           }),
-          axios.get(`http://localhost:5000/api/users/points/summary`, {
+          axios.get(`/api/users/points/summary`, {
             headers: { 'x-auth-token': localStorage.getItem('token') }
           })
         ]);
@@ -104,10 +104,10 @@ function EmployeeDashboard({ user }) {
     try {
       console.log('Searching for receipt:', searchValue);
       const [bookingRes, instantRes] = await Promise.all([
-        axios.get(`http://localhost:5000/api/bookings?receiptNumber=${searchValue}`, {
+        axios.get(`/api/bookings?receiptNumber=${searchValue}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         }),
-        axios.get(`http://localhost:5000/api/instant-services?receiptNumber=${searchValue}`, {
+        axios.get(`/api/instant-services?receiptNumber=${searchValue}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         })
       ]);
@@ -135,8 +135,8 @@ function EmployeeDashboard({ user }) {
     try {
       console.log('Executing service:', { serviceId, type, recordId, employeeId: user.id });
       const endpoint = type === 'booking' 
-        ? `http://localhost:5000/api/bookings/execute-service/${recordId}/${serviceId}`
-        : `http://localhost:5000/api/instant-services/execute-service/${recordId}/${serviceId}`;
+        ? `/api/bookings/execute-service/${recordId}/${serviceId}`
+        : `/api/instant-services/execute-service/${recordId}/${serviceId}`;
       const res = await axios.post(endpoint, { employeeId: user.id }, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
@@ -161,7 +161,7 @@ function EmployeeDashboard({ user }) {
         setInstantServices(prev => prev.map(s => (s._id === recordId ? res.data.instantService : s)));
       }
 
-      const pointsRes = await axios.get(`http://localhost:5000/api/users/points/summary`, {
+      const pointsRes = await axios.get(`/api/users/points/summary`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       console.log('Updated points summary:', pointsRes.data);

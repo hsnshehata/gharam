@@ -180,11 +180,11 @@ function Dashboard({ user }) {
   const loadDashboardData = useCallback(async () => {
     try {
       const [summaryRes, bookingsRes, packagesData, servicesData, usersRes] = await Promise.all([
-        axios.get(`http://localhost:5000/api/dashboard/summary?date=${date}`, { headers: { 'x-auth-token': localStorage.getItem('token') } }),
-        axios.get(`http://localhost:5000/api/today-work?date=${date}`, { headers: { 'x-auth-token': localStorage.getItem('token') } }),
+        axios.get(`/api/dashboard/summary?date=${date}`, { headers: { 'x-auth-token': localStorage.getItem('token') } }),
+        axios.get(`/api/today-work?date=${date}`, { headers: { 'x-auth-token': localStorage.getItem('token') } }),
         getPackages(),
         getServices(),
-        axios.get('http://localhost:5000/api/users', { headers: { 'x-auth-token': localStorage.getItem('token') } })
+        axios.get('/api/users', { headers: { 'x-auth-token': localStorage.getItem('token') } })
       ]);
       setSummary(summaryRes.data);
       setBookings(bookingsRes.data || { makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
@@ -208,7 +208,7 @@ function Dashboard({ user }) {
       const selectedIds = [bookingFormData.packageId, bookingFormData.hennaPackageId, bookingFormData.photographyPackageId].filter(id => id);
       if (selectedIds.length > 0) {
         try {
-          const res = await axios.get('http://localhost:5000/api/packages/services', {
+          const res = await axios.get('/api/packages/services', {
             headers: { 'x-auth-token': localStorage.getItem('token') }
           });
           const filteredServices = res.data.filter(srv => selectedIds.includes(srv.packageId?._id.toString()));
@@ -282,7 +282,7 @@ function Dashboard({ user }) {
     };
     try {
       if (editBooking) {
-        const res = await axios.put(`http://localhost:5000/api/bookings/${editBooking._id}`, submitData, {
+        const res = await axios.put(`/api/bookings/${editBooking._id}`, submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setMessage('تم تعديل الحجز بنجاح');
@@ -290,7 +290,7 @@ function Dashboard({ user }) {
         setShowReceiptModal(true);
         loadDashboardData();
       } else {
-        const res = await axios.post('http://localhost:5000/api/bookings', submitData, {
+        const res = await axios.post('/api/bookings', submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setMessage('تم إضافة الحجز بنجاح');
@@ -323,7 +323,7 @@ function Dashboard({ user }) {
     };
     try {
       if (editItem) {
-        const res = await axios.put(`http://localhost:5000/api/instant-services/${editItem._id}`, submitData, {
+        const res = await axios.put(`/api/instant-services/${editItem._id}`, submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setMessage('تم تعديل الخدمة الفورية بنجاح');
@@ -331,7 +331,7 @@ function Dashboard({ user }) {
         setShowReceiptModal(true);
         loadDashboardData();
       } else {
-        const res = await axios.post('http://localhost:5000/api/instant-services', submitData, {
+        const res = await axios.post('/api/instant-services', submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         setMessage('تم إضافة الخدمة الفورية بنجاح');
@@ -370,7 +370,7 @@ function Dashboard({ user }) {
       }
     }
     try {
-      const res = await axios.post('http://localhost:5000/api/expenses-advances', expenseAdvanceFormData, {
+      const res = await axios.post('/api/expenses-advances', expenseAdvanceFormData, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       const typeLabel = res.data.type === 'expense' ? 'المصروف' : res.data.type === 'advance' ? 'السلفة' : 'الخصم الإداري';
@@ -412,7 +412,7 @@ function Dashboard({ user }) {
       return;
     }
     try {
-      await axios.delete(`http://localhost:5000/api/bookings/${deleteItem._id}`, {
+      await axios.delete(`/api/bookings/${deleteItem._id}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setMessage('تم حذف الحجز بنجاح');
@@ -432,7 +432,7 @@ function Dashboard({ user }) {
       return;
     }
     try {
-      const res = await axios.post(`http://localhost:5000/api/bookings/${bookingId}/installment`, { amount: parseFloat(installmentAmount) }, {
+      const res = await axios.post(`/api/bookings/${bookingId}/installment`, { amount: parseFloat(installmentAmount) }, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setBookings({

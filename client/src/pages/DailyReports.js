@@ -19,7 +19,7 @@ function DailyReports() {
   useEffect(() => {
     const fetchReport = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/reports/daily?date=${date}`, {
+        const res = await axios.get(`/api/reports/daily?date=${date}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         });
         console.log('Report response:', res.data);
@@ -35,7 +35,7 @@ function DailyReports() {
 
   const handleSearch = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/reports/daily?date=${date}`, {
+      const res = await axios.get(`/api/reports/daily?date=${date}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       console.log('Search response:', res.data);

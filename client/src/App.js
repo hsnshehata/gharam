@@ -17,6 +17,8 @@ import Navbar from './components/Navbar';
 import { ToastProvider } from './components/ToastProvider';
 import './App.css';
 
+const API_BASE = (process.env.REACT_APP_API_BASE || '').replace(/\/$/, '');
+
 function App() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -29,7 +31,7 @@ function App() {
         return;
       }
       try {
-        const res = await fetch('http://localhost:5000/api/auth/me', {
+        const res = await fetch(`${API_BASE}/api/auth/me`, {
           headers: { 'x-auth-token': token }
         });
         if (!res.ok) {

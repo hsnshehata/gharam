@@ -11,7 +11,7 @@ const getTokenHeader = () => ({ headers: { 'x-auth-token': localStorage.getItem(
 export async function getPackages() {
   try {
     if (cachedPackages && (Date.now() - tsPackages) < TTL) return cachedPackages;
-    const res = await axios.get('http://localhost:5000/api/packages/packages', getTokenHeader());
+    const res = await axios.get('/api/packages/packages', getTokenHeader());
     cachedPackages = res.data;
     tsPackages = Date.now();
     return cachedPackages;
@@ -23,7 +23,7 @@ export async function getPackages() {
 export async function getServices() {
   try {
     if (cachedServices && (Date.now() - tsServices) < TTL) return cachedServices;
-    const res = await axios.get('http://localhost:5000/api/packages/services', getTokenHeader());
+    const res = await axios.get('/api/packages/services', getTokenHeader());
     cachedServices = res.data;
     tsServices = Date.now();
     return cachedServices;
