@@ -39,7 +39,7 @@ function Bookings() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   
-  const [searchNamePhone, setSearchNamePhone] = useState('');
+  const [searchNamePhone, setSearchNamePhone] = useState(''); // اسم/هاتف/وصل
   const [searchDate, setSearchDate] = useState('');
   const receiptRef = useRef(null); // للتحكم في طباعة الوصل
   const [editSubmitting, setEditSubmitting] = useState(false);
@@ -294,7 +294,8 @@ function Bookings() {
 
   const handleSearch = async () => {
     try {
-      const res = await axios.get(`/api/bookings?search=${searchNamePhone}&date=${searchDate}`, {
+      const query = searchNamePhone.trim();
+      const res = await axios.get(`/api/bookings?search=${query}&receiptNumber=${query}&date=${searchDate}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setBookings(res.data.bookings);
@@ -314,12 +315,12 @@ function Bookings() {
       <Row className="mt-3">
         <Col md={6}>
           <Form.Group>
-            <Form.Label>بحث بالاسم أو رقم الهاتف</Form.Label>
+            <Form.Label>بحث بالاسم أو رقم الهاتف أو رقم الوصل</Form.Label>
             <Form.Control
               type="text"
               value={searchNamePhone}
               onChange={(e) => setSearchNamePhone(e.target.value)}
-              placeholder="ابحث بالاسم أو رقم الهاتف"
+              placeholder="ابحث بالاسم أو رقم الهاتف أو رقم الوصل"
             />
           </Form.Group>
         </Col>
