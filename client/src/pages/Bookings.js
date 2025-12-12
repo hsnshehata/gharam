@@ -295,7 +295,17 @@ function Bookings() {
   const handleSearch = async () => {
     try {
       const query = searchNamePhone.trim();
-      const res = await axios.get(`/api/bookings?search=${query}&receiptNumber=${query}&date=${searchDate}`, {
+      const isReceipt = /^\d+$/.test(query) && query.length > 0;
+      const params = new URLSearchParams();
+      if (query) {
+        if (isReceipt) {
+          params.append('receiptNumber', query);
+        } else {
+          params.append('search', query);
+        }
+      }
+      if (searchDate) params.append('date', searchDate);
+      const res = await axios.get(`/api/bookings?${params.toString()}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setBookings(res.data.bookings);
