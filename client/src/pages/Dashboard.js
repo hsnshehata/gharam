@@ -59,6 +59,10 @@ function Dashboard({ user }) {
   const [selectedPackageServices, setSelectedPackageServices] = useState([]);
   const [total, setTotal] = useState(0);
   const [remaining, setRemaining] = useState(0);
+  const [bookingSubmitting, setBookingSubmitting] = useState(false);
+  const [instantSubmitting, setInstantSubmitting] = useState(false);
+  const [expenseSubmitting, setExpenseSubmitting] = useState(false);
+  const [installmentSubmitting, setInstallmentSubmitting] = useState(false);
 
   // Custom styles للـ react-select — neutralized to use CSS variables (black/white theme)
   const customStyles = {
@@ -271,6 +275,7 @@ function Dashboard({ user }) {
 
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
+    if (bookingSubmitting) return;
     const submitData = {
       ...bookingFormData,
       packageId: bookingFormData.packageId || null,
@@ -280,6 +285,8 @@ function Dashboard({ user }) {
       returnedServices: bookingFormData.returnedServices.map(s => s.value),
       hairStraightening: bookingFormData.hairStraightening === 'yes'
     };
+    setBookingSubmitting(true);
+    setShowBookingModal(false);
     try {
       if (editBooking) {
         const res = await axios.put(`/api/bookings/${editBooking._id}`, submitData, {
@@ -304,10 +311,11 @@ function Dashboard({ user }) {
         clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: 0
       });
       setEditBooking(null);
-      setShowBookingModal(false);
     } catch (err) {
       console.error('Booking submit error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في إضافة/تعديل الحجز');
+    } finally {
+      setBookingSubmitting(false);
     }
   };
 
@@ -317,10 +325,13 @@ function Dashboard({ user }) {
       setMessage('الرجاء اختيار خدمة واحدة على الأقل');
       return;
     }
+    if (instantSubmitting) return;
     const submitData = {
       employeeId: instantServiceFormData.employeeId || null,
       services: instantServiceFormData.services.map(s => s.value)
     };
+    setInstantSubmitting(true);
+    setShowInstantServiceModal(false);
     try {
       if (editItem) {
         const res = await axios.put(`/api/instant-services/${editItem._id}`, submitData, {
@@ -341,10 +352,11 @@ function Dashboard({ user }) {
       }
       setInstantServiceFormData({ employeeId: '', services: [] });
       setEditItem(null);
-      setShowInstantServiceModal(false);
     } catch (err) {
       console.error('Instant service submit error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في إضافة/تعديل الخدمة الفورية');
+    } finally {
+      setInstantSubmitting(false);
     }
   };
 
@@ -368,6 +380,9 @@ function Dashboard({ user }) {
         setMessage(expenseAdvanceFormData.type === 'advance' ? 'السلفة أكبر من المتبقي من الراتب' : 'الخصم أكبر من المتبقي من الراتب');
         return;
       }
+      if (expenseSubmitting) return;
+      setExpenseSubmitting(true);
+      setShowExpenseAdvanceModal(false);
     }
     try {
       const res = await axios.post('/api/expenses-advances', expenseAdvanceFormData, {
@@ -375,11 +390,12 @@ function Dashboard({ user }) {
       });
       const typeLabel = res.data.type === 'expense' ? 'المصروف' : res.data.type === 'advance' ? 'السلفة' : 'الخصم الإداري';
       setMessage(`تم إضافة ${typeLabel} بنجاح`);
-      setExpenseAdvanceFormData({ type: 'expense', details: '', amount: 0, userId: '' });
       setShowExpenseAdvanceModal(false);
       loadDashboardData();
     } catch (err) {
       console.error('Expense/Advance submit error:', err.response?.data || err.message);
+      } finally {
+        setExpenseSubmitting(false);
       setMessage(err.response?.data?.msg || 'خطأ في إضافة العملية');
     }
   };
@@ -431,6 +447,9 @@ function Dashboard({ user }) {
       setMessage('خطأ: قيمة القسط أو رقم الحجز غير صالح');
       return;
     }
+    if (installmentSubmitting) return;
+    setInstallmentSubmitting(true);
+    setShowInstallmentModal(false);
     try {
       const res = await axios.post(`/api/bookings/${bookingId}/installment`, { amount: parseFloat(installmentAmount) }, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -441,12 +460,13 @@ function Dashboard({ user }) {
         photographyBookings: bookings.photographyBookings.map(b => (b._id === bookingId ? res.data.booking : b))
       });
       setMessage('تم إضافة القسط بنجاح');
-      setShowInstallmentModal(false);
       setInstallmentAmount(0);
       loadDashboardData();
     } catch (err) {
       console.error('Installment error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في إضافة القسط');
+    } finally {
+      setInstallmentSubmitting(false);
     }
   };
 
@@ -871,7 +891,9 @@ function Dashboard({ user }) {
                 </Form.Group>
               </Col>
               <Col md={12}>
-                <Button type="submit" className="mt-3">{editBooking ? 'تعديل' : 'حفظ'}</Button>
+                <Button type="submit" className="mt-3" disabled={bookingSubmitting}>
+                  {bookingSubmitting ? 'جارٍ الحفظ...' : editBooking ? 'تعديل' : 'حفظ'}
+                </Button>
                 <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
                   setBookingFormData({
                     packageId: '', hennaPackageId: '', photographyPackageId: '', extraServices: [], returnedServices: [],
@@ -933,7 +955,9 @@ function Dashboard({ user }) {
                 </Form.Group>
               </Col>
               <Col md={12}>
-                <Button type="submit" className="mt-3">{editItem ? 'تعديل' : 'حفظ'}</Button>
+                <Button type="submit" className="mt-3" disabled={instantSubmitting}>
+                  {instantSubmitting ? 'جارٍ الحفظ...' : editItem ? 'تعديل' : 'حفظ'}
+                </Button>
                 <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
                   setInstantServiceFormData({ employeeId: '', services: [] });
                   setEditItem(null);
@@ -1064,7 +1088,9 @@ function Dashboard({ user }) {
                 </>
               )}
               <Col md={12}>
-                <Button type="submit" className="mt-3">حفظ</Button>
+                <Button type="submit" className="mt-3" disabled={expenseSubmitting}>
+                  {expenseSubmitting ? 'جارٍ الحفظ...' : 'حفظ'}
+                </Button>
                 <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
                   setExpenseAdvanceFormData({ type: 'expense', details: '', amount: 0, userId: '' });
                   setShowExpenseAdvanceModal(false);
@@ -1105,7 +1131,9 @@ function Dashboard({ user }) {
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowInstallmentModal(false)}>إلغاء</Button>
-          <Button variant="primary" onClick={() => handleAddInstallment(deleteItem?._id)}>حفظ</Button>
+          <Button variant="primary" disabled={installmentSubmitting || !installmentAmount} onClick={() => handleAddInstallment(deleteItem?._id)}>
+            {installmentSubmitting ? 'جارٍ الإضافة...' : 'حفظ'}
+          </Button>
         </Modal.Footer>
       </Modal>
 

@@ -32,6 +32,7 @@ function InstantServices({ user }) {
   const [totalPages, setTotalPages] = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchNameReceipt, setSearchNameReceipt] = useState('');
+  const [submitLoading, setSubmitLoading] = useState(false);
 
   // Custom styles للـ react-select — neutralized to use CSS variables (black/white theme)
   const customStyles = {
@@ -187,10 +188,13 @@ function InstantServices({ user }) {
       setMessage('الرجاء اختيار خدمة واحدة على الأقل');
       return;
     }
+    if (submitLoading) return;
     const submitData = {
       employeeId: formData.employeeId || null,
       services: formData.services.map(s => s.value)
     };
+    setSubmitLoading(true);
+    setShowCreateModal(false);
     try {
       if (editItem) {
         const res = await axios.put(`/api/instant-services/${editItem._id}`, submitData, {
@@ -211,10 +215,11 @@ function InstantServices({ user }) {
       }
       setFormData({ employeeId: '', services: [] });
       setEditItem(null);
-      setShowCreateModal(false);
     } catch (err) {
       console.error('Submit error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في إضافة/تعديل الخدمة الفورية');
+    } finally {
+      setSubmitLoading(false);
     }
   };
 
@@ -356,7 +361,9 @@ function InstantServices({ user }) {
               </Form.Group>
             </Col>
             <Col md={12}>
-              <Button type="submit" className="mt-3">{editItem ? 'تعديل' : 'حفظ'}</Button>
+              <Button type="submit" className="mt-3" disabled={submitLoading}>
+                {submitLoading ? 'جارٍ الحفظ...' : editItem ? 'تعديل' : 'حفظ'}
+              </Button>
               <Button
                 variant="secondary"
                 className="mt-3 ms-2"

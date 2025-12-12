@@ -19,6 +19,7 @@ function ExpensesAdvances() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false); // إضافة الـ state هنا
+  const [submitLoading, setSubmitLoading] = useState(false);
 
   const userOptions = useMemo(() => (
     users.map(user => ({
@@ -164,6 +165,9 @@ function ExpensesAdvances() {
         return;
       }
     }
+    if (submitLoading) return;
+    setSubmitLoading(true);
+    setShowCreateModal(false);
     console.log('Submitting formData:', formData);
     try {
       if (editItem) {
@@ -186,10 +190,11 @@ function ExpensesAdvances() {
       }
       setFormData({ type: 'expense', details: '', amount: 0, userId: '' });
       setEditItem(null);
-      setShowCreateModal(false);
     } catch (err) {
       console.error('Submit error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في إضافة/تعديل العملية');
+    } finally {
+      setSubmitLoading(false);
     }
   };
 
@@ -392,7 +397,9 @@ function ExpensesAdvances() {
                 </>
             )}
             <Col md={12}>
-              <Button type="submit" className="mt-3">{editItem ? 'تعديل' : 'حفظ'}</Button>
+              <Button type="submit" className="mt-3" disabled={submitLoading}>
+                {submitLoading ? 'جارٍ الحفظ...' : editItem ? 'تعديل' : 'حفظ'}
+              </Button>
               <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
                 setFormData({ type: 'expense', details: '', amount: 0, userId: '' });
                 setEditItem(null);

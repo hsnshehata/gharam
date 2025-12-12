@@ -10,6 +10,8 @@ function Employees() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteItem, setDeleteItem] = useState(null);
   const [editItem, setEditItem] = useState(null);
+  const [addSubmitting, setAddSubmitting] = useState(false);
+  const [editSubmitting, setEditSubmitting] = useState(false);
   const [addFormData, setAddFormData] = useState({
     username: '',
     password: '',
@@ -47,6 +49,8 @@ function Employees() {
       setMessage('كلمات المرور غير متطابقة');
       return;
     }
+    if (addSubmitting) return;
+    setAddSubmitting(true);
     try {
       const res = await axios.post('/api/users', addFormData, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -56,6 +60,8 @@ function Employees() {
       setAddFormData({ username: '', password: '', confirmPassword: '', role: 'employee', monthlySalary: 0, phone: '' });
     } catch (err) {
       setMessage(err.response?.data?.msg || 'خطأ في إضافة الموظف');
+    } finally {
+      setAddSubmitting(false);
     }
   };
 
@@ -65,6 +71,8 @@ function Employees() {
       setMessage('كلمات المرور غير متطابقة');
       return;
     }
+    if (editSubmitting) return;
+    setEditSubmitting(true);
     try {
       const updateData = {
         username: editFormData.username,
@@ -84,6 +92,8 @@ function Employees() {
       setEditFormData({ username: '', password: '', confirmPassword: '', role: 'employee', monthlySalary: 0, phone: '' });
     } catch (err) {
       setMessage(err.response?.data?.msg || 'خطأ في تعديل الموظف');
+    } finally {
+      setEditSubmitting(false);
     }
   };
 
@@ -191,8 +201,8 @@ function Employees() {
               </Form.Group>
             </Col>
             <Col md={12}>
-              <Button type="submit" className="mt-3">
-                <FontAwesomeIcon icon={faPlus} /> إضافة
+              <Button type="submit" className="mt-3" disabled={addSubmitting}>
+                {addSubmitting ? 'جارٍ الحفظ...' : (<><FontAwesomeIcon icon={faPlus} /> إضافة</>)}
               </Button>
               <Button
                 variant="secondary"
@@ -305,7 +315,9 @@ function Employees() {
                 </Form.Group>
               </Col>
               <Col md={12}>
-                <Button type="submit" className="mt-3">تعديل</Button>
+                <Button type="submit" className="mt-3" disabled={editSubmitting}>
+                  {editSubmitting ? 'جارٍ الحفظ...' : 'تعديل'}
+                </Button>
                 <Button variant="secondary" className="mt-3 ms-2" onClick={() => setEditItem(null)}>
                   إلغاء
                 </Button>

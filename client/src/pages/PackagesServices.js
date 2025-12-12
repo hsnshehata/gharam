@@ -11,6 +11,8 @@ function PackagesServices() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteItem, setDeleteItem] = useState(null);
   const [editItem, setEditItem] = useState(null);
+  const [pkgSubmitting, setPkgSubmitting] = useState(false);
+  const [srvSubmitting, setSrvSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -32,6 +34,8 @@ function PackagesServices() {
 
   const handlePackageSubmit = async (e) => {
     e.preventDefault();
+    if (pkgSubmitting) return;
+    setPkgSubmitting(true);
     try {
       if (editItem) {
         const res = await axios.put(`/api/packages/package/${editItem._id}`, packageForm, {
@@ -50,11 +54,15 @@ function PackagesServices() {
       setPackageForm({ name: '', price: 0, type: 'makeup' });
     } catch (err) {
       setMessage('خطأ في إضافة/تعديل الباكدج');
+    } finally {
+      setPkgSubmitting(false);
     }
   };
 
   const handleServiceSubmit = async (e) => {
     e.preventDefault();
+    if (srvSubmitting) return;
+    setSrvSubmitting(true);
     try {
       if (editItem) {
         const res = await axios.put(`/api/packages/service/${editItem._id}`, serviceForm, {
@@ -73,6 +81,8 @@ function PackagesServices() {
       setServiceForm({ name: '', price: 0, type: 'instant', packageId: '' });
     } catch (err) {
       setMessage('خطأ في إضافة/تعديل الخدمة');
+    } finally {
+      setSrvSubmitting(false);
     }
   };
 
@@ -145,7 +155,9 @@ function PackagesServices() {
                 <option value="photography">تصوير</option>
               </Form.Control>
             </Form.Group>
-            <Button type="submit" className="mt-3">{editItem ? 'تعديل' : 'حفظ'}</Button>
+            <Button type="submit" className="mt-3" disabled={pkgSubmitting}>
+              {pkgSubmitting ? 'جارٍ الحفظ...' : editItem ? 'تعديل' : 'حفظ'}
+            </Button>
             <Button variant="secondary" className="mt-3 ms-2" onClick={() => { setPackageForm({ name: '', price: 0, type: 'makeup' }); setEditItem(null); }}>
               إلغاء
             </Button>
@@ -197,7 +209,9 @@ function PackagesServices() {
                 </Form.Control>
               </Form.Group>
             )}
-            <Button type="submit" className="mt-3">{editItem ? 'تعديل' : 'حفظ'}</Button>
+            <Button type="submit" className="mt-3" disabled={srvSubmitting}>
+              {srvSubmitting ? 'جارٍ الحفظ...' : editItem ? 'تعديل' : 'حفظ'}
+            </Button>
             <Button variant="secondary" className="mt-3 ms-2" onClick={() => { setServiceForm({ name: '', price: 0, type: 'instant', packageId: '' }); setEditItem(null); }}>
               إلغاء
             </Button>

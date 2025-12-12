@@ -42,6 +42,8 @@ function Bookings() {
   const [searchNamePhone, setSearchNamePhone] = useState('');
   const [searchDate, setSearchDate] = useState('');
   const receiptRef = useRef(null); // للتحكم في طباعة الوصل
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [installmentSubmitting, setInstallmentSubmitting] = useState(false);
 
   // Custom styles للـ react-select — neutralized to use CSS variables (black/white theme)
   const customStyles = {
@@ -228,7 +230,9 @@ function Bookings() {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    if (!editItem) return;
+    if (!editItem || editSubmitting) return;
+    setEditSubmitting(true);
+    setShowEditModal(false);
     const submitData = {
       clientName: formData.clientName,
       clientPhone: formData.clientPhone,
@@ -251,24 +255,29 @@ function Bookings() {
       });
       setBookings(bookings.map(b => (b._id === editItem._id ? res.data.booking : b)));
       setMessage('تم تعديل الحجز بنجاح');
-      setShowEditModal(false);
       setEditItem(null);
     } catch (err) {
       setMessage('خطأ في تعديل الحجز');
+    } finally {
+      setEditSubmitting(false);
     }
   };
 
   const handleAddInstallment = async (bookingId) => {
+    if (installmentSubmitting) return;
+    setInstallmentSubmitting(true);
+    setShowInstallmentModal(false);
     try {
       const res = await axios.post(`/api/bookings/${bookingId}/installment`, { amount: parseFloat(installmentAmount) }, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setBookings(bookings.map(b => (b._id === bookingId ? res.data.booking : b)));
       setMessage('تم إضافة القسط بنجاح');
-      setShowInstallmentModal(false);
       setInstallmentAmount(0);
     } catch (err) {
       setMessage('خطأ في إضافة القسط');
+    } finally {
+      setInstallmentSubmitting(false);
     }
   };
 
@@ -566,7 +575,9 @@ function Bookings() {
                 </Form.Group>
               </Col>
               <Col md={12} className="mt-3">
-                <Button type="submit" className="me-2">حفظ التعديلات</Button>
+                <Button type="submit" className="me-2" disabled={editSubmitting}>
+                  {editSubmitting ? 'جارٍ الحفظ...' : 'حفظ التعديلات'}
+                </Button>
                 <Button variant="secondary" onClick={() => { setShowEditModal(false); setEditItem(null); }}>إلغاء</Button>
               </Col>
             </Row>
@@ -602,7 +613,9 @@ function Bookings() {
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowInstallmentModal(false)}>إلغاء</Button>
-          <Button variant="primary" onClick={() => handleAddInstallment(deleteItem._id)}>حفظ</Button>
+          <Button variant="primary" disabled={installmentSubmitting || !installmentAmount} onClick={() => handleAddInstallment(deleteItem._id)}>
+            {installmentSubmitting ? 'جارٍ الإضافة...' : 'حفظ'}
+          </Button>
         </Modal.Footer>
       </Modal>
 
