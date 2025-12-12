@@ -69,6 +69,35 @@ function HallSupervision() {
     loadData();
   }, [loadData]);
 
+  const handleReceiptSearch = useCallback(async (searchValue) => {
+    try {
+      const [bookingRes, instantRes] = await Promise.all([
+        axios.get(`/api/bookings?receiptNumber=${searchValue}`, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        }),
+        axios.get(`/api/instant-services?receiptNumber=${searchValue}`, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        })
+      ]);
+
+      if (bookingRes.data.bookings?.length > 0) {
+        const booking = bookingRes.data.bookings[0];
+        setSearchResult({ type: 'booking', data: booking });
+        showToast('تم العثور على الحجز', 'success');
+      } else if (instantRes.data.instantServices?.length > 0) {
+        const instantService = instantRes.data.instantServices[0];
+        setSearchResult({ type: 'instant', data: instantService });
+        showToast('تم العثور على خدمة فورية', 'success');
+      } else {
+        setSearchResult(null);
+        showToast('لم يتم العثور على حجز أو خدمة فورية بهذا الرقم', 'warning');
+      }
+    } catch (err) {
+      console.error('Receipt search error:', err.response?.data || err.message);
+      showToast(err.response?.data?.msg || 'خطأ في البحث عن الوصل', 'danger');
+    }
+  }, [showToast]);
+
   useEffect(() => {
     if (showQrModal) {
       qrCodeScanner.current = new Html5Qrcode('qr-reader');
@@ -122,35 +151,6 @@ function HallSupervision() {
   const handleOpenQrModal = () => {
     setShowQrModal(true);
   };
-
-  const handleReceiptSearch = useCallback(async (searchValue) => {
-    try {
-      const [bookingRes, instantRes] = await Promise.all([
-        axios.get(`/api/bookings?receiptNumber=${searchValue}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        }),
-        axios.get(`/api/instant-services?receiptNumber=${searchValue}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        })
-      ]);
-
-      if (bookingRes.data.bookings?.length > 0) {
-        const booking = bookingRes.data.bookings[0];
-        setSearchResult({ type: 'booking', data: booking });
-        showToast('تم العثور على الحجز', 'success');
-      } else if (instantRes.data.instantServices?.length > 0) {
-        const instantService = instantRes.data.instantServices[0];
-        setSearchResult({ type: 'instant', data: instantService });
-        showToast('تم العثور على خدمة فورية', 'success');
-      } else {
-        setSearchResult(null);
-        showToast('لم يتم العثور على حجز أو خدمة فورية بهذا الرقم', 'warning');
-      }
-    } catch (err) {
-      console.error('Receipt search error:', err.response?.data || err.message);
-      showToast(err.response?.data?.msg || 'خطأ في البحث عن الوصل', 'danger');
-    }
-  }, [showToast]);
 
   const updateBookingState = (updatedBooking) => {
     setBookings(prev => ({
