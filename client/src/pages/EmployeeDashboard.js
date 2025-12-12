@@ -54,6 +54,37 @@ function EmployeeDashboard({ user }) {
     fetchData();
   }, [date, showToast]);
 
+  const handleReceiptSearch = useCallback(async (searchValue) => {
+    try {
+      console.log('Searching for receipt:', searchValue);
+      const [bookingRes, instantRes] = await Promise.all([
+        axios.get(`/api/bookings?receiptNumber=${searchValue}`, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        }),
+        axios.get(`/api/instant-services?receiptNumber=${searchValue}`, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        })
+      ]);
+
+      if (bookingRes.data.bookings.length > 0) {
+        const booking = bookingRes.data.bookings[0];
+        console.log('Found booking:', booking);
+        setPointsData({ type: 'booking', data: booking });
+        setShowPointsModal(true);
+      } else if (instantRes.data.instantServices.length > 0) {
+        const instantService = instantRes.data.instantServices[0];
+        console.log('Found instant service:', instantService);
+        setPointsData({ type: 'instant', data: instantService });
+        setShowPointsModal(true);
+      } else {
+        showToast('لم يتم العثور على حجز أو خدمة فورية بهذا الرقم', 'warning');
+      }
+    } catch (err) {
+      console.error('Receipt search error:', err.response?.data || err.message);
+      showToast(err.response?.data?.msg || 'خطأ في البحث عن الوصل', 'danger');
+    }
+  }, [showToast]);
+
   useEffect(() => {
     if (showQrModal) {
       qrCodeScanner.current = new Html5Qrcode("qr-reader");
@@ -99,37 +130,6 @@ function EmployeeDashboard({ user }) {
     }
     await handleReceiptSearch(receiptNumber);
   };
-
-  const handleReceiptSearch = useCallback(async (searchValue) => {
-    try {
-      console.log('Searching for receipt:', searchValue);
-      const [bookingRes, instantRes] = await Promise.all([
-        axios.get(`/api/bookings?receiptNumber=${searchValue}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        }),
-        axios.get(`/api/instant-services?receiptNumber=${searchValue}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        })
-      ]);
-
-      if (bookingRes.data.bookings.length > 0) {
-        const booking = bookingRes.data.bookings[0];
-        console.log('Found booking:', booking);
-        setPointsData({ type: 'booking', data: booking });
-        setShowPointsModal(true);
-      } else if (instantRes.data.instantServices.length > 0) {
-        const instantService = instantRes.data.instantServices[0];
-        console.log('Found instant service:', instantService);
-        setPointsData({ type: 'instant', data: instantService });
-        setShowPointsModal(true);
-      } else {
-        showToast('لم يتم العثور على حجز أو خدمة فورية بهذا الرقم', 'warning');
-      }
-    } catch (err) {
-      console.error('Receipt search error:', err.response?.data || err.message);
-      showToast(err.response?.data?.msg || 'خطأ في البحث عن الوصل', 'danger');
-    }
-  }, [showToast]);
 
   const handleExecuteService = async (serviceId, type, recordId) => {
     try {
