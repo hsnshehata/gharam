@@ -26,7 +26,7 @@ const getHomePath = (u) => {
   return '/dashboard';
 };
 
-function App() {
+function AppContent() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const navigate = useNavigate();
@@ -70,7 +70,6 @@ function App() {
   }, [authLoading, user, location.pathname, navigate]);
 
   return (
-    <Router>
       <ToastProvider>
       <div className="App">
         {authLoading ? (
@@ -131,6 +130,13 @@ function App() {
         )}
       </div>
       </ToastProvider>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }
