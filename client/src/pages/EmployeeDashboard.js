@@ -68,8 +68,8 @@ function EmployeeDashboard({ user }) {
         },
         (error) => {
           if (!error.includes('NotFoundException')) {
-            console.error('QR scan error:', error);
-            showToast('خطأ في مسح الباركود: تأكد من إذن الكاميرا أو وضوح الباركود', 'danger');
+            // Ignore transient decode errors to avoid noisy toasts while scanning
+            console.warn('QR scan warning:', error);
           }
         }
       ).catch((err) => {
