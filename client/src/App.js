@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Spinner } from 'react-bootstrap';
 import Login from './pages/Login';
 import Users from './pages/Users';
@@ -19,9 +19,18 @@ import './App.css';
 
 const API_BASE = (process.env.REACT_APP_API_BASE || '').replace(/\/$/, '');
 
+const getHomePath = (u) => {
+  if (!u) return '/login';
+  if (u.role === 'employee') return '/employee-dashboard';
+  if (u.role === 'hallSupervisor') return '/hall-supervision';
+  return '/dashboard';
+};
+
 function App() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   React.useEffect(() => {
     const loadUser = async () => {
@@ -51,6 +60,14 @@ function App() {
     };
     loadUser();
   }, []);
+
+  React.useEffect(() => {
+    if (authLoading) return;
+    // لو المستخدم لسه متسجل دخول ومتوقف على صفحة اللوجين، حوّله تلقائي لمساره
+    if (user && location.pathname === '/login') {
+      navigate(getHomePath(user), { replace: true });
+    }
+  }, [authLoading, user, location.pathname, navigate]);
 
   return (
     <Router>
@@ -108,7 +125,7 @@ function App() {
             path="/employee-dashboard"
             element={user && user.role === 'employee' ? <EmployeeDashboard user={user} /> : <Navigate to="/login" />}
           />
-          <Route path="/" element={<Navigate to="/login" />} />
+          <Route path="/" element={<Navigate to={getHomePath(user)} replace />} />
             </Routes>
           </>
         )}
