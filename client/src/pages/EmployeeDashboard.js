@@ -352,7 +352,8 @@ function EmployeeDashboard({ user }) {
         <Col md={8} lg={6}>
           <div className="scan-panel text-center">
             <Button variant="primary" onClick={handleOpenQrModal} className="scan-btn">
-              <FontAwesomeIcon icon={faQrcode} className="me-2" /> مسح الباركود
+              <span className="barcode-glow" aria-hidden="true" />
+              <FontAwesomeIcon icon={faQrcode} className="me-2 barcode-icon" /> مسح الباركود
             </Button>
             <Form onSubmit={handleReceiptSubmit} className="mt-3">
               <Form.Group>

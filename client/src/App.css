@@ -373,33 +373,49 @@ body.theme-dark .table-hover > tbody > tr:hover { background-color: rgba(255,255
   max-width: 360px;
   font-weight: 800;
   letter-spacing: 0.4px;
-  background: linear-gradient(135deg, #0b1f3a, #123c64);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #eaf4ff;
+  background: linear-gradient(135deg, #028090, #26a7b8);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #0a1f33;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 14px 28px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.08);
+  box-shadow: 0 14px 28px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.08);
   text-transform: uppercase;
 }
 
-.scan-btn::before {
+.barcode-icon {
+  font-size: 1.6rem;
+  color: #0d0d0d;
+  position: relative;
+  z-index: 1;
+}
+
+.barcode-glow {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(120deg, rgba(255,255,255,0.22), rgba(255,255,255,0.08));
+  box-shadow: 0 0 18px rgba(0,0,0,0.06);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.barcode-glow::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 48%, transparent 100%);
-  opacity: 0;
-  animation: shine 2.6s ease-in-out infinite;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.75) 46%, transparent 100%);
+  animation: iconShine 1.8s ease-in-out infinite;
+  opacity: 0.65;
 }
 
-.scan-btn:hover::before {
-  animation-duration: 1.8s;
-}
-
-@keyframes shine {
-  0% { transform: translateX(-80%); opacity: 0; }
-  40% { transform: translateX(10%); opacity: 0.35; }
-  60% { transform: translateX(30%); opacity: 0.2; }
-  100% { transform: translateX(120%); opacity: 0; }
+@keyframes iconShine {
+  0% { transform: translateX(-80%); }
+  50% { transform: translateX(10%); }
+  100% { transform: translateX(80%); }
 }
 
 .scan-panel .form-label { text-align: center; }
