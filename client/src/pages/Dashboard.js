@@ -47,6 +47,7 @@ function Dashboard({ user }) {
   const [bookingFormData, setBookingFormData] = useState({
     packageId: '', hennaPackageId: '', photographyPackageId: '', extraServices: [], returnedServices: [],
     hairStraightening: 'no', hairStraighteningPrice: '', hairStraighteningDate: '',
+    hairDye: 'no', hairDyePrice: '', hairDyeDate: '',
     clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: ''
   });
   const [instantServiceFormData, setInstantServiceFormData] = useState({ employeeId: '', services: [] });
@@ -272,7 +273,10 @@ function Dashboard({ user }) {
       const hairPrice = bookingFormData.hairStraightening === 'yes'
         ? Number(bookingFormData.hairStraighteningPrice) || 0
         : 0;
-      tempTotal += hairPrice;
+      const hairDyePrice = bookingFormData.hairDye === 'yes'
+        ? Number(bookingFormData.hairDyePrice) || 0
+        : 0;
+      tempTotal += hairPrice + hairDyePrice;
 
       const depositValue = Number(bookingFormData.deposit) || 0;
 
@@ -301,12 +305,14 @@ function Dashboard({ user }) {
       ...bookingFormData,
       deposit: Number(bookingFormData.deposit) || 0,
       hairStraighteningPrice: bookingFormData.hairStraightening === 'yes' ? Number(bookingFormData.hairStraighteningPrice) || 0 : 0,
+      hairDyePrice: bookingFormData.hairDye === 'yes' ? Number(bookingFormData.hairDyePrice) || 0 : 0,
       packageId: bookingFormData.packageId || null,
       hennaPackageId: bookingFormData.hennaPackageId || null,
       photographyPackageId: bookingFormData.photographyPackageId || null,
       extraServices: bookingFormData.extraServices.map(s => s.value),
       returnedServices: bookingFormData.returnedServices.map(s => s.value),
-      hairStraightening: bookingFormData.hairStraightening === 'yes'
+      hairStraightening: bookingFormData.hairStraightening === 'yes',
+      hairDye: bookingFormData.hairDye === 'yes'
     };
     setBookingSubmitting(true);
     setShowBookingModal(false);
@@ -331,6 +337,7 @@ function Dashboard({ user }) {
       setBookingFormData({
         packageId: '', hennaPackageId: '', photographyPackageId: '', extraServices: [], returnedServices: [],
         hairStraightening: 'no', hairStraighteningPrice: '', hairStraighteningDate: '',
+        hairDye: 'no', hairDyePrice: '', hairDyeDate: '',
         clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: ''
       });
       setEditBooking(null);
@@ -719,149 +726,7 @@ function Dashboard({ user }) {
         </Modal.Header>
         <Modal.Body>
           <Form onSubmit={handleBookingSubmit} className="form-row">
-            <Row>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>نوع الباكدج</Form.Label>
-                  <Form.Control
-                    as="select"
-                    value={bookingFormData.packageId}
-                    onChange={(e) => setBookingFormData({ ...bookingFormData, packageId: e.target.value })}
-                    required
-                  >
-                    <option value="">اختر باكدج</option>
-                    {packages.map(pkg => (
-                      <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
-                    ))}
-                  </Form.Control>
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>تاريخ المناسبة</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={bookingFormData.eventDate}
-                    onChange={(e) => setBookingFormData({ ...bookingFormData, eventDate: e.target.value })}
-                    required
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>باكدج حنة (اختياري)</Form.Label>
-                  <Form.Control
-                    as="select"
-                    value={bookingFormData.hennaPackageId}
-                    onChange={(e) => setBookingFormData({ ...bookingFormData, hennaPackageId: e.target.value })}
-                  >
-                    <option value="">لا يوجد</option>
-                    {packages.filter(pkg => pkg.type === 'makeup').map(pkg => (
-                      <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
-                    ))}
-                  </Form.Control>
-                </Form.Group>
-              </Col>
-              {bookingFormData.hennaPackageId && (
-                <Col md={6}>
-                  <Form.Group>
-                    <Form.Label>تاريخ الحنة</Form.Label>
-                    <Form.Control
-                      type="date"
-                      value={bookingFormData.hennaDate}
-                      onChange={(e) => setBookingFormData({ ...bookingFormData, hennaDate: e.target.value })}
-                      required
-                    />
-                  </Form.Group>
-                </Col>
-              )}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>باكدج تصوير (اختياري)</Form.Label>
-                  <Form.Control
-                    as="select"
-                    value={bookingFormData.photographyPackageId}
-                    onChange={(e) => setBookingFormData({ ...bookingFormData, photographyPackageId: e.target.value })}
-                  >
-                    <option value="">لا يوجد</option>
-                    {packages.filter(pkg => pkg.type === 'photography').map(pkg => (
-                      <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
-                    ))}
-                  </Form.Control>
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>مرتجع من الباكدجات (اختياري)</Form.Label>
-                  <Select
-                    isMulti
-                    options={selectedPackageServices}
-                    value={bookingFormData.returnedServices}
-                    onChange={(selected) => setBookingFormData({ ...bookingFormData, returnedServices: selected })}
-                    isSearchable
-                    placeholder="اختر الخدمات..."
-                    className="booking-services-select"
-                    classNamePrefix="booking-services"
-                    styles={customStyles}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>خدمات إضافية (اختياري)</Form.Label>
-                  <Select
-                    isMulti
-                    options={services.filter(srv => srv.type === 'instant').map(srv => ({ value: srv._id, label: srv.name, price: srv.price }))}
-                    value={bookingFormData.extraServices}
-                    onChange={(selected) => setBookingFormData({ ...bookingFormData, extraServices: selected })}
-                    isSearchable
-                    placeholder="اختر الخدمات..."
-                    className="booking-services-select"
-                    classNamePrefix="booking-services"
-                    styles={customStyles}
-                  />
-                </Form.Group>
-              </Col>
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>فرد شعر</Form.Label>
-                  <Form.Control
-                    as="select"
-                    value={bookingFormData.hairStraightening}
-                    onChange={(e) => setBookingFormData({ ...bookingFormData, hairStraightening: e.target.value })}
-                    className="custom-select"
-                  >
-                    <option value="no">لا</option>
-                    <option value="yes">نعم</option>
-                  </Form.Control>
-                </Form.Group>
-              </Col>
-              {bookingFormData.hairStraightening === 'yes' && (
-                <>
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label>سعر فرد الشعر</Form.Label>
-                      <Form.Control
-                        type="number"
-                        value={bookingFormData.hairStraighteningPrice}
-                        onChange={(e) => setBookingFormData({ ...bookingFormData, hairStraighteningPrice: e.target.value })}
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                  <Col md={6}>
-                    <Form.Group>
-                      <Form.Label>تاريخ فرد الشعر</Form.Label>
-                      <Form.Control
-                        type="date"
-                        value={bookingFormData.hairStraighteningDate}
-                        onChange={(e) => setBookingFormData({ ...bookingFormData, hairStraighteningDate: e.target.value })}
-                        required
-                      />
-                    </Form.Group>
-                  </Col>
-                </>
-              )}
+            <Row className="g-3">
               <Col md={6}>
                 <Form.Group>
                   <Form.Label>اسم العميل</Form.Label>
@@ -917,6 +782,188 @@ function Dashboard({ user }) {
               </Col>
               <Col md={6}>
                 <Form.Group>
+                  <Form.Label>تاريخ المناسبة</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={bookingFormData.eventDate}
+                    onChange={(e) => setBookingFormData({ ...bookingFormData, eventDate: e.target.value })}
+                    required
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>نوع الباكدج</Form.Label>
+                  <Form.Control
+                    as="select"
+                    value={bookingFormData.packageId}
+                    onChange={(e) => setBookingFormData({ ...bookingFormData, packageId: e.target.value })}
+                    required
+                  >
+                    <option value="">اختر باكدج</option>
+                    {packages.map(pkg => (
+                      <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
+                    ))}
+                  </Form.Control>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>باكدج حنة (اختياري)</Form.Label>
+                  <Form.Control
+                    as="select"
+                    value={bookingFormData.hennaPackageId}
+                    onChange={(e) => setBookingFormData({ ...bookingFormData, hennaPackageId: e.target.value })}
+                  >
+                    <option value="">لا يوجد</option>
+                    {packages.filter(pkg => pkg.type === 'makeup').map(pkg => (
+                      <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
+                    ))}
+                  </Form.Control>
+                </Form.Group>
+              </Col>
+              {bookingFormData.hennaPackageId && (
+                <Col md={6}>
+                  <Form.Group>
+                    <Form.Label>تاريخ الحنة</Form.Label>
+                    <Form.Control
+                      type="date"
+                      value={bookingFormData.hennaDate}
+                      onChange={(e) => setBookingFormData({ ...bookingFormData, hennaDate: e.target.value })}
+                      required
+                    />
+                  </Form.Group>
+                </Col>
+              )}
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>باكدج تصوير (اختياري)</Form.Label>
+                  <Form.Control
+                    as="select"
+                    value={bookingFormData.photographyPackageId}
+                    onChange={(e) => setBookingFormData({ ...bookingFormData, photographyPackageId: e.target.value })}
+                  >
+                    <option value="">لا يوجد</option>
+                    {packages.filter(pkg => pkg.type === 'photography').map(pkg => (
+                      <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
+                    ))}
+                  </Form.Control>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>خدمات الشعر - فرد</Form.Label>
+                  <Form.Control
+                    as="select"
+                    value={bookingFormData.hairStraightening}
+                    onChange={(e) => setBookingFormData({ ...bookingFormData, hairStraightening: e.target.value })}
+                    className="custom-select"
+                  >
+                    <option value="no">لا</option>
+                    <option value="yes">نعم</option>
+                  </Form.Control>
+                </Form.Group>
+              </Col>
+              {bookingFormData.hairStraightening === 'yes' && (
+                <>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label>سعر فرد الشعر</Form.Label>
+                      <Form.Control
+                        type="number"
+                        value={bookingFormData.hairStraighteningPrice}
+                        onChange={(e) => setBookingFormData({ ...bookingFormData, hairStraighteningPrice: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label>تاريخ فرد الشعر</Form.Label>
+                      <Form.Control
+                        type="date"
+                        value={bookingFormData.hairStraighteningDate}
+                        onChange={(e) => setBookingFormData({ ...bookingFormData, hairStraighteningDate: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                </>
+              )}
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>خدمات الشعر - صبغة</Form.Label>
+                  <Form.Control
+                    as="select"
+                    value={bookingFormData.hairDye}
+                    onChange={(e) => setBookingFormData({ ...bookingFormData, hairDye: e.target.value })}
+                    className="custom-select"
+                  >
+                    <option value="no">لا</option>
+                    <option value="yes">نعم</option>
+                  </Form.Control>
+                </Form.Group>
+              </Col>
+              {bookingFormData.hairDye === 'yes' && (
+                <>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label>سعر الصبغة</Form.Label>
+                      <Form.Control
+                        type="number"
+                        value={bookingFormData.hairDyePrice}
+                        onChange={(e) => setBookingFormData({ ...bookingFormData, hairDyePrice: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label>تاريخ الصبغة</Form.Label>
+                      <Form.Control
+                        type="date"
+                        value={bookingFormData.hairDyeDate}
+                        onChange={(e) => setBookingFormData({ ...bookingFormData, hairDyeDate: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                </>
+              )}
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>مرتجع من الباكدجات (اختياري)</Form.Label>
+                  <Select
+                    isMulti
+                    options={selectedPackageServices}
+                    value={bookingFormData.returnedServices}
+                    onChange={(selected) => setBookingFormData({ ...bookingFormData, returnedServices: selected })}
+                    isSearchable
+                    placeholder="اختر الخدمات..."
+                    className="booking-services-select"
+                    classNamePrefix="booking-services"
+                    styles={customStyles}
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>خدمات إضافية (اختياري)</Form.Label>
+                  <Select
+                    isMulti
+                    options={services.filter(srv => srv.type === 'instant').map(srv => ({ value: srv._id, label: srv.name, price: srv.price }))}
+                    value={bookingFormData.extraServices}
+                    onChange={(selected) => setBookingFormData({ ...bookingFormData, extraServices: selected })}
+                    isSearchable
+                    placeholder="اختر الخدمات..."
+                    className="booking-services-select"
+                    classNamePrefix="booking-services"
+                    styles={customStyles}
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
                   <Form.Label>العربون</Form.Label>
                   <Form.Control
                     type="number"
@@ -926,12 +973,12 @@ function Dashboard({ user }) {
                   />
                 </Form.Group>
               </Col>
-              <Col md={6}>
+              <Col md={3}>
                 <Form.Group>
                   <Form.Label>الإجمالي: {total} جنيه</Form.Label>
                 </Form.Group>
               </Col>
-              <Col md={6}>
+              <Col md={3}>
                 <Form.Group>
                   <Form.Label>المتبقي: {remaining} جنيه</Form.Label>
                 </Form.Group>
@@ -944,6 +991,7 @@ function Dashboard({ user }) {
                   setBookingFormData({
                     packageId: '', hennaPackageId: '', photographyPackageId: '', extraServices: [], returnedServices: [],
                     hairStraightening: 'no', hairStraighteningPrice: '', hairStraighteningDate: '',
+                    hairDye: 'no', hairDyePrice: '', hairDyeDate: '',
                     clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: ''
                   });
                   setEditBooking(null);

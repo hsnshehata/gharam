@@ -7,7 +7,9 @@ const { addPointsAndConvertInternal, removePointsAndCoinsInternal } = require('.
 exports.addBooking = async (req, res) => {
   const {
     packageId, hennaPackageId, photographyPackageId, returnedServices, extraServices,
-    hairStraightening, hairStraighteningPrice, hairStraighteningDate, clientName,
+    hairStraightening, hairStraighteningPrice, hairStraighteningDate,
+    hairDye, hairDyePrice, hairDyeDate,
+    clientName,
     clientPhone, city, eventDate, hennaDate, deposit
   } = req.body;
   const employeeId = req.user.id;
@@ -43,7 +45,13 @@ exports.addBooking = async (req, res) => {
       extraPrice = services.reduce((sum, srv) => sum + srv.price, 0);
     }
 
-    total = total + hennaPrice + photoPrice + extraPrice - returnedPrice + (hairStraightening ? parseFloat(hairStraighteningPrice) : 0);
+    total = total
+      + hennaPrice
+      + photoPrice
+      + extraPrice
+      - returnedPrice
+      + (hairStraightening ? parseFloat(hairStraighteningPrice) : 0)
+      + (hairDye ? parseFloat(hairDyePrice) : 0);
     const remaining = total - deposit;
 
     const receiptNumber = Math.floor(1000000 + Math.random() * 9000000).toString();
@@ -85,6 +93,7 @@ exports.addBooking = async (req, res) => {
       photographyPackage: photographyPackageId && photographyPackageId !== '' ? photographyPackageId : null,
       returnedServices, extraServices, packageServices: formattedPackageServices,
       hairStraightening, hairStraighteningPrice, hairStraighteningDate,
+      hairDye, hairDyePrice, hairDyeDate,
       clientName, clientPhone, city, eventDate, hennaDate, deposit,
       installments: [], total, remaining, receiptNumber, barcode,
       createdBy: employeeId,
@@ -93,7 +102,7 @@ exports.addBooking = async (req, res) => {
 
     await booking.save();
     const populatedBooking = await Booking.findById(booking._id)
-      .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy');
+      .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy hairStraighteningExecutedBy hairDyeExecutedBy packageServices.executedBy');
     res.json({ msg: 'Booking added successfully', booking: populatedBooking });
   } catch (err) {
     console.error(err);
@@ -104,7 +113,9 @@ exports.addBooking = async (req, res) => {
 exports.updateBooking = async (req, res) => {
   const {
     packageId, hennaPackageId, photographyPackageId, returnedServices, extraServices,
-    hairStraightening, hairStraighteningPrice, hairStraighteningDate, clientName,
+    hairStraightening, hairStraighteningPrice, hairStraighteningDate,
+    hairDye, hairDyePrice, hairDyeDate,
+    clientName,
     clientPhone, city, eventDate, hennaDate, deposit
   } = req.body;
   const employeeId = req.user.id;
@@ -140,7 +151,13 @@ exports.updateBooking = async (req, res) => {
       extraPrice = services.reduce((sum, srv) => sum + srv.price, 0);
     }
 
-    total = total + hennaPrice + photoPrice + extraPrice - returnedPrice + (hairStraightening ? parseFloat(hairStraighteningPrice) : 0);
+    total = total
+      + hennaPrice
+      + photoPrice
+      + extraPrice
+      - returnedPrice
+      + (hairStraightening ? parseFloat(hairStraighteningPrice) : 0)
+      + (hairDye ? parseFloat(hairDyePrice) : 0);
     const remaining = total - deposit;
 
     // جلب خدمات الباكدجات
@@ -190,12 +207,13 @@ exports.updateBooking = async (req, res) => {
         photographyPackage: photographyPackageId && photographyPackageId !== '' ? photographyPackageId : null,
         returnedServices, extraServices, packageServices: formattedPackageServices,
         hairStraightening, hairStraighteningPrice, hairStraighteningDate,
+        hairDye, hairDyePrice, hairDyeDate,
         clientName, clientPhone, city, eventDate, hennaDate, deposit,
         total, remaining,
         $push: { updates: { changes, employeeId } }
       },
       { new: true }
-    ).populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy');
+    ).populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy hairStraighteningExecutedBy hairDyeExecutedBy packageServices.executedBy');
     if (!booking) return res.status(404).json({ msg: 'Booking not found' });
     res.json({ msg: 'Booking updated successfully', booking });
   } catch (err) {
@@ -265,7 +283,7 @@ exports.getBookings = async (req, res) => {
     }
 
     const bookings = await Booking.find(query)
-      .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy')
+      .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy hairStraighteningExecutedBy hairDyeExecutedBy packageServices.executedBy')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(parseInt(limit));
@@ -290,14 +308,24 @@ exports.executeService = async (req, res) => {
 
     let points = 0;
     let serviceName = 'غير معروف';
-    if (serviceId === 'hairStraightening') {
-      if (booking.hairStraightening && !booking.hairStraighteningExecuted) {
-        booking.hairStraighteningExecuted = true;
-        booking.hairStraighteningExecutedBy = employeeId;
-        points = booking.hairStraighteningPrice * 0.15;
-        serviceName = 'فرد الشعر';
+    if (serviceId === 'hairStraightening' || serviceId === 'hairDye') {
+      const isStraightening = serviceId === 'hairStraightening';
+      const enabled = isStraightening ? booking.hairStraightening : booking.hairDye;
+      const already = isStraightening ? booking.hairStraighteningExecuted : booking.hairDyeExecuted;
+      if (enabled && !already) {
+        if (isStraightening) {
+          booking.hairStraighteningExecuted = true;
+          booking.hairStraighteningExecutedBy = employeeId;
+          points = (booking.hairStraighteningPrice || 0) * 0.15;
+          serviceName = 'فرد الشعر';
+        } else {
+          booking.hairDyeExecuted = true;
+          booking.hairDyeExecutedBy = employeeId;
+          points = (booking.hairDyePrice || 0) * 0.15;
+          serviceName = 'صبغة الشعر';
+        }
       } else {
-        return res.status(400).json({ msg: 'Hair straightening already executed or not applicable' });
+        return res.status(400).json({ msg: 'Hair service already executed or not applicable' });
       }
     } else {
       const service = booking.packageServices.find(srv => srv._id.toString() === serviceId);
@@ -312,14 +340,14 @@ exports.executeService = async (req, res) => {
     // إضافة النقاط وتحويلها لعملات عند الحاجة
     await addPointsAndConvertInternal(employeeId, points, {
       bookingId: id,
-      serviceId: serviceId === 'hairStraightening' ? null : serviceId,
+      serviceId: (serviceId === 'hairStraightening' || serviceId === 'hairDye') ? null : serviceId,
       serviceName,
       receiptNumber: booking.receiptNumber || null
     });
 
     await booking.save();
     const populatedBooking = await Booking.findById(booking._id)
-      .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy packageServices.executedBy hairStraighteningExecutedBy');
+      .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy packageServices.executedBy hairStraighteningExecutedBy hairDyeExecutedBy');
     res.json({ msg: 'Service executed successfully', booking: populatedBooking, points });
   } catch (err) {
     console.error(err);
@@ -338,14 +366,22 @@ exports.resetService = async (req, res) => {
     let oldEmployeeId = null;
     let points = 0;
 
-    if (serviceId === 'hairStraightening') {
-      if (!booking.hairStraighteningExecuted || !booking.hairStraighteningExecutedBy) {
-        return res.status(400).json({ msg: 'Hair straightening is not executed to reset' });
+    if (serviceId === 'hairStraightening' || serviceId === 'hairDye') {
+      const isStraightening = serviceId === 'hairStraightening';
+      const executed = isStraightening ? booking.hairStraighteningExecuted : booking.hairDyeExecuted;
+      const execBy = isStraightening ? booking.hairStraighteningExecutedBy : booking.hairDyeExecutedBy;
+      if (!executed || !execBy) {
+        return res.status(400).json({ msg: 'Hair service is not executed to reset' });
       }
-      oldEmployeeId = booking.hairStraighteningExecutedBy;
-      points = booking.hairStraighteningPrice * 0.15;
-      booking.hairStraighteningExecuted = false;
-      booking.hairStraighteningExecutedBy = null;
+      oldEmployeeId = execBy;
+      points = (isStraightening ? booking.hairStraighteningPrice : booking.hairDyePrice) * 0.15;
+      if (isStraightening) {
+        booking.hairStraighteningExecuted = false;
+        booking.hairStraighteningExecutedBy = null;
+      } else {
+        booking.hairDyeExecuted = false;
+        booking.hairDyeExecutedBy = null;
+      }
     } else {
       const service = booking.packageServices.find(srv => srv._id.toString() === serviceId);
       if (!service) return res.status(404).json({ msg: 'Service not found' });
@@ -361,15 +397,15 @@ exports.resetService = async (req, res) => {
     if (oldEmployeeId) {
       await removePointsAndCoinsInternal(oldEmployeeId, (p) => (
         p.bookingId?.toString() === id && (
-          (serviceId === 'hairStraightening' && !p.serviceId) ||
-          (serviceId !== 'hairStraightening' && p.serviceId && p.serviceId.toString() === serviceId)
+          ((serviceId === 'hairStraightening' || serviceId === 'hairDye') && !p.serviceId) ||
+          (serviceId !== 'hairStraightening' && serviceId !== 'hairDye' && p.serviceId && p.serviceId.toString() === serviceId)
         )
       ));
     }
 
     await booking.save();
     const populatedBooking = await Booking.findById(booking._id)
-      .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy packageServices.executedBy hairStraighteningExecutedBy');
+      .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy packageServices.executedBy hairStraighteningExecutedBy hairDyeExecutedBy');
 
     res.json({ msg: 'Service reset successfully', booking: populatedBooking, removedPoints: points });
   } catch (err) {

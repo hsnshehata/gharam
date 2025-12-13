@@ -8,15 +8,16 @@ exports.getTodayWork = async (req, res) => {
     const endDate = new Date(startDate);
     endDate.setHours(23, 59, 59, 999);
 
-    // جلب الحجوزات اللي تاريخ الباكدج الأساسي أو الحنة أو فرد الشعر إنهاردة
+    // جلب الحجوزات اللي تاريخ الباكدج الأساسي أو الحنة أو خدمات الشعر إنهاردة
     const bookings = await Booking.find({
       $or: [
         { eventDate: { $gte: startDate, $lte: endDate } },
         { hennaDate: { $gte: startDate, $lte: endDate } },
-        { hairStraighteningDate: { $gte: startDate, $lte: endDate } }
+        { hairStraighteningDate: { $gte: startDate, $lte: endDate } },
+        { hairDyeDate: { $gte: startDate, $lte: endDate } }
       ]
     }).populate({
-      path: 'package hennaPackage photographyPackage extraServices returnedServices packageServices._id packageServices.executedBy createdBy installments.employeeId updates.employeeId hairStraighteningExecutedBy',
+      path: 'package hennaPackage photographyPackage extraServices returnedServices packageServices._id packageServices.executedBy createdBy installments.employeeId updates.employeeId hairStraighteningExecutedBy hairDyeExecutedBy',
       strictPopulate: false // تجاهل أخطاء الـ populate
     });
 
@@ -28,6 +29,9 @@ exports.getTodayWork = async (req, res) => {
     );
     const hairStraighteningBookings = bookings.filter(
       booking => booking.hairStraightening && new Date(booking.hairStraighteningDate).toDateString() === startDate.toDateString()
+    );
+    const hairDyeBookings = bookings.filter(
+      booking => booking.hairDye && new Date(booking.hairDyeDate).toDateString() === startDate.toDateString()
     );
     const photographyBookings = bookings.filter(
       booking => 
@@ -41,6 +45,10 @@ exports.getTodayWork = async (req, res) => {
         createdBy: b.createdBy || { username: 'غير معروف' }
       })),
       hairStraighteningBookings: hairStraighteningBookings.map(b => ({
+        ...b._doc,
+        createdBy: b.createdBy || { username: 'غير معروف' }
+      })),
+      hairDyeBookings: hairDyeBookings.map(b => ({
         ...b._doc,
         createdBy: b.createdBy || { username: 'غير معروف' }
       })),
