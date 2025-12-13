@@ -2,9 +2,19 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table } from 'react-bootstrap';
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faCheck, faQrcode } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faCheck, faQrcode, faGift, faCoins, faBolt } from '@fortawesome/free-solid-svg-icons';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useToast } from '../components/ToastProvider';
+
+const COIN_COLORS = {
+  1: '#c0c7d1', // فضي
+  2: '#d4af37', // ذهبي
+  3: '#e74c3c', // أحمر
+  4: '#27ae60', // أخضر
+  5: '#2980b9', // أزرق
+  6: '#8e44ad', // أرجواني
+  default: '#2c3e50'
+};
 
 function EmployeeDashboard({ user }) {
   const [bookings, setBookings] = useState({
@@ -20,6 +30,10 @@ function EmployeeDashboard({ user }) {
   const [showQrModal, setShowQrModal] = useState(false);
   const [pointsSummary, setPointsSummary] = useState(null);
   const [redeemCount, setRedeemCount] = useState(1);
+  const [showRedeemModal, setShowRedeemModal] = useState(false);
+  const [converting, setConverting] = useState(false);
+  const [convertCelebration, setConvertCelebration] = useState(false);
+  const [redeeming, setRedeeming] = useState(false);
   const qrCodeScanner = useRef(null);
   const { showToast } = useToast();
 
@@ -29,6 +43,18 @@ function EmployeeDashboard({ user }) {
     });
     setPointsSummary(pointsRes.data);
   }, []);
+
+  const formatNumber = useCallback((num = 0) => new Intl.NumberFormat('en-US').format(Math.max(0, num)), []);
+
+  const getTopCoinLevel = useCallback((byLevel = {}) => {
+    const levels = Object.keys(byLevel || {})
+      .map(Number)
+      .filter((lvl) => !Number.isNaN(lvl) && byLevel[lvl] > 0);
+    if (levels.length === 0) return 1;
+    return Math.max(...levels);
+  }, []);
+
+  const getCoinColor = useCallback((level) => COIN_COLORS[level] || COIN_COLORS.default, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -129,20 +155,50 @@ function EmployeeDashboard({ user }) {
     await handleReceiptSearch(receiptNumber);
   };
 
+  const handleConvertPoints = async () => {
+    if (!pointsSummary || (pointsSummary.convertiblePoints || 0) < 1000) {
+      showToast('لا توجد نقاط كافية للتحويل', 'warning');
+      return;
+    }
+    try {
+      setConverting(true);
+      const res = await axios.post('/api/users/convert-points', {}, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      showToast(`تم تحويل ${res.data.mintedCoins} عملة جديدة`, 'success');
+      setConvertCelebration(true);
+      setTimeout(() => setConvertCelebration(false), 1200);
+      await fetchPointsSummary();
+    } catch (err) {
+      console.error('Convert error:', err.response?.data || err.message);
+      showToast(err.response?.data?.msg || 'تعذر تحويل النقاط الآن', 'danger');
+    } finally {
+      setConverting(false);
+    }
+  };
+
   const handleRedeemCoins = async () => {
     if (!redeemCount || redeemCount <= 0) {
       showToast('اختار عدد العملات للاستبدال', 'warning');
       return;
     }
+    if (redeemCount > coinsCount) {
+      showToast('عدد العملات المطلوب أكبر من المتاح', 'warning');
+      return;
+    }
     try {
+      setRedeeming(true);
       const res = await axios.post('/api/users/redeem-coins', { count: redeemCount }, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       showToast(`تم استبدال ${res.data.redeemedCoins} عملة بقيمة ${res.data.totalValue} جنيه`, 'success');
       await fetchPointsSummary();
+      setShowRedeemModal(false);
     } catch (err) {
       console.error('Redeem error:', err.response?.data || err.message);
       showToast(err.response?.data?.msg || 'تعذر استبدال العملات', 'danger');
+    } finally {
+      setRedeeming(false);
     }
   };
 
@@ -198,6 +254,12 @@ function EmployeeDashboard({ user }) {
     setShowQrModal(true);
   };
 
+  const coinsCount = pointsSummary?.coins?.totalCount || 0;
+  const topCoinLevel = getTopCoinLevel(pointsSummary?.coins?.byLevel || {});
+  const topCoinColor = getCoinColor(topCoinLevel);
+  const convertiblePoints = pointsSummary?.convertiblePoints || 0;
+  const canConvert = convertiblePoints >= 1000;
+
   return (
     <Container className="mt-5">
       <h2>لوحة الموظف</h2>
@@ -231,46 +293,80 @@ function EmployeeDashboard({ user }) {
         </Col>
       </Row>
 
-      <Card className="mb-4">
+      <Card className="mb-4 points-card">
         <Card.Body>
-          <Card.Title>ملخص النقاط</Card.Title>
+          <Card.Title>لوحة المكافآت</Card.Title>
           {pointsSummary ? (
             <>
-              <Card.Text>
-                المستوى الحالي: {pointsSummary.level} (قيمة العملة: {pointsSummary.currentCoinValue} جنيه)<br />
-                إجمالي النقاط: {pointsSummary.totalPoints} نقطة<br />
-                العملات المتاحة: {pointsSummary.coins?.totalCount || 0} (قيمة إجمالية: {pointsSummary.coins?.totalValue || 0} جنيه)<br />
-                رصيد نقاط قابل للتحويل: {pointsSummary.convertiblePoints} نقطة
-              </Card.Text>
-              <div className="mb-3">
-                <div className="d-flex justify-content-between small mb-1">
-                  <span>التقدم للمستوى التالي</span>
-                  <span>{pointsSummary.progress?.percent || 0}%</span>
-                </div>
-                <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pointsSummary.progress?.percent || 0}>
+              <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 points-top">
+                <div className="coin-chip">
                   <div
-                    className="progress-bar"
-                    style={{ width: `${pointsSummary.progress?.percent || 0}%` }}
-                  />
+                    className="coin-illustration"
+                    style={{ background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.7), rgba(255,255,255,0.1)), linear-gradient(135deg, ${topCoinColor}, ${topCoinColor}aa)` }}
+                  >
+                    <span className="coin-glow" />
+                    <span className="coin-level">L{topCoinLevel}</span>
+                  </div>
+                  <div className="coin-meta">
+                    <div className="coin-title">أعلى عملة وصلت لها</div>
+                    <div className="coin-count-text">
+                      <FontAwesomeIcon icon={faCoins} className="me-2" />
+                      {coinsCount}
+                    </div>
+                    <div className="coin-desc">اللون يعكس مستوى العملة الحالي</div>
+                  </div>
                 </div>
-                <div className="small text-muted mt-1">
-                  متبقي: {Math.max(0, (pointsSummary.progress?.target || 0) - (pointsSummary.progress?.current || 0))} نقطة للوصول للمستوى التالي
+
+                <div className="level-progress-wrap">
+                  <div className="d-flex align-items-center gap-2 mb-1">
+                    <span className="text-muted small">المستوى الحالي</span>
+                    <span className="level-badge">L{pointsSummary.level}</span>
+                  </div>
+                  <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pointsSummary.progress?.percent || 0}>
+                    <div
+                      className="progress-bar"
+                      style={{ width: `${pointsSummary.progress?.percent || 0}%` }}
+                    />
+                  </div>
+                  <div className="small text-muted mt-1">
+                    متبقي: {Math.max(0, (pointsSummary.progress?.target || 0) - (pointsSummary.progress?.current || 0))} نقطة للوصول للمستوى التالي
+                  </div>
                 </div>
+
+                {coinsCount > 0 && (
+                  <Button variant="outline-success" className="gift-btn" onClick={() => { setRedeemCount(1); setShowRedeemModal(true); }}>
+                    <FontAwesomeIcon icon={faGift} className="me-2" /> استبدال العملات
+                  </Button>
+                )}
               </div>
-              <Form className="d-flex flex-wrap gap-2 align-items-end">
-                <Form.Group style={{ maxWidth: '180px' }}>
-                  <Form.Label>عدد العملات للاستبدال</Form.Label>
-                  <Form.Control
-                    type="number"
-                    min={1}
-                    value={redeemCount}
-                    onChange={(e) => setRedeemCount(Number(e.target.value))}
-                  />
-                </Form.Group>
-                <Button variant="success" onClick={handleRedeemCoins} className="mt-2">
-                  استبدال العملات للراتب الحالي
-                </Button>
-              </Form>
+
+              <div className="counter-block mt-3">
+                <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                  <div>
+                    <div className="small text-muted">عداد النقاط القابلة للتحويل</div>
+                    <div className={`points-counter ${convertCelebration ? 'burst' : ''}`}>
+                      {formatNumber(convertiblePoints)}
+                    </div>
+                  </div>
+                  <div className="text-end">
+                    <div className="small text-muted">قيمة العملة الحالية</div>
+                    <div className="fw-bold">{formatNumber(pointsSummary.currentCoinValue)} جنيه</div>
+                  </div>
+                </div>
+
+                {canConvert ? (
+                  <Button
+                    className={`convert-btn mt-2 ${convertCelebration ? 'celebrate' : ''}`}
+                    onClick={handleConvertPoints}
+                    disabled={converting}
+                  >
+                    <FontAwesomeIcon icon={faBolt} className="me-2" />
+                    حوّل كل 1000 نقطة إلى عملة
+                  </Button>
+                ) : (
+                  <div className="text-muted small mt-2">اجمع {formatNumber(Math.max(0, 1000 - convertiblePoints))} نقطة إضافية علشان تحوّل أول عملة</div>
+                )}
+              </div>
             </>
           ) : (
             <div>جارٍ التحميل...</div>
@@ -388,6 +484,35 @@ function EmployeeDashboard({ user }) {
           );
         })}
       </Row>
+
+      <Modal show={showRedeemModal} onHide={() => setShowRedeemModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>استبدال العملات</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="d-flex align-items-center gap-2 mb-3">
+            <FontAwesomeIcon icon={faGift} />
+            <span>معاك {formatNumber(coinsCount)} عملة بقيمة إجمالية {formatNumber(pointsSummary?.coins?.totalValue || 0)} جنيه</span>
+          </div>
+          <Form.Group>
+            <Form.Label>عدد العملات للاستبدال</Form.Label>
+            <Form.Control
+              type="number"
+              min={1}
+              max={coinsCount}
+              value={redeemCount}
+              onChange={(e) => setRedeemCount(Number(e.target.value))}
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowRedeemModal(false)}>إغلاق</Button>
+          <Button variant="success" onClick={handleRedeemCoins} disabled={redeeming}>
+            <FontAwesomeIcon icon={faGift} className="me-2" />
+            {redeeming ? 'جاري الاستبدال...' : 'تأكيد الاستبدال'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       <Modal show={showQrModal} onHide={() => setShowQrModal(false)}>
         <Modal.Header closeButton>

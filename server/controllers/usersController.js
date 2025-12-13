@@ -22,6 +22,11 @@ const ensureArrays = (user) => {
   if (!Array.isArray(user.coinsRedeemed)) user.coinsRedeemed = [];
 };
 
+const recomputeConvertible = (user) => {
+  const totalCoinsEarned = (user.efficiencyCoins?.length || 0) + (user.coinsRedeemed?.length || 0);
+  user.convertiblePoints = Math.max(0, (user.totalPoints || 0) - (totalCoinsEarned * 1000));
+};
+
 const addPointsAndConvert = async (userId, amount, meta = {}) => {
   const user = await User.findById(userId);
   if (!user) throw new Error('User not found');
@@ -46,19 +51,6 @@ const addPointsAndConvert = async (userId, amount, meta = {}) => {
   // تحديث المستوى الحالي بعد إضافة النقاط
   user.level = getLevel(user.totalPoints);
 
-  // تحويل النقاط إلى عملات (كل 1000 نقطة = عملة واحدة بمستوى لحظة الكسب)
-  while (user.convertiblePoints >= 1000) {
-    user.convertiblePoints -= 1000;
-    const coinLevel = user.level;
-    user.efficiencyCoins.push({
-      level: coinLevel,
-      value: getCoinValue(coinLevel),
-      earnedAt: new Date(),
-      sourcePointId: pointId,
-      receiptNumber: meta.receiptNumber || null
-    });
-  }
-
   await user.save();
   return user;
 };
@@ -77,9 +69,7 @@ const removePointsAndCoins = async (userId, matchFn) => {
 
   user.totalPoints = Math.max(0, (user.totalPoints || 0) - (targetPoint.amount || 0));
 
-  // إعادة حساب الرصيد القابل للتحويل: إجمالي النقاط - العملات المكتسبة (متاحة + مصروفة) *1000
-  const totalCoinsEarned = (user.efficiencyCoins?.length || 0) + (user.coinsRedeemed?.length || 0);
-  user.convertiblePoints = Math.max(0, user.totalPoints - (totalCoinsEarned * 1000));
+  recomputeConvertible(user);
 
   user.level = getLevel(user.totalPoints);
   user.points = user.points.filter(p => p._id?.toString() !== pointIdStr);
@@ -172,6 +162,10 @@ exports.getPointsSummary = async (req, res) => {
     if (!user) return res.status(404).json({ msg: 'User not found' });
     ensureArrays(user);
 
+    // تأكد من اتساق الرصيد القابل للتحويل مع إجمالي النقاط والعملات
+    recomputeConvertible(user);
+    await user.save();
+
     const totalPoints = user.totalPoints || 0;
     const level = user.level || getLevel(totalPoints);
     const currentLevelStart = LEVEL_THRESHOLDS[level - 1] || 0;
@@ -203,6 +197,49 @@ exports.getPointsSummary = async (req, res) => {
         nextLevelTarget,
         percent: progressPercent
       }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports.convertPointsToCoins = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    ensureArrays(user);
+
+    const convertible = Math.floor((user.convertiblePoints || 0) / 1000);
+    if (convertible < 1) return res.status(400).json({ msg: 'لا توجد نقاط كافية للتحويل' });
+
+    const coinLevel = getLevel(user.totalPoints || 0);
+    const coinValue = getCoinValue(coinLevel);
+    const mintedCoins = [];
+
+    for (let i = 0; i < convertible; i += 1) {
+      mintedCoins.push({
+        level: coinLevel,
+        value: coinValue,
+        earnedAt: new Date(),
+        sourcePointId: null,
+        receiptNumber: null
+      });
+    }
+
+    user.efficiencyCoins.push(...mintedCoins);
+    recomputeConvertible(user);
+    user.level = getLevel(user.totalPoints || 0);
+
+    await user.save();
+
+    res.json({
+      msg: 'تم تحويل النقاط إلى عملات',
+      mintedCoins: mintedCoins.length,
+      coinLevel,
+      coinValue,
+      convertiblePoints: user.convertiblePoints || 0,
+      totalCoins: user.efficiencyCoins.length
     });
   } catch (err) {
     console.error(err);
@@ -243,6 +280,9 @@ exports.redeemCoins = async (req, res) => {
 
     // إضافة المكافأة للراتب الحالي
     user.remainingSalary = (user.remainingSalary || 0) + totalRedeemedValue;
+
+    // إعادة حساب الرصيد القابل للتحويل بعد استهلاك العملات
+    recomputeConvertible(user);
 
     await user.save();
 
