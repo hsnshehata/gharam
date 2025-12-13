@@ -161,6 +161,14 @@ function HallSupervision() {
       hairStraighteningBookings: prev.hairStraighteningBookings.map(b => (normalizeId(b._id) === targetId ? updatedBooking : b)),
       photographyBookings: prev.photographyBookings.map(b => (normalizeId(b._id) === targetId ? updatedBooking : b))
     }));
+
+    setSearchResult(prev => {
+      if (!prev) return prev;
+      if (prev.type === 'booking' && normalizeId(prev.data._id) === targetId) {
+        return { ...prev, data: updatedBooking };
+      }
+      return prev;
+    });
   };
 
   const handleAssign = async (type, recordId, serviceId) => {
@@ -181,7 +189,15 @@ function HallSupervision() {
       if (type === 'booking') {
         updateBookingState(res.data.booking);
       } else {
-        setInstantServices(prev => prev.map(s => (normalizeId(s._id) === normalizeId(recordId) ? res.data.instantService : s)));
+        const updatedInstant = res.data.instantService;
+        setInstantServices(prev => prev.map(s => (normalizeId(s._id) === normalizeId(recordId) ? updatedInstant : s)));
+        setSearchResult(prev => {
+          if (!prev) return prev;
+          if (prev.type === 'instant' && normalizeId(prev.data._id) === normalizeId(recordId)) {
+            return { ...prev, data: updatedInstant };
+          }
+          return prev;
+        });
       }
       showToast('تم التكليف وتسجيل النقاط بنجاح', 'success');
     } catch (err) {
@@ -202,7 +218,15 @@ function HallSupervision() {
       if (type === 'booking') {
         updateBookingState(res.data.booking);
       } else {
-        setInstantServices(prev => prev.map(s => (normalizeId(s._id) === normalizeId(recordId) ? res.data.instantService : s)));
+        const updatedInstant = res.data.instantService;
+        setInstantServices(prev => prev.map(s => (normalizeId(s._id) === normalizeId(recordId) ? updatedInstant : s)));
+        setSearchResult(prev => {
+          if (!prev) return prev;
+          if (prev.type === 'instant' && normalizeId(prev.data._id) === normalizeId(recordId)) {
+            return { ...prev, data: updatedInstant };
+          }
+          return prev;
+        });
       }
       showToast('تم سحب التكليف وإرجاع المهمة كغير منفذة', 'info');
     } catch (err) {
