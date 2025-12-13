@@ -264,17 +264,7 @@ function EmployeeDashboard({ user }) {
     <Container className="mt-5">
       <h2>لوحة الموظف</h2>
       <Row className="mb-3">
-        <Col md={6}>
-          <Form.Group>
-            <Form.Label>اختر التاريخ</Form.Label>
-            <Form.Control
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </Form.Group>
-        </Col>
-        <Col md={6}>
+        <Col md={12}>
           <Button variant="primary" onClick={handleOpenQrModal} className="mb-3">
             <FontAwesomeIcon icon={faQrcode} /> مسح الباركود
           </Button>
