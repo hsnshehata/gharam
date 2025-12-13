@@ -239,6 +239,69 @@ body.theme-dark .table-hover > tbody > tr:hover { background-color: rgba(255,255
 }
 .refresh-btn:hover { background: var(--nav-link-hover); color: var(--text); }
 
+/* Toasts: fixed top center, clear stacking */
+.toast-portal {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 1400;
+  width: min(420px, calc(100% - 24px));
+  pointer-events: none;
+}
+
+.toast-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px 14px 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  animation: toast-enter 180ms ease-out;
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+.toast-icon {
+  font-size: 18px;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.toast-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-title {
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.toast-message {
+  font-size: 0.95rem;
+  color: var(--muted);
+  word-break: break-word;
+}
+
+.toast-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.toast-close:hover { color: var(--text); }
+
 .toast-progress {
   position: absolute;
   bottom: 0;
