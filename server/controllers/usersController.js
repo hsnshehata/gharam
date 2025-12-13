@@ -186,6 +186,7 @@ exports.getPointsSummary = async (req, res) => {
       level,
       currentCoinValue: getCoinValue(level),
       convertiblePoints: user.convertiblePoints || 0,
+      remainingSalary: user.remainingSalary || 0,
       coins: {
         totalCount: coins.length,
         totalValue: coinsTotalValue,

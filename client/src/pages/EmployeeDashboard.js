@@ -278,6 +278,7 @@ function EmployeeDashboard({ user }) {
   const topCoinColor = getCoinColor(topCoinLevel);
   const convertiblePoints = pointsSummary?.convertiblePoints || 0;
   const canConvert = convertiblePoints >= 1000;
+  const remainingSalary = pointsSummary?.remainingSalary || 0;
 
   const executedServices = useMemo(() => {
     const employeeId = user?._id || user?.id;
@@ -442,6 +443,7 @@ function EmployeeDashboard({ user }) {
                   <div className="text-end">
                     <div className="small text-muted">قيمة العملة الحالية</div>
                     <div className="fw-bold">{formatNumber(pointsSummary.currentCoinValue)} جنيه</div>
+                    <div className="small text-muted mt-1">متبقي راتب الشهر: {formatNumber(remainingSalary)} جنيه</div>
                   </div>
                 </div>
 
