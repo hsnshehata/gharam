@@ -37,7 +37,9 @@ function HallSupervision() {
   const executedByName = (val) => {
     if (!val) return 'غير معروف';
     if (typeof val === 'object' && val.username) return val.username;
-    return 'غير معروف';
+    const id = normalizeId(val);
+    const found = users.find(u => normalizeId(u._id) === id);
+    return found?.username || 'غير معروف';
   };
 
   const loadData = useCallback(async () => {
@@ -153,10 +155,11 @@ function HallSupervision() {
   };
 
   const updateBookingState = (updatedBooking) => {
+    const targetId = normalizeId(updatedBooking._id);
     setBookings(prev => ({
-      makeupBookings: prev.makeupBookings.map(b => (b._id === updatedBooking._id ? updatedBooking : b)),
-      hairStraighteningBookings: prev.hairStraighteningBookings.map(b => (b._id === updatedBooking._id ? updatedBooking : b)),
-      photographyBookings: prev.photographyBookings.map(b => (b._id === updatedBooking._id ? updatedBooking : b))
+      makeupBookings: prev.makeupBookings.map(b => (normalizeId(b._id) === targetId ? updatedBooking : b)),
+      hairStraighteningBookings: prev.hairStraighteningBookings.map(b => (normalizeId(b._id) === targetId ? updatedBooking : b)),
+      photographyBookings: prev.photographyBookings.map(b => (normalizeId(b._id) === targetId ? updatedBooking : b))
     }));
   };
 
@@ -178,7 +181,7 @@ function HallSupervision() {
       if (type === 'booking') {
         updateBookingState(res.data.booking);
       } else {
-        setInstantServices(prev => prev.map(s => (s._id === recordId ? res.data.instantService : s)));
+        setInstantServices(prev => prev.map(s => (normalizeId(s._id) === normalizeId(recordId) ? res.data.instantService : s)));
       }
       showToast('تم التكليف وتسجيل النقاط بنجاح', 'success');
     } catch (err) {
@@ -199,7 +202,7 @@ function HallSupervision() {
       if (type === 'booking') {
         updateBookingState(res.data.booking);
       } else {
-        setInstantServices(prev => prev.map(s => (s._id === recordId ? res.data.instantService : s)));
+        setInstantServices(prev => prev.map(s => (normalizeId(s._id) === normalizeId(recordId) ? res.data.instantService : s)));
       }
       showToast('تم سحب التكليف وإرجاع المهمة كغير منفذة', 'info');
     } catch (err) {
