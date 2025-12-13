@@ -197,6 +197,13 @@ body.theme-dark .table-hover > tbody > tr:hover { background-color: rgba(255,255
 .scan-btn:hover { transform: translateY(-1px); box-shadow: 0 16px 32px rgba(0,0,0,0.2); }
 .scan-btn:active { transform: translateY(0); }
 
+.refresh-btn {
+  background: rgba(255,255,255,0.08);
+  color: #eaf4ff;
+  border-color: rgba(255,255,255,0.12);
+}
+.refresh-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
 .scan-btn-clean {
   display: grid;
   grid-template-columns: auto 1fr;

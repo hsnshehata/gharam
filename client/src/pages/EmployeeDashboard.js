@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table } from 'react-bootstrap';
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faCheck, faQrcode, faGift, faCoins, faBolt } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faCheck, faQrcode, faGift, faCoins, faBolt, faRotateRight } from '@fortawesome/free-solid-svg-icons';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useToast } from '../components/ToastProvider';
 
@@ -34,6 +34,7 @@ function EmployeeDashboard({ user }) {
   const [converting, setConverting] = useState(false);
   const [convertCelebration, setConvertCelebration] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
+  const [loadingData, setLoadingData] = useState(false);
   const qrCodeScanner = useRef(null);
   const { showToast } = useToast();
 
@@ -43,6 +44,28 @@ function EmployeeDashboard({ user }) {
     });
     setPointsSummary(pointsRes.data);
   }, []);
+
+  const fetchAllData = useCallback(async () => {
+    setLoadingData(true);
+    try {
+      const [bookingsRes, instantRes] = await Promise.all([
+        axios.get(`/api/today-work?date=${date}`, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        }),
+        axios.get(`/api/instant-services?date=${date}`, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        })
+      ]);
+      await fetchPointsSummary();
+      setBookings(bookingsRes.data || { makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
+      setInstantServices(instantRes.data.instantServices || []);
+    } catch (err) {
+      console.error('Fetch error:', err.response?.data || err.message);
+      showToast('خطأ في جلب البيانات', 'danger');
+    } finally {
+      setLoadingData(false);
+    }
+  }, [date, fetchPointsSummary, showToast]);
 
   const formatNumber = useCallback((num = 0) => new Intl.NumberFormat('en-US').format(Math.max(0, num)), []);
 
@@ -71,26 +94,8 @@ function EmployeeDashboard({ user }) {
   }, [user]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [bookingsRes, instantRes] = await Promise.all([
-          axios.get(`/api/today-work?date=${date}`, {
-            headers: { 'x-auth-token': localStorage.getItem('token') }
-          }),
-          axios.get(`/api/instant-services?date=${date}`, {
-            headers: { 'x-auth-token': localStorage.getItem('token') }
-          })
-        ]);
-        await fetchPointsSummary();
-        setBookings(bookingsRes.data || { makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
-        setInstantServices(instantRes.data.instantServices || []);
-      } catch (err) {
-        console.error('Fetch error:', err.response?.data || err.message);
-        showToast('خطأ في جلب البيانات', 'danger');
-      }
-    };
-    fetchData();
-  }, [date, showToast, fetchPointsSummary]);
+    fetchAllData();
+  }, [fetchAllData]);
 
   const handleReceiptSearch = useCallback(async (searchValue) => {
     try {
@@ -251,7 +256,7 @@ function EmployeeDashboard({ user }) {
         setInstantServices(prev => prev.map(s => (s._id === recordId ? res.data.instantService : s)));
       }
 
-      await fetchPointsSummary();
+      await fetchAllData();
     } catch (err) {
       console.error('Execute service error:', err.response?.data || err.message);
       showToast(err.response?.data?.msg || 'خطأ في تنفيذ الخدمة', 'danger');
@@ -350,6 +355,12 @@ function EmployeeDashboard({ user }) {
     <Container className="mt-5">
       <Row className="mb-4 justify-content-center">
         <Col md={8} lg={6}>
+          <div className="d-flex justify-content-end mb-2">
+            <Button variant="outline-light" className="refresh-btn" onClick={fetchAllData} disabled={loadingData}>
+              <FontAwesomeIcon icon={faRotateRight} className="me-2" />
+              {loadingData ? 'جاري التحديث...' : 'تحديث البيانات'}
+            </Button>
+          </div>
           <div className="scan-panel text-center">
             <Button variant="primary" onClick={handleOpenQrModal} className="scan-btn scan-btn-clean">
               <span className="scan-icon-shell">
