@@ -9,7 +9,6 @@ function Login({ setUser }) {
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [remember, setRemember] = useState(false);
-  const [allowBootstrapAdmin, setAllowBootstrapAdmin] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -48,29 +47,6 @@ function Login({ setUser }) {
     } catch (err) {
       console.error('Login error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في تسجيل الدخول');
-      if (err.response?.status === 400 && err.response?.data?.msg === 'Invalid credentials') {
-        // إظهار زر إنشاء أدمن طوارئ لو الحسابات اتحذفت
-        setAllowBootstrapAdmin(true);
-      }
-    }
-  };
-
-  const handleBootstrapAdmin = async () => {
-    setMessage('');
-    try {
-      const res = await axios.post('/api/auth/register', {
-        username: 'admin',
-        password: '662015',
-        role: 'admin',
-        monthlySalary: 0,
-        phone: ''
-      });
-      localStorage.setItem('token', res.data.token);
-      setUser(res.data.user);
-      navigate('/dashboard');
-    } catch (err) {
-      console.error('Bootstrap admin error:', err.response?.data || err.message);
-      setMessage(err.response?.data?.msg || 'تعذر إنشاء الأدمن');
     }
   };
 
@@ -109,16 +85,6 @@ function Login({ setUser }) {
           </div>
           {message && <div className="alert alert-danger mt-2">{message}</div>}
           <Button variant="primary" type="submit" className="mt-3">تسجيل الدخول</Button>
-          {allowBootstrapAdmin && (
-            <Button
-              variant="outline-secondary"
-              type="button"
-              className="mt-3 w-100"
-              onClick={handleBootstrapAdmin}
-            >
-              إنشاء أدمن طوارئ (admin / 662015)
-            </Button>
-          )}
         </Form>
       </div>
     </Container>
