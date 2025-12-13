@@ -359,6 +359,70 @@ body.theme-dark .table-hover > tbody > tr:hover { background-color: rgba(255,255
   .dashboard-hero { grid-template-columns: 1fr; }
 }
 
+/* زر الباركود والبحث */
+.scan-panel {
+  background: linear-gradient(135deg, rgba(2,128,144,0.08), rgba(2,128,144,0.02));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 10px 22px var(--shadow);
+}
+
+.scan-btn {
+  width: 100%;
+  max-width: 360px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  background: linear-gradient(135deg, #6a7cff, #8ef0c0);
+  border: none;
+  color: #0d1b2a;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 12px 24px rgba(0,0,0,0.16);
+}
+
+.scan-pulse {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(255,255,255,0.3), transparent 60%);
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.98); opacity: 0.8; }
+  50% { transform: scale(1.02); opacity: 0.4; }
+  100% { transform: scale(0.98); opacity: 0.8; }
+}
+
+.scan-panel .form-label { text-align: center; }
+.scan-panel .form-control { background: var(--surface); }
+
+/* كروت الخدمات المنفذة */
+.service-card {
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 28px var(--shadow);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(2,128,144,0.06), rgba(2,128,144,0.01));
+}
+
+.service-type {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.points-pill {
+  background: linear-gradient(135deg, #ffb347, #ffcc33);
+  color: #2c2c2c;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 999px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+}
+
 /* نقاط وكوينات الموظف */
 .points-card { overflow: hidden; }
 .points-top { gap: 16px; }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table } from 'react-bootstrap';
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -55,6 +55,13 @@ function EmployeeDashboard({ user }) {
   }, []);
 
   const getCoinColor = useCallback((level) => COIN_COLORS[level] || COIN_COLORS.default, []);
+
+  const isSameEmployee = useCallback((executedBy) => {
+    const employeeId = user?._id || user?.id;
+    const executedId = typeof executedBy === 'object' ? (executedBy?._id || executedBy?.id) : executedBy;
+    if (!employeeId || !executedId) return false;
+    return executedId.toString() === employeeId.toString();
+  }, [user]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -260,26 +267,97 @@ function EmployeeDashboard({ user }) {
   const convertiblePoints = pointsSummary?.convertiblePoints || 0;
   const canConvert = convertiblePoints >= 1000;
 
+  const executedServices = useMemo(() => {
+    const employeeId = user?._id || user?.id;
+    if (!employeeId) return [];
+
+    const collected = [];
+
+    const pushService = (payload) => collected.push({
+      receiptNumber: payload.receiptNumber || 'غير متاح',
+      serviceName: payload.serviceName || 'خدمة',
+      clientName: payload.clientName || '—',
+      points: payload.points || 0,
+      source: payload.source || 'booking'
+    });
+
+    const iterateBooking = (booking) => {
+      const receiptNumber = booking.receiptNumber;
+      const clientName = booking.clientName || '—';
+
+      (booking.packageServices || []).forEach((srv) => {
+        if (srv.executed && isSameEmployee(srv.executedBy)) {
+          const points = Math.round((srv.price || 0) * 0.15);
+          pushService({
+            receiptNumber,
+            serviceName: srv.name || 'خدمة باكدج',
+            clientName,
+            points,
+            source: 'booking'
+          });
+        }
+      });
+
+      if (booking.hairStraightening && booking.hairStraighteningExecuted && isSameEmployee(booking.hairStraighteningExecutedBy)) {
+        const points = Math.round((booking.hairStraighteningPrice || 0) * 0.15);
+        pushService({
+          receiptNumber,
+          serviceName: 'فرد الشعر',
+          clientName,
+          points,
+          source: 'booking'
+        });
+      }
+    };
+
+    (bookings.makeupBookings || []).forEach(iterateBooking);
+    (bookings.hairStraighteningBookings || []).forEach(iterateBooking);
+    (bookings.photographyBookings || []).forEach(iterateBooking);
+
+    (instantServices || []).forEach((svc) => {
+      const receiptNumber = svc.receiptNumber;
+      (svc.services || []).forEach((srv) => {
+        if (srv.executed && isSameEmployee(srv.executedBy)) {
+          const points = Math.round((srv.price || 0) * 0.15);
+          pushService({
+            receiptNumber,
+            serviceName: srv.name || 'خدمة فورية',
+            clientName: '—',
+            points,
+            source: 'instant'
+          });
+        }
+      });
+    });
+
+    return collected.sort((a, b) => (b.receiptNumber || '').localeCompare(a.receiptNumber || ''));
+  }, [bookings, instantServices, isSameEmployee, user]);
+
   return (
     <Container className="mt-5">
       <h2>لوحة الموظف</h2>
-      <Row className="mb-3">
-        <Col md={12}>
-          <Button variant="primary" onClick={handleOpenQrModal} className="mb-3">
-            <FontAwesomeIcon icon={faQrcode} /> مسح الباركود
-          </Button>
-          <Form onSubmit={handleReceiptSubmit}>
-            <Form.Group>
-              <Form.Label>إدخال رقم الوصل</Form.Label>
-              <Form.Control
-                type="text"
-                value={receiptNumber}
-                onChange={(e) => setReceiptNumber(e.target.value)}
-                placeholder="أدخل رقم الوصل"
-              />
-            </Form.Group>
-            <Button type="submit" className="mt-3">بحث</Button>
-          </Form>
+      <Row className="mb-4 justify-content-center">
+        <Col md={8} lg={6}>
+          <div className="scan-panel text-center">
+            <Button variant="primary" onClick={handleOpenQrModal} className="scan-btn">
+              <span className="scan-pulse" />
+              <FontAwesomeIcon icon={faQrcode} className="me-2" /> مسح الباركود
+            </Button>
+            <Form onSubmit={handleReceiptSubmit} className="mt-3">
+              <Form.Group>
+                <Form.Label>أو اكتب رقم الوصل</Form.Label>
+                <div className="d-flex gap-2">
+                  <Form.Control
+                    type="text"
+                    value={receiptNumber}
+                    onChange={(e) => setReceiptNumber(e.target.value)}
+                    placeholder="أدخل رقم الوصل"
+                  />
+                  <Button type="submit" variant="outline-primary">بحث</Button>
+                </div>
+              </Form.Group>
+            </Form>
+          </div>
         </Col>
       </Row>
 
@@ -364,115 +442,26 @@ function EmployeeDashboard({ user }) {
         </Card.Body>
       </Card>
 
-      <h3>حجوزات الميك آب</h3>
-      {bookings.makeupBookings.length === 0 && <Alert variant="info">لا توجد حجوزات ميك آب لهذا اليوم</Alert>}
+      <h3 className="mb-3">الخدمات اللي نفذتها النهارده</h3>
+      {executedServices.length === 0 && (
+        <Alert variant="info">لسه ما نفذت خدمات النهارده</Alert>
+      )}
       <Row>
-        {bookings.makeupBookings.map(booking => (
-          <Col md={4} key={booking._id} className="mb-3">
-            <Card>
+        {executedServices.map((srv, idx) => (
+          <Col md={4} key={`${srv.receiptNumber}-${idx}`} className="mb-3">
+            <Card className="service-card">
               <Card.Body>
-                <Card.Title>
-                  {booking.clientName} ({new Date(booking.eventDate).toDateString() === new Date(date).toDateString() ? 'زفاف/شبكة' : 'حنة'})
-                  {Number(booking.remaining) === 0 && (
-                    <span className="badge bg-success ms-2">مدفوع بالكامل</span>
-                  )}
-                </Card.Title>
-                <Card.Text>
-                  رقم الهاتف: {booking.clientPhone}<br />
-                  المدفوع: {booking.deposit} جنيه<br />
-                  المتبقي: {booking.remaining} جنيه<br />
-                  رقم الوصل: {booking.receiptNumber}
-                </Card.Text>
-                <Button variant="primary" onClick={() => handleShowDetails(booking, 'booking')}>
-                  <FontAwesomeIcon icon={faEye} /> عرض التفاصيل
-                </Button>
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <span className="service-type">{srv.source === 'instant' ? 'خدمة فورية' : 'باكدج'}</span>
+                  <span className="points-pill">+{formatNumber(srv.points)} نقطة</span>
+                </div>
+                <Card.Title className="mb-2">{srv.serviceName}</Card.Title>
+                <Card.Text className="mb-1">رقم الوصل: {srv.receiptNumber}</Card.Text>
+                <Card.Text className="text-muted small">العروسة: {srv.clientName}</Card.Text>
               </Card.Body>
             </Card>
           </Col>
         ))}
-      </Row>
-
-      <h3>حجوزات فرد الشعر</h3>
-      {bookings.hairStraighteningBookings.length === 0 && <Alert variant="info">لا توجد حجوزات فرد شعر لهذا اليوم</Alert>}
-      <Row>
-        {bookings.hairStraighteningBookings.map(booking => (
-          <Col md={4} key={booking._id} className="mb-3">
-            <Card>
-              <Card.Body>
-                <Card.Title>
-                  {booking.clientName}
-                  {Number(booking.remaining) === 0 && (
-                    <span className="badge bg-success ms-2">مدفوع بالكامل</span>
-                  )}
-                </Card.Title>
-                <Card.Text>
-                  رقم الهاتف: {booking.clientPhone}<br />
-                  المدفوع: {booking.deposit} جنيه<br />
-                  المتبقي: {booking.remaining} جنيه<br />
-                  رقم الوصل: {booking.receiptNumber}
-                </Card.Text>
-                <Button variant="primary" onClick={() => handleShowDetails(booking, 'booking')}>
-                  <FontAwesomeIcon icon={faEye} /> عرض التفاصيل
-                </Button>
-              </Card.Body>
-            </Card>
-          </Col>
-        ))}
-      </Row>
-
-      <h3>حجوزات التصوير</h3>
-      {bookings.photographyBookings.length === 0 && <Alert variant="info">لا توجد حجوزات تصوير لهذا اليوم</Alert>}
-      <Row>
-        {bookings.photographyBookings.map(booking => (
-          <Col md={4} key={booking._id} className="mb-3">
-            <Card>
-              <Card.Body>
-                <Card.Title>
-                  {booking.clientName} ({new Date(booking.eventDate).toDateString() === new Date(date).toDateString() ? 'زفاف/شبكة' : 'حنة'})
-                  {Number(booking.remaining) === 0 && (
-                    <span className="badge bg-success ms-2">مدفوع بالكامل</span>
-                  )}
-                </Card.Title>
-                <Card.Text>
-                  رقم الهاتف: {booking.clientPhone}<br />
-                  المدفوع: {booking.deposit} جنيه<br />
-                  المتبقي: {booking.remaining} جنيه<br />
-                  رقم الوصل: {booking.receiptNumber}
-                </Card.Text>
-                <Button variant="primary" onClick={() => handleShowDetails(booking, 'booking')}>
-                  <FontAwesomeIcon icon={faEye} /> عرض التفاصيل
-                </Button>
-              </Card.Body>
-            </Card>
-          </Col>
-        ))}
-      </Row>
-
-      <h3>الخدمات الفورية</h3>
-      {instantServices.length === 0 && <Alert variant="info">لا توجد خدمات فورية لهذا اليوم</Alert>}
-      <Row>
-        {instantServices.map(service => {
-          const executedService = service.services.find(srv => srv.executed && srv.executedBy);
-          const displayName = executedService ? executedService.executedBy.username : 'غير محدد';
-          return (
-            <Col md={4} key={service._id} className="mb-3">
-              <Card>
-                <Card.Body>
-                  <Card.Title>{displayName}</Card.Title>
-                  <Card.Text>
-                    رقم الوصل: {service.receiptNumber}<br />
-                    الخدمات: {service.services.map(srv => srv.name || 'غير معروف').join(', ') || 'غير محدد'}<br />
-                    الإجمالي: {service.total} جنيه<br />
-                    تاريخ: {new Date(service.createdAt).toLocaleDateString()}
-                  </Card.Text>
-                  <Button variant="primary" onClick={() => handleShowDetails(service, 'instant')}>
-                    <FontAwesomeIcon icon={faEye} /> عرض التفاصيل
-                  </Button>
-                </Card.Body>
-              </Card>
-            </Col>
-          );
-        })}
       </Row>
 
       <Modal show={showRedeemModal} onHide={() => setShowRedeemModal(false)}>
