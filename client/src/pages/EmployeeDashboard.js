@@ -356,12 +356,6 @@ function EmployeeDashboard({ user }) {
     <Container className="mt-5">
       <Row className="mb-4 justify-content-center">
         <Col md={8} lg={6}>
-          <div className="d-flex justify-content-end mb-2">
-            <Button variant="outline-light" className="refresh-btn" onClick={fetchAllData} disabled={loadingData}>
-              <FontAwesomeIcon icon={faRotateRight} className="me-2" />
-              {loadingData ? 'جاري التحديث...' : 'تحديث البيانات'}
-            </Button>
-          </div>
           <div className="scan-panel text-center">
             <Button variant="primary" onClick={handleOpenQrModal} className="scan-btn simple-scan-btn">
               <FontAwesomeIcon icon={faQrcode} className="me-2" />
@@ -467,7 +461,18 @@ function EmployeeDashboard({ user }) {
         </Card.Body>
       </Card>
 
-      <h3 className="mb-3">الخدمات اللي نفذتها النهارده</h3>
+      <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h3 className="mb-0">الخدمات اللي نفذتها النهارده</h3>
+        <Button
+          variant="outline-light"
+          className="refresh-btn"
+          onClick={fetchAllData}
+          disabled={loadingData}
+        >
+          <FontAwesomeIcon icon={faRotateRight} className="me-2" />
+          {loadingData ? 'جاري التحديث...' : 'تحديث البيانات'}
+        </Button>
+      </div>
       {executedServices.length === 0 && (
         <Alert variant="info">لسه ما نفذت خدمات النهارده</Alert>
       )}
