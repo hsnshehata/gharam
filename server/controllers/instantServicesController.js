@@ -41,34 +41,20 @@ exports.addInstantService = async (req, res) => {
 
     await instantService.save();
 
-    // إضافة النقاط للموظف لو فيه employeeId
+    // إضافة النقاط والعملة لو فيه employeeId (لكل خدمة منفذة)
     if (employeeId) {
-      const user = await User.findById(employeeId);
-      if (!user) {
-        console.error('User not found:', employeeId);
-        return res.status(404).json({ msg: 'الموظف غير موجود' });
+      for (const srv of formattedServices) {
+        if (srv.executed) {
+          const pointsForService = srv.price * 0.15;
+          await addPointsAndConvertInternal(employeeId, pointsForService, {
+            bookingId: null,
+            serviceId: srv._id,
+            serviceName: srv.name,
+            instantServiceId: instantService._id,
+            receiptNumber
+          });
+        }
       }
-      if (!Array.isArray(user.points)) {
-        console.warn(`Points field for user ${employeeId} is not an array (type: ${typeof user.points}), fixing it`);
-        await User.findByIdAndUpdate(employeeId, { $set: { points: [] } });
-      }
-      await User.findByIdAndUpdate(employeeId, {
-          $push: {
-            points: {
-              $each: formattedServices.map(srv => ({
-                amount: srv.price * 0.15,
-                date: new Date(),
-                bookingId: null,
-                serviceId: srv._id,
-                serviceName: srv.name,
-                instantServiceId: instantService._id,
-                receiptNumber
-              })),
-              $position: 0
-            }
-          }
-      });
-      console.log(`Points added to user ${employeeId}: ${totalPoints}`);
     }
 
     const populatedService = await InstantService.findById(instantService._id)
@@ -124,33 +110,20 @@ exports.updateInstantService = async (req, res) => {
       return res.status(404).json({ msg: 'الخدمة الفورية غير موجودة' });
     }
 
-    // إضافة النقاط للموظف لو فيه employeeId
+    // إضافة النقاط والعملة لو فيه employeeId (لكل خدمة منفذة)
     if (employeeId) {
-      const user = await User.findById(employeeId);
-      if (!user) {
-        console.error('User not found:', employeeId);
-        return res.status(404).json({ msg: 'الموظف غير موجود' });
+      for (const srv of formattedServices) {
+        if (srv.executed) {
+          const pointsForService = srv.price * 0.15;
+          await addPointsAndConvertInternal(employeeId, pointsForService, {
+            bookingId: null,
+            serviceId: srv._id,
+            serviceName: srv.name,
+            instantServiceId: instantService._id,
+            receiptNumber: instantService.receiptNumber
+          });
+        }
       }
-      if (!Array.isArray(user.points)) {
-        console.warn(`Points field for user ${employeeId} is not an array (type: ${typeof user.points}), fixing it`);
-        await User.findByIdAndUpdate(employeeId, { $set: { points: [] } });
-      }
-      await User.findByIdAndUpdate(employeeId, {
-          $push: {
-            points: {
-              $each: formattedServices.map(srv => ({
-                amount: srv.price * 0.15,
-                date: new Date(),
-                bookingId: null,
-                serviceId: srv._id,
-                serviceName: srv.name,
-                instantServiceId: instantService._id,
-                receiptNumber: instantService.receiptNumber
-              }))
-            }
-          }
-      });
-      console.log(`Points added to user ${employeeId}: ${totalPoints}`);
     }
 
     return res.json({ msg: 'تم تعديل الخدمة الفورية بنجاح', instantService, points: totalPoints });
