@@ -351,11 +351,14 @@ function EmployeeDashboard({ user }) {
       <Row className="mb-4 justify-content-center">
         <Col md={8} lg={6}>
           <div className="scan-panel text-center">
-            <Button variant="primary" onClick={handleOpenQrModal} className="scan-btn">
-              <span className="barcode-icon-wrap">
-                <FontAwesomeIcon icon={faQrcode} className="barcode-icon" />
+            <Button variant="primary" onClick={handleOpenQrModal} className="scan-btn scan-btn-clean">
+              <span className="scan-icon-shell">
+                <FontAwesomeIcon icon={faQrcode} className="scan-icon" />
               </span>
-              <span className="scan-text">مسح الباركود</span>
+              <span className="scan-labels">
+                <span className="scan-title">مسح الباركود</span>
+                <span className="scan-sub">افتح الكاميرا وامسح</span>
+              </span>
             </Button>
             <Form onSubmit={handleReceiptSubmit} className="mt-3">
               <Form.Group>
