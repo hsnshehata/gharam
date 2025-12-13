@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 
 const LEVEL_THRESHOLDS = [0, 3000, 8000, 18000, 38000, 73000, 118000, 178000, 268000, 418000];
+const COIN_VALUES = [0, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600];
 const MAX_LEVEL = 10;
 
 const getLevel = (totalPoints = 0) => {
@@ -14,7 +15,10 @@ const getLevel = (totalPoints = 0) => {
   return 1;
 };
 
-const getCoinValue = (level) => Math.min(level, MAX_LEVEL) * 100;
+const getCoinValue = (level) => {
+  const lvl = Math.min(level, MAX_LEVEL);
+  return COIN_VALUES[lvl] || 100;
+};
 
 const ensureArrays = (user) => {
   if (!Array.isArray(user.points)) user.points = [];
