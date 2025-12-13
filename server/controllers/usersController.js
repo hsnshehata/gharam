@@ -1,5 +1,92 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose');
+
+const LEVEL_THRESHOLDS = [0, 3000, 8000, 18000, 38000, 73000, 118000, 178000, 268000, 418000];
+const MAX_LEVEL = 10;
+
+const getLevel = (totalPoints = 0) => {
+  for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i -= 1) {
+    if (totalPoints >= LEVEL_THRESHOLDS[i]) {
+      return Math.min(i + 1, MAX_LEVEL);
+    }
+  }
+  return 1;
+};
+
+const getCoinValue = (level) => Math.min(level, MAX_LEVEL) * 100;
+
+const ensureArrays = (user) => {
+  if (!Array.isArray(user.points)) user.points = [];
+  if (!Array.isArray(user.efficiencyCoins)) user.efficiencyCoins = [];
+  if (!Array.isArray(user.coinsRedeemed)) user.coinsRedeemed = [];
+};
+
+const addPointsAndConvert = async (userId, amount, meta = {}) => {
+  const user = await User.findById(userId);
+  if (!user) throw new Error('User not found');
+  ensureArrays(user);
+
+  const pointId = new mongoose.Types.ObjectId();
+  const point = {
+    _id: pointId,
+    amount,
+    date: new Date(),
+    bookingId: meta.bookingId || null,
+    serviceId: meta.serviceId || null,
+    serviceName: meta.serviceName || null,
+    instantServiceId: meta.instantServiceId || null,
+    receiptNumber: meta.receiptNumber || null
+  };
+
+  user.points.push(point);
+  user.totalPoints = (user.totalPoints || 0) + amount;
+  user.convertiblePoints = (user.convertiblePoints || 0) + amount;
+
+  // تحديث المستوى الحالي بعد إضافة النقاط
+  user.level = getLevel(user.totalPoints);
+
+  // تحويل النقاط إلى عملات (كل 1000 نقطة = عملة واحدة بمستوى لحظة الكسب)
+  while (user.convertiblePoints >= 1000) {
+    user.convertiblePoints -= 1000;
+    const coinLevel = user.level;
+    user.efficiencyCoins.push({
+      level: coinLevel,
+      value: getCoinValue(coinLevel),
+      earnedAt: new Date(),
+      sourcePointId: pointId,
+      receiptNumber: meta.receiptNumber || null
+    });
+  }
+
+  await user.save();
+  return user;
+};
+
+const removePointsAndCoins = async (userId, matchFn) => {
+  const user = await User.findById(userId);
+  if (!user) throw new Error('User not found');
+  ensureArrays(user);
+
+  const targetPoint = user.points.find(matchFn);
+  if (!targetPoint) return user;
+
+  // احذف العملات المرتبطة بنفس الـ point
+  const pointIdStr = targetPoint._id?.toString();
+  user.efficiencyCoins = user.efficiencyCoins.filter(c => c.sourcePointId?.toString() !== pointIdStr);
+
+  user.totalPoints = Math.max(0, (user.totalPoints || 0) - (targetPoint.amount || 0));
+
+  // إعادة حساب الرصيد القابل للتحويل: إجمالي النقاط - العملات المكتسبة (متاحة + مصروفة) *1000
+  const totalCoinsEarned = (user.efficiencyCoins?.length || 0) + (user.coinsRedeemed?.length || 0);
+  user.convertiblePoints = Math.max(0, user.totalPoints - (totalCoinsEarned * 1000));
+
+  user.level = getLevel(user.totalPoints);
+  user.points = user.points.filter(p => p._id?.toString() !== pointIdStr);
+
+  await user.save();
+  return user;
+};
 
 exports.addUser = async (req, res) => {
   const { username, password, confirmPassword, role, monthlySalary, phone } = req.body;
@@ -70,17 +157,8 @@ exports.getUsers = async (req, res) => {
 exports.addPoints = async (req, res) => {
   const { points, bookingId, serviceId } = req.body;
   try {
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ msg: 'User not found' });
-
-    user.points.push({
-      amount: points,
-      date: new Date(),
-      bookingId: bookingId || null,
-      serviceId: serviceId || null
-    });
-    await user.save();
-    res.json({ msg: 'Points added successfully', user: { id: user.id, username: user.username, points: user.points } });
+    const user = await addPointsAndConvert(req.user.id, points, { bookingId, serviceId, serviceName: null, receiptNumber: null });
+    res.json({ msg: 'Points added successfully', user: { id: user.id, username: user.username, points: user.points, totalPoints: user.totalPoints, efficiencyCoins: user.efficiencyCoins } });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Server error' });
@@ -90,47 +168,99 @@ exports.addPoints = async (req, res) => {
 exports.getPointsSummary = async (req, res) => {
   try {
     const userId = req.user.id;
-    const currentDate = new Date();
-    const currentMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    const lastMonthStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0);
-
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ msg: 'User not found' });
+    ensureArrays(user);
 
-    // نقاط الشهر الحالي
-    const currentMonthPoints = user.points
-      .filter(point => point.date >= currentMonthStart && point.date <= currentDate)
-      .reduce((sum, point) => sum + point.amount, 0);
+    const totalPoints = user.totalPoints || 0;
+    const level = user.level || getLevel(totalPoints);
+    const currentLevelStart = LEVEL_THRESHOLDS[level - 1] || 0;
+    const nextLevelTarget = level >= MAX_LEVEL ? LEVEL_THRESHOLDS[MAX_LEVEL - 1] : LEVEL_THRESHOLDS[level];
+    const progressCurrent = Math.max(0, totalPoints - currentLevelStart);
+    const progressNeeded = level >= MAX_LEVEL ? 0 : Math.max(1, nextLevelTarget - currentLevelStart);
+    const progressPercent = level >= MAX_LEVEL ? 100 : Math.min(100, Math.round((progressCurrent / progressNeeded) * 100));
 
-    // نقاط الشهر الماضي
-    const lastMonthPoints = user.points
-      .filter(point => point.date >= lastMonthStart && point.date <= lastMonthEnd)
-      .reduce((sum, point) => sum + point.amount, 0);
-
-    // أعلى شهر
-    const pointsByMonth = {};
-    user.points.forEach(point => {
-      const date = new Date(point.date);
-      const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
-      if (!pointsByMonth[monthKey]) pointsByMonth[monthKey] = 0;
-      pointsByMonth[monthKey] += point.amount;
-    });
-
-    let highestMonth = { points: 0, month: '' };
-    Object.entries(pointsByMonth).forEach(([month, points]) => {
-      if (points > highestMonth.points) {
-        highestMonth = { points, month };
-      }
-    });
+    const coins = user.efficiencyCoins || [];
+    const coinsByLevel = coins.reduce((acc, c) => {
+      acc[c.level] = (acc[c.level] || 0) + 1;
+      return acc;
+    }, {});
+    const coinsTotalValue = coins.reduce((sum, c) => sum + (c.value || 0), 0);
 
     res.json({
-      currentMonth: currentMonthPoints,
-      lastMonth: lastMonthPoints,
-      highestMonth: { points: highestMonth.points, month: highestMonth.month || 'غير متوفر' }
+      totalPoints,
+      level,
+      currentCoinValue: getCoinValue(level),
+      convertiblePoints: user.convertiblePoints || 0,
+      coins: {
+        totalCount: coins.length,
+        totalValue: coinsTotalValue,
+        byLevel: coinsByLevel
+      },
+      progress: {
+        current: progressCurrent,
+        target: progressNeeded,
+        nextLevelTarget,
+        percent: progressPercent
+      }
     });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Server error' });
   }
 };
+
+exports.redeemCoins = async (req, res) => {
+  try {
+    const { count } = req.body;
+    if (!count || count <= 0) return res.status(400).json({ msg: 'حدد عدد العملات للاستبدال' });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    ensureArrays(user);
+
+    if (user.efficiencyCoins.length < count) {
+      return res.status(400).json({ msg: 'عدد العملات المتاحة أقل من المطلوب' });
+    }
+
+    // استهلاك الأقدم أولاً
+    const coinsToRedeem = user.efficiencyCoins
+      .slice(0, count)
+      .map(c => ({ ...c.toObject?.() || c }));
+
+    user.efficiencyCoins = user.efficiencyCoins.slice(count);
+
+    const totalRedeemedValue = coinsToRedeem.reduce((sum, c) => sum + (c.value || 0), 0);
+
+    coinsToRedeem.forEach(c => {
+      user.coinsRedeemed.push({
+        level: c.level,
+        value: c.value,
+        redeemedAt: new Date(),
+        sourcePointId: c.sourcePointId || null
+      });
+    });
+
+    // إضافة المكافأة للراتب الحالي
+    user.remainingSalary = (user.remainingSalary || 0) + totalRedeemedValue;
+
+    await user.save();
+
+    res.json({
+      msg: 'تم استبدال العملات وإضافتها للراتب الحالي',
+      redeemedCoins: coinsToRedeem.length,
+      totalValue: totalRedeemedValue,
+      remainingCoins: user.efficiencyCoins.length,
+      remainingSalary: user.remainingSalary
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+// Internal helpers for other controllers
+exports.addPointsAndConvertInternal = addPointsAndConvert;
+exports.removePointsAndCoinsInternal = removePointsAndCoins;
+exports.getLevelInternal = getLevel;
+exports.getCoinValueInternal = getCoinValue;

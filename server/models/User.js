@@ -7,6 +7,22 @@ const userSchema = new mongoose.Schema({
   monthlySalary: { type: Number, default: 0 },
   remainingSalary: { type: Number, default: 0 }, // المتبقي من الراتب
   phone: { type: String },
+  totalPoints: { type: Number, default: 0 }, // إجمالي النقاط التراكمية
+  convertiblePoints: { type: Number, default: 0 }, // الرصيد القابل للتحويل لعملات
+  level: { type: Number, default: 1 },
+  efficiencyCoins: [{
+    level: Number,
+    value: Number,
+    earnedAt: { type: Date, default: Date.now },
+    sourcePointId: { type: mongoose.Schema.Types.ObjectId },
+    receiptNumber: { type: String, default: null }
+  }],
+  coinsRedeemed: [{
+    level: Number,
+    value: Number,
+    redeemedAt: { type: Date, default: Date.now },
+    sourcePointId: { type: mongoose.Schema.Types.ObjectId, default: null }
+  }],
   points: [{
     amount: Number,
     date: Date,

@@ -18,41 +18,39 @@ function EmployeeDashboard({ user }) {
   const [showPointsModal, setShowPointsModal] = useState(false);
   const [pointsData, setPointsData] = useState(null);
   const [showQrModal, setShowQrModal] = useState(false);
-  const [pointsSummary, setPointsSummary] = useState({
-    currentMonth: 0,
-    lastMonth: 0,
-    highestMonth: { points: 0, month: '' }
-  });
+  const [pointsSummary, setPointsSummary] = useState(null);
+  const [redeemCount, setRedeemCount] = useState(1);
   const qrCodeScanner = useRef(null);
   const { showToast } = useToast();
+
+  const fetchPointsSummary = useCallback(async () => {
+    const pointsRes = await axios.get(`/api/users/points/summary`, {
+      headers: { 'x-auth-token': localStorage.getItem('token') }
+    });
+    setPointsSummary(pointsRes.data);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [bookingsRes, instantRes, pointsRes] = await Promise.all([
+        const [bookingsRes, instantRes] = await Promise.all([
           axios.get(`/api/today-work?date=${date}`, {
             headers: { 'x-auth-token': localStorage.getItem('token') }
           }),
           axios.get(`/api/instant-services?date=${date}`, {
             headers: { 'x-auth-token': localStorage.getItem('token') }
-          }),
-          axios.get(`/api/users/points/summary`, {
-            headers: { 'x-auth-token': localStorage.getItem('token') }
           })
         ]);
-        console.log('Today work response:', bookingsRes.data);
-        console.log('Instant services response:', instantRes.data);
-        console.log('Points summary:', pointsRes.data);
+        await fetchPointsSummary();
         setBookings(bookingsRes.data || { makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
         setInstantServices(instantRes.data.instantServices || []);
-        setPointsSummary(pointsRes.data);
       } catch (err) {
         console.error('Fetch error:', err.response?.data || err.message);
         showToast('خطأ في جلب البيانات', 'danger');
       }
     };
     fetchData();
-  }, [date, showToast]);
+  }, [date, showToast, fetchPointsSummary]);
 
   const handleReceiptSearch = useCallback(async (searchValue) => {
     try {
@@ -131,6 +129,23 @@ function EmployeeDashboard({ user }) {
     await handleReceiptSearch(receiptNumber);
   };
 
+  const handleRedeemCoins = async () => {
+    if (!redeemCount || redeemCount <= 0) {
+      showToast('اختار عدد العملات للاستبدال', 'warning');
+      return;
+    }
+    try {
+      const res = await axios.post('/api/users/redeem-coins', { count: redeemCount }, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      showToast(`تم استبدال ${res.data.redeemedCoins} عملة بقيمة ${res.data.totalValue} جنيه`, 'success');
+      await fetchPointsSummary();
+    } catch (err) {
+      console.error('Redeem error:', err.response?.data || err.message);
+      showToast(err.response?.data?.msg || 'تعذر استبدال العملات', 'danger');
+    }
+  };
+
   const handleExecuteService = async (serviceId, type, recordId) => {
     const employeeId = user?._id || user?.id;
     if (!employeeId) {
@@ -166,11 +181,7 @@ function EmployeeDashboard({ user }) {
         setInstantServices(prev => prev.map(s => (s._id === recordId ? res.data.instantService : s)));
       }
 
-      const pointsRes = await axios.get(`/api/users/points/summary`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      console.log('Updated points summary:', pointsRes.data);
-      setPointsSummary(pointsRes.data);
+      await fetchPointsSummary();
     } catch (err) {
       console.error('Execute service error:', err.response?.data || err.message);
       showToast(err.response?.data?.msg || 'خطأ في تنفيذ الخدمة', 'danger');
@@ -223,11 +234,47 @@ function EmployeeDashboard({ user }) {
       <Card className="mb-4">
         <Card.Body>
           <Card.Title>ملخص النقاط</Card.Title>
-          <Card.Text>
-            نقاط الشهر الحالي: {pointsSummary.currentMonth} نقطة<br />
-            نقاط الشهر الماضي: {pointsSummary.lastMonth} نقطة<br />
-            أعلى شهر: {pointsSummary.highestMonth.points} نقطة ({pointsSummary.highestMonth.month})
-          </Card.Text>
+          {pointsSummary ? (
+            <>
+              <Card.Text>
+                المستوى الحالي: {pointsSummary.level} (قيمة العملة: {pointsSummary.currentCoinValue} جنيه)<br />
+                إجمالي النقاط: {pointsSummary.totalPoints} نقطة<br />
+                العملات المتاحة: {pointsSummary.coins?.totalCount || 0} (قيمة إجمالية: {pointsSummary.coins?.totalValue || 0} جنيه)<br />
+                رصيد نقاط قابل للتحويل: {pointsSummary.convertiblePoints} نقطة
+              </Card.Text>
+              <div className="mb-3">
+                <div className="d-flex justify-content-between small mb-1">
+                  <span>التقدم للمستوى التالي</span>
+                  <span>{pointsSummary.progress?.percent || 0}%</span>
+                </div>
+                <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pointsSummary.progress?.percent || 0}>
+                  <div
+                    className="progress-bar"
+                    style={{ width: `${pointsSummary.progress?.percent || 0}%` }}
+                  />
+                </div>
+                <div className="small text-muted mt-1">
+                  متبقي: {Math.max(0, (pointsSummary.progress?.target || 0) - (pointsSummary.progress?.current || 0))} نقطة للوصول للمستوى التالي
+                </div>
+              </div>
+              <Form className="d-flex flex-wrap gap-2 align-items-end">
+                <Form.Group style={{ maxWidth: '180px' }}>
+                  <Form.Label>عدد العملات للاستبدال</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min={1}
+                    value={redeemCount}
+                    onChange={(e) => setRedeemCount(Number(e.target.value))}
+                  />
+                </Form.Group>
+                <Button variant="success" onClick={handleRedeemCoins} className="mt-2">
+                  استبدال العملات للراتب الحالي
+                </Button>
+              </Form>
+            </>
+          ) : (
+            <div>جارٍ التحميل...</div>
+          )}
         </Card.Body>
       </Card>
 

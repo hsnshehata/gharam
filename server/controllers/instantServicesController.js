@@ -1,6 +1,7 @@
 const InstantService = require('../models/InstantService');
 const Service = require('../models/Service');
 const User = require('../models/User');
+const { addPointsAndConvertInternal, removePointsAndCoinsInternal } = require('./usersController');
 
 exports.addInstantService = async (req, res) => {
   const { employeeId, services } = req.body;
@@ -256,18 +257,12 @@ exports.executeService = async (req, res) => {
     service.executedBy = employeeId;
     const points = service.price * 0.15;
 
-    await User.findByIdAndUpdate(employeeId, {
-      $push: {
-        points: {
-          amount: points,
-          date: new Date(),
-          bookingId: null,
-          serviceId,
-          serviceName: service.name || 'خدمة فورية',
-          instantServiceId: instantService._id,
-          receiptNumber: instantService.receiptNumber || null
-        }
-      }
+    await addPointsAndConvertInternal(employeeId, points, {
+      bookingId: null,
+      serviceId,
+      serviceName: service.name || 'خدمة فورية',
+      instantServiceId: instantService._id,
+      receiptNumber: instantService.receiptNumber || null
     });
 
     await instantService.save();
@@ -304,17 +299,9 @@ exports.resetService = async (req, res) => {
     const oldEmployeeId = service.executedBy;
     const points = service.price * 0.15;
 
-    await User.updateOne(
-      { _id: oldEmployeeId },
-      {
-        $pull: {
-          points: {
-            instantServiceId: id,
-            serviceId
-          }
-        }
-      }
-    );
+    await removePointsAndCoinsInternal(oldEmployeeId, (p) => (
+      p.instantServiceId?.toString() === id && p.serviceId?.toString() === serviceId
+    ));
 
     service.executed = false;
     service.executedBy = null;

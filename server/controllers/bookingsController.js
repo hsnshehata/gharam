@@ -2,6 +2,7 @@ const Booking = require('../models/Booking');
 const Service = require('../models/Service');
 const Package = require('../models/Package');
 const User = require('../models/User');
+const { addPointsAndConvertInternal, removePointsAndCoinsInternal } = require('./usersController');
 
 exports.addBooking = async (req, res) => {
   const {
@@ -308,18 +309,12 @@ exports.executeService = async (req, res) => {
       serviceName = service.name || 'خدمة باكدج';
     }
 
-    // إضافة النقاط للموظف مع اسم الخدمة ورقم الوصل
-    await User.findByIdAndUpdate(employeeId, {
-      $push: {
-        points: {
-          amount: points,
-          date: new Date(),
-          bookingId: id,
-          serviceId: serviceId === 'hairStraightening' ? null : serviceId,
-          serviceName,
-          receiptNumber: booking.receiptNumber || null
-        }
-      }
+    // إضافة النقاط وتحويلها لعملات عند الحاجة
+    await addPointsAndConvertInternal(employeeId, points, {
+      bookingId: id,
+      serviceId: serviceId === 'hairStraightening' ? null : serviceId,
+      serviceName,
+      receiptNumber: booking.receiptNumber || null
     });
 
     await booking.save();
@@ -364,17 +359,12 @@ exports.resetService = async (req, res) => {
     }
 
     if (oldEmployeeId) {
-      await User.updateOne(
-        { _id: oldEmployeeId },
-        {
-          $pull: {
-            points: {
-              bookingId: id,
-              serviceId: serviceId === 'hairStraightening' ? null : serviceId
-            }
-          }
-        }
-      );
+      await removePointsAndCoinsInternal(oldEmployeeId, (p) => (
+        p.bookingId?.toString() === id && (
+          (serviceId === 'hairStraightening' && !p.serviceId) ||
+          (serviceId !== 'hairStraightening' && p.serviceId && p.serviceId.toString() === serviceId)
+        )
+      ));
     }
 
     await booking.save();

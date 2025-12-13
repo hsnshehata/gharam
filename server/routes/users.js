@@ -9,5 +9,6 @@ router.delete('/:id', authenticate, usersController.deleteUser);
 router.get('/', authenticate, usersController.getUsers);
 router.post('/points', authenticate, usersController.addPoints);
 router.get('/points/summary', authenticate, usersController.getPointsSummary);
+router.post('/redeem-coins', authenticate, usersController.redeemCoins);
 
 module.exports = router;
