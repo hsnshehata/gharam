@@ -249,6 +249,9 @@ body.theme-dark .table-hover > tbody > tr:hover { background-color: rgba(255,255
   50% { transform: translateX(-10%); }
   100% { transform: translateX(100%); }
 }
+
+.toast-progress {
+  position: absolute;
   bottom: 0;
   left: 0;
   height: 3px;
