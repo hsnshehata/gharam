@@ -352,9 +352,6 @@ function EmployeeDashboard({ user }) {
         <Col md={8} lg={6}>
           <div className="scan-panel text-center">
             <Button variant="primary" onClick={handleOpenQrModal} className="scan-btn">
-              <span className="scan-pulse" />
-              <span className="scan-lines" aria-hidden="true" />
-              <span className="scan-code" aria-hidden="true" />
               <FontAwesomeIcon icon={faQrcode} className="me-2" /> مسح الباركود
             </Button>
             <Form onSubmit={handleReceiptSubmit} className="mt-3">
