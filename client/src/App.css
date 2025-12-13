@@ -190,6 +190,83 @@ body.theme-dark .table-hover > tbody > tr:hover { background-color: rgba(255,255
   background: transparent; border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; cursor: pointer;
 }
 
+/* Toasts: floating, always visible, animated */
+.toast-portal {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 4000;
+  width: min(480px, 92vw);
+  pointer-events: none;
+}
+
+.toast-card {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,255,255,0.85));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.12);
+  padding: 12px 14px;
+  backdrop-filter: blur(10px);
+  animation: toast-enter 220ms ease forwards;
+  position: relative;
+  overflow: hidden;
+}
+
+.toast-card .toast-icon { font-size: 18px; }
+.toast-card .toast-title { font-weight: 700; color: var(--text); }
+.toast-card .toast-message { color: var(--muted); font-size: 0.95rem; }
+
+.toast-card .toast-close {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 6px;
+  line-height: 1;
+}
+
+.toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  background: rgba(0,0,0,0.08);
+}
+
+.toast-progress::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--olive), #00c2ba);
+  animation: toast-progress var(--toast-duration, 3s) linear forwards;
+}
+
+.toast-card.toast-success { border-color: #2ecc71; }
+.toast-card.toast-danger { border-color: #e74c3c; }
+.toast-card.toast-warning { border-color: #f1c40f; }
+.toast-card.toast-info { border-color: #3498db; }
+
+@keyframes toast-enter {
+  from { transform: translate(-50%, -14px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+@keyframes toast-progress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
 /* Layout helpers for form rows */
 .form-row { display: flex; flex-wrap: wrap; gap: 10px; }
 .form-row > * { flex: 1 1 200px; }

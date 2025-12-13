@@ -1,5 +1,4 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { Toast, ToastContainer } from 'react-bootstrap';
 
 const ToastContext = createContext(null);
 
@@ -18,22 +17,40 @@ export const ToastProvider = ({ children }) => {
 
   const value = useMemo(() => ({ showToast }), [showToast]);
 
+  const badgeFor = (variant) => {
+    switch (variant) {
+      case 'danger':
+        return { icon: '⚠️', title: 'تنبيه' };
+      case 'warning':
+        return { icon: '⚡', title: 'ملاحظة' };
+      case 'info':
+        return { icon: 'ℹ️', title: 'معلومة' };
+      default:
+        return { icon: '✅', title: 'تم' };
+    }
+  };
+
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <ToastContainer position="top-end" className="p-3" style={{ zIndex: 2000 }}>
-        {toasts.map((toast) => (
-          <Toast
-            key={toast.id}
-            bg={toast.variant}
-            onClose={() => removeToast(toast.id)}
-            autohide
-            delay={toast.delay}
-          >
-            <Toast.Body className="text-white">{toast.message}</Toast.Body>
-          </Toast>
-        ))}
-      </ToastContainer>
+      <div className="toast-portal" aria-live="polite" aria-atomic="true">
+        {toasts.map((toast) => {
+          const meta = badgeFor(toast.variant);
+          return (
+            <div key={toast.id} className={`toast-card toast-${toast.variant || 'success'}`}>
+              <div className="toast-icon" aria-hidden="true">{meta.icon}</div>
+              <div className="toast-text">
+                <div className="toast-title">{meta.title}</div>
+                <div className="toast-message">{toast.message}</div>
+              </div>
+              <button className="toast-close" onClick={() => removeToast(toast.id)} aria-label="إغلاق">
+                ×
+              </button>
+              <div className="toast-progress" style={{ animationDuration: `${toast.delay}ms` }} />
+            </div>
+          );
+        })}
+      </div>
     </ToastContext.Provider>
   );
 };
