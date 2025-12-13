@@ -8,6 +8,7 @@ import { faPlus, faPrint, faEdit, faEye, faDollarSign, faTrash } from '@fortawes
 import ReceiptPrint, { printReceiptElement } from '../pages/ReceiptPrint';
 import { Link } from 'react-router-dom';
 import { useToast } from '../components/ToastProvider';
+import { getRecentEntries, saveRecentEntry } from '../utils/recentEntries';
 
 function Dashboard({ user }) {
   const [summary, setSummary] = useState({
@@ -42,14 +43,14 @@ function Dashboard({ user }) {
   const [currentReceipt, setCurrentReceipt] = useState(null);
   const [currentDetails, setCurrentDetails] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
-  const [installmentAmount, setInstallmentAmount] = useState(0);
+  const [installmentAmount, setInstallmentAmount] = useState('');
   const [bookingFormData, setBookingFormData] = useState({
     packageId: '', hennaPackageId: '', photographyPackageId: '', extraServices: [], returnedServices: [],
-    hairStraightening: 'no', hairStraighteningPrice: 0, hairStraighteningDate: '',
-    clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: 0
+    hairStraightening: 'no', hairStraighteningPrice: '', hairStraighteningDate: '',
+    clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: ''
   });
   const [instantServiceFormData, setInstantServiceFormData] = useState({ employeeId: '', services: [] });
-  const [expenseAdvanceFormData, setExpenseAdvanceFormData] = useState({ type: 'expense', details: '', amount: 0, userId: '' });
+  const [expenseAdvanceFormData, setExpenseAdvanceFormData] = useState({ type: 'expense', details: '', amount: '', userId: '' });
   const [packages, setPackages] = useState([]);
   const [services, setServices] = useState([]);
   const [users, setUsers] = useState([]);
@@ -63,6 +64,7 @@ function Dashboard({ user }) {
   const [instantSubmitting, setInstantSubmitting] = useState(false);
   const [expenseSubmitting, setExpenseSubmitting] = useState(false);
   const [installmentSubmitting, setInstallmentSubmitting] = useState(false);
+  const [recentEntries, setRecentEntries] = useState({});
 
   // Custom styles للـ react-select — neutralized to use CSS variables (black/white theme)
   const customStyles = {
@@ -173,6 +175,20 @@ function Dashboard({ user }) {
     })
   };
 
+  useEffect(() => {
+    const fields = ['clientName', 'clientPhone', 'city', 'expenseDetails'];
+    const loaded = {};
+    fields.forEach((field) => {
+      loaded[field] = getRecentEntries(field);
+    });
+    setRecentEntries(loaded);
+  }, []);
+
+  const rememberEntry = useCallback((field, value) => {
+    const updated = saveRecentEntry(field, value);
+    setRecentEntries((prev) => ({ ...prev, [field]: updated }));
+  }, []);
+
   const userOptions = useMemo(() => (
     users.map(user => ({
       value: user._id?.toString(),
@@ -253,10 +269,15 @@ function Dashboard({ user }) {
         if (srv) tempTotal -= srv.price;
       });
 
-      if (bookingFormData.hairStraightening === 'yes') tempTotal += parseFloat(bookingFormData.hairStraighteningPrice || 0);
+      const hairPrice = bookingFormData.hairStraightening === 'yes'
+        ? Number(bookingFormData.hairStraighteningPrice) || 0
+        : 0;
+      tempTotal += hairPrice;
+
+      const depositValue = Number(bookingFormData.deposit) || 0;
 
       setTotal(tempTotal);
-      setRemaining(tempTotal - bookingFormData.deposit);
+      setRemaining(tempTotal - depositValue);
     };
     calculateTotal();
   }, [bookingFormData, packages, services, selectedPackageServices]);
@@ -278,6 +299,8 @@ function Dashboard({ user }) {
     if (bookingSubmitting) return;
     const submitData = {
       ...bookingFormData,
+      deposit: Number(bookingFormData.deposit) || 0,
+      hairStraighteningPrice: bookingFormData.hairStraightening === 'yes' ? Number(bookingFormData.hairStraighteningPrice) || 0 : 0,
       packageId: bookingFormData.packageId || null,
       hennaPackageId: bookingFormData.hennaPackageId || null,
       photographyPackageId: bookingFormData.photographyPackageId || null,
@@ -307,8 +330,8 @@ function Dashboard({ user }) {
       }
       setBookingFormData({
         packageId: '', hennaPackageId: '', photographyPackageId: '', extraServices: [], returnedServices: [],
-        hairStraightening: 'no', hairStraighteningPrice: 0, hairStraighteningDate: '',
-        clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: 0
+        hairStraightening: 'no', hairStraighteningPrice: '', hairStraighteningDate: '',
+        clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: ''
       });
       setEditBooking(null);
     } catch (err) {
@@ -384,12 +407,14 @@ function Dashboard({ user }) {
     if (expenseSubmitting) return;
     setExpenseSubmitting(true);
     setShowExpenseAdvanceModal(false);
+    const expensePayload = { ...expenseAdvanceFormData, amount: Number(expenseAdvanceFormData.amount) || 0 };
     try {
-      const res = await axios.post('/api/expenses-advances', expenseAdvanceFormData, {
+      const res = await axios.post('/api/expenses-advances', expensePayload, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       const typeLabel = res.data.type === 'expense' ? 'المصروف' : res.data.type === 'advance' ? 'السلفة' : 'الخصم الإداري';
       setMessage(`تم إضافة ${typeLabel} بنجاح`);
+      setExpenseAdvanceFormData({ type: 'expense', details: '', amount: '', userId: '' });
       loadDashboardData();
     } catch (err) {
       console.error('Expense/Advance submit error:', err.response?.data || err.message);
@@ -408,14 +433,14 @@ function Dashboard({ user }) {
       extraServices: booking.extraServices.map(srv => ({ value: srv._id, label: srv.name })) || [],
       returnedServices: booking.returnedServices.map(srv => ({ value: srv._id, label: `${srv.name} (${srv.packageId.name})` })) || [],
       hairStraightening: booking.hairStraightening ? 'yes' : 'no',
-      hairStraighteningPrice: booking.hairStraighteningPrice || 0,
+      hairStraighteningPrice: booking.hairStraighteningPrice != null ? booking.hairStraighteningPrice.toString() : '',
       hairStraighteningDate: booking.hairStraighteningDate ? new Date(booking.hairStraighteningDate).toISOString().split('T')[0] : '',
       clientName: booking.clientName || '',
       clientPhone: booking.clientPhone || '',
       city: booking.city || '',
       eventDate: booking.eventDate ? new Date(booking.eventDate).toISOString().split('T')[0] : '',
       hennaDate: booking.hennaDate ? new Date(booking.hennaDate).toISOString().split('T')[0] : '',
-      deposit: booking.deposit || 0
+      deposit: booking.deposit != null ? booking.deposit.toString() : ''
     });
     setShowBookingModal(true);
   };
@@ -442,7 +467,8 @@ function Dashboard({ user }) {
   };
 
   const handleAddInstallment = async (bookingId) => {
-    if (!bookingId || !installmentAmount) {
+    const amountNumber = Number(installmentAmount) || 0;
+    if (!bookingId || !amountNumber) {
       setMessage('خطأ: قيمة القسط أو رقم الحجز غير صالح');
       return;
     }
@@ -450,7 +476,7 @@ function Dashboard({ user }) {
     setInstallmentSubmitting(true);
     setShowInstallmentModal(false);
     try {
-      const res = await axios.post(`/api/bookings/${bookingId}/installment`, { amount: parseFloat(installmentAmount) }, {
+      const res = await axios.post(`/api/bookings/${bookingId}/installment`, { amount: amountNumber }, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setBookings({
@@ -459,7 +485,7 @@ function Dashboard({ user }) {
         photographyBookings: bookings.photographyBookings.map(b => (b._id === bookingId ? res.data.booking : b))
       });
       setMessage('تم إضافة القسط بنجاح');
-      setInstallmentAmount(0);
+      setInstallmentAmount('');
       loadDashboardData();
     } catch (err) {
       console.error('Installment error:', err.response?.data || err.message);
@@ -842,9 +868,16 @@ function Dashboard({ user }) {
                   <Form.Control
                     type="text"
                     value={bookingFormData.clientName}
+                    list="recent-clientName"
                     onChange={(e) => setBookingFormData({ ...bookingFormData, clientName: e.target.value })}
+                    onBlur={(e) => rememberEntry('clientName', e.target.value)}
                     required
                   />
+                  <datalist id="recent-clientName">
+                    {(recentEntries.clientName || []).map((opt) => (
+                      <option key={opt.value} value={opt.value} />
+                    ))}
+                  </datalist>
                 </Form.Group>
               </Col>
               <Col md={6}>
@@ -853,9 +886,16 @@ function Dashboard({ user }) {
                   <Form.Control
                     type="text"
                     value={bookingFormData.clientPhone}
+                    list="recent-clientPhone"
                     onChange={(e) => setBookingFormData({ ...bookingFormData, clientPhone: e.target.value })}
+                    onBlur={(e) => rememberEntry('clientPhone', e.target.value)}
                     required
                   />
+                  <datalist id="recent-clientPhone">
+                    {(recentEntries.clientPhone || []).map((opt) => (
+                      <option key={opt.value} value={opt.value} />
+                    ))}
+                  </datalist>
                 </Form.Group>
               </Col>
               <Col md={6}>
@@ -864,8 +904,15 @@ function Dashboard({ user }) {
                   <Form.Control
                     type="text"
                     value={bookingFormData.city}
+                    list="recent-city"
                     onChange={(e) => setBookingFormData({ ...bookingFormData, city: e.target.value })}
+                    onBlur={(e) => rememberEntry('city', e.target.value)}
                   />
+                  <datalist id="recent-city">
+                    {(recentEntries.city || []).map((opt) => (
+                      <option key={opt.value} value={opt.value} />
+                    ))}
+                  </datalist>
                 </Form.Group>
               </Col>
               <Col md={6}>
@@ -896,8 +943,8 @@ function Dashboard({ user }) {
                 <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
                   setBookingFormData({
                     packageId: '', hennaPackageId: '', photographyPackageId: '', extraServices: [], returnedServices: [],
-                    hairStraightening: 'no', hairStraighteningPrice: 0, hairStraighteningDate: '',
-                    clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: 0
+                    hairStraightening: 'no', hairStraighteningPrice: '', hairStraighteningDate: '',
+                    clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: ''
                   });
                   setEditBooking(null);
                   setShowBookingModal(false);
@@ -999,9 +1046,16 @@ function Dashboard({ user }) {
                       <Form.Control
                         type="text"
                         value={expenseAdvanceFormData.details}
+                        list="recent-expenseDetails-deduction"
                         onChange={(e) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, details: e.target.value })}
+                        onBlur={(e) => rememberEntry('expenseDetails', e.target.value)}
                         required
                       />
+                      <datalist id="recent-expenseDetails-deduction">
+                        {(recentEntries.expenseDetails || []).map((opt) => (
+                          <option key={opt.value} value={opt.value} />
+                        ))}
+                      </datalist>
                     </Form.Group>
                   </Col>
                   <Col md={6}>
@@ -1079,9 +1133,16 @@ function Dashboard({ user }) {
                       <Form.Control
                         type="text"
                         value={expenseAdvanceFormData.details}
+                        list="recent-expenseDetails"
                         onChange={(e) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, details: e.target.value })}
+                        onBlur={(e) => rememberEntry('expenseDetails', e.target.value)}
                         required
                       />
+                      <datalist id="recent-expenseDetails">
+                        {(recentEntries.expenseDetails || []).map((opt) => (
+                          <option key={opt.value} value={opt.value} />
+                        ))}
+                      </datalist>
                     </Form.Group>
                   </Col>
                 </>
@@ -1091,7 +1152,7 @@ function Dashboard({ user }) {
                   {expenseSubmitting ? 'جارٍ الحفظ...' : 'حفظ'}
                 </Button>
                 <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
-                  setExpenseAdvanceFormData({ type: 'expense', details: '', amount: 0, userId: '' });
+                  setExpenseAdvanceFormData({ type: 'expense', details: '', amount: '', userId: '' });
                   setShowExpenseAdvanceModal(false);
                 }}>
                   إلغاء
