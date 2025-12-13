@@ -46,6 +46,13 @@ function EmployeeDashboard({ user }) {
 
   const formatNumber = useCallback((num = 0) => new Intl.NumberFormat('en-US').format(Math.max(0, num)), []);
 
+  const formatTime = useCallback((dt) => {
+    if (!dt) return '—';
+    const dateObj = new Date(dt);
+    if (Number.isNaN(dateObj.getTime())) return '—';
+    return dateObj.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  }, []);
+
   const getTopCoinLevel = useCallback((byLevel = {}) => {
     const levels = Object.keys(byLevel || {})
       .map(Number)
@@ -278,7 +285,8 @@ function EmployeeDashboard({ user }) {
       serviceName: payload.serviceName || 'خدمة',
       clientName: payload.clientName || '—',
       points: payload.points || 0,
-      source: payload.source || 'booking'
+      source: payload.source || 'booking',
+      executedAt: payload.executedAt || null
     });
 
     const iterateBooking = (booking) => {
@@ -324,13 +332,18 @@ function EmployeeDashboard({ user }) {
             serviceName: srv.name || 'خدمة فورية',
             clientName: '—',
             points,
-            source: 'instant'
+            source: 'instant',
+            executedAt: svc.createdAt || null
           });
         }
       });
     });
 
-    return collected.sort((a, b) => (b.receiptNumber || '').localeCompare(a.receiptNumber || ''));
+    return collected.sort((a, b) => {
+      const timeA = a.executedAt ? new Date(a.executedAt).getTime() : 0;
+      const timeB = b.executedAt ? new Date(b.executedAt).getTime() : 0;
+      return timeB - timeA;
+    });
   }, [bookings, instantServices, isSameEmployee, user]);
 
   return (
@@ -457,7 +470,12 @@ function EmployeeDashboard({ user }) {
                 </div>
                 <Card.Title className="mb-2">{srv.serviceName}</Card.Title>
                 <Card.Text className="mb-1">رقم الوصل: {srv.receiptNumber}</Card.Text>
-                <Card.Text className="text-muted small">العروسة: {srv.clientName}</Card.Text>
+                {srv.source !== 'instant' && (
+                  <Card.Text className="text-muted small">العروسة: {srv.clientName}</Card.Text>
+                )}
+                {srv.source === 'instant' && (
+                  <Card.Text className="text-muted small">وقت التنفيذ: {formatTime(srv.executedAt)}</Card.Text>
+                )}
               </Card.Body>
             </Card>
           </Col>
