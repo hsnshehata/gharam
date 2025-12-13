@@ -535,3 +535,7 @@ body.theme-dark .table-hover > tbody > tr:hover { background-color: rgba(255,255
   75% { transform: translateY(-2px) rotate(-1deg); }
   100% { transform: translateY(0); }
 }
+
+.assign-select {
+  min-width: 200px;
+}

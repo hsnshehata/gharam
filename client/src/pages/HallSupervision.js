@@ -254,6 +254,7 @@ function HallSupervision() {
             value={assignments[key] || ''}
             onChange={(e) => handleAssignChange(key, e.target.value)}
             disabled={srv.executed}
+            className="assign-select"
           >
             <option value="">اختر الموظف</option>
             {employeeOptions.map(emp => (
@@ -303,6 +304,7 @@ function HallSupervision() {
             value={assignments[key] || ''}
             onChange={(e) => handleAssignChange(key, e.target.value)}
             disabled={booking.hairStraighteningExecuted}
+            className="assign-select"
           >
             <option value="">اختر الموظف</option>
             {employeeOptions.map(emp => (
@@ -489,7 +491,7 @@ function HallSupervision() {
           ) : (
             <Row>
               {allBookings.map((booking, idx) => (
-                <Col md={6} key={booking._id} className="mb-3">
+                <Col xs={12} key={booking._id} className="mb-3">
                   <Card>
                     <Card.Body>
                       <Card.Title className="d-flex justify-content-between align-items-start">
@@ -527,7 +529,7 @@ function HallSupervision() {
           ) : (
             <Row>
               {instantServices.map(service => (
-                <Col md={6} key={service._id} className="mb-3">
+                <Col xs={12} key={service._id} className="mb-3">
                   <Card>
                     <Card.Body>
                       <Card.Title className="d-flex justify-content-between align-items-start">
@@ -564,6 +566,7 @@ function HallSupervision() {
                                     value={assignments[key] || ''}
                                     onChange={(e) => handleAssignChange(key, e.target.value)}
                                     disabled={srv.executed}
+                                    className="assign-select"
                                   >
                                     <option value="">اختر الموظف</option>
                                     {employeeOptions.map(emp => (
