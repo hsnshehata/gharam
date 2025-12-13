@@ -348,7 +348,6 @@ function EmployeeDashboard({ user }) {
 
   return (
     <Container className="mt-5">
-      <h2>لوحة الموظف</h2>
       <Row className="mb-4 justify-content-center">
         <Col md={8} lg={6}>
           <div className="scan-panel text-center">
