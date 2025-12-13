@@ -17,6 +17,12 @@
   --btn-text: var(--bg);
   --accent: var(--olive); /* accents and icons */
   --shadow: rgba(0,0,0,0.08);
+  --nav-bg: rgba(255,255,255,0.85);
+  --nav-border: rgba(2,128,144,0.18);
+  --nav-shadow: 0 12px 28px rgba(0,0,0,0.12);
+  --nav-link: #0f2736;
+  --nav-link-hover: rgba(2,128,144,0.12);
+  --nav-muted: #4b5a66;
 }
 
 /* Dark theme variables */
@@ -33,6 +39,12 @@ body.theme-dark {
   --btn-bg-hover: rgba(255,255,255,0.9);
   --btn-text: var(--bg); /* button text shows olive */
   --shadow: rgba(0,0,0,0.6);
+  --nav-bg: rgba(2, 104, 116, 0.6);
+  --nav-border: rgba(255,255,255,0.18);
+  --nav-shadow: 0 14px 32px rgba(0,0,0,0.45);
+  --nav-link: #eaf7fb;
+  --nav-link-hover: rgba(255,255,255,0.12);
+  --nav-muted: rgba(255,255,255,0.8);
 }
 
 /* Base reset */
@@ -47,6 +59,68 @@ body {
   color: var(--text);
   direction: rtl;
 }
+
+.app-navbar {
+  background: var(--nav-bg) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--nav-border) !important;
+  box-shadow: var(--nav-shadow);
+  border-radius: 14px;
+  padding: 10px 16px;
+  margin: 14px auto 22px;
+  position: sticky;
+  top: 12px;
+  z-index: 1020;
+}
+
+.app-navbar .navbar-brand {
+  color: var(--nav-link) !important;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-navbar .navbar-brand .logo { width: 42px; height: 42px; object-fit: contain; border-radius: 10px; }
+
+.app-navbar .nav-link {
+  color: var(--nav-link) !important;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 8px 12px;
+  transition: all 0.2s ease;
+}
+
+.app-navbar .nav-link:hover,
+.app-navbar .nav-link:focus,
+.app-navbar .nav-link.active {
+  background: var(--nav-link-hover);
+  color: var(--text) !important;
+}
+
+.app-navbar .navbar-toggler {
+  border-color: var(--nav-border);
+  color: var(--nav-link);
+}
+
+.app-navbar .navbar-text,
+.app-navbar .nav-item { color: var(--nav-muted); }
+
+.theme-toggle-btn {
+  border: 1px solid var(--nav-border);
+  background: var(--surface);
+  color: var(--nav-link);
+  border-radius: 12px;
+  padding: 7px 12px;
+  margin-inline-end: 10px;
+  font-weight: 700;
+  box-shadow: 0 8px 18px var(--shadow);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.theme-toggle-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 22px var(--shadow); }
+.theme-toggle-btn:active { transform: translateY(0); }
 
 code { font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace; }
 

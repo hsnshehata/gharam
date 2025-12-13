@@ -30,7 +30,13 @@ function Navbar({ user, setUser }) {
   };
 
   return (
-    <BootstrapNavbar bg="dark" variant="dark" expand="lg" className="mb-4">
+    <BootstrapNavbar
+      bg="transparent"
+      variant={dark ? 'dark' : 'light'}
+      expand="lg"
+      className="app-navbar mb-4"
+      data-bs-theme={dark ? 'dark' : 'light'}
+    >
       <BootstrapNavbar.Brand>
         <img src="/logo.png" alt="Logo" className="logo" /> مرحباً بعودتك, {user.username}
       </BootstrapNavbar.Brand>
