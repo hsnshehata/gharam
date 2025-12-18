@@ -182,13 +182,13 @@ function PriceList() {
 		.lead { color: var(--muted); line-height: 1.6; margin-bottom: 18px; }
 		.section { margin: 24px 0; }
 		.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
-		.card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: 0 12px 26px var(--shadow); }
+		.card { background: var(--card) !important; color: var(--text) !important; border: 1px solid var(--border) !important; border-radius: 14px; padding: 16px; box-shadow: 0 12px 26px var(--shadow); }
 		.card h3 { margin: 0 0 8px; font-size: 18px; color: var(--text); }
 		.price { font-weight: 800; color: var(--gold); margin-bottom: 10px; }
 		ul { padding-left: 18px; margin: 0; color: var(--muted); line-height: 1.6; }
 		.btn { margin-top: 12px; padding: 10px 14px; border: none; border-radius: 10px; background: linear-gradient(135deg, var(--gold), #e6c27b); color: #0f0b0a; font-weight: 700; cursor: pointer; }
 		.services { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-top: 12px; }
-		.service { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; color: var(--text); box-shadow: 0 8px 18px var(--shadow); }
+		.service { background: var(--card) !important; color: var(--text) !important; border: 1px solid var(--border) !important; border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; box-shadow: 0 8px 18px var(--shadow); }
 		.breadcrumb { margin-bottom: 16px; color: var(--muted); }
 		.sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; padding: 10px 14px; background: ${theme === 'light' ? 'rgba(255,255,255,0.96)' : 'rgba(24,18,16,0.92)'}; border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 20px 40px var(--shadow); z-index: 100; }
 		.sticky-bar .btn { padding: 12px 14px; }

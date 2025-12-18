@@ -467,15 +467,15 @@ function Landing() {
 					className="chat-frame"
 					style={{
 						position: 'fixed',
-						bottom: 76,
+						top: '50%',
 						left: '50%',
-						transform: 'translateX(-50%)',
+						transform: 'translate(-50%, -50%)',
 						width: 360,
 						maxWidth: '90vw',
 						height: 520,
-						maxHeight: '80vh',
+						maxHeight: '90vh',
 						background: '#fff',
-						borderRadius: 14,
+						borderRadius: 0,
 						overflow: 'hidden',
 						boxShadow: '0 25px 50px rgba(0,0,0,0.35)',
 						zIndex: 121
