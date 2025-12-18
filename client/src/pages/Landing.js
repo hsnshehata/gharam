@@ -148,7 +148,7 @@ function Landing() {
 		.btn-primary { background: linear-gradient(135deg, var(--gold), #e6c27b); color: #0f0b0a; }
 		.btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
 		.btn-ghost { background: rgba(0,0,0,0.03); color: var(--text); border: 1px solid var(--border); }
-		.btn-prices { background: linear-gradient(135deg, var(--accent), var(--gold)); color: #0f0b0a; padding: 14px 24px; font-size: 16px; min-width: 220px; text-align: center; box-shadow: 0 12px 28px var(--shadow); }
+		.btn-prices { background: linear-gradient(135deg, var(--gold), #e6c27b); color: #0f0b0a; padding: 14px 24px; font-size: 16px; min-width: 220px; text-align: center; box-shadow: 0 14px 30px var(--shadow); border: 1px solid var(--border); }
 		.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 26px 0; }
 		.landing-page .card { background: var(--card) !important; color: var(--text) !important; border: 1px solid var(--border) !important; box-shadow: 0 15px 30px var(--shadow) !important; padding: 18px; border-radius: 14px; }
 		.card h3 { margin: 0 0 6px; font-size: 19px; color: var(--text); }
@@ -168,7 +168,7 @@ function Landing() {
 		.availability form { display: grid; gap: 12px; }
 		label { color: var(--muted); font-size: 14px; }
 		.landing-page input, .landing-page select { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: var(--text); }
-		.availability-result { padding: 16px; border-radius: 14px; border: 1px solid var(--border); background: rgba(198,161,91,0.12); min-width: min(440px, 90vw); box-shadow: 0 20px 40px var(--shadow); }
+		.availability-result { padding: 18px; border-radius: 14px; border: 1px solid var(--border); background: var(--card); min-width: min(460px, 92vw); box-shadow: 0 24px 48px var(--shadow); color: var(--text); }
 		.availability-result h4 { margin: 0 0 6px; color: var(--text); }
 		.contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 20px 0; }
 		.contact-card { display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: 14px; border: 1px solid var(--border); background: rgba(0,0,0,0.02); box-shadow: 0 10px 22px var(--shadow); }
@@ -196,7 +196,7 @@ function Landing() {
 		.support-floating { position: fixed; bottom: 20px; right: 20px; z-index: 120; }
 		.chat-frame { position: fixed; bottom: 20px; right: 20px; width: 360px; max-width: 90vw; height: 520px; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.35); z-index: 121; }
 		.close-btn { position: absolute; top: 10px; left: 10px; background: #dc3545; color: #fff; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; }
-		.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 130; padding: 16px; }
+		.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 130; padding: 16px; }
 		.modal-card { position: relative; }
 		@media (max-width: 768px) {
 			hero { grid-template-columns: 1fr; padding-top: 12px; }
