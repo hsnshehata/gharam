@@ -195,7 +195,7 @@ function Landing() {
 		.sticky-bar .btn { padding: 10px 12px; }
 		.support-floating { position: fixed; bottom: 20px; right: 20px; z-index: 120; }
 		.chat-frame { position: fixed; bottom: 20px; right: 20px; width: 360px; max-width: 90vw; height: 520px; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.35); z-index: 121; }
-		.close-btn { position: absolute; top: 10px; left: 10px; background: #dc3545; color: #fff; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; }
+		.close-btn { position: absolute; top: 10px; left: 10px; background: #dc3545; color: #fff; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 2; }
 		.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 130; padding: 16px; }
 		.modal-card { position: relative; }
 		@media (max-width: 768px) {
@@ -463,9 +463,31 @@ function Landing() {
 				</button>
 			</div>
 			{showChat && (
-				<div className="chat-frame" style={{ position: 'fixed', bottom: 20, right: 20, width: 360, maxWidth: '90vw', height: 520, maxHeight: '80vh', background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 25px 50px rgba(0,0,0,0.35)', zIndex: 121 }}>
+				<div
+					className="chat-frame"
+					style={{
+						position: 'fixed',
+						bottom: 76,
+						left: '50%',
+						transform: 'translateX(-50%)',
+						width: 360,
+						maxWidth: '90vw',
+						height: 520,
+						maxHeight: '80vh',
+						background: '#fff',
+						borderRadius: 14,
+						overflow: 'hidden',
+						boxShadow: '0 25px 50px rgba(0,0,0,0.35)',
+						zIndex: 121
+					}}
+				>
 					<button className="close-btn" onClick={() => setShowChat(false)}>✕</button>
-					<iframe title="support" src={SUPPORT_LINK} style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} scrolling="no" />
+					<iframe
+						title="support"
+						src={SUPPORT_LINK}
+						style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', display: 'block' }}
+						scrolling="no"
+					/>
 				</div>
 			)}
 		</div>
