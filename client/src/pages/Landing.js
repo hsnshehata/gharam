@@ -79,6 +79,7 @@ function Landing() {
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState('');
 	const [showChat, setShowChat] = useState(false);
+	const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
 	const [theme, setTheme] = useState('light');
 
 	const palette = themes[theme];
@@ -99,6 +100,7 @@ function Landing() {
 	const handleCheckAvailability = async () => {
 		setError('');
 		setAvailability(null);
+		setShowAvailabilityModal(false);
 		if (!date) {
 			setError('اختاري التاريخ الأول.');
 			return;
@@ -107,6 +109,7 @@ function Landing() {
 		try {
 			const res = await axios.get(`${API_BASE}/api/public/availability`, { params: { date, packageType } });
 			setAvailability(res.data);
+			setShowAvailabilityModal(true);
 		} catch (err) {
 			setError('حصل خطأ في الاستعلام، جربي تاني.');
 		} finally {
@@ -139,11 +142,13 @@ function Landing() {
 		h2 { margin: 0 0 12px; }
 		p { color: var(--muted); line-height: 1.75; margin: 0; }
 		.cta-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+		.cta-row.center { justify-content: center; }
 		.btn { border: none; cursor: pointer; padding: 12px 18px; border-radius: 12px; font-weight: 700; transition: transform 0.15s ease, box-shadow 0.15s ease; color: #0f0b0a; }
 		.btn:hover { transform: translateY(-2px); box-shadow: 0 12px 28px var(--shadow); }
 		.btn-primary { background: linear-gradient(135deg, var(--gold), #e6c27b); color: #0f0b0a; }
 		.btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
 		.btn-ghost { background: rgba(0,0,0,0.03); color: var(--text); border: 1px solid var(--border); }
+		.btn-prices { background: linear-gradient(135deg, var(--accent), var(--gold)); color: #0f0b0a; padding: 14px 24px; font-size: 16px; min-width: 220px; text-align: center; box-shadow: 0 12px 28px var(--shadow); }
 		.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 26px 0; }
 		.landing-page .card { background: var(--card) !important; color: var(--text) !important; border: 1px solid var(--border) !important; box-shadow: 0 15px 30px var(--shadow) !important; padding: 18px; border-radius: 14px; }
 		.card h3 { margin: 0 0 6px; font-size: 19px; color: var(--text); }
@@ -163,7 +168,7 @@ function Landing() {
 		.availability form { display: grid; gap: 12px; }
 		label { color: var(--muted); font-size: 14px; }
 		.landing-page input, .landing-page select { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: var(--text); }
-		.availability-result { padding: 16px; border-radius: 12px; border: 1px solid var(--border); background: rgba(198,161,91,0.08); min-height: 190px; }
+		.availability-result { padding: 16px; border-radius: 14px; border: 1px solid var(--border); background: rgba(198,161,91,0.12); min-width: min(440px, 90vw); box-shadow: 0 20px 40px var(--shadow); }
 		.availability-result h4 { margin: 0 0 6px; color: var(--text); }
 		.contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 20px 0; }
 		.contact-card { display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: 14px; border: 1px solid var(--border); background: rgba(0,0,0,0.02); box-shadow: 0 10px 22px var(--shadow); }
@@ -191,6 +196,8 @@ function Landing() {
 		.support-floating { position: fixed; bottom: 20px; right: 20px; z-index: 120; }
 		.chat-frame { position: fixed; bottom: 20px; right: 20px; width: 360px; max-width: 90vw; height: 520px; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.35); z-index: 121; }
 		.close-btn { position: absolute; top: 10px; left: 10px; background: #dc3545; color: #fff; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; }
+		.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 130; padding: 16px; }
+		.modal-card { position: relative; }
 		@media (max-width: 768px) {
 			hero { grid-template-columns: 1fr; padding-top: 12px; }
 			.sticky-bar { width: calc(100% - 24px); justify-content: space-between; background: ${theme === 'light' ? 'rgba(255,255,255,0.98)' : 'rgba(24,18,16,0.95)'}; }
@@ -225,18 +232,10 @@ function Landing() {
 							راحة فاخرة بضغطة زر مع كرسي المساج الذكي ضد الجاذبية.
 						</p>
 						<div className="pill">جودة منتجات عالمية • اهتمام بالتفاصيل • راحة فاخرة</div>
-						<div className="cta-row">
-							<button className="btn btn-primary" onClick={() => window.open(WHATSAPP_LINK, '_blank')} aria-label="واتساب">
-								<WhatsAppIcon size={18} />
-								<span style={{ marginInlineStart: 6 }}>واتساب</span>
-							</button>
-							<button className="btn btn-outline" onClick={() => window.location.href = `tel:${LANDLINE}`} aria-label="اتصال أرضي">
-								<PhoneIcon size={18} />
-								<span style={{ marginInlineStart: 6 }}>اتصال أرضي: {LANDLINE}</span>
-							</button>
-							<button className="btn btn-outline" onClick={() => window.location.href = '/prices'} aria-label="أسعار الخدمات">
+						<div className="cta-row center">
+							<button className="btn btn-prices" onClick={() => window.location.href = '/prices'} aria-label="أسعار الخدمات">
 								<span role="img" aria-label="قائمة">💸</span>
-								<span style={{ marginInlineStart: 6 }}>أسعار الخدمات</span>
+								<span style={{ marginInlineStart: 8, fontSize: 16 }}>أسعار الخدمات</span>
 							</button>
 						</div>
 					</div>
@@ -256,6 +255,29 @@ function Landing() {
 						<p>منتجات عالمية، احترافية عالية، متابعة أحدث التقنيات وتجربة عملاء مريحة من البداية للنهاية.</p>
 					</div>
 				</section>
+
+					<section className="availability reveal">
+						<div className="card">
+							<span className="badge">تأكيد التوافر</span>
+							<h2 style={{ margin: '8px 0 12px' }}>تأكدي إن اليوم فاضي للباكدج</h2>
+							<form onSubmit={(e) => { e.preventDefault(); handleCheckAvailability(); }}>
+								<div>
+									<label>نوع الباكدج</label>
+									<select value={packageType} onChange={(e) => setPackageType(e.target.value)}>
+										<option value="makeup">ميك أب / حنة / حجز صالون</option>
+										<option value="photo">تصوير</option>
+									</select>
+								</div>
+								<div>
+									<label>تاريخ الحجز</label>
+									<input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+								</div>
+								<p style={{ color: 'var(--muted)', fontSize: 13, margin: '4px 0 0' }}>اختاري نوع الباكدج والتاريخ واعرفي التوافر فورًا.</p>
+								{error && <div style={{ color: '#d9534f', fontSize: 14 }}>{error}</div>}
+								<button type="submit" className="btn btn-primary" disabled={loading}>{loading ? 'بيتحقق...' : 'افحص التوافر'}</button>
+							</form>
+						</div>
+					</section>
 
 				<section className="highlight reveal">
 					<div className="massage-banner">
@@ -341,40 +363,6 @@ function Landing() {
 					</div>
 				</section>
 
-				<section className="availability reveal">
-					<div className="card">
-						<span className="badge">تأكيد التوافر</span>
-						<h2 style={{ margin: '8px 0 12px' }}>تأكدي إن اليوم فاضي للباكدج</h2>
-						<form onSubmit={(e) => { e.preventDefault(); handleCheckAvailability(); }}>
-							<div>
-								<label>نوع الباكدج</label>
-								<select value={packageType} onChange={(e) => setPackageType(e.target.value)}>
-									<option value="makeup">ميك أب / حنة / حجز صالون</option>
-									<option value="photo">تصوير</option>
-								</select>
-							</div>
-							<div>
-								<label>تاريخ الحجز</label>
-								<input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-							</div>
-							<p style={{ color: 'var(--muted)', fontSize: 13, margin: '4px 0 0' }}>اختاري نوع الباكدج والتاريخ واعرفي التوافر فورًا.</p>
-							{error && <div style={{ color: '#d9534f', fontSize: 14 }}>{error}</div>}
-							<button type="submit" className="btn btn-primary" disabled={loading}>{loading ? 'بيتحقق...' : 'افحص التوافر'}</button>
-						</form>
-					</div>
-					{availabilityBadge && (
-						<div className="availability-result card">
-							<h4>{availabilityBadge.title}</h4>
-							<p>{availabilityBadge.message}</p>
-							<p style={{ color: 'var(--muted)' }}>نوع الطلب: {availability?.type === 'photo' ? 'تصوير' : 'ميك أب/حنة'}</p>
-							<div className="cta-row">
-								<button className="btn btn-primary" onClick={() => window.open(WHATSAPP_LINK, '_blank')}>تواصلي واتساب</button>
-								<button className="btn btn-outline" onClick={() => window.location.href = `tel:${LANDLINE}`}>اتصال أرضي</button>
-							</div>
-						</div>
-					)}
-				</section>
-
 				<section className="reviews reveal">
 					<div className="reviews-header">
 						<div>
@@ -425,6 +413,21 @@ function Landing() {
 				</section>
 			</div>
 
+			{showAvailabilityModal && availabilityBadge && (
+				<div className="modal-backdrop" onClick={() => setShowAvailabilityModal(false)}>
+					<div className="availability-result modal-card" onClick={(e) => e.stopPropagation()}>
+						<button className="close-btn" onClick={() => setShowAvailabilityModal(false)} aria-label="إغلاق">✕</button>
+						<h4>{availabilityBadge.title}</h4>
+						<p>{availabilityBadge.message}</p>
+						<p style={{ color: 'var(--muted)' }}>نوع الطلب: {availability?.type === 'photo' ? 'تصوير' : 'ميك أب/حنة'}</p>
+						<div className="cta-row" style={{ marginTop: 10 }}>
+							<button className="btn btn-primary" onClick={() => window.open(WHATSAPP_LINK, '_blank')}>تواصلي واتساب</button>
+							<button className="btn btn-outline" onClick={() => window.location.href = `tel:${LANDLINE}`}>اتصال أرضي</button>
+						</div>
+					</div>
+				</div>
+			)}
+
 			<div className="sticky-bar">
 				<button
 					className="btn"
@@ -460,9 +463,9 @@ function Landing() {
 				</button>
 			</div>
 			{showChat && (
-				<div className="chat-frame">
+				<div className="chat-frame" style={{ position: 'fixed', top: 16, right: 20, width: 360, maxWidth: '90vw', height: 'min(520px, 80vh)', maxHeight: '80vh', background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 25px 50px rgba(0,0,0,0.35)', zIndex: 121 }}>
 					<button className="close-btn" onClick={() => setShowChat(false)}>✕</button>
-					<iframe title="support" src={SUPPORT_LINK} style={{ width: '100%', height: '100%', border: 'none' }} scrolling="no" />
+					<iframe title="support" src={SUPPORT_LINK} style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} scrolling="no" />
 				</div>
 			)}
 		</div>
