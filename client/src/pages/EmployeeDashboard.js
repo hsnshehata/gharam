@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table } from 'react-bootstrap';
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faCheck, faQrcode, faGift, faCoins, faBolt, faRotateRight } from '@fortawesome/free-solid-svg-icons';
+import { faCheck, faQrcode, faGift, faCoins, faBolt, faRotateRight } from '@fortawesome/free-solid-svg-icons';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useToast } from '../components/ToastProvider';
 
@@ -23,7 +23,7 @@ function EmployeeDashboard({ user }) {
     photographyBookings: []
   });
   const [instantServices, setInstantServices] = useState([]);
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date] = useState(new Date().toISOString().split('T')[0]);
   const [receiptNumber, setReceiptNumber] = useState('');
   const [showPointsModal, setShowPointsModal] = useState(false);
   const [pointsData, setPointsData] = useState(null);
@@ -98,13 +98,18 @@ function EmployeeDashboard({ user }) {
   }, [fetchAllData]);
 
   const handleReceiptSearch = useCallback(async (searchValue) => {
+    const normalized = (searchValue ?? '').toString().trim();
+    if (!normalized) {
+      showToast('الرجاء إدخال رقم الوصل', 'warning');
+      return;
+    }
     try {
-      console.log('Searching for receipt:', searchValue);
+      console.log('Searching for receipt:', normalized);
       const [bookingRes, instantRes] = await Promise.all([
-        axios.get(`/api/bookings?receiptNumber=${searchValue}`, {
+        axios.get(`/api/bookings?receiptNumber=${normalized}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         }),
-        axios.get(`/api/instant-services?receiptNumber=${searchValue}`, {
+        axios.get(`/api/instant-services?receiptNumber=${normalized}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         })
       ]);
@@ -261,12 +266,6 @@ function EmployeeDashboard({ user }) {
       console.error('Execute service error:', err.response?.data || err.message);
       showToast(err.response?.data?.msg || 'خطأ في تنفيذ الخدمة', 'danger');
     }
-  };
-
-  const handleShowDetails = (item, type) => {
-    console.log('Showing details:', { item, type });
-    setPointsData({ type, data: item });
-    setShowPointsModal(true);
   };
 
   const handleOpenQrModal = () => {

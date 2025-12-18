@@ -13,6 +13,9 @@ import Dashboard from './pages/Dashboard';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import EmployeeReports from './pages/EmployeeReports';
 import HallSupervision from './pages/HallSupervision';
+import Landing from './pages/Landing';
+import PriceList from './pages/PriceList';
+import MassageChair from './pages/MassageChair';
 import Navbar from './components/Navbar';
 import { ToastProvider } from './components/ToastProvider';
 import './App.css';
@@ -20,10 +23,15 @@ import './App.css';
 const API_BASE = (process.env.REACT_APP_API_BASE || '').replace(/\/$/, '');
 
 const getHomePath = (u) => {
-  if (!u) return '/login';
+  if (!u) return '/landing';
   if (u.role === 'employee') return '/employee-dashboard';
   if (u.role === 'hallSupervisor') return '/hall-supervision';
   return '/dashboard';
+};
+
+const isStandaloneApp = () => {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 };
 
 function AppContent() {
@@ -67,6 +75,11 @@ function AppContent() {
     if (user && location.pathname === '/login') {
       navigate(getHomePath(user), { replace: true });
     }
+    // لو التطبيق متسطب كـ PWA/تطبيق على الموبايل افتح /login مباشرة بدل اللاندنج
+    if (!user && isStandaloneApp()) {
+      const isLanding = location.pathname === '/' || location.pathname === '/landing';
+      if (isLanding) navigate('/login', { replace: true });
+    }
   }, [authLoading, user, location.pathname, navigate]);
 
   return (
@@ -84,6 +97,9 @@ function AppContent() {
             {user && <Navbar user={user} setUser={setUser} />}
             <Routes>
           <Route path="/login" element={<Login setUser={setUser} />} />
+          <Route path="/landing" element={<Landing />} />
+          <Route path="/prices" element={<PriceList />} />
+          <Route path="/massage-chair" element={<MassageChair />} />
           <Route
             path="/users"
             element={user && user.role === 'admin' ? <Users /> : <Navigate to="/login" />}

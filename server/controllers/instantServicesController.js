@@ -147,11 +147,14 @@ exports.deleteInstantService = async (req, res) => {
 };
 
 exports.getInstantServices = async (req, res) => {
-  const { page = 1, limit = 50, search, date } = req.query;
+  const { page = 1, limit = 50, search, date, receiptNumber } = req.query;
 
   try {
     let query = {};
-    if (search) {
+
+    if (receiptNumber) {
+      query.receiptNumber = receiptNumber.toString().trim();
+    } else if (search) {
       const users = await User.find({
         username: { $regex: search, $options: 'i' }
       }).select('_id');
