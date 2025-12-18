@@ -191,8 +191,8 @@ function Landing() {
 		.review-card small { color: var(--muted); }
 		.review-card p { margin: 8px 0 0; color: var(--muted); line-height: 1.5; }
 		.footer { margin: 28px 0 56px; text-align: center; color: var(--muted); font-size: 14px; }
-		.sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; padding: 10px 14px; background: ${theme === 'light' ? 'rgba(255,255,255,0.96)' : 'rgba(24,18,16,0.92)'}; border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 20px 40px var(--shadow); z-index: 100; }
-		.sticky-bar .btn { padding: 12px 14px; }
+		.sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 8px 10px; background: ${theme === 'light' ? 'rgba(255,255,255,0.96)' : 'rgba(24,18,16,0.92)'}; border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 20px 40px var(--shadow); z-index: 100; width: auto; max-width: calc(100% - 24px); }
+		.sticky-bar .btn { padding: 10px 12px; }
 		.support-floating { position: fixed; bottom: 20px; right: 20px; z-index: 120; }
 		.chat-frame { position: fixed; bottom: 20px; right: 20px; width: 360px; max-width: 90vw; height: 520px; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.35); z-index: 121; }
 		.close-btn { position: absolute; top: 10px; left: 10px; background: #dc3545; color: #fff; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; }
@@ -463,7 +463,7 @@ function Landing() {
 				</button>
 			</div>
 			{showChat && (
-				<div className="chat-frame" style={{ position: 'fixed', top: 16, right: 20, width: 360, maxWidth: '90vw', height: 'min(520px, 80vh)', maxHeight: '80vh', background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 25px 50px rgba(0,0,0,0.35)', zIndex: 121 }}>
+				<div className="chat-frame" style={{ position: 'fixed', bottom: 20, right: 20, width: 360, maxWidth: '90vw', height: 520, maxHeight: '80vh', background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 25px 50px rgba(0,0,0,0.35)', zIndex: 121 }}>
 					<button className="close-btn" onClick={() => setShowChat(false)}>✕</button>
 					<iframe title="support" src={SUPPORT_LINK} style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} scrolling="no" />
 				</div>
