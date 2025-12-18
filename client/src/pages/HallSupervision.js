@@ -72,12 +72,17 @@ function HallSupervision() {
   }, [loadData]);
 
   const handleReceiptSearch = useCallback(async (searchValue) => {
+    const normalized = (searchValue ?? '').toString().trim();
+    if (!normalized) {
+      showToast('الرجاء إدخال رقم الوصل', 'warning');
+      return;
+    }
     try {
       const [bookingRes, instantRes] = await Promise.all([
-        axios.get(`/api/bookings?receiptNumber=${searchValue}`, {
+        axios.get(`/api/bookings?receiptNumber=${normalized}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         }),
-        axios.get(`/api/instant-services?receiptNumber=${searchValue}`, {
+        axios.get(`/api/instant-services?receiptNumber=${normalized}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         })
       ]);
