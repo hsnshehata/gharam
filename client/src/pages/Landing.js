@@ -469,13 +469,13 @@ function Landing() {
 						position: 'fixed',
 						top: '50%',
 						left: '50%',
+						bottom: 'auto',
+						right: 'auto',
 						transform: 'translate(-50%, -50%)',
-						width: 360,
-						maxWidth: '90vw',
-						height: 520,
-						maxHeight: '90vh',
+						width: 'min(420px, 92vw)',
+						height: 'min(520px, 90vh)',
 						background: '#fff',
-						borderRadius: 0,
+						borderRadius: 14,
 						overflow: 'hidden',
 						boxShadow: '0 25px 50px rgba(0,0,0,0.35)',
 						zIndex: 121
@@ -485,7 +485,7 @@ function Landing() {
 					<iframe
 						title="support"
 						src={SUPPORT_LINK}
-						style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', display: 'block' }}
+						style={{ position: 'absolute', top: '-25px', left: 0, right: 0, bottom: 0, width: '100%', height: 'calc(100% + 25px)', border: 'none', display: 'block' }}
 						scrolling="no"
 					/>
 				</div>
