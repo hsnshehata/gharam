@@ -10,6 +10,7 @@ router.get('/', authenticate, usersController.getUsers);
 router.post('/gift', authenticate, usersController.giftPoints);
 router.post('/deduct', authenticate, usersController.deductPoints);
 router.get('/gifts/pending', authenticate, usersController.listPendingGifts);
+router.get('/gifts/today', authenticate, usersController.listTodayGifts);
 router.post('/gifts/open/:giftId', authenticate, usersController.openGift);
 router.post('/points', authenticate, usersController.addPoints);
 router.get('/points/summary', authenticate, usersController.getPointsSummary);

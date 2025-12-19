@@ -210,6 +210,38 @@ exports.listPendingGifts = async (req, res) => {
   }
 };
 
+exports.listTodayGifts = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('points username');
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    ensureArrays(user);
+
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const end = new Date(start);
+    end.setDate(end.getDate() + 1);
+
+    const gifts = (user.points || []).filter((p) => {
+      if (p.type !== 'gift' || p.status !== 'applied') return false;
+      const dt = p.openedAt || p.date;
+      if (!dt) return false;
+      const d = new Date(dt);
+      return d >= start && d < end;
+    }).map((p) => ({
+      _id: p._id,
+      amount: p.amount,
+      note: p.note,
+      giftedByName: p.giftedByName || 'الإدارة',
+      openedAt: p.openedAt || p.date
+    }));
+
+    res.json({ gifts });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
 exports.openGift = async (req, res) => {
   try {
     const { giftId } = req.params;

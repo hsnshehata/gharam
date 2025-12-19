@@ -614,6 +614,8 @@ body.theme-dark .table-hover > tbody > tr:hover { background-color: rgba(255,255
 .gift-open-btn { box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35); transition: transform 0.15s ease, box-shadow 0.2s ease; }
 .gift-open-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(16, 185, 129, 0.45); }
 
+.gift-log-card { border: 1px solid var(--border); box-shadow: 0 8px 18px var(--shadow); }
+
 @keyframes gift-bounce {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
