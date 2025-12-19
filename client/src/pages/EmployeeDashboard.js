@@ -412,32 +412,6 @@ function EmployeeDashboard({ user }) {
         </Card>
       )}
 
-      {todayGifts.length > 0 && (
-        <Card className="mb-4">
-          <Card.Body>
-            <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-              <Card.Title className="mb-0">الهدايا اللي استلمتها النهارده</Card.Title>
-              <div className="text-muted small">تفضل ظاهرة طول اليوم الحالي</div>
-            </div>
-            <Row>
-              {todayGifts.map((g) => (
-                <Col md={4} key={g._id} className="mb-3">
-                  <Card className="gift-log-card h-100">
-                    <Card.Body>
-                      <div className="d-flex justify-content-between align-items-center mb-2">
-                        <span className="badge bg-success">+{g.amount} نقطة</span>
-                        <span className="text-muted small">{g.openedAt ? new Date(g.openedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
-                      </div>
-                      <div className="fw-bold mb-1">من: {g.giftedByName || 'الإدارة'}</div>
-                      <div className="text-muted small">السبب: {g.note || 'هدية تقدير'}</div>
-                    </Card.Body>
-                  </Card>
-                </Col>
-              ))}
-            </Row>
-          </Card.Body>
-        </Card>
-      )}
       <Row className="mb-4 justify-content-center">
         <Col md={8} lg={6}>
           <div className="scan-panel text-center">
@@ -582,6 +556,32 @@ function EmployeeDashboard({ user }) {
           </Col>
         ))}
       </Row>
+
+      {todayGifts.length > 0 && (
+        <Card className="mb-4">
+          <Card.Body>
+            <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+              <Card.Title className="mb-0">الهدايا اللي استلمتها النهارده</Card.Title>
+            </div>
+            <Row>
+              {todayGifts.map((g) => (
+                <Col md={4} key={g._id} className="mb-3">
+                  <Card className="gift-log-card h-100">
+                    <Card.Body>
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <span className="badge bg-success">+{g.amount} نقطة</span>
+                        <span className="text-muted small">{g.openedAt ? new Date(g.openedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                      </div>
+                      <div className="fw-bold mb-1">من: {g.giftedByName || 'الإدارة'}</div>
+                      <div className="text-muted small">السبب: {g.note || 'هدية تقدير'}</div>
+                    </Card.Body>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          </Card.Body>
+        </Card>
+      )}
 
       <Modal show={showRedeemModal} onHide={() => setShowRedeemModal(false)}>
         <Modal.Header closeButton>
