@@ -4,6 +4,10 @@ const MAP_LINK = 'https://maps.app.goo.gl/AHX3MDPhyLEuvWUN8';
 const WHATSAPP_LINK = 'https://wa.me/gharam';
 const LANDLINE = '0472570908';
 const SUPPORT_LINK = 'https://zainbot.com/chat/ghazal';
+const INSTAGRAM_LINK = 'https://www.instagram.com/gharamsoltan';
+const TIKTOK_LINK = 'https://www.tiktok.com/@gharamsoltan';
+const FACEBOOK_LINK = 'https://www.facebook.com/gharam.ml';
+const THREADS_LINK = 'https://www.threads.net/@gharamsoltan';
 
 const themes = {
 	light: {
@@ -120,7 +124,7 @@ function MassageChair() {
 			--shadow: ${palette.shadow};
 		}
 		.page { background: var(--bg); min-height: 100vh; color: var(--text); font-family: 'Tajawal', 'Arial', sans-serif; }
-		.container { width: min(1100px, 94%); margin: 0 auto; padding: 28px 0 72px; }
+		.container { width: min(1200px, 92%); margin: 0 auto; padding: 28px 0 72px; }
 		h1 { margin: 0 0 12px; font-size: clamp(26px, 4vw, 38px); }
 		.section { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin: 14px 0; box-shadow: 0 12px 26px var(--shadow); }
 		.section h2 { margin: 0 0 10px; font-size: 20px; color: var(--text); }
@@ -137,6 +141,11 @@ function MassageChair() {
 		.sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; padding: 10px 14px; background: ${theme === 'light' ? 'rgba(255,255,255,0.96)' : 'rgba(24,18,16,0.92)'}; border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 20px 40px var(--shadow); z-index: 100; }
 		.sticky-bar .btn { padding: 12px 14px; }
 		.btn-ghost { background: rgba(0,0,0,0.03); color: var(--text); border: 1px solid var(--border); }
+		.topbar { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 18px 0; }
+		.brand { display: flex; align-items: center; justify-content: center; text-align: center; gap: 12px; font-weight: 800; }
+		.brand img { width: 64px; height: 64px; object-fit: contain; }
+		.pill { display: inline-flex; gap: 8px; align-items: center; padding: 10px 14px; background: rgba(0,0,0,0.03); border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 14px; }
+		.footer { margin: 28px 0 56px; text-align: center; color: var(--muted); font-size: 14px; }
 		.reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
 		.reveal.visible { opacity: 1; transform: translateY(0); }
 	`; 
@@ -145,6 +154,15 @@ function MassageChair() {
 		<div className="page" dir="rtl">
 			<style>{css}</style>
 			<div className="container">
+				<div className="topbar reveal">
+					<div className="brand">
+						<img src="/logo.png" alt="شعار غرام سلطان" loading="lazy" />
+						<div>
+							<div style={{ fontSize: 18 }}>غرام سلطان</div>
+							<div className="pill">بيوتي سنتر وستوديو </div>
+						</div>
+					</div>
+				</div>
 				<h1>كرسي المساج الذكي</h1>
 				{sections.map((sec) => (
 					<div className="section reveal" key={sec.title}>
@@ -161,7 +179,7 @@ function MassageChair() {
 					</div>
 				))}
 
-				<div className="contact">
+				<div className="contact reveal">
 					<h3 style={{ marginTop: 0 }}>معلومات التواصل السريعة</h3>
 					<div>📍 <a href={MAP_LINK} target="_blank" rel="noreferrer">دسوق - شارع الجيش</a></div>
 					<div>📞 <a href={`tel:${LANDLINE}`}>رقم أرضي: {LANDLINE}</a></div>
@@ -170,6 +188,13 @@ function MassageChair() {
 						<button className="link" onClick={() => window.open(WHATSAPP_LINK, '_blank')}>احجز جلسة</button>
 						<button className="link" onClick={() => window.location.href = `tel:${LANDLINE}`}>اتصل مباشرة</button>
 					</div>
+
+					<section className="footer reveal" style={{ paddingBottom: 90, marginTop: 24 }}>
+						<div>تابعينا: <a href={INSTAGRAM_LINK} target="_blank" rel="noreferrer" style={{ color: 'var(--gold)' }}>إنستجرام</a> · <a href={TIKTOK_LINK} target="_blank" rel="noreferrer" style={{ color: 'var(--gold)' }}>تيكتوك</a> · <a href={FACEBOOK_LINK} target="_blank" rel="noreferrer" style={{ color: 'var(--gold)' }}>فيسبوك</a> · <a href={THREADS_LINK} target="_blank" rel="noreferrer" style={{ color: 'var(--gold)' }}>ثريدز</a></div>
+						<div style={{ marginTop: 6, fontSize: 13 }}>
+							© غرام سلطان بيوتي سنتر · اسم يعني الثقة
+						</div>
+					</section>
 				</div>
 			</div>
 

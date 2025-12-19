@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const WHATSAPP_LINK = 'https://wa.me/gharam';
 const SUPPORT_LINK = 'https://zainbot.com/chat/ghazal';
 const LANDLINE = '0472570908';
+const INSTAGRAM_LINK = 'https://www.instagram.com/gharamsoltan';
+const TIKTOK_LINK = 'https://www.tiktok.com/@gharamsoltan';
+const FACEBOOK_LINK = 'https://www.facebook.com/gharam.ml';
+const THREADS_LINK = 'https://www.threads.net/@gharamsoltan';
 
 const themes = {
 	light: {
@@ -172,11 +176,11 @@ function PriceList() {
 		window.open(`${WHATSAPP_LINK}?text=${message}`, '_blank');
 	};
 
-	React.useEffect(() => {
+	useEffect(() => {
 		localStorage.setItem('theme', theme);
 	}, [theme]);
 
-	React.useEffect(() => {
+	useEffect(() => {
 		const link = document.createElement('link');
 		link.rel = 'preconnect';
 		link.href = new URL(SUPPORT_LINK).origin;
@@ -185,6 +189,17 @@ function PriceList() {
 		return () => {
 			if (link.parentNode) link.parentNode.removeChild(link);
 		};
+	}, []);
+
+	useEffect(() => {
+		const observer = new IntersectionObserver((entries) => {
+			entries.forEach((entry) => {
+				if (entry.isIntersecting) entry.target.classList.add('visible');
+			});
+		}, { threshold: 0.2 });
+
+		document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+		return () => observer.disconnect();
 	}, []);
 
 
@@ -201,7 +216,7 @@ function PriceList() {
 			--shadow: ${palette.shadow};
 		}
 		.price-page { background: var(--bg); color: var(--text); min-height: 100vh; font-family: 'Tajawal', 'Arial', sans-serif; }
-		.container { width: min(1100px, 92%); margin: 0 auto; padding: 28px 0 72px; }
+		.container { width: min(1200px, 92%); margin: 0 auto; padding: 28px 0 72px; }
 		h1 { margin: 0 0 12px; font-size: clamp(26px, 4vw, 38px); }
 		.lead { color: var(--muted); line-height: 1.6; margin-bottom: 18px; }
 		.section { margin: 24px 0; }
@@ -214,24 +229,40 @@ function PriceList() {
 		.services { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-top: 12px; }
 		.service { background: var(--card) !important; color: var(--text) !important; border: 1px solid var(--border) !important; border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; box-shadow: 0 8px 18px var(--shadow); }
 		.breadcrumb { margin-bottom: 16px; color: var(--muted); }
+		.topbar { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 18px 0; }
+		.brand { display: flex; align-items: center; justify-content: center; text-align: center; gap: 12px; font-weight: 800; }
+		.brand img { width: 64px; height: 64px; object-fit: contain; }
+		.pill { display: inline-flex; gap: 8px; align-items: center; padding: 10px 14px; background: rgba(0,0,0,0.03); border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 14px; }
+		.footer { margin: 28px 0 56px; text-align: center; color: var(--muted); font-size: 14px; }
 		.sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; padding: 10px 14px; background: ${theme === 'light' ? 'rgba(255,255,255,0.96)' : 'rgba(24,18,16,0.92)'}; border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 20px 40px var(--shadow); z-index: 100; }
 		.sticky-bar .btn { padding: 12px 14px; }
 		.btn-ghost { background: rgba(0,0,0,0.03); color: var(--text); border: 1px solid var(--border); }
+		.reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
+		.reveal.visible { opacity: 1; transform: translateY(0); }
 	`; 
 
 	return (
 		<div className="price-page" dir="rtl">
 			<style>{css}</style>
 			<div className="container">
+				<div className="topbar reveal">
+					<div className="brand">
+						<img src="/logo.png" alt="شعار غرام سلطان" loading="lazy" />
+						<div>
+							<div style={{ fontSize: 18 }}>غرام سلطان</div>
+							<div className="pill">بيوتي سنتر وستوديو </div>
+						</div>
+					</div>
+				</div>
 				<div className="breadcrumb">غرام سلطان • قائمة الأسعار</div>
 				<h1>قائمة الأسعار</h1>
 				<div className="lead">باكدجات الميك أب، باكدجات التصوير، وأسعار الخدمات الفردية في مكان واحد.</div>
 
-				<div className="section">
+				<div className="section reveal">
 					<h2>باكدجات الميك أب</h2>
 					<div className="cards">
 						{makeupPackages.map((pkg) => (
-							<div className="card" key={pkg.title}>
+							<div className="card reveal" key={pkg.title}>
 								<h3>{pkg.title}</h3>
 								<div className="price">{pkg.price}</div>
 								<ul>
@@ -245,11 +276,11 @@ function PriceList() {
 					</div>
 				</div>
 
-				<div className="section">
+				<div className="section reveal">
 					<h2>باكدجات التصوير</h2>
 					<div className="cards">
 						{photoPackages.map((pkg) => (
-							<div className="card" key={pkg.title}>
+							<div className="card reveal" key={pkg.title}>
 								<h3>{pkg.title}</h3>
 								<div className="price">{pkg.price}</div>
 								<ul>
@@ -263,17 +294,24 @@ function PriceList() {
 					</div>
 				</div>
 
-				<div className="section">
+				<div className="section reveal">
 					<h2>أسعار الخدمات الفردية</h2>
 					<div className="services">
 						{services.map((s) => (
-							<div className="service" key={s.name}>
+							<div className="service reveal" key={s.name}>
 								<span>{s.name}</span>
 								<span style={{ color: 'var(--gold)', fontWeight: 700 }}>{s.price}</span>
 							</div>
 						))}
 					</div>
 				</div>
+
+				<section className="footer reveal" style={{ paddingBottom: 90, marginTop: 24 }}>
+					<div>تابعينا: <a href={INSTAGRAM_LINK} target="_blank" rel="noreferrer" style={{ color: 'var(--gold)' }}>إنستجرام</a> · <a href={TIKTOK_LINK} target="_blank" rel="noreferrer" style={{ color: 'var(--gold)' }}>تيكتوك</a> · <a href={FACEBOOK_LINK} target="_blank" rel="noreferrer" style={{ color: 'var(--gold)' }}>فيسبوك</a> · <a href={THREADS_LINK} target="_blank" rel="noreferrer" style={{ color: 'var(--gold)' }}>ثريدز</a></div>
+					<div style={{ marginTop: 6, fontSize: 13 }}>
+						© غرام سلطان بيوتي سنتر · اسم يعني الثقة
+					</div>
+				</section>
 			</div>
 
 			<div className="sticky-bar">
