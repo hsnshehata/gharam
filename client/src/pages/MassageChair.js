@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 const MAP_LINK = 'https://maps.app.goo.gl/AHX3MDPhyLEuvWUN8';
 const WHATSAPP_LINK = 'https://wa.me/gharam';
@@ -74,10 +74,44 @@ const sections = [
 ];
 
 function MassageChair() {
-	const [theme, setTheme] = useState('light');
+	const [theme, setTheme] = useState(() => {
+		if (typeof window === 'undefined') return 'light';
+		return localStorage.getItem('theme') || 'light';
+	});
 	const [showChat, setShowChat] = useState(false);
 	const palette = themes[theme];
 	const toggleTheme = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+
+	useEffect(() => {
+		localStorage.setItem('theme', theme);
+	}, [theme]);
+
+	useEffect(() => {
+		const link = document.createElement('link');
+		link.rel = 'preconnect';
+		link.href = new URL(SUPPORT_LINK).origin;
+		link.crossOrigin = 'anonymous';
+		document.head.appendChild(link);
+		return () => {
+			if (link.parentNode) link.parentNode.removeChild(link);
+		};
+	}, []);
+
+	useEffect(() => {
+		const iframe = document.createElement('iframe');
+		iframe.src = SUPPORT_LINK;
+		iframe.style.position = 'absolute';
+		iframe.style.width = '0';
+		iframe.style.height = '0';
+		iframe.style.border = '0';
+		iframe.style.opacity = '0';
+		iframe.style.pointerEvents = 'none';
+		iframe.setAttribute('aria-hidden', 'true');
+		document.body.appendChild(iframe);
+		return () => {
+			if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+		};
+	}, []);
 
 	const css = `
 		:root {
