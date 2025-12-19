@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 
 function Navbar({ user, setUser }) {
   const [dark, setDark] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     try {
@@ -29,6 +30,8 @@ function Navbar({ user, setUser }) {
     }
   };
 
+  const closeMenu = () => setExpanded(false);
+
   return (
     <BootstrapNavbar
       bg="transparent"
@@ -36,45 +39,47 @@ function Navbar({ user, setUser }) {
       expand="lg"
       className="app-navbar mb-4"
       data-bs-theme={dark ? 'dark' : 'light'}
+      expanded={expanded}
+      onToggle={(isOpen) => setExpanded(isOpen)}
     >
       <BootstrapNavbar.Brand>
         <img src="/logo.png" alt="Logo" className="logo" /> مرحباً بعودتك, {user.username}
       </BootstrapNavbar.Brand>
-      <BootstrapNavbar.Toggle aria-controls="basic-navbar-nav" />
+      <BootstrapNavbar.Toggle aria-controls="basic-navbar-nav" onClick={() => setExpanded(!expanded)} />
       <BootstrapNavbar.Collapse id="basic-navbar-nav">
         <Nav className="me-auto">
           {user.role === 'admin' && (
             <>
-              <Nav.Link as={Link} to="/dashboard">شغل إنهاردة</Nav.Link>
-              <Nav.Link as={Link} to="/hall-supervision">اشراف الصالة</Nav.Link>
-              <Nav.Link as={Link} to="/bookings">الحجوزات</Nav.Link>
-              <Nav.Link as={Link} to="/instant-services">الخدمات الفورية</Nav.Link>
-              <Nav.Link as={Link} to="/expenses-advances">المصروفات والسلف</Nav.Link>
-              <Nav.Link as={Link} to="/employee-reports">تقارير الموظفين</Nav.Link>
-              <Nav.Link as={Link} to="/packages-services">إضافة باكدجات/خدمات</Nav.Link>
-              <Nav.Link as={Link} to="/points-admin">نقاط الموظفين</Nav.Link>
-              <Nav.Link as={Link} to="/users">الموظفين</Nav.Link>
-              <Nav.Link as={Link} to="/daily-reports">التقارير اليومية</Nav.Link>
+              <Nav.Link as={Link} to="/dashboard" onClick={closeMenu}>شغل إنهاردة</Nav.Link>
+              <Nav.Link as={Link} to="/hall-supervision" onClick={closeMenu}>اشراف الصالة</Nav.Link>
+              <Nav.Link as={Link} to="/bookings" onClick={closeMenu}>الحجوزات</Nav.Link>
+              <Nav.Link as={Link} to="/instant-services" onClick={closeMenu}>الخدمات الفورية</Nav.Link>
+              <Nav.Link as={Link} to="/expenses-advances" onClick={closeMenu}>المصروفات والسلف</Nav.Link>
+              <Nav.Link as={Link} to="/employee-reports" onClick={closeMenu}>تقارير الموظفين</Nav.Link>
+              <Nav.Link as={Link} to="/packages-services" onClick={closeMenu}>إضافة باكدجات/خدمات</Nav.Link>
+              <Nav.Link as={Link} to="/points-admin" onClick={closeMenu}>نقاط الموظفين</Nav.Link>
+              <Nav.Link as={Link} to="/users" onClick={closeMenu}>الموظفين</Nav.Link>
+              <Nav.Link as={Link} to="/daily-reports" onClick={closeMenu}>التقارير اليومية</Nav.Link>
             </>
           )}
           {(user.role === 'supervisor') && (
             <>
-              <Nav.Link as={Link} to="/dashboard">شغل إنهاردة</Nav.Link>
-              <Nav.Link as={Link} to="/hall-supervision">اشراف الصالة</Nav.Link>
-              <Nav.Link as={Link} to="/bookings">الحجوزات</Nav.Link>
-              <Nav.Link as={Link} to="/instant-services">الخدمات الفورية</Nav.Link>
-              <Nav.Link as={Link} to="/expenses-advances">المصروفات والسلف</Nav.Link>
-              <Nav.Link as={Link} to="/employee-reports">تقارير الموظفين</Nav.Link>
+              <Nav.Link as={Link} to="/dashboard" onClick={closeMenu}>شغل إنهاردة</Nav.Link>
+              <Nav.Link as={Link} to="/hall-supervision" onClick={closeMenu}>اشراف الصالة</Nav.Link>
+              <Nav.Link as={Link} to="/bookings" onClick={closeMenu}>الحجوزات</Nav.Link>
+              <Nav.Link as={Link} to="/instant-services" onClick={closeMenu}>الخدمات الفورية</Nav.Link>
+              <Nav.Link as={Link} to="/expenses-advances" onClick={closeMenu}>المصروفات والسلف</Nav.Link>
+              <Nav.Link as={Link} to="/employee-reports" onClick={closeMenu}>تقارير الموظفين</Nav.Link>
             </>
           )}
           {user.role === 'hallSupervisor' && (
             <>
-              <Nav.Link as={Link} to="/hall-supervision">اشراف الصالة</Nav.Link>
+              <Nav.Link as={Link} to="/hall-supervision" onClick={closeMenu}>اشراف الصالة</Nav.Link>
             </>
           )}
           {user.role === 'employee' && (
             <>
-              <Nav.Link as={Link} to="/employee-dashboard">لوحة الموظف</Nav.Link>
+              <Nav.Link as={Link} to="/employee-dashboard" onClick={closeMenu}>لوحة الموظف</Nav.Link>
             </>
           )}
         </Nav>
@@ -90,7 +95,7 @@ function Navbar({ user, setUser }) {
             {dark ? '☀️ فاتح' : '🌙 داكن'}
           </button>
 
-          <Nav.Link onClick={() => { localStorage.removeItem('token'); if (setUser) setUser(null); window.location.href = '/login'; }}>
+          <Nav.Link onClick={() => { closeMenu(); localStorage.removeItem('token'); if (setUser) setUser(null); window.location.href = '/login'; }}>
             تسجيل الخروج
           </Nav.Link>
         </Nav>
