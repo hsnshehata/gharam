@@ -267,6 +267,29 @@ function Landing() {
 					</div>
 				</section>
 
+				<section className="availability reveal">
+					<div className="card">
+						<span className="badge">تأكيد التوافر</span>
+						<h2 style={{ margin: '8px 0 12px' }}>تأكدي إن اليوم فاضي للباكدج</h2>
+						<form onSubmit={(e) => { e.preventDefault(); handleCheckAvailability(); }}>
+							<div>
+								<label>نوع الباكدج</label>
+								<select value={packageType} onChange={(e) => setPackageType(e.target.value)}>
+									<option value="makeup">ميك أب / حنة / حجز صالون</option>
+									<option value="photo">تصوير</option>
+								</select>
+							</div>
+							<div>
+								<label>تاريخ الحجز</label>
+								<input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+							</div>
+							<p style={{ color: 'var(--muted)', fontSize: 13, margin: '4px 0 0' }}>اختاري نوع الباكدج والتاريخ واعرفي التوافر فورًا.</p>
+							{error && <div style={{ color: '#d9534f', fontSize: 14 }}>{error}</div>}
+							<button type="submit" className="btn btn-primary" disabled={loading}>{loading ? 'بيتحقق...' : 'افحص التوافر'}</button>
+						</form>
+					</div>
+				</section>
+
 				<section className="reveal">
 					<div className="package-grid">
 						{featuredPackages.map((pkg) => (
@@ -300,29 +323,6 @@ function Landing() {
 						<p>منتجات عالمية، احترافية عالية، متابعة أحدث التقنيات وتجربة عملاء مريحة من البداية للنهاية.</p>
 					</div>
 				</section>
-
-					<section className="availability reveal">
-						<div className="card">
-							<span className="badge">تأكيد التوافر</span>
-							<h2 style={{ margin: '8px 0 12px' }}>تأكدي إن اليوم فاضي للباكدج</h2>
-							<form onSubmit={(e) => { e.preventDefault(); handleCheckAvailability(); }}>
-								<div>
-									<label>نوع الباكدج</label>
-									<select value={packageType} onChange={(e) => setPackageType(e.target.value)}>
-										<option value="makeup">ميك أب / حنة / حجز صالون</option>
-										<option value="photo">تصوير</option>
-									</select>
-								</div>
-								<div>
-									<label>تاريخ الحجز</label>
-									<input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-								</div>
-								<p style={{ color: 'var(--muted)', fontSize: 13, margin: '4px 0 0' }}>اختاري نوع الباكدج والتاريخ واعرفي التوافر فورًا.</p>
-								{error && <div style={{ color: '#d9534f', fontSize: 14 }}>{error}</div>}
-								<button type="submit" className="btn btn-primary" disabled={loading}>{loading ? 'بيتحقق...' : 'افحص التوافر'}</button>
-							</form>
-						</div>
-					</section>
 
 				<section className="highlight reveal">
 					<div className="massage-banner">
