@@ -37,6 +37,21 @@ const themes = {
 	}
 };
 
+const featuredPackages = [
+	{
+		label: 'باكدج الميك أب الأكثر طلبًا',
+		title: 'باكدج زفاف سبيشيال بلس',
+		price: '5,500 ج',
+		points: ['تنضيف بشرة كامل + حمام مغربي وعطري', 'صنفرة للجسم + 3 رسومات حنة', 'تسريحة/لفة + رموش + عدسات + فيك نيلز', 'تأجير تاج/طرحة + بديكير ومنيكير + سشوار']
+	},
+	{
+		label: 'باكدج التصوير الأكثر طلبًا',
+		title: 'باكدج تصوير ألبوم 20×30',
+		price: '1,600ج (استوديو) · 2,700ج (لوكيشن)',
+		points: ['ألبوم 20×30 (10 مناظر)', 'فوتوبلوك 50×60', 'ألبوم ميني', '40 كارت مكرر']
+	}
+];
+
 const availabilityCopy = {
 	busy: { title: 'اليوم كامل', message: 'اليوم مشغول ولا يمكن حجزه حالياً.' },
 	nearly: { title: 'يكاد يكتمل', message: 'اليوم على وشك الاكتمال، أسرعي في التواصل لتأكيد الميعاد.' },
@@ -85,6 +100,11 @@ function Landing() {
 	const palette = themes[theme];
 	const selectedReviews = useMemo(() => shuffle(googleReviews).slice(0, 12), []);
 	const availabilityBadge = availability ? availabilityCopy[availability.status] : null;
+
+	const handlePackageWhatsApp = (title) => {
+		const message = encodeURIComponent(`أريد حجز باكدج ${title}`);
+		window.open(`${WHATSAPP_LINK}?text=${message}`, '_blank');
+	};
 
 	useEffect(() => {
 		const observer = new IntersectionObserver((entries) => {
@@ -183,6 +203,12 @@ function Landing() {
 		.stars { color: #f4c150; font-size: 18px; letter-spacing: 1px; }
 		.review-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 16px; }
 		.review-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; min-height: 170px; box-shadow: 0 14px 28px var(--shadow); }
+		.package-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin: 20px 0; }
+		.package-card { position: relative; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: 0 14px 28px var(--shadow); display: grid; gap: 10px; }
+		.package-label { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 999px; border: 1px solid rgba(198,161,91,0.4); background: rgba(198,161,91,0.12); color: var(--text); font-weight: 700; width: fit-content; }
+		.package-price { color: var(--gold); font-weight: 800; }
+		.package-points { margin: 0; padding-inline-start: 18px; color: var(--muted); line-height: 1.6; }
+		.package-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 		.reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
 		.reveal.visible { opacity: 1; transform: translateY(0); }
 		.review-head { display: flex; align-items: center; gap: 10px; }
@@ -238,6 +264,25 @@ function Landing() {
 								<span style={{ marginInlineStart: 8, fontSize: 16 }}>أسعار الخدمات</span>
 							</button>
 						</div>
+					</div>
+				</section>
+
+				<section className="reveal">
+					<div className="package-grid">
+						{featuredPackages.map((pkg) => (
+							<div key={pkg.title} className="package-card">
+								<span className="package-label">{pkg.label}</span>
+								<h3 style={{ margin: '4px 0 4px' }}>{pkg.title}</h3>
+								<div className="package-price">{pkg.price}</div>
+								<ul className="package-points">
+									{pkg.points.map((pt) => <li key={pt}>{pt}</li>)}
+								</ul>
+								<div className="package-actions">
+									<button className="btn btn-primary" onClick={() => handlePackageWhatsApp(pkg.title)}>احجز الآن</button>
+									<button className="btn btn-outline" onClick={() => (window.location.href = '/prices')}>شوفي باقي الباكدجات وأسعار الخدمات</button>
+								</div>
+							</div>
+						))}
 					</div>
 				</section>
 

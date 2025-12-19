@@ -164,6 +164,11 @@ function PriceList() {
 	const [showChat, setShowChat] = useState(false);
 	const palette = themes[theme];
 
+	const handlePackageWhatsApp = (title) => {
+		const message = encodeURIComponent(`أريد حجز باكدج ${title}`);
+		window.open(`${WHATSAPP_LINK}?text=${message}`, '_blank');
+	};
+
 	const toggleTheme = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
 
 	const css = `
@@ -215,7 +220,7 @@ function PriceList() {
 										<li key={item}>{item}</li>
 									))}
 								</ul>
-								<button className="btn" onClick={() => window.open(WHATSAPP_LINK, '_blank')}>احجز الآن</button>
+								<button className="btn" onClick={() => handlePackageWhatsApp(pkg.title)}>احجز الآن</button>
 							</div>
 						))}
 					</div>
@@ -233,7 +238,7 @@ function PriceList() {
 										<li key={item}>{item}</li>
 									))}
 								</ul>
-								<button className="btn" onClick={() => window.open(WHATSAPP_LINK, '_blank')}>احجز الآن</button>
+								<button className="btn" onClick={() => handlePackageWhatsApp(pkg.title)}>احجز الآن</button>
 							</div>
 						))}
 					</div>
