@@ -12,6 +12,35 @@ const SUPPORT_LINK = 'https://zainbot.com/chat/ghazal';
 const LANDLINE = '0472570908';
 const API_BASE = (process.env.REACT_APP_API_BASE || 'http://localhost:5000').replace(/\/$/, '');
 
+const INSTAGRAM_SVG = (
+	<path
+		fillRule="evenodd"
+		d="M224.1 141c-63.6 0-114.9 51.3-114.9 114.9s51.3 114.9 114.9 114.9S339 319.5 339 255.9 287.7 141 224.1 141zm0 189.6c-41.1 0-74.7-33.5-74.7-74.7s33.5-74.7 74.7-74.7 74.7 33.5 74.7 74.7-33.6 74.7-74.7 74.7zm146.4-194.3c0 14.9-12 26.8-26.8 26.8-14.9 0-26.8-12-26.8-26.8s12-26.8 26.8-26.8 26.8 12 26.8 26.8zm76.1 27.2c-1.7-35.9-9.9-67.7-36.2-93.9-26.2-26.2-58-34.4-93.9-36.2-37-2.1-147.9-2.1-184.9 0-35.8 1.7-67.6 9.9-93.9 36.1s-34.4 58-36.2 93.9c-2.1 37-2.1 147.9 0 184.9 1.7 35.9 9.9 67.7 36.2 93.9s58 34.4 93.9 36.2c37 2.1 147.9 2.1 184.9 0 35.9-1.7 67.7-9.9 93.9-36.2 26.2-26.2 34.4-58 36.2-93.9 2.1-37 2.1-147.8 0-184.8z"
+	/>
+);
+
+const WHATSAPP_SVG = (
+	<path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z" />
+);
+
+const socialLinks = [
+	{ href: INSTAGRAM_LINK, label: 'Instagram', text: 'إنستجرام', color: '#e1306c', svg: INSTAGRAM_SVG },
+	{ href: FACEBOOK_LINK, label: 'Facebook', text: 'فيسبوك', color: '#1877f2', svg: (
+		<path d="M279.14 288l14.22-92.66h-88.91v-60.13c0-25.35 12.42-50.06 52.24-50.06h40.42V6.26S260.43 0 225.36 0c-73.22 0-121.08 44.38-121.08 124.72v70.62H22.89V288h81.39v224h100.17V288z" />
+	)},
+	{ href: THREADS_LINK, label: 'Threads', text: 'ثريدز', color: '#000000', svg: (
+		<path d="M331.5 235.7c2.2.9 4.2 1.9 6.3 2.8 29.2 14.1 50.6 35.2 61.8 61.4 15.7 36.5 17.2 95.8-30.3 143.2-36.2 36.2-80.3 52.5-142.6 53h-.3c-70.2-.5-124.1-24.1-160.4-70.2-32.3-41-48.9-98.1-49.5-169.6V256v-.2C17 184.3 33.6 127.2 65.9 86.2 102.2 40.1 156.2 16.5 226.4 16h.3c70.3.5 124.9 24 162.3 69.9 18.4 22.7 32 50 40.6 81.7l-40.4 10.8c-7.1-25.8-17.8-47.8-32.2-65.4-29.2-35.8-73-54.2-130.5-54.6-57 .5-100.1 18.8-128.2 54.4C72.1 146.1 58.5 194.3 58 256c.5 61.7 14.1 109.9 40.3 143.3 28 35.6 71.2 53.9 128.2 54.4 51.4-.4 85.4-12.6 113.7-40.9 32.3-32.2 31.7-71.8 21.4-95.9-6.1-14.2-17.1-26-31.9-34.9-3.7 26.9-11.8 48.3-24.7 64.8-17.1 21.8-41.4 33.6-72.7 35.3-23.6 1.3-46.3-4.4-63.9-16-20.8-13.8-33-34.8-34.3-59.3-2.5-48.3 35.7-83 95.2-86.4 21.1-1.2 40.9-.3 59.2 2.8-2.4-14.8-7.3-26.6-14.6-35.2-10-11.7-25.6-17.7-46.2-17.8H227c-16.6 0-39 4.6-53.3 26.3l-34.4-23.6c19.2-29.1 50.3-45.1 87.8-45.1h.8c62.6.4 99.9 39.5 103.7 107.7l-.2.2zm-156 68.8c1.3 25.1 28.4 36.8 54.6 35.3 25.6-1.4 54.6-11.4 59.5-73.2-13.2-2.9-27.8-4.4-43.4-4.4-4.8 0-9.6.1-14.4.4-42.9 2.4-57.2 23.2-56.2 41.8l-.1.1z" />
+	)},
+	{ href: TIKTOK_LINK, label: 'TikTok', text: 'تيكتوك', color: '#010101', svg: (
+		<path d="M448 209.91a210.06 210.06 0 0 1-122.77-39.25V349.38A162.55 162.55 0 1 1 185 188.31V278.2a74.62 74.62 0 1 0 52.23 71.18V0h88a121.18 121.18 0 0 0 1.86 22.17A122.18 122.18 0 0 0 381 102.39a121.43 121.43 0 0 0 67 20.14z" />
+	)},
+	{ href: WHATSAPP_LINK, label: 'WhatsApp', text: 'واتساب', color: '#25d366', svg: (
+		<path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z" />
+	)}
+];
+
+const socialLinksNoWhatsApp = socialLinks.filter((s) => s.label !== 'WhatsApp');
+
 const themes = {
 	light: {
 		bg: '#f9f6f1',
@@ -20,7 +49,7 @@ const themes = {
 		muted: '#5e5146',
 		border: '#e6dfd4',
 		gold: '#c49841',
-		accent: '#a76bdb',
+		accent: '#1fb6a6',
 		overlay: '#f1e7d8',
 		shadow: 'rgba(0,0,0,0.08)'
 	},
@@ -31,7 +60,7 @@ const themes = {
 		muted: '#cfc5b7',
 		border: '#2b2320',
 		gold: '#c6a15b',
-		accent: '#9b8bff',
+		accent: '#1aa193',
 		overlay: '#241915',
 		shadow: 'rgba(0,0,0,0.28)'
 	}
@@ -77,6 +106,23 @@ const colorFromName = (name) => {
 const PhoneIcon = ({ size = 18 }) => (
 	<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
 		<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.11 4.1 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+	</svg>
+);
+
+const MapPinIcon = ({ size = 18 }) => (
+	<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+		<path d="M12 2c-3.9 0-7 3-7 6.8 0 4.7 4 9.1 6.4 11.5.3.3.8.3 1.1 0C15 17.9 19 13.5 19 8.8 19 5 15.9 2 12 2z" />
+		<circle cx="12" cy="9" r="2.5" />
+	</svg>
+);
+
+const BotIcon = ({ size = 18 }) => (
+	<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+		<rect x="4" y="7" width="16" height="10" rx="3" />
+		<path d="M12 7V4" />
+		<circle cx="9" cy="12" r="1" />
+		<circle cx="15" cy="12" r="1" />
+		<path d="M8 17h8" />
 	</svg>
 );
 
@@ -170,14 +216,21 @@ function Landing() {
 			--shadow: ${palette.shadow};
 		}
 		body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Tajawal', 'Arial', sans-serif; }
-		.landing-page { background: radial-gradient(circle at 15% 20%, rgba(198,161,91,0.12), transparent 26%), radial-gradient(circle at 85% 15%, rgba(167,107,219,0.10), transparent 24%), var(--bg); min-height: 100vh; }
+		.landing-page { background: radial-gradient(circle at 15% 20%, rgba(198,161,91,0.18), transparent 26%), radial-gradient(circle at 85% 15%, rgba(120,78,44,0.14), transparent 24%), var(--bg); min-height: 100vh; }
 		.container { width: min(1200px, 92%); margin: 0 auto; }
 		.topbar { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 18px 0; }
 		.brand { display: flex; align-items: center; justify-content: center; text-align: center; gap: 12px; font-weight: 800; }
 		.brand img { width: 64px; height: 64px; object-fit: contain; }
 		.pill { display: inline-flex; gap: 8px; align-items: center; padding: 10px 14px; background: rgba(0,0,0,0.03); border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 14px; }
-		.hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 32px; align-items: center; padding: 24px 0 12px; }
+		.hero { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 32px; align-items: center; padding: 24px 0 12px; }
+		.hero::before { content: ''; position: absolute; inset: -8% 48% 26% -8%; background: radial-gradient(circle at 30% 30%, rgba(198,161,91,0.34), rgba(120,78,44,0.26) 42%, transparent 70%); filter: blur(26px); animation: floatGlow 14s ease-in-out infinite; z-index: 0; pointer-events: none; }
+		.hero > * { position: relative; z-index: 1; }
 		.hero img { width: 100%; border-radius: 16px; object-fit: cover; box-shadow: 0 30px 60px var(--shadow); border: 1px solid var(--border); background: var(--card); }
+		@keyframes floatGlow {
+			0% { transform: translate3d(-16px, 4px, 0) scale(0.98); opacity: 0.9; }
+			50% { transform: translate3d(18px, -10px, 0) scale(1.06); opacity: 1; }
+			100% { transform: translate3d(-12px, 6px, 0) scale(1); opacity: 0.94; }
+		}
 		h1 { margin: 8px 0 16px; font-size: clamp(28px, 4vw, 42px); line-height: 1.2; }
 		h2 { margin: 0 0 12px; }
 		p { color: var(--muted); line-height: 1.75; margin: 0; }
@@ -212,7 +265,7 @@ function Landing() {
 		.availability-result h4 { margin: 0 0 6px; color: var(--text); }
 		.contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 20px 0; }
 		.contact-card { display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: 14px; border: 1px solid var(--border); background: rgba(0,0,0,0.02); box-shadow: 0 10px 22px var(--shadow); }
-		.contact-title { font-weight: 700; color: var(--text); }
+		.contact-title { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--text); }
 		.contact-desc { color: var(--muted); font-size: 14px; }
 		.quick-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 8px 0 24px; }
 		.quick-link { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: rgba(0,0,0,0.02); color: var(--text); text-decoration: none; transition: transform 0.15s ease, box-shadow 0.15s ease; }
@@ -237,6 +290,10 @@ function Landing() {
 		.review-card small { color: var(--muted); }
 		.review-card p { margin: 8px 0 0; color: var(--muted); line-height: 1.5; }
 		.footer { margin: 28px 0 56px; text-align: center; color: var(--muted); font-size: 14px; }
+		.social-row { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 12px; }
+		.social-link { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); border-radius: 10px; transition: color 0.2s ease, transform 0.2s ease; }
+		.social-link svg { width: 28px; height: 28px; fill: currentColor; }
+		.social-link:hover { transform: translateY(-2px); color: var(--hover, var(--gold)); }
 		.sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 8px 10px; background: ${theme === 'light' ? 'rgba(255,255,255,0.96)' : 'rgba(24,18,16,0.92)'}; border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 20px 40px var(--shadow); z-index: 100; width: auto; max-width: calc(100% - 24px); }
 		.sticky-bar .btn { padding: 10px 12px; }
 		.support-floating { position: fixed; bottom: 20px; right: 20px; z-index: 120; }
@@ -362,15 +419,18 @@ function Landing() {
 					<p style={{ color: 'var(--muted)', margin: '0 0 14px' }}>اختاري الطريقة المناسبة ليكي؛ مكالمة، واتساب، خريطة أو سوشيال في ضغطة.</p>
 					<div className="contact-grid" style={{ marginBottom: 12 }}>
 						<div className="contact-card" style={{ borderColor: '#25d36655' }}>
-							<span className="contact-title">واتساب</span>
+							<span className="contact-title">
+								<svg viewBox="0 0 448 512" role="img" aria-hidden="true" focusable="false" style={{ width: 18, height: 18, color: '#0f0b0a' }}>{WHATSAPP_SVG}</svg>
+								واتساب
+							</span>
 							<span className="contact-desc">رد سريع وتأكيد تفاصيل الميعاد.</span>
 							<button className="btn" style={{ background: '#25d366', color: '#0f0b0a', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => window.open(WHATSAPP_LINK, '_blank')}>
-								<WhatsAppIcon size={18} />
+								<svg viewBox="0 0 448 512" role="img" aria-hidden="true" focusable="false" style={{ width: 18, height: 18, color: '#0f0b0a' }}>{WHATSAPP_SVG}</svg>
 								<span>مراسلة واتساب</span>
 							</button>
 						</div>
 						<div className="contact-card" style={{ borderColor: '#c6a15b55' }}>
-							<span className="contact-title">اتصال أرضي</span>
+							<span className="contact-title"><PhoneIcon size={18} />اتصال أرضي</span>
 							<span className="contact-desc">للاستفسارات السريعة: {LANDLINE}</span>
 							<button className="btn" style={{ background: '#c6a15b', color: '#0f0b0a', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => window.location.href = `tel:${LANDLINE}`}>
 								<PhoneIcon size={18} />
@@ -378,39 +438,29 @@ function Landing() {
 							</button>
 						</div>
 						<div className="contact-card" style={{ borderColor: '#4ea1ff55' }}>
-							<span className="contact-title">الموقع</span>
+							<span className="contact-title"><MapPinIcon size={18} />الموقع</span>
 							<span className="contact-desc">شارع الجيش، مدينة دسوق . </span>
 							<button className="btn" style={{ background: '#4ea1ff', color: '#0f0b0a', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => window.location.href = MAP_LINK}>
-								<span role="img" aria-label="خريطة">📍</span>
+								<MapPinIcon size={18} />
 								<span>افتحي الخريطة</span>
 							</button>
 						</div>
-						<div className="contact-card" style={{ borderColor: '#9b8bff55' }}>
-							<span className="contact-title">دعم فوري</span>
+						<div className="contact-card" style={{ borderColor: '#1aa19355' }}>
+							<span className="contact-title"><BotIcon size={18} />دعم فوري</span>
 							<span className="contact-desc">زري البوت لأسئلة سريعة.</span>
-							<button className="btn" style={{ background: '#9b8bff', color: '#0f0b0a', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => setShowChat(true)}>
-								<span role="img" aria-label="دعم">💬</span>
+							<button className="btn" style={{ background: '#1aa193', color: '#0f0b0a', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => setShowChat(true)}>
+								<BotIcon size={18} />
 								<span>افتحي البوت</span>
 							</button>
 						</div>
 					</div>
 					<div className="quick-links">
-						<a className="quick-link" href={INSTAGRAM_LINK} target="_blank" rel="noreferrer">
-							<span className="icon">📷</span>
-							<span>إنستجرام</span>
-						</a>
-						<a className="quick-link" href={TIKTOK_LINK} target="_blank" rel="noreferrer">
-							<span className="icon">🎵</span>
-							<span>تيكتوك</span>
-						</a>
-						<a className="quick-link" href={FACEBOOK_LINK} target="_blank" rel="noreferrer">
-							<span className="icon">📘</span>
-							<span>فيسبوك</span>
-						</a>
-						<a className="quick-link" href={THREADS_LINK} target="_blank" rel="noreferrer">
-							<span className="icon">🧵</span>
-							<span>ثريدز</span>
-						</a>
+						{socialLinksNoWhatsApp.map((s) => (
+							<a className="quick-link" key={s.href} href={s.href} target="_blank" rel="noreferrer">
+								<svg viewBox="0 0 448 512" role="img" aria-hidden="true" focusable="false" style={{ width: 26, height: 26, color: 'inherit' }}>{s.svg}</svg>
+								<span>{s.text || s.label}</span>
+							</a>
+						))}
 					</div>
 				</section>
 
@@ -472,7 +522,14 @@ function Landing() {
 				</section>
 
 				<section className="footer reveal" style={{ paddingBottom: 90 }}>
-					<div>تابعينا: <a href={INSTAGRAM_LINK} target="_blank" rel="noreferrer" style={{ color: 'var(--gold)' }}>إنستجرام</a> · <a href={TIKTOK_LINK} target="_blank" rel="noreferrer" style={{ color: 'var(--gold)' }}>تيكتوك</a> · <a href={FACEBOOK_LINK} target="_blank" rel="noreferrer" style={{ color: 'var(--gold)' }}>فيسبوك</a> · <a href={THREADS_LINK} target="_blank" rel="noreferrer" style={{ color: 'var(--gold)' }}>ثريدز</a></div>
+					<div>تابعينا على السوشيال</div>
+					<div className="social-row">
+						{socialLinks.map((s) => (
+							<a key={s.href} className="social-link" href={s.href} target="_blank" rel="noreferrer" style={{ '--hover': s.color }} aria-label={s.label}>
+								<svg viewBox="0 0 448 512" role="img" aria-hidden="true" focusable="false">{s.svg}</svg>
+							</a>
+						))}
+					</div>
 					<div style={{ marginTop: 6, fontSize: 13 }}>
 						© غرام سلطان بيوتي سنتر · اسم يعني الثقة
 					</div>
