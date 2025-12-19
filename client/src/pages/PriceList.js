@@ -160,7 +160,10 @@ const services = [
 ];
 
 function PriceList() {
-	const [theme, setTheme] = useState('light');
+	const [theme, setTheme] = useState(() => {
+		if (typeof window === 'undefined') return 'light';
+		return localStorage.getItem('theme') || 'light';
+	});
 	const [showChat, setShowChat] = useState(false);
 	const palette = themes[theme];
 
@@ -168,6 +171,21 @@ function PriceList() {
 		const message = encodeURIComponent(`أريد حجز باكدج ${title}`);
 		window.open(`${WHATSAPP_LINK}?text=${message}`, '_blank');
 	};
+
+	React.useEffect(() => {
+		localStorage.setItem('theme', theme);
+	}, [theme]);
+
+	React.useEffect(() => {
+		const link = document.createElement('link');
+		link.rel = 'preconnect';
+		link.href = new URL(SUPPORT_LINK).origin;
+		link.crossOrigin = 'anonymous';
+		document.head.appendChild(link);
+		return () => {
+			if (link.parentNode) link.parentNode.removeChild(link);
+		};
+	}, []);
 
 	const toggleTheme = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
 

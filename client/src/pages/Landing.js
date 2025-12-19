@@ -10,7 +10,7 @@ const FACEBOOK_LINK = 'https://www.facebook.com/gharam.ml';
 const THREADS_LINK = 'https://www.threads.net/@gharamsoltan';
 const SUPPORT_LINK = 'https://zainbot.com/chat/ghazal';
 const LANDLINE = '0472570908';
-const API_BASE = (process.env.REACT_APP_API_BASE || '').replace(/\/$/, '');
+const API_BASE = (process.env.REACT_APP_API_BASE || 'http://localhost:5000').replace(/\/$/, '');
 
 const themes = {
 	light: {
@@ -95,11 +95,29 @@ function Landing() {
 	const [error, setError] = useState('');
 	const [showChat, setShowChat] = useState(false);
 	const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
-	const [theme, setTheme] = useState('light');
+	const [theme, setTheme] = useState(() => {
+		if (typeof window === 'undefined') return 'light';
+		return localStorage.getItem('theme') || 'light';
+	});
 
 	const palette = themes[theme];
 	const selectedReviews = useMemo(() => shuffle(googleReviews).slice(0, 12), []);
 	const availabilityBadge = availability ? availabilityCopy[availability.status] : null;
+
+	useEffect(() => {
+		localStorage.setItem('theme', theme);
+	}, [theme]);
+
+	useEffect(() => {
+		const link = document.createElement('link');
+		link.rel = 'preconnect';
+		link.href = new URL(SUPPORT_LINK).origin;
+		link.crossOrigin = 'anonymous';
+		document.head.appendChild(link);
+		return () => {
+			if (link.parentNode) link.parentNode.removeChild(link);
+		};
+	}, []);
 
 	const handlePackageWhatsApp = (title) => {
 		const message = encodeURIComponent(`أريد حجز باكدج ${title}`);
@@ -239,7 +257,7 @@ function Landing() {
 			<div className="container">
 				<div className="topbar">
 					<div className="brand">
-						<img src="/logo.png" alt="شعار غرام سلطان" />
+						<img src="/logo.png" alt="شعار غرام سلطان" loading="lazy" />
 						<div>
 							<div style={{ fontSize: 18 }}>غرام سلطان</div>
 							<div className="pill">بيوتي سنتر وستوديو </div>
@@ -249,7 +267,7 @@ function Landing() {
 
 				<section className="hero reveal">
 					<div>
-						<img src="/gharam.jpg" alt="غرام سلطان تحمل شهادة البورد الأمريكي" />
+						<img src="/gharam.jpg" alt="غرام سلطان تحمل شهادة البورد الأمريكي" loading="lazy" />
 					</div>
 					<div>
 						<h1>إطلالة ساحرة مع خبيرة الميكب غرام سلطان</h1>
