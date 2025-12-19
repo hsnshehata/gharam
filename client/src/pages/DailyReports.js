@@ -107,6 +107,7 @@ function Reports() {
   const [rangeData, setRangeData] = useState(null);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState({ daily: false, monthly: false, range: false });
+  const [showAllMonthlyDays, setShowAllMonthlyDays] = useState(false);
 
   const fetchDaily = async () => {
     setLoading((p) => ({ ...p, daily: true }));
@@ -164,7 +165,14 @@ function Reports() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const analyticsBlock = (data) => (
+  const analyticsBlock = (data, options = {}) => {
+    const dailyRevenueData = options.dailyRevenueData || data.analytics?.dailyRevenue || [];
+    const dailyTitle = options.dailyTitle || 'الدخل اليومي خلال الشهر';
+    const dailyBadgeLabel = options.dailyBadgeLabel || data.analytics?.stats?.daysCount;
+    const dailyNote = options.dailyNote || 'الأرقام تمثل إجمالي الدخل (حجوزات + خدمات فورية) لكل يوم.';
+    const dailyControls = options.dailyControls;
+
+    return (
     <>
       <SummaryGrid summary={data.summary || {}} stats={data.analytics?.stats} />
       <Row className="g-3 mb-3">
@@ -184,14 +192,17 @@ function Reports() {
           <Card className="h-100">
             <Card.Body>
               <div className="section-head">
-                <h5 className="mb-1">الدخل اليومي خلال الشهر</h5>
-                <Badge bg="light" text="dark">أيام: {data.analytics?.stats?.daysCount}</Badge>
+                <h5 className="mb-1">{dailyTitle}</h5>
+                <div className="d-flex align-items-center gap-2 flex-wrap">
+                  <Badge bg="light" text="dark">أيام: {dailyBadgeLabel}</Badge>
+                  {dailyControls}
+                </div>
               </div>
               <BarLines
-                data={(data.analytics?.dailyRevenue || []).map((d) => ({ label: d.date.slice(8, 10), value: d.total }))}
+                data={dailyRevenueData.map((d) => ({ label: d.date.slice(8, 10), value: d.total }))}
                 accent="#1fb6a6"
               />
-              <div className="muted mt-2">الأرقام تمثل إجمالي الدخل (حجوزات + خدمات فورية) لكل يوم.</div>
+              <div className="muted mt-2">{dailyNote}</div>
             </Card.Body>
           </Card>
         </Col>
@@ -202,7 +213,8 @@ function Reports() {
         <Col md={4}><MiniList title="أعلى مجمعين نقاط" items={data.analytics?.topEarners || []} formatter={(i) => `${i.points} نقطة`} /></Col>
       </Row>
     </>
-  );
+    );
+  };
 
   return (
     <Container className="mt-4 reports-page">
@@ -300,7 +312,34 @@ function Reports() {
               </Row>
             </Card.Body>
           </Card>
-          {loading.monthly ? <div className="text-center"><Spinner animation="border" /></div> : monthlyData && analyticsBlock(monthlyData)}
+          {loading.monthly ? (
+            <div className="text-center"><Spinner animation="border" /></div>
+          ) : monthlyData && (
+            (() => {
+              const daily = monthlyData.analytics?.dailyRevenue || [];
+              const top5 = [...daily].sort((a, b) => b.total - a.total).slice(0, 5);
+              const dailyForChart = showAllMonthlyDays ? daily : top5;
+              const controlButton = daily.length > 5 ? (
+                <Button
+                  size="sm"
+                  variant="outline-secondary"
+                  onClick={() => setShowAllMonthlyDays((p) => !p)}
+                >
+                  {showAllMonthlyDays ? 'عرض أعلى 5 أيام' : 'عرض الشهر كامل'}
+                </Button>
+              ) : null;
+
+              return analyticsBlock(monthlyData, {
+                dailyRevenueData: dailyForChart,
+                dailyTitle: showAllMonthlyDays ? 'الدخل اليومي للشهر كامل' : 'أعلى 5 أيام دخل في الشهر',
+                dailyBadgeLabel: dailyForChart.length,
+                dailyNote: showAllMonthlyDays
+                  ? 'إجمالي الدخل اليومي (حجوزات + خدمات فورية) لجميع أيام الشهر.'
+                  : 'ترتيب تنازلي لأعلى 5 أيام دخل في الشهر.',
+                dailyControls: controlButton
+              });
+            })()
+          )}
         </>
       )}
 
