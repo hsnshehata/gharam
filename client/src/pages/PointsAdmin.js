@@ -8,6 +8,7 @@ function PointsAdmin() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [sendToAll, setSendToAll] = useState(false);
   const [giftAmount, setGiftAmount] = useState('');
   const [giftNote, setGiftNote] = useState('');
   const [deductAmount, setDeductAmount] = useState('');
@@ -62,16 +63,28 @@ function PointsAdmin() {
 
   const handleGift = async (e) => {
     e.preventDefault();
-    if (!selectedUserId || !giftAmount) {
-      setMessage('اختار موظف وقيمة الهدية');
+    if (!sendToAll && !selectedUserId) {
+      setMessage('اختار موظف أو فعّل إرسال للجميع');
+      return;
+    }
+    if (!giftAmount) {
+      setMessage('حدد قيمة الهدية');
       return;
     }
     try {
       setLoading(true);
-      const res = await axios.post('/api/users/gift', { userId: selectedUserId, amount: Number(giftAmount), note: giftNote }, { headers: { 'x-auth-token': localStorage.getItem('token') } });
+      const payload = { amount: Number(giftAmount), note: giftNote };
+      let res;
+      if (sendToAll) {
+        res = await axios.post('/api/users/gift/bulk', payload, { headers: { 'x-auth-token': localStorage.getItem('token') } });
+      } else {
+        res = await axios.post('/api/users/gift', { ...payload, userId: selectedUserId }, { headers: { 'x-auth-token': localStorage.getItem('token') } });
+      }
       showToast(res.data.msg || 'تم إرسال الهدية', 'success');
       setGiftAmount('');
       setGiftNote('');
+      if (!sendToAll) setSelectedUserId('');
+      setSendToAll(false);
       await loadUsers();
     } catch (err) {
       const msg = err.response?.data?.msg || 'تعذر إرسال الهدية';
@@ -113,13 +126,21 @@ function PointsAdmin() {
         <Col md={4}>
           <Form.Group>
             <Form.Label>اختر الموظف</Form.Label>
-            <Form.Select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)}>
+            <Form.Select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)} disabled={sendToAll}>
               <option value="">-- اختر --</option>
               {users.map((u) => (
                 <option key={u._id} value={u._id}>{u.username} ({u.role})</option>
               ))}
             </Form.Select>
           </Form.Group>
+          <Form.Check
+            type="checkbox"
+            id="send-all"
+            className="mt-2"
+            label="تحديد الكل (هدية جماعية لكل الحسابات)"
+            checked={sendToAll}
+            onChange={(e) => setSendToAll(e.target.checked)}
+          />
           {selectedUser && (
             <Card className="mt-3">
               <Card.Body>

@@ -196,6 +196,48 @@ exports.giftPoints = async (req, res) => {
   }
 };
 
+exports.giftPointsBulk = async (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ msg: 'صلاحية غير كافية' });
+
+  const { amount, note } = req.body;
+  const pointsValue = Number(amount);
+  if (!pointsValue || pointsValue <= 0) {
+    return res.status(400).json({ msg: 'حدد قيمة الهدية بشكل صحيح' });
+  }
+
+  try {
+    const actor = await User.findById(req.user.id).select('username');
+    const giftedByName = actor?.username || 'الإدارة';
+    const users = await User.find();
+
+    const now = new Date();
+    const giftPointTemplate = () => ({
+      _id: new mongoose.Types.ObjectId(),
+      amount: pointsValue,
+      date: now,
+      type: 'gift',
+      note: note || 'هدية نقاط جماعية',
+      giftedBy: req.user.id,
+      giftedByName,
+      status: 'pending'
+    });
+
+    let sent = 0;
+    await Promise.all(users.map(async (user) => {
+      ensureArrays(user);
+      const giftPoint = giftPointTemplate();
+      user.points.push(giftPoint);
+      await user.save();
+      sent += 1;
+    }));
+
+    res.json({ msg: `تم إرسال الهدية الجماعية إلى ${sent} حساب`, sent });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
 exports.listPendingGifts = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('points username');

@@ -8,6 +8,7 @@ router.put('/:id', authenticate, usersController.updateUser);
 router.delete('/:id', authenticate, usersController.deleteUser);
 router.get('/', authenticate, usersController.getUsers);
 router.post('/gift', authenticate, usersController.giftPoints);
+router.post('/gift/bulk', authenticate, usersController.giftPointsBulk);
 router.post('/deduct', authenticate, usersController.deductPoints);
 router.get('/gifts/pending', authenticate, usersController.listPendingGifts);
 router.get('/gifts/today', authenticate, usersController.listTodayGifts);
