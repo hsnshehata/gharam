@@ -119,6 +119,22 @@ function Landing() {
 		};
 	}, []);
 
+	useEffect(() => {
+		const iframe = document.createElement('iframe');
+		iframe.src = SUPPORT_LINK;
+		iframe.style.position = 'absolute';
+		iframe.style.width = '0';
+		iframe.style.height = '0';
+		iframe.style.border = '0';
+		iframe.style.opacity = '0';
+		iframe.style.pointerEvents = 'none';
+		iframe.setAttribute('aria-hidden', 'true');
+		document.body.appendChild(iframe);
+		return () => {
+			if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+		};
+	}, []);
+
 	const handlePackageWhatsApp = (title) => {
 		const message = encodeURIComponent(`أريد حجز باكدج ${title}`);
 		window.open(`${WHATSAPP_LINK}?text=${message}`, '_blank');
