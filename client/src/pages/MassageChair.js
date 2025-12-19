@@ -97,6 +97,17 @@ function MassageChair() {
 		};
 	}, []);
 
+	useEffect(() => {
+		const observer = new IntersectionObserver((entries) => {
+			entries.forEach((entry) => {
+				if (entry.isIntersecting) entry.target.classList.add('visible');
+			});
+		}, { threshold: 0.2 });
+
+		document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
+		return () => observer.disconnect();
+	}, []);
+
 
 	const css = `
 		:root {
@@ -111,7 +122,6 @@ function MassageChair() {
 		.page { background: var(--bg); min-height: 100vh; color: var(--text); font-family: 'Tajawal', 'Arial', sans-serif; }
 		.container { width: min(1100px, 94%); margin: 0 auto; padding: 28px 0 72px; }
 		h1 { margin: 0 0 12px; font-size: clamp(26px, 4vw, 38px); }
-		.lead { color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
 		.section { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin: 14px 0; box-shadow: 0 12px 26px var(--shadow); }
 		.section h2 { margin: 0 0 10px; font-size: 20px; color: var(--text); }
 		.section p { color: var(--muted); margin: 0 0 12px; line-height: 1.6; }
@@ -127,6 +137,8 @@ function MassageChair() {
 		.sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; padding: 10px 14px; background: ${theme === 'light' ? 'rgba(255,255,255,0.96)' : 'rgba(24,18,16,0.92)'}; border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 20px 40px var(--shadow); z-index: 100; }
 		.sticky-bar .btn { padding: 12px 14px; }
 		.btn-ghost { background: rgba(0,0,0,0.03); color: var(--text); border: 1px solid var(--border); }
+		.reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
+		.reveal.visible { opacity: 1; transform: translateY(0); }
 	`; 
 
 	return (
@@ -134,9 +146,8 @@ function MassageChair() {
 			<style>{css}</style>
 			<div className="container">
 				<h1>كرسي المساج الذكي</h1>
-				<div className="lead">كل التفاصيل والمزايا في مكان واحد من غير زحمة تصميمات.</div>
 				{sections.map((sec) => (
-					<div className="section" key={sec.title}>
+					<div className="section reveal" key={sec.title}>
 						<h2>{sec.title}</h2>
 						{sec.description && <p>{sec.description}</p>}
 						{sec.image && <img src={sec.image} alt={sec.title} loading="lazy" />}
