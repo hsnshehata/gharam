@@ -29,6 +29,32 @@ function PointsAdmin() {
 
   const selectedUser = useMemo(() => users.find((u) => u._id === selectedUserId), [selectedUserId, users]);
   const pendingGifts = useMemo(() => (selectedUser?.points || []).filter((p) => p.type === 'gift' && p.status === 'pending'), [selectedUser]);
+  const appliedPointsByMonth = useMemo(() => {
+    const map = {};
+    (selectedUser?.points || []).forEach((p) => {
+      if (p.status === 'pending') return;
+      const dt = p.date ? new Date(p.date) : null;
+      if (!dt || Number.isNaN(dt.getTime())) return;
+      const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+      map[key] = (map[key] || 0) + Number(p.amount || 0);
+    });
+    return map;
+  }, [selectedUser]);
+  const monthStats = useMemo(() => {
+    const now = new Date();
+    const keyNow = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const keyPrev = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+    let bestMonth = { key: '—', value: 0 };
+    Object.entries(appliedPointsByMonth).forEach(([k, v]) => {
+      if (v > bestMonth.value) bestMonth = { key: k, value: v };
+    });
+    return {
+      current: appliedPointsByMonth[keyNow] || 0,
+      previous: appliedPointsByMonth[keyPrev] || 0,
+      best: bestMonth
+    };
+  }, [appliedPointsByMonth]);
   const recentMovements = useMemo(() => {
     const arr = (selectedUser?.points || []).slice().sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
     return arr.slice(0, 10);
@@ -97,7 +123,7 @@ function PointsAdmin() {
           {selectedUser && (
             <Card className="mt-3">
               <Card.Body>
-                <div className="d-flex justify-content-between">
+                <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
                   <div>
                     <div className="text-muted small">إجمالي النقاط</div>
                     <div className="fw-bold">{selectedUser.totalPoints || 0}</div>
@@ -107,7 +133,13 @@ function PointsAdmin() {
                     <div className="fw-bold">{selectedUser.convertiblePoints || 0}</div>
                   </div>
                 </div>
-                <div className="text-muted small mt-2">رصيد العملات: {selectedUser.efficiencyCoins?.length || 0}</div>
+                <div className="d-flex flex-wrap gap-3 mt-3">
+                  <span className="badge bg-primary">المستوى L{selectedUser.level || 1}</span>
+                  <span className="text-muted small">نقاط الشهر الحالي: {monthStats.current}</span>
+                  <span className="text-muted small">نقاط الشهر السابق: {monthStats.previous}</span>
+                  <span className="text-muted small">أعلى شهر: {monthStats.best.key} ({monthStats.best.value})</span>
+                  <span className="text-muted small">رصيد العملات: {selectedUser.efficiencyCoins?.length || 0}</span>
+                </div>
               </Card.Body>
             </Card>
           )}
@@ -166,6 +198,7 @@ function PointsAdmin() {
                       <tr>
                         <th>القيمة</th>
                         <th>السبب</th>
+                        <th>من</th>
                         <th>التاريخ</th>
                       </tr>
                     </thead>
@@ -174,6 +207,7 @@ function PointsAdmin() {
                         <tr key={g._id}>
                           <td>+{g.amount}</td>
                           <td>{g.note || 'هدية نقاط'}</td>
+                          <td>{g.giftedByName || 'الإدارة'}</td>
                           <td>{g.date ? new Date(g.date).toLocaleDateString() : '—'}</td>
                         </tr>
                       ))}

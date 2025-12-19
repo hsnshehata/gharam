@@ -389,11 +389,14 @@ function EmployeeDashboard({ user }) {
                   <div className="text-muted small">افتح الصندوق علشان النقاط تضاف لرصيدك</div>
                 </div>
               </div>
-              <div className="d-flex flex-wrap gap-2">
+              <div className="d-flex flex-column gap-2 flex-fill">
                 {pendingGifts.map((g) => (
-                  <Button key={g._id} variant="success" className="gift-open-btn" onClick={() => handleOpenGift(g._id)}>
-                    افتح +{g.amount} نقطة
-                  </Button>
+                  <div key={g._id} className="d-flex flex-wrap align-items-center gap-2 justify-content-between gift-row">
+                    <div className="text-muted small">من: {g.giftedByName || 'الإدارة'} — السبب: {g.note || 'هدية تقدير'}</div>
+                    <Button variant="success" className="gift-open-btn" onClick={() => handleOpenGift(g._id)}>
+                      افتح +{g.amount} نقطة
+                    </Button>
+                  </div>
                 ))}
               </div>
             </div>
