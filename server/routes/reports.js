@@ -4,6 +4,8 @@ const reportsController = require('../controllers/reportsController');
 const authenticate = require('../middleware/authenticate');
 
 router.get('/daily', authenticate, reportsController.getDailyReport);
+router.get('/monthly', authenticate, reportsController.getMonthlyReport);
+router.get('/range', authenticate, reportsController.getRangeReport);
 router.get('/employee', authenticate, reportsController.getEmployeeReport);
 
 module.exports = router;

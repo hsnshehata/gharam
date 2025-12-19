@@ -6,126 +6,266 @@ const Deduction = require('../models/Deduction');
 const Service = require('../models/Service');
 const User = require('../models/User');
 
+const msInDay = 1000 * 60 * 60 * 24;
+
+const flattenPoints = (points) => {
+  if (!Array.isArray(points)) return [];
+  return points.flatMap((p) => (Array.isArray(p) ? p : [p])).filter(Boolean);
+};
+
+const leaderboardPoints = async (startDate, endDate) => {
+  const users = await User.find({ 'points.date': { $gte: startDate, $lte: endDate } }, 'username role points');
+  return users
+    .map((u) => {
+      const total = flattenPoints(u.points)
+        .filter((p) => p.date && new Date(p.date) >= startDate && new Date(p.date) <= endDate)
+        .reduce((sum, p) => sum + (p.amount || 0), 0);
+      return { username: u.username, role: u.role, points: total };
+    })
+    .filter((u) => u.points > 0)
+    .sort((a, b) => b.points - a.points)
+    .slice(0, 5);
+};
+
+const aggregateReport = async ({ startDate, endDate, includeOperations = false }) => {
+  const bookings = await Booking.find({
+    createdAt: { $gte: startDate, $lte: endDate }
+  }).populate('package createdBy');
+
+  const bookingsWithInstallments = await Booking.find({
+    'installments.date': { $gte: startDate, $lte: endDate }
+  }).populate('package hennaPackage photographyPackage createdBy installments.employeeId');
+
+  const instantServices = await InstantService.find({
+    createdAt: { $gte: startDate, $lte: endDate }
+  }).populate('employeeId services');
+
+  const expenses = await Expense.find({
+    createdAt: { $gte: startDate, $lte: endDate }
+  }).populate('userId createdBy');
+
+  const advances = await Advance.find({
+    createdAt: { $gte: startDate, $lte: endDate }
+  }).populate('userId createdBy');
+
+  const totalDepositFromBookings = bookings.reduce((sum, booking) => {
+    const installmentsSum = booking.installments.reduce((s, inst) => s + inst.amount, 0);
+    return sum + (booking.deposit - installmentsSum);
+  }, 0);
+
+  const totalInstallments = bookingsWithInstallments.reduce((sum, booking) => {
+    return (
+      sum +
+      booking.installments
+        .filter((installment) => {
+          const installmentDate = new Date(installment.date);
+          return installmentDate >= startDate && installmentDate <= endDate;
+        })
+        .reduce((s, installment) => s + installment.amount, 0)
+    );
+  }, 0);
+
+  const totalDeposit = totalDepositFromBookings + totalInstallments;
+  const totalInstantServices = instantServices.reduce((sum, service) => sum + service.total, 0);
+  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const totalAdvances = advances.reduce((sum, advance) => sum + advance.amount, 0);
+  const net = totalDeposit + totalInstantServices - totalExpenses - totalAdvances;
+
+  const packageMix = { makeup: 0, photography: 0, unknown: 0 };
+  const topPackagesMap = new Map();
+
+  bookings.forEach((booking) => {
+    const installmentsSum = booking.installments.reduce((s, inst) => s + inst.amount, 0);
+    const initialDeposit = booking.deposit - installmentsSum;
+    const pkgType = booking.package?.type || 'unknown';
+    packageMix[pkgType] = (packageMix[pkgType] || 0) + initialDeposit;
+    const pkgName = booking.package?.name || 'باكدج غير محدد';
+    const current = topPackagesMap.get(pkgName) || { name: pkgName, count: 0, amount: 0 };
+    topPackagesMap.set(pkgName, { name: pkgName, count: current.count + 1, amount: current.amount + initialDeposit });
+  });
+
+  bookingsWithInstallments.forEach((booking) => {
+    const pkgType = booking.package?.type || 'unknown';
+    const pkgName = booking.package?.name || 'باكدج غير محدد';
+    booking.installments
+      .filter((inst) => {
+        const d = new Date(inst.date);
+        return d >= startDate && d <= endDate;
+      })
+      .forEach((inst) => {
+        packageMix[pkgType] = (packageMix[pkgType] || 0) + inst.amount;
+        const current = topPackagesMap.get(pkgName) || { name: pkgName, count: 0, amount: 0 };
+        topPackagesMap.set(pkgName, { name: pkgName, count: current.count + 0, amount: current.amount + inst.amount });
+      });
+  });
+
+  const topPackages = Array.from(topPackagesMap.values())
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 5);
+
+  const topServicesMap = new Map();
+  instantServices.forEach((service) => {
+    (service.services || []).forEach((s) => {
+      const current = topServicesMap.get(s.name) || { name: s.name, count: 0, amount: 0 };
+      topServicesMap.set(s.name, { name: s.name, count: current.count + 1, amount: current.amount + (s.price || 0) });
+    });
+  });
+
+  const topServices = Array.from(topServicesMap.values())
+    .sort((a, b) => b.count - a.count || b.amount - a.amount)
+    .slice(0, 5);
+
+  const daysCount = Math.max(1, Math.round((endDate - startDate) / msInDay) + 1);
+  const gross = totalDeposit + totalInstantServices;
+  const expenseRatio = gross ? Number(((totalExpenses + totalAdvances) / gross).toFixed(3)) : 0;
+  const averageNetPerDay = Number((net / daysCount).toFixed(2));
+
+  const topEarners = await leaderboardPoints(startDate, endDate);
+
+  const revenueStreams = [
+    { label: 'حجوزات وأقساط', value: totalDeposit },
+    { label: 'شغل فوري', value: totalInstantServices }
+  ];
+
+  const outflows = [
+    { label: 'مصروفات', value: totalExpenses },
+    { label: 'سلف', value: totalAdvances }
+  ];
+
+  const operations = includeOperations
+    ? [
+        ...bookings.map((booking) => {
+          const installmentsSum = booking.installments.reduce((s, inst) => s + inst.amount, 0);
+          const initialDeposit = booking.deposit - installmentsSum;
+          return {
+            type: 'booking',
+            details: `حجز لـ ${booking.clientName} (باكدج: ${booking.package?.name || 'غير محدد'})`,
+            amount: initialDeposit,
+            createdAt: booking.createdAt,
+            createdBy: booking.createdBy?.username || 'غير معروف'
+          };
+        }),
+        ...bookingsWithInstallments.flatMap((booking) =>
+          booking.installments
+            .filter((installment) => {
+              const installmentDate = new Date(installment.date);
+              return installmentDate >= startDate && installmentDate <= endDate;
+            })
+            .map((installment) => ({
+              type: 'installment',
+              details: `قسط لـ ${booking.clientName} (رقم الوصل: ${booking.receiptNumber})`,
+              amount: installment.amount,
+              createdAt: installment.date,
+              createdBy: installment.employeeId?.username || 'غير معروف'
+            }))
+        ),
+        ...instantServices.map((service) => ({
+          type: 'instantService',
+          details: `خدمة فورية (${service.services.map((s) => s.name).join(', ')})`,
+          amount: service.total,
+          createdAt: service.createdAt,
+          createdBy: service.employeeId?.username || 'غير معروف'
+        })),
+        ...expenses.map((expense) => ({
+          type: 'expense',
+          details: expense.details,
+          amount: expense.amount,
+          createdAt: expense.createdAt,
+          createdBy: expense.createdBy?.username || expense.userId?.username || 'غير معروف'
+        })),
+        ...advances.map((advance) => ({
+          type: 'advance',
+          details: `سلفة لـ ${advance.userId?.username || 'غير معروف'}`,
+          amount: advance.amount,
+          createdAt: advance.createdAt,
+          createdBy: advance.createdBy?.username || advance.userId?.username || 'غير معروف'
+        }))
+      ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    : [];
+
+  return {
+    summary: {
+      totalDeposit,
+      totalInstantServices,
+      totalExpenses,
+      totalAdvances,
+      net
+    },
+    operations,
+    analytics: {
+      revenueStreams,
+      outflows,
+      packageMix,
+      topPackages,
+      topServices,
+      topEarners,
+      stats: {
+        gross,
+        expenseRatio,
+        averageNetPerDay,
+        daysCount
+      }
+    }
+  };
+};
+
 exports.getDailyReport = async (req, res) => {
-  const { date } = req.query; // التاريخ على شكل YYYY-MM-DD
+  const { date } = req.query;
   try {
     const startDate = date ? new Date(date) : new Date();
     startDate.setHours(0, 0, 0, 0);
     const endDate = new Date(startDate);
     endDate.setHours(23, 59, 59, 999);
 
-    // جلب الحجوزات الجديدة في اليوم
-    const bookings = await Booking.find({
-      createdAt: { $gte: startDate, $lte: endDate }
-    }).populate('package hennaPackage photographyPackage createdBy');
-
-    // جلب الحجوزات اللي فيها أقساط اتضافت في اليوم
-    const bookingsWithInstallments = await Booking.find({
-      'installments.date': { $gte: startDate, $lte: endDate }
-    }).populate('package hennaPackage photographyPackage createdBy installments.employeeId');
-
-    // حساب إجمالي العرابين الأولية من الحجوزات الجديدة (deposit ناقص مجموع الأقساط)
-    const totalDepositFromBookings = bookings.reduce((sum, booking) => {
-      const installmentsSum = booking.installments.reduce((s, inst) => s + inst.amount, 0);
-      return sum + (booking.deposit - installmentsSum);
-    }, 0);
-
-    // حساب إجمالي الأقساط اللي اتضافت في اليوم
-    const totalInstallments = bookingsWithInstallments.reduce((sum, booking) => {
-      return sum + booking.installments
-        .filter(installment => {
-          const installmentDate = new Date(installment.date);
-          return installmentDate >= startDate && installmentDate <= endDate;
-        })
-        .reduce((sum, installment) => sum + installment.amount, 0);
-    }, 0);
-
-    // إجمالي المدفوعات من الحجوزات = العرابين الأولية + الأقساط
-    const totalDeposit = totalDepositFromBookings + totalInstallments;
-
-    // جلب الخدمات الفورية
-    const instantServices = await InstantService.find({
-      createdAt: { $gte: startDate, $lte: endDate }
-    }).populate('employeeId services');
-
-    // جلب المصروفات
-    const expenses = await Expense.find({
-      createdAt: { $gte: startDate, $lte: endDate }
-    }).populate('userId createdBy');
-
-    // جلب السلف
-    const advances = await Advance.find({
-      createdAt: { $gte: startDate, $lte: endDate }
-    }).populate('userId createdBy');
-
-    // حساب الإجماليات
-    const totalInstantServices = instantServices.reduce((sum, service) => sum + service.total, 0);
-    const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-    const totalAdvances = advances.reduce((sum, advance) => sum + advance.amount, 0);
-    const net = totalDeposit + totalInstantServices - totalExpenses - totalAdvances;
-
-    // تجميع العمليات في قايمة واحدة
-    const operations = [
-      ...bookings.map(booking => {
-        const installmentsSum = booking.installments.reduce((s, inst) => s + inst.amount, 0);
-        const initialDeposit = booking.deposit - installmentsSum;
-        return {
-          type: 'booking',
-          details: `حجز لـ ${booking.clientName} (باكدج: ${booking.package.name})`,
-          amount: initialDeposit,
-          createdAt: booking.createdAt,
-          createdBy: booking.createdBy?.username || 'غير معروف'
-        };
-      }),
-      ...bookingsWithInstallments.flatMap(booking => 
-        booking.installments
-          .filter(installment => {
-            const installmentDate = new Date(installment.date);
-            return installmentDate >= startDate && installmentDate <= endDate;
-          })
-          .map(installment => ({
-            type: 'installment',
-            details: `قسط لـ ${booking.clientName} (رقم الوصل: ${booking.receiptNumber})`,
-            amount: installment.amount,
-            createdAt: installment.date,
-            createdBy: installment.employeeId?.username || 'غير معروف'
-          }))
-      ),
-      ...instantServices.map(service => ({
-        type: 'instantService',
-        details: `خدمة فورية (${service.services.map(s => s.name).join(', ')})`,
-        amount: service.total,
-        createdAt: service.createdAt,
-        createdBy: service.employeeId?.username || 'غير معروف'
-      })),
-      ...expenses.map(expense => ({
-        type: 'expense',
-        details: expense.details,
-        amount: expense.amount,
-        createdAt: expense.createdAt,
-        createdBy: expense.createdBy?.username || expense.userId?.username || 'غير معروف'
-      })),
-      ...advances.map(advance => ({
-        type: 'advance',
-        details: `سلفة لـ ${advance.userId?.username || 'غير معروف'}`,
-        amount: advance.amount,
-        createdAt: advance.createdAt,
-        createdBy: advance.createdBy?.username || advance.userId?.username || 'غير معروف'
-      }))
-    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    res.json({
-      summary: {
-        totalDeposit,
-        totalInstantServices,
-        totalExpenses,
-        totalAdvances,
-        net
-      },
-      operations
-    });
+    const payload = await aggregateReport({ startDate, endDate, includeOperations: true });
+    res.json(payload);
   } catch (err) {
-    console.error(err);
+    console.error('Error in getDailyReport:', err);
+    res.status(500).json({ msg: 'خطأ في السيرفر' });
+  }
+};
+
+exports.getMonthlyReport = async (req, res) => {
+  try {
+    const { month } = req.query; // شكل YYYY-MM
+    const target = month ? new Date(`${month}-01`) : new Date();
+    if (Number.isNaN(target.getTime())) return res.status(400).json({ msg: 'شهر غير صالح' });
+
+    const startDate = new Date(target.getFullYear(), target.getMonth(), 1);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(target.getFullYear(), target.getMonth() + 1, 0, 23, 59, 59, 999);
+
+    const payload = await aggregateReport({ startDate, endDate, includeOperations: false });
+    payload.meta = {
+      label: startDate.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' })
+    };
+    res.json(payload);
+  } catch (err) {
+    console.error('Error in getMonthlyReport:', err);
+    res.status(500).json({ msg: 'خطأ في السيرفر' });
+  }
+};
+
+exports.getRangeReport = async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    if (!from || !to) return res.status(400).json({ msg: 'تاريخ البداية والنهاية مطلوبان' });
+    const startDate = new Date(from);
+    const endDate = new Date(to);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      return res.status(400).json({ msg: 'التواريخ غير صالحة' });
+    }
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    const payload = await aggregateReport({ startDate, endDate, includeOperations: false });
+    payload.meta = {
+      from,
+      to
+    };
+    res.json(payload);
+  } catch (err) {
+    console.error('Error in getRangeReport:', err);
     res.status(500).json({ msg: 'خطأ في السيرفر' });
   }
 };

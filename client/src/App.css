@@ -620,3 +620,97 @@ body.theme-dark .table-hover > tbody > tr:hover { background-color: rgba(255,255
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
 }
+
+/* Reports hub styling */
+.reports-page .reports-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.reports-tabs {
+  display: inline-flex;
+  gap: 8px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.reports-tabs button {
+  border: none;
+  background: transparent;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.reports-tabs button.active {
+  background: linear-gradient(135deg, #c49841, #e6c27b);
+  color: #0f0b0a;
+}
+
+.summary-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.04);
+}
+
+.summary-card .label {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.summary-card .value {
+  font-size: 20px;
+  font-weight: 800;
+  margin-top: 6px;
+}
+
+.summary-card.positive .value { color: #0d9488; }
+.summary-card.negative .value { color: #b91c1c; }
+.summary-card.neutral .value { color: #111827; }
+
+.bar-lines { display: grid; gap: 12px; }
+.bar-line { display: grid; gap: 6px; }
+.bar-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  color: #111827;
+}
+.bar-meta strong { font-size: 15px; }
+.bar-track {
+  position: relative;
+  width: 100%;
+  height: 10px;
+  background: #f3f4f6;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.bar-fill { height: 100%; border-radius: 999px; }
+
+.mini-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px dashed #e5e7eb;
+}
+.mini-row:last-child { border-bottom: none; }
+.mini-title { font-weight: 700; }
+.mini-sub { color: #6b7280; font-size: 13px; }
+.mini-value { font-weight: 800; color: #111827; }
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.muted { color: #6b7280; font-size: 14px; }

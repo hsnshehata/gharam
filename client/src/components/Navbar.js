@@ -59,7 +59,7 @@ function Navbar({ user, setUser }) {
               <Nav.Link as={Link} to="/packages-services" onClick={closeMenu}>إضافة باكدجات/خدمات</Nav.Link>
               <Nav.Link as={Link} to="/points-admin" onClick={closeMenu}>نقاط الموظفين</Nav.Link>
               <Nav.Link as={Link} to="/users" onClick={closeMenu}>الموظفين</Nav.Link>
-              <Nav.Link as={Link} to="/daily-reports" onClick={closeMenu}>التقارير اليومية</Nav.Link>
+              <Nav.Link as={Link} to="/reports" onClick={closeMenu}>التقارير</Nav.Link>
             </>
           )}
           {(user.role === 'supervisor') && (

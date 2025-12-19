@@ -126,8 +126,12 @@ function AppContent() {
             element={user && user.role === 'admin' ? <PointsAdmin /> : <Navigate to="/login" />}
           />
           <Route
-            path="/daily-reports"
+            path="/reports"
             element={user && user.role === 'admin' ? <DailyReports /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/daily-reports"
+            element={<Navigate to="/reports" replace />}
           />
           <Route
             path="/employee-reports"

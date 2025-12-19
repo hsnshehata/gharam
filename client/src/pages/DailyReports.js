@@ -1,120 +1,338 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Alert, Form, Button, Table } from 'react-bootstrap';
+import React, { useEffect, useState } from 'react';
+import { Container, Row, Col, Card, Alert, Form, Button, Table, Spinner, Badge } from 'react-bootstrap';
 import axios from 'axios';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch } from '@fortawesome/free-solid-svg-icons';
 
-function DailyReports() {
-  const [summary, setSummary] = useState({
-    totalDeposit: 0,
-    totalInstantServices: 0,
-    totalExpenses: 0,
-    totalAdvances: 0,
-    net: 0
-  });
-  const [operations, setOperations] = useState([]);
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+const currency = (v) => `${Number(v || 0).toLocaleString('ar-EG')} ج`;
+
+const BarLines = ({ data = [], accent = '#c49841' }) => {
+  if (!data.length) return <div className="muted">لا يوجد بيانات</div>;
+  const max = Math.max(...data.map((d) => d.value || 0), 1);
+  return (
+    <div className="bar-lines">
+      {data.map((d) => (
+        <div className="bar-line" key={d.label}>
+          <div className="bar-meta">
+            <span>{d.label}</span>
+            <strong>{currency(d.value)}</strong>
+          </div>
+          <div className="bar-track">
+            <div className="bar-fill" style={{ width: `${((d.value || 0) / max) * 100}%`, background: accent }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const MiniList = ({ title, items = [], formatter }) => (
+  <Card className="h-100">
+    <Card.Body>
+      <div className="section-head">
+        <h5 className="mb-0">{title}</h5>
+      </div>
+      {!items.length && <div className="muted">لا يوجد بيانات</div>}
+      {items.map((item) => (
+        <div className="mini-row" key={item.name || item.username}>
+          <div>
+            <div className="mini-title">{item.name || item.username}</div>
+            {item.role && <div className="mini-sub">{item.role}</div>}
+          </div>
+          <div className="mini-value">{formatter ? formatter(item) : currency(item.amount || item.points || 0)}</div>
+        </div>
+      ))}
+    </Card.Body>
+  </Card>
+);
+
+const SummaryGrid = ({ summary, stats }) => (
+  <Row className="g-3 mb-3">
+    <Col md={3} sm={6} xs={12}>
+      <Card className="summary-card positive">
+        <Card.Body>
+          <div className="label">حجوزات وأقساط</div>
+          <div className="value">{currency(summary.totalDeposit)}</div>
+        </Card.Body>
+      </Card>
+    </Col>
+    <Col md={3} sm={6} xs={12}>
+      <Card className="summary-card positive">
+        <Card.Body>
+          <div className="label">خدمات فورية</div>
+          <div className="value">{currency(summary.totalInstantServices)}</div>
+        </Card.Body>
+      </Card>
+    </Col>
+    <Col md={3} sm={6} xs={12}>
+      <Card className="summary-card negative">
+        <Card.Body>
+          <div className="label">مصروفات + سلف</div>
+          <div className="value">{currency((summary.totalExpenses || 0) + (summary.totalAdvances || 0))}</div>
+        </Card.Body>
+      </Card>
+    </Col>
+    <Col md={3} sm={6} xs={12}>
+      <Card className="summary-card neutral">
+        <Card.Body>
+          <div className="label">الصافي</div>
+          <div className="value">{currency(summary.net)}</div>
+          {stats && (
+            <div className="mini-sub">صافي يومي متوسّط: {currency(stats.averageNetPerDay || summary.net)}</div>
+          )}
+        </Card.Body>
+      </Card>
+    </Col>
+  </Row>
+);
+
+const typeLabels = {
+  booking: 'حجز',
+  installment: 'قسط',
+  instantService: 'خدمة فورية',
+  expense: 'مصروف',
+  advance: 'سلفة'
+};
+
+function Reports() {
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const monthStr = todayStr.slice(0, 7);
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+
+  const [activeTab, setActiveTab] = useState('daily');
+  const [date, setDate] = useState(todayStr);
+  const [month, setMonth] = useState(monthStr);
+  const [range, setRange] = useState({ from: monthStart, to: todayStr });
+  const [dailyData, setDailyData] = useState({ summary: {}, operations: [], analytics: {} });
+  const [monthlyData, setMonthlyData] = useState(null);
+  const [rangeData, setRangeData] = useState(null);
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState({ daily: false, monthly: false, range: false });
 
-  useEffect(() => {
-    const fetchReport = async () => {
-      try {
-        const res = await axios.get(`/api/reports/daily?date=${date}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        console.log('Report response:', res.data);
-        setSummary(res.data.summary);
-        setOperations(res.data.operations);
-      } catch (err) {
-        console.error('Fetch error:', err.response?.data || err.message);
-        setMessage('خطأ في جلب التقرير');
-      }
-    };
-    fetchReport();
-  }, [date]);
-
-  const handleSearch = async () => {
+  const fetchDaily = async () => {
+    setLoading((p) => ({ ...p, daily: true }));
+    setMessage('');
     try {
       const res = await axios.get(`/api/reports/daily?date=${date}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
-      console.log('Search response:', res.data);
-      setSummary(res.data.summary);
-      setOperations(res.data.operations);
-      setMessage('');
+      setDailyData(res.data);
     } catch (err) {
-      console.error('Search error:', err.response?.data || err.message);
-      setMessage('خطأ في البحث');
+      setMessage('خطأ في جلب التقرير اليومي');
+    } finally {
+      setLoading((p) => ({ ...p, daily: false }));
     }
   };
 
-  return (
-    <Container className="mt-5">
-      <h2>التقارير اليومية</h2>
-      {message && <Alert variant="danger">{message}</Alert>}
-      <Row className="mb-3">
+  const fetchMonthly = async () => {
+    setLoading((p) => ({ ...p, monthly: true }));
+    setMessage('');
+    try {
+      const res = await axios.get(`/api/reports/monthly?month=${month}`, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      setMonthlyData(res.data);
+    } catch (err) {
+      setMessage('خطأ في جلب التقرير الشهري');
+    } finally {
+      setLoading((p) => ({ ...p, monthly: false }));
+    }
+  };
+
+  const fetchRange = async () => {
+    if (!range.from || !range.to) {
+      setMessage('حدد تاريخ البداية والنهاية');
+      return;
+    }
+    setLoading((p) => ({ ...p, range: true }));
+    setMessage('');
+    try {
+      const res = await axios.get(`/api/reports/range?from=${range.from}&to=${range.to}`, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      setRangeData(res.data);
+    } catch (err) {
+      setMessage('خطأ في جلب تقرير الفترة');
+    } finally {
+      setLoading((p) => ({ ...p, range: false }));
+    }
+  };
+
+  useEffect(() => {
+    fetchDaily();
+    fetchMonthly();
+    fetchRange();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const analyticsBlock = (data) => (
+    <>
+      <SummaryGrid summary={data.summary || {}} stats={data.analytics?.stats} />
+      <Row className="g-3 mb-3">
         <Col md={6}>
-          <Form.Group>
-            <Form.Label>اختر التاريخ</Form.Label>
-            <Form.Control
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            />
-          </Form.Group>
+          <Card className="h-100">
+            <Card.Body>
+              <div className="section-head">
+                <h5 className="mb-1">التدفقات النقدية</h5>
+                <Badge bg="light" text="dark">صافي: {currency(data.summary?.net)}</Badge>
+              </div>
+              <BarLines data={[...(data.analytics?.revenueStreams || []), ...(data.analytics?.outflows || [])]} accent="#c49841" />
+              <div className="muted mt-2">نسبة المصروفات للسحب: {(data.analytics?.stats?.expenseRatio || 0) * 100}%</div>
+            </Card.Body>
+          </Card>
         </Col>
-        <Col md={6} className="d-flex align-items-end">
-          <Button variant="primary" onClick={handleSearch}>
-            <FontAwesomeIcon icon={faSearch} /> بحث
-          </Button>
+        <Col md={6}>
+          <Card className="h-100">
+            <Card.Body>
+              <div className="section-head">
+                <h5 className="mb-1">توزيع مصادر الدخل</h5>
+                <Badge bg="light" text="dark">أيام التغطية: {data.analytics?.stats?.daysCount}</Badge>
+              </div>
+              <BarLines
+                data={[
+                  { label: 'ميكب/حنة/صالون', value: data.analytics?.packageMix?.makeup || 0 },
+                  { label: 'تصوير', value: data.analytics?.packageMix?.photography || 0 },
+                  { label: 'غير مصنف', value: data.analytics?.packageMix?.unknown || 0 }
+                ]}
+                accent="#1fb6a6"
+              />
+            </Card.Body>
+          </Card>
         </Col>
       </Row>
+      <Row className="g-3 mb-3">
+        <Col md={4}><MiniList title="أعلى باكدجات" items={data.analytics?.topPackages || []} /></Col>
+        <Col md={4}><MiniList title="أكثر شغل اتعمل" items={data.analytics?.topServices || []} formatter={(i) => `${i.count} مرة / ${currency(i.amount)}`} /></Col>
+        <Col md={4}><MiniList title="أعلى مجمعين نقاط" items={data.analytics?.topEarners || []} formatter={(i) => `${i.points} نقطة`} /></Col>
+      </Row>
+    </>
+  );
 
-      <Card className="mb-4">
-        <Card.Body>
-          <Card.Title>ملخص اليوم ({new Date(date).toLocaleDateString()})</Card.Title>
-          <Card.Text>
-            إجمالي العربون: {summary.totalDeposit} جنيه<br />
-            إجمالي الخدمات الفورية: {summary.totalInstantServices} جنيه<br />
-            إجمالي المصروفات: {summary.totalExpenses} جنيه<br />
-            إجمالي السلف: {summary.totalAdvances} جنيه<br />
-            <strong>الصافي: {summary.net} جنيه</strong>
-          </Card.Text>
-        </Card.Body>
-      </Card>
+  return (
+    <Container className="mt-4 reports-page">
+      <div className="reports-header">
+        <div>
+          <h2 className="mb-1">التقارير</h2>
+          <div className="muted">تتبع الأرباح والخساير والمصروفات والسلف برسومات خفيفة وقراءة سريعة.</div>
+        </div>
+        <div className="reports-tabs">
+          <button className={activeTab === 'daily' ? 'active' : ''} onClick={() => setActiveTab('daily')}>التقارير اليومية</button>
+          <button className={activeTab === 'monthly' ? 'active' : ''} onClick={() => setActiveTab('monthly')}>التقارير الشهرية</button>
+          <button className={activeTab === 'range' ? 'active' : ''} onClick={() => setActiveTab('range')}>تقارير الفترة الزمنية</button>
+        </div>
+      </div>
 
-      <h3>تفاصيل العمليات</h3>
-      <Table striped bordered hover>
-        <thead>
-          <tr>
-            <th>النوع</th>
-            <th>التفاصيل</th>
-            <th>المبلغ</th>
-            <th>التاريخ</th>
-            <th>أضيف بواسطة</th>
-          </tr>
-        </thead>
-        <tbody>
-          {operations.map((op, index) => (
-            <tr key={index}>
-              <td>
-                {op.type === 'booking' ? 'حجز' : 
-                 op.type === 'instantService' ? 'خدمة فورية' : 
-                 op.type === 'expense' ? 'مصروف' : 
-                 op.type === 'advance' ? 'سلفة' : 
-                 op.type === 'installment' ? 'قسط' : 'غير معروف'}
-              </td>
-              <td>{op.details}</td>
-              <td>{op.amount} جنيه</td>
-              <td>{new Date(op.createdAt).toLocaleDateString()}</td>
-              <td>{op.createdBy}</td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
+      {message && <Alert variant="danger">{message}</Alert>}
+
+      {activeTab === 'daily' && (
+        <>
+          <Card className="mb-3">
+            <Card.Body>
+              <Row className="g-3 align-items-end">
+                <Col md={4} sm={6}>
+                  <Form.Group>
+                    <Form.Label>اختر التاريخ</Form.Label>
+                    <Form.Control type="date" value={date} onChange={(e) => setDate(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && fetchDaily()} />
+                  </Form.Group>
+                </Col>
+                <Col md={3} sm={6}>
+                  <Button variant="primary" onClick={fetchDaily} disabled={loading.daily}>
+                    {loading.daily ? 'جارٍ التحميل...' : 'عرض التقرير'}
+                  </Button>
+                </Col>
+              </Row>
+            </Card.Body>
+          </Card>
+
+          {loading.daily ? (
+            <div className="text-center"><Spinner animation="border" /></div>
+          ) : (
+            <>
+              <SummaryGrid summary={dailyData.summary || {}} />
+              <Card className="mb-3">
+                <Card.Body>
+                  <div className="section-head mb-2">
+                    <h5 className="mb-0">تفاصيل العمليات</h5>
+                    <Badge bg="light" text="dark">{dailyData.operations?.length || 0} حركة</Badge>
+                  </div>
+                  <Table striped bordered hover responsive className="mt-2">
+                    <thead>
+                      <tr>
+                        <th>النوع</th>
+                        <th>التفاصيل</th>
+                        <th>المبلغ</th>
+                        <th>التاريخ</th>
+                        <th>أضيف بواسطة</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(dailyData.operations || []).map((op, index) => (
+                        <tr key={`${op.createdAt}-${index}`}>
+                          <td><Badge bg="secondary">{typeLabels[op.type] || 'غير معروف'}</Badge></td>
+                          <td>{op.details}</td>
+                          <td className={['expense', 'advance'].includes(op.type) ? 'text-danger' : 'text-success'}>{currency(op.amount)}</td>
+                          <td>{new Date(op.createdAt).toLocaleDateString()}</td>
+                          <td>{op.createdBy}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </Card.Body>
+              </Card>
+            </>
+          )}
+        </>
+      )}
+
+      {activeTab === 'monthly' && (
+        <>
+          <Card className="mb-3">
+            <Card.Body>
+              <Row className="g-3 align-items-end">
+                <Col md={4} sm={6}>
+                  <Form.Label>اختر الشهر</Form.Label>
+                  <Form.Control type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+                </Col>
+                <Col md={3} sm={6}>
+                  <Button variant="primary" onClick={fetchMonthly} disabled={loading.monthly}>
+                    {loading.monthly ? 'جارٍ التحميل...' : 'عرض التقرير'}
+                  </Button>
+                </Col>
+                {monthlyData?.meta?.label && (
+                  <Col md={5} className="text-md-end text-sm-start muted">{monthlyData.meta.label}</Col>
+                )}
+              </Row>
+            </Card.Body>
+          </Card>
+          {loading.monthly ? <div className="text-center"><Spinner animation="border" /></div> : monthlyData && analyticsBlock(monthlyData)}
+        </>
+      )}
+
+      {activeTab === 'range' && (
+        <>
+          <Card className="mb-3">
+            <Card.Body>
+              <Row className="g-3 align-items-end">
+                <Col md={4} sm={6}>
+                  <Form.Label>من</Form.Label>
+                  <Form.Control type="date" value={range.from} onChange={(e) => setRange((p) => ({ ...p, from: e.target.value }))} />
+                </Col>
+                <Col md={4} sm={6}>
+                  <Form.Label>إلى</Form.Label>
+                  <Form.Control type="date" value={range.to} onChange={(e) => setRange((p) => ({ ...p, to: e.target.value }))} />
+                </Col>
+                <Col md={3} sm={6}>
+                  <Button variant="primary" onClick={fetchRange} disabled={loading.range}>
+                    {loading.range ? 'جارٍ التحميل...' : 'عرض التقرير'}
+                  </Button>
+                </Col>
+              </Row>
+            </Card.Body>
+          </Card>
+          {loading.range ? <div className="text-center"><Spinner animation="border" /></div> : rangeData && analyticsBlock(rangeData)}
+        </>
+      )}
     </Container>
   );
 }
 
-export default DailyReports;
+export default Reports;
