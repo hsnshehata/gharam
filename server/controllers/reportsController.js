@@ -288,7 +288,7 @@ exports.getRangeReport = async (req, res) => {
     startDate.setHours(0, 0, 0, 0);
     endDate.setHours(23, 59, 59, 999);
 
-    const payload = await aggregateReport({ startDate, endDate, includeOperations: false });
+    const payload = await aggregateReport({ startDate, endDate, includeOperations: false, includeDailyBreakdown: true });
     payload.meta = {
       from,
       to

@@ -101,7 +101,7 @@ function Reports() {
   const [activeTab, setActiveTab] = useState('daily');
   const [date, setDate] = useState(todayStr);
   const [month, setMonth] = useState(monthStr);
-  const [range, setRange] = useState({ from: monthStart, to: todayStr });
+  const [range, setRange] = useState({ from: monthStart.slice(0, 7), to: monthStr });
   const [dailyData, setDailyData] = useState({ summary: {}, operations: [], analytics: {} });
   const [monthlyData, setMonthlyData] = useState(null);
   const [rangeData, setRangeData] = useState(null);
@@ -141,13 +141,18 @@ function Reports() {
 
   const fetchRange = async () => {
     if (!range.from || !range.to) {
-      setMessage('حدد تاريخ البداية والنهاية');
+      setMessage('حدد شهر البداية وشهر النهاية');
       return;
     }
+    const fromDate = `${range.from}-01`;
+    const [toYear, toMonth] = range.to.split('-').map(Number);
+    const endDateObj = new Date(toYear, toMonth, 0, 23, 59, 59, 999);
+    const toDate = endDateObj.toISOString().split('T')[0];
+
     setLoading((p) => ({ ...p, range: true }));
     setMessage('');
     try {
-      const res = await axios.get(`/api/reports/range?from=${range.from}&to=${range.to}`, {
+      const res = await axios.get(`/api/reports/range?from=${fromDate}&to=${toDate}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setRangeData(res.data);
@@ -164,6 +169,16 @@ function Reports() {
     fetchRange();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const monthlyFromDaily = (daily = []) => {
+    const map = new Map();
+    daily.forEach((d) => {
+      const key = d.date.slice(0, 7); // YYYY-MM
+      const current = map.get(key) || 0;
+      map.set(key, current + (d.total || 0));
+    });
+    return Array.from(map.entries()).map(([month, total]) => ({ month, total }));
+  };
 
   const analyticsBlock = (data, options = {}) => {
     const dailyRevenueData = options.dailyRevenueData || data.analytics?.dailyRevenue || [];
@@ -349,12 +364,12 @@ function Reports() {
             <Card.Body>
               <Row className="g-3 align-items-end">
                 <Col md={4} sm={6}>
-                  <Form.Label>من</Form.Label>
-                  <Form.Control type="date" value={range.from} onChange={(e) => setRange((p) => ({ ...p, from: e.target.value }))} />
+                  <Form.Label>من (شهر)</Form.Label>
+                  <Form.Control type="month" value={range.from} onChange={(e) => setRange((p) => ({ ...p, from: e.target.value }))} />
                 </Col>
                 <Col md={4} sm={6}>
-                  <Form.Label>إلى</Form.Label>
-                  <Form.Control type="date" value={range.to} onChange={(e) => setRange((p) => ({ ...p, to: e.target.value }))} />
+                  <Form.Label>إلى (شهر)</Form.Label>
+                  <Form.Control type="month" value={range.to} onChange={(e) => setRange((p) => ({ ...p, to: e.target.value }))} />
                 </Col>
                 <Col md={3} sm={6}>
                   <Button variant="primary" onClick={fetchRange} disabled={loading.range}>
@@ -364,7 +379,20 @@ function Reports() {
               </Row>
             </Card.Body>
           </Card>
-          {loading.range ? <div className="text-center"><Spinner animation="border" /></div> : rangeData && analyticsBlock(rangeData)}
+          {loading.range ? (
+            <div className="text-center"><Spinner animation="border" /></div>
+          ) : rangeData && (
+            (() => {
+              const monthlyTotals = monthlyFromDaily(rangeData.analytics?.dailyRevenue || []);
+              return analyticsBlock(rangeData, {
+                dailyRevenueData: monthlyTotals.map((m) => ({ date: `${m.month}-01`, total: m.total })),
+                dailyTitle: 'الدخل الشهري خلال الفترة المختارة',
+                dailyBadgeLabel: monthlyTotals.length,
+                dailyNote: 'إجمالي الدخل (حجوزات + خدمات فورية) لكل شهر في الفترة.',
+                dailyControls: null
+              });
+            })()
+          )}
         </>
       )}
     </Container>
