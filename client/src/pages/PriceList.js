@@ -187,21 +187,6 @@ function PriceList() {
 		};
 	}, []);
 
-	React.useEffect(() => {
-		const iframe = document.createElement('iframe');
-		iframe.src = SUPPORT_LINK;
-		iframe.style.position = 'absolute';
-		iframe.style.width = '0';
-		iframe.style.height = '0';
-		iframe.style.border = '0';
-		iframe.style.opacity = '0';
-		iframe.style.pointerEvents = 'none';
-		iframe.setAttribute('aria-hidden', 'true');
-		document.body.appendChild(iframe);
-		return () => {
-			if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-		};
-	}, []);
 
 	const toggleTheme = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
 
@@ -325,12 +310,31 @@ function PriceList() {
 					{theme === 'light' ? '🌙' : '☀️'}
 				</button>
 			</div>
-			{showChat && (
-				<div className="chat-frame" style={{ position: 'fixed', bottom: 20, right: 20, width: 360, maxWidth: '90vw', height: 520, background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 25px 50px rgba(0,0,0,0.35)', zIndex: 121 }}>
-					<button className="close-btn" style={{ position: 'absolute', top: 10, left: 10, background: '#dc3545', color: '#fff', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer' }} onClick={() => setShowChat(false)}>✕</button>
-					<iframe title="support" src={SUPPORT_LINK} style={{ width: '100%', height: '100%', border: 'none' }} scrolling="no" />
-				</div>
-			)}
+			<div
+				className="chat-frame"
+				style={{
+					position: 'fixed',
+					top: '50%',
+					left: '50%',
+					bottom: 'auto',
+					right: 'auto',
+					transform: 'translate(-50%, -50%)',
+					width: 'min(420px, 92vw)',
+					height: 'min(520px, 90vh)',
+					background: '#fff',
+					borderRadius: 14,
+					overflow: 'hidden',
+					boxShadow: '0 25px 50px rgba(0,0,0,0.35)',
+					zIndex: 121,
+					opacity: showChat ? 1 : 0,
+					visibility: showChat ? 'visible' : 'hidden',
+					pointerEvents: showChat ? 'auto' : 'none',
+					transition: 'opacity 0.2s ease'
+				}}
+			>
+				<button className="close-btn" style={{ position: 'absolute', top: 10, left: 10, background: '#dc3545', color: '#fff', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer' }} onClick={() => setShowChat(false)}>✕</button>
+				<iframe title="support" src={SUPPORT_LINK} style={{ position: 'absolute', top: '-25px', left: 0, right: 0, bottom: 0, width: '100%', height: 'calc(100% + 25px)', border: 'none', display: 'block' }} scrolling="no" />
+			</div>
 		</div>
 	);
 }
