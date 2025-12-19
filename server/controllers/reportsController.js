@@ -27,7 +27,7 @@ const leaderboardPoints = async (startDate, endDate) => {
     .slice(0, 5);
 };
 
-const aggregateReport = async ({ startDate, endDate, includeOperations = false }) => {
+const aggregateReport = async ({ startDate, endDate, includeOperations = false, includeDailyBreakdown = false }) => {
   const bookings = await Booking.find({
     createdAt: { $gte: startDate, $lte: endDate }
   }).populate('package createdBy');
@@ -48,9 +48,22 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false }
     createdAt: { $gte: startDate, $lte: endDate }
   }).populate('userId createdBy');
 
+  const dailyMap = new Map();
+
+  const addToDay = (date, amount) => {
+    if (!includeDailyBreakdown) return;
+    const key = new Date(date);
+    key.setHours(0, 0, 0, 0);
+    const iso = key.toISOString().slice(0, 10);
+    const current = dailyMap.get(iso) || 0;
+    dailyMap.set(iso, current + (amount || 0));
+  };
+
   const totalDepositFromBookings = bookings.reduce((sum, booking) => {
     const installmentsSum = booking.installments.reduce((s, inst) => s + inst.amount, 0);
-    return sum + (booking.deposit - installmentsSum);
+    const initialDeposit = booking.deposit - installmentsSum;
+    addToDay(booking.createdAt, initialDeposit);
+    return sum + initialDeposit;
   }, 0);
 
   const totalInstallments = bookingsWithInstallments.reduce((sum, booking) => {
@@ -59,14 +72,19 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false }
       booking.installments
         .filter((installment) => {
           const installmentDate = new Date(installment.date);
-          return installmentDate >= startDate && installmentDate <= endDate;
+          const inRange = installmentDate >= startDate && installmentDate <= endDate;
+          if (inRange) addToDay(installment.date, installment.amount);
+          return inRange;
         })
         .reduce((s, installment) => s + installment.amount, 0)
     );
   }, 0);
 
   const totalDeposit = totalDepositFromBookings + totalInstallments;
-  const totalInstantServices = instantServices.reduce((sum, service) => sum + service.total, 0);
+  const totalInstantServices = instantServices.reduce((sum, service) => {
+    addToDay(service.createdAt, service.total);
+    return sum + service.total;
+  }, 0);
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const totalAdvances = advances.reduce((sum, advance) => sum + advance.amount, 0);
   const net = totalDeposit + totalInstantServices - totalExpenses - totalAdvances;
@@ -121,6 +139,17 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false }
   const averageNetPerDay = Number((net / daysCount).toFixed(2));
 
   const topEarners = await leaderboardPoints(startDate, endDate);
+
+  const dailyRevenue = includeDailyBreakdown
+    ? (() => {
+        const days = [];
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+          const iso = new Date(d).toISOString().slice(0, 10);
+          days.push({ date: iso, total: Number((dailyMap.get(iso) || 0).toFixed(2)) });
+        }
+        return days;
+      })()
+    : [];
 
   const revenueStreams = [
     { label: 'حجوزات وأقساط', value: totalDeposit },
@@ -204,7 +233,8 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false }
         expenseRatio,
         averageNetPerDay,
         daysCount
-      }
+      },
+      dailyRevenue
     }
   };
 };
@@ -235,7 +265,7 @@ exports.getMonthlyReport = async (req, res) => {
     startDate.setHours(0, 0, 0, 0);
     const endDate = new Date(target.getFullYear(), target.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    const payload = await aggregateReport({ startDate, endDate, includeOperations: false });
+    const payload = await aggregateReport({ startDate, endDate, includeOperations: false, includeDailyBreakdown: true });
     payload.meta = {
       label: startDate.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' })
     };

@@ -184,17 +184,14 @@ function Reports() {
           <Card className="h-100">
             <Card.Body>
               <div className="section-head">
-                <h5 className="mb-1">توزيع مصادر الدخل</h5>
-                <Badge bg="light" text="dark">أيام التغطية: {data.analytics?.stats?.daysCount}</Badge>
+                <h5 className="mb-1">الدخل اليومي خلال الشهر</h5>
+                <Badge bg="light" text="dark">أيام: {data.analytics?.stats?.daysCount}</Badge>
               </div>
               <BarLines
-                data={[
-                  { label: 'ميكب/حنة/صالون', value: data.analytics?.packageMix?.makeup || 0 },
-                  { label: 'تصوير', value: data.analytics?.packageMix?.photography || 0 },
-                  { label: 'غير مصنف', value: data.analytics?.packageMix?.unknown || 0 }
-                ]}
+                data={(data.analytics?.dailyRevenue || []).map((d) => ({ label: d.date.slice(8, 10), value: d.total }))}
                 accent="#1fb6a6"
               />
+              <div className="muted mt-2">الأرقام تمثل إجمالي الدخل (حجوزات + خدمات فورية) لكل يوم.</div>
             </Card.Body>
           </Card>
         </Col>
