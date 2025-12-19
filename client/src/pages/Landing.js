@@ -329,20 +329,6 @@ function Landing() {
 					</div>
 				</section>
 
-				<section className="grid-3 reveal">
-					<div className="card">
-						<h3>الخبرة</h3>
-						<p>منذ 2017 خبرة واسعة وشهادات معتمدة. نواجه كل التحديات ونحل مشاكل كل عميلة باحتراف.</p>
-					</div>
-					<div className="card">
-						<h3>الوقت</h3>
-						<p>التزام بالمواعيد، سرعة وكفاءة، استجابة سريعة وجدولة مرنة تناسبك.</p>
-					</div>
-					<div className="card">
-						<h3>الجودة</h3>
-						<p>منتجات عالمية، احترافية عالية، متابعة أحدث التقنيات وتجربة عملاء مريحة من البداية للنهاية.</p>
-					</div>
-				</section>
 
 				<section className="highlight reveal">
 					<div className="massage-banner">
@@ -467,6 +453,21 @@ function Landing() {
 							<span>★</span>
 							<span>عرض كل التقييمات</span>
 						</button>
+					</div>
+				</section>
+
+				<section className="grid-3 reveal">
+					<div className="card">
+						<h3>الخبرة</h3>
+						<p>منذ 2017 خبرة واسعة وشهادات معتمدة. نواجه كل التحديات ونحل مشاكل كل عميلة باحتراف.</p>
+					</div>
+					<div className="card">
+						<h3>الوقت</h3>
+						<p>التزام بالمواعيد، سرعة وكفاءة، استجابة سريعة وجدولة مرنة تناسبك.</p>
+					</div>
+					<div className="card">
+						<h3>الجودة</h3>
+						<p>منتجات عالمية، احترافية عالية، متابعة أحدث التقنيات وتجربة عملاء مريحة من البداية للنهاية.</p>
 					</div>
 				</section>
 
