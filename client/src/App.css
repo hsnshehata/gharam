@@ -602,3 +602,19 @@ body.theme-dark .table-hover > tbody > tr:hover { background-color: rgba(255,255
 .assign-select {
   min-width: 200px;
 }
+
+/* هدية النقاط للموظف */
+.gift-card { position: relative; overflow: hidden; border: 1px solid #e3f5f0; background: linear-gradient(135deg, #f9fffd, #eef8f4); }
+.gift-card::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 20% 20%, rgba(0, 200, 120, 0.1), transparent 35%), radial-gradient(circle at 80% 30%, rgba(0, 120, 255, 0.08), transparent 30%); }
+.gift-box { position: relative; width: 68px; height: 68px; animation: gift-bounce 1.2s ease-in-out infinite; }
+.gift-body { position: absolute; bottom: 0; width: 100%; height: 55%; background: linear-gradient(135deg, #16a085, #0d7a63); border-radius: 8px; }
+.gift-lid { position: absolute; top: 6px; left: -4px; right: -4px; height: 18px; background: linear-gradient(135deg, #0fb486, #12a67a); border-radius: 10px; box-shadow: 0 6px 10px rgba(0,0,0,0.08); }
+.gift-ribbon { position: absolute; inset: 0; margin: auto; width: 18px; background: linear-gradient(180deg, #ffd166, #f4a261); border-radius: 6px; }
+.gift-ribbon::after { content: ""; position: absolute; left: 50%; top: -6px; width: 14px; height: 14px; border-radius: 50%; background: #f4a261; transform: translateX(-50%); box-shadow: 10px 4px 0 -2px #ffd166, -10px 4px 0 -2px #ffd166; }
+.gift-open-btn { box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35); transition: transform 0.15s ease, box-shadow 0.2s ease; }
+.gift-open-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(16, 185, 129, 0.45); }
+
+@keyframes gift-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}

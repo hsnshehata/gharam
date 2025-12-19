@@ -52,6 +52,7 @@ function Navbar({ user, setUser }) {
               <Nav.Link as={Link} to="/expenses-advances">المصروفات والسلف</Nav.Link>
               <Nav.Link as={Link} to="/employee-reports">تقارير الموظفين</Nav.Link>
               <Nav.Link as={Link} to="/packages-services">إضافة باكدجات/خدمات</Nav.Link>
+              <Nav.Link as={Link} to="/points-admin">نقاط الموظفين</Nav.Link>
               <Nav.Link as={Link} to="/users">الموظفين</Nav.Link>
               <Nav.Link as={Link} to="/daily-reports">التقارير اليومية</Nav.Link>
             </>

@@ -26,6 +26,8 @@ const ensureArrays = (user) => {
   if (!Array.isArray(user.coinsRedeemed)) user.coinsRedeemed = [];
 };
 
+const isAdmin = (req) => req?.user?.role === 'admin';
+
 const recomputeConvertible = (user) => {
   const totalCoinsEarned = (user.efficiencyCoins?.length || 0) + (user.coinsRedeemed?.length || 0);
   user.convertiblePoints = Math.max(0, (user.totalPoints || 0) - (totalCoinsEarned * 1000));
@@ -45,7 +47,12 @@ const addPointsAndConvert = async (userId, amount, meta = {}) => {
     serviceId: meta.serviceId || null,
     serviceName: meta.serviceName || null,
     instantServiceId: meta.instantServiceId || null,
-    receiptNumber: meta.receiptNumber || null
+    receiptNumber: meta.receiptNumber || null,
+    type: meta.type || 'work',
+    note: meta.note || null,
+    giftedBy: meta.giftedBy || null,
+    giftedByName: meta.giftedByName || null,
+    status: 'applied'
   };
 
   user.points.push(point);
@@ -142,6 +149,135 @@ exports.getUsers = async (req, res) => {
   try {
     const users = await User.find().select('-password');
     res.json(users);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports.giftPoints = async (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ msg: 'صلاحية غير كافية' });
+
+  const { userId, amount, note } = req.body;
+  const pointsValue = Number(amount);
+  if (!userId || !pointsValue || pointsValue <= 0) {
+    return res.status(400).json({ msg: 'حدد الموظف وقيمة النقاط بشكل صحيح' });
+  }
+
+  try {
+    const [user, actor] = await Promise.all([
+      User.findById(userId),
+      User.findById(req.user.id).select('username')
+    ]);
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    ensureArrays(user);
+
+    const giftedByName = actor?.username || 'الإدارة';
+
+    const pointId = new mongoose.Types.ObjectId();
+    const giftPoint = {
+      _id: pointId,
+      amount: pointsValue,
+      date: new Date(),
+      type: 'gift',
+      note: note || 'هدية نقاط',
+      giftedBy: req.user.id,
+      giftedByName,
+      status: 'pending'
+    };
+
+    user.points.push(giftPoint);
+    await user.save();
+
+    res.json({ msg: 'تم إرسال الهدية، ستظهر للموظف حتى يفتحها', gift: giftPoint });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports.listPendingGifts = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('points username');
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    ensureArrays(user);
+
+    const pendingGifts = (user.points || []).filter((p) => p.type === 'gift' && p.status === 'pending');
+    res.json({ gifts: pendingGifts });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports.openGift = async (req, res) => {
+  try {
+    const { giftId } = req.params;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    ensureArrays(user);
+
+    const target = (user.points || []).find((p) => p._id?.toString() === giftId && p.type === 'gift' && p.status === 'pending');
+    if (!target) return res.status(404).json({ msg: 'لم يتم العثور على هدية بانتظار الفتح' });
+
+    const amount = Number(target.amount) || 0;
+    target.status = 'applied';
+    target.openedAt = new Date();
+
+    user.totalPoints = (user.totalPoints || 0) + amount;
+    user.convertiblePoints = (user.convertiblePoints || 0) + amount;
+    recomputeConvertible(user);
+    user.level = getLevel(user.totalPoints);
+
+    await user.save();
+
+    res.json({ msg: 'تم فتح الهدية وإضافة النقاط', gift: target, totalPoints: user.totalPoints, convertiblePoints: user.convertiblePoints, level: user.level });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports.deductPoints = async (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ msg: 'صلاحية غير كافية' });
+
+  const { userId, amount, reason } = req.body;
+  const pointsValue = Number(amount);
+  if (!userId || !pointsValue || pointsValue <= 0) {
+    return res.status(400).json({ msg: 'حدد الموظف وقيمة الخصم بشكل صحيح' });
+  }
+
+  try {
+    const [user, actor] = await Promise.all([
+      User.findById(userId),
+      User.findById(req.user.id).select('username')
+    ]);
+    if (!user) return res.status(404).json({ msg: 'User not found' });
+    ensureArrays(user);
+
+    const giftedByName = actor?.username || 'الإدارة';
+
+    const deduction = Math.min(pointsValue, user.totalPoints || 0);
+    const pointId = new mongoose.Types.ObjectId();
+    const deductionPoint = {
+      _id: pointId,
+      amount: -deduction,
+      date: new Date(),
+      type: 'deduction',
+      note: reason || 'خصم نقاط إداري',
+      giftedBy: req.user.id,
+      giftedByName,
+      status: 'applied'
+    };
+
+    user.points.push(deductionPoint);
+    user.totalPoints = Math.max(0, (user.totalPoints || 0) - deduction);
+    user.level = getLevel(user.totalPoints);
+    recomputeConvertible(user);
+
+    await user.save();
+
+    res.json({ msg: 'تم الخصم وتسجيله', deduction: deductionPoint, totalPoints: user.totalPoints, convertiblePoints: user.convertiblePoints, level: user.level });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Server error' });

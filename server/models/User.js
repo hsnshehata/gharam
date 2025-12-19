@@ -30,7 +30,13 @@ const userSchema = new mongoose.Schema({
     serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Service', default: null },
     serviceName: { type: String, default: null },
     instantServiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'InstantService', default: null },
-    receiptNumber: { type: String, default: null }
+    receiptNumber: { type: String, default: null },
+    type: { type: String, enum: ['work', 'gift', 'deduction'], default: 'work' },
+    note: { type: String, default: null },
+    giftedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    giftedByName: { type: String, default: null },
+    status: { type: String, enum: ['pending', 'applied'], default: 'applied' },
+    openedAt: { type: Date, default: null }
   }],
   createdAt: { type: Date, default: Date.now }
 });

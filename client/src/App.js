@@ -16,6 +16,7 @@ import HallSupervision from './pages/HallSupervision';
 import Landing from './pages/Landing';
 import PriceList from './pages/PriceList';
 import MassageChair from './pages/MassageChair';
+import PointsAdmin from './pages/PointsAdmin';
 import Navbar from './components/Navbar';
 import { ToastProvider } from './components/ToastProvider';
 import './App.css';
@@ -119,6 +120,10 @@ function AppContent() {
           <Route
             path="/packages-services"
             element={user && user.role === 'admin' ? <PackagesServices /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/points-admin"
+            element={user && user.role === 'admin' ? <PointsAdmin /> : <Navigate to="/login" />}
           />
           <Route
             path="/daily-reports"

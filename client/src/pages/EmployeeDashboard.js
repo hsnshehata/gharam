@@ -29,6 +29,7 @@ function EmployeeDashboard({ user }) {
   const [pointsData, setPointsData] = useState(null);
   const [showQrModal, setShowQrModal] = useState(false);
   const [pointsSummary, setPointsSummary] = useState(null);
+  const [pendingGifts, setPendingGifts] = useState([]);
   const [redeemCount, setRedeemCount] = useState(1);
   const [showRedeemModal, setShowRedeemModal] = useState(false);
   const [converting, setConverting] = useState(false);
@@ -45,6 +46,13 @@ function EmployeeDashboard({ user }) {
     setPointsSummary(pointsRes.data);
   }, []);
 
+  const fetchPendingGifts = useCallback(async () => {
+    const res = await axios.get('/api/users/gifts/pending', {
+      headers: { 'x-auth-token': localStorage.getItem('token') }
+    });
+    setPendingGifts(res.data?.gifts || []);
+  }, []);
+
   const fetchAllData = useCallback(async () => {
     setLoadingData(true);
     try {
@@ -56,7 +64,7 @@ function EmployeeDashboard({ user }) {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         })
       ]);
-      await fetchPointsSummary();
+      await Promise.all([fetchPointsSummary(), fetchPendingGifts()]);
       setBookings(bookingsRes.data || { makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
       setInstantServices(instantRes.data.instantServices || []);
     } catch (err) {
@@ -65,7 +73,7 @@ function EmployeeDashboard({ user }) {
     } finally {
       setLoadingData(false);
     }
-  }, [date, fetchPointsSummary, showToast]);
+  }, [date, fetchPointsSummary, fetchPendingGifts, showToast]);
 
   const formatNumber = useCallback((num = 0) => new Intl.NumberFormat('en-US').format(Math.max(0, num)), []);
 
@@ -192,7 +200,7 @@ function EmployeeDashboard({ user }) {
       showToast(`تم تحويل ${res.data.mintedCoins} عملة جديدة`, 'success');
       setConvertCelebration(true);
       setTimeout(() => setConvertCelebration(false), 1200);
-      await fetchPointsSummary();
+      await Promise.all([fetchPointsSummary(), fetchPendingGifts()]);
     } catch (err) {
       console.error('Convert error:', err.response?.data || err.message);
       showToast(err.response?.data?.msg || 'تعذر تحويل النقاط الآن', 'danger');
@@ -216,7 +224,7 @@ function EmployeeDashboard({ user }) {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       showToast(`تم استبدال ${res.data.redeemedCoins} عملة بقيمة ${res.data.totalValue} جنيه`, 'success');
-      await fetchPointsSummary();
+      await Promise.all([fetchPointsSummary(), fetchPendingGifts()]);
       setShowRedeemModal(false);
     } catch (err) {
       console.error('Redeem error:', err.response?.data || err.message);
@@ -270,6 +278,19 @@ function EmployeeDashboard({ user }) {
 
   const handleOpenQrModal = () => {
     setShowQrModal(true);
+  };
+
+  const handleOpenGift = async (giftId) => {
+    try {
+      const res = await axios.post(`/api/users/gifts/open/${giftId}`, {}, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      showToast(res.data.msg || 'تم فتح الهدية', 'success');
+      await Promise.all([fetchPointsSummary(), fetchPendingGifts()]);
+    } catch (err) {
+      console.error('Gift open error:', err.response?.data || err.message);
+      showToast(err.response?.data?.msg || 'تعذر فتح الهدية الآن', 'danger');
+    }
   };
 
   const coinsCount = pointsSummary?.coins?.totalCount || 0;
@@ -353,6 +374,32 @@ function EmployeeDashboard({ user }) {
 
   return (
     <Container className="mt-5">
+      {pendingGifts.length > 0 && (
+        <Card className="mb-4 gift-card">
+          <Card.Body>
+            <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+              <div className="d-flex align-items-center gap-3">
+                <div className="gift-box">
+                  <div className="gift-lid" />
+                  <div className="gift-body" />
+                  <div className="gift-ribbon" />
+                </div>
+                <div>
+                  <Card.Title className="mb-1">عندك هدية نقاط مستنياك</Card.Title>
+                  <div className="text-muted small">افتح الصندوق علشان النقاط تضاف لرصيدك</div>
+                </div>
+              </div>
+              <div className="d-flex flex-wrap gap-2">
+                {pendingGifts.map((g) => (
+                  <Button key={g._id} variant="success" className="gift-open-btn" onClick={() => handleOpenGift(g._id)}>
+                    افتح +{g.amount} نقطة
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </Card.Body>
+        </Card>
+      )}
       <Row className="mb-4 justify-content-center">
         <Col md={8} lg={6}>
           <div className="scan-panel text-center">
