@@ -218,13 +218,37 @@ function Landing() {
 		body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Tajawal', 'Arial', sans-serif; }
 		.landing-page { background: var(--bg); min-height: 100vh; position: relative; overflow: hidden; }
 		.floating-icons { position: fixed; inset: 0; pointer-events: auto; z-index: 0; }
-		.floating-icons span { position: absolute; font-size: 34px; opacity: 0.2; animation: float 7s ease-in-out infinite, drift 18s linear infinite; transition: transform 0.3s ease, opacity 0.2s ease; cursor: default; }
-		.floating-icons span:hover { opacity: 0.35; transform: scale(1.1) rotate(4deg); }
-		.floating-icons span:nth-child(1) { top: 12%; left: 18%; animation-duration: 8s, 20s; }
-		.floating-icons span:nth-child(2) { top: 24%; right: 16%; animation-duration: 7.5s, 18s; }
-		.floating-icons span:nth-child(3) { top: 48%; left: 8%; animation-duration: 7s, 22s; }
-		.floating-icons span:nth-child(4) { top: 66%; right: 12%; animation-duration: 8.5s, 21s; }
-		.floating-icons span:nth-child(5) { top: 78%; left: 42%; animation-duration: 7.5s, 19s; }
+		.floating-icons span { position: absolute; font-size: 40px; opacity: 0.22; animation: float 6s ease-in-out infinite, drift 14s linear infinite; transition: transform 0.28s ease, opacity 0.18s ease; cursor: default; }
+		.floating-icons span:hover { opacity: 0.4; transform: scale(1.18) rotate(6deg); }
+		.floating-icons span:nth-child(1) { top: 10%; left: 14%; animation-duration: 6.5s, 16s; }
+		.floating-icons span:nth-child(2) { top: 26%; right: 14%; animation-duration: 6s, 15s; }
+		.floating-icons span:nth-child(3) { top: 50%; left: 6%; animation-duration: 6.2s, 17s; }
+		.floating-icons span:nth-child(4) { top: 64%; right: 10%; animation-duration: 6.8s, 16.5s; }
+		.floating-icons span:nth-child(5) { top: 80%; left: 44%; animation-duration: 6.1s, 15.5s; }
+		@keyframes float {
+			0% { transform: translateY(0); }
+			50% { transform: translateY(-18px); }
+			100% { transform: translateY(0); }
+		}
+		@keyframes drift {
+			0% { transform: translateX(0) rotate(0deg); }
+			50% { transform: translateX(12px) rotate(6deg); }
+			100% { transform: translateX(0) rotate(0deg); }
+		}
+		.sparkles { position: fixed; inset: 0; pointer-events: none; z-index: 0; mix-blend-mode: screen; }
+		.sparkles span { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 60%); opacity: 0.5; animation: twinkle 2.6s ease-in-out infinite; }
+		.sparkles span:nth-child(1) { top: 14%; left: 32%; animation-delay: 0.2s; }
+		.sparkles span:nth-child(2) { top: 38%; right: 24%; animation-delay: 0.6s; }
+		.sparkles span:nth-child(3) { top: 58%; left: 22%; animation-delay: 1.1s; }
+		.sparkles span:nth-child(4) { top: 72%; right: 30%; animation-delay: 0.4s; }
+		.sparkles span:nth-child(5) { top: 18%; right: 48%; animation-delay: 1s; }
+		.sparkles span:nth-child(6) { top: 66%; left: 52%; animation-delay: 1.4s; }
+		.sparkles span:nth-child(7) { top: 30%; left: 12%; animation-delay: 0.8s; }
+		.sparkles span:nth-child(8) { top: 82%; right: 12%; animation-delay: 1.6s; }
+		@keyframes twinkle {
+			0%, 100% { transform: scale(0.6); opacity: 0.2; }
+			50% { transform: scale(1.4); opacity: 0.8; }
+		}
 		@keyframes float {
 			0% { transform: translateY(0); }
 			50% { transform: translateY(-12px); }
@@ -331,6 +355,10 @@ function Landing() {
 				<span>✨</span>
 				<span>👑</span>
 				<span>🌸</span>
+			</div>
+			<div className="sparkles" aria-hidden>
+				<span></span><span></span><span></span><span></span>
+				<span></span><span></span><span></span><span></span>
 			</div>
 			<div className="container">
 				<div className="topbar">
