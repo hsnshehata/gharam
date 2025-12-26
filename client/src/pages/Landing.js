@@ -216,21 +216,32 @@ function Landing() {
 			--shadow: ${palette.shadow};
 		}
 		body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Tajawal', 'Arial', sans-serif; }
-		.landing-page { background: radial-gradient(circle at 15% 20%, rgba(198,161,91,0.18), transparent 26%), radial-gradient(circle at 85% 15%, rgba(120,78,44,0.14), transparent 24%), var(--bg); min-height: 100vh; }
-		.container { width: min(1200px, 92%); margin: 0 auto; }
+		.landing-page { background: var(--bg); min-height: 100vh; position: relative; overflow: hidden; }
+		.floating-icons { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+		.floating-icons span { position: absolute; font-size: 28px; opacity: 0.15; animation: float 9s ease-in-out infinite, drift 24s linear infinite; }
+		.floating-icons span:nth-child(1) { top: 12%; left: 18%; animation-duration: 10s, 28s; }
+		.floating-icons span:nth-child(2) { top: 24%; right: 16%; animation-duration: 11s, 26s; }
+		.floating-icons span:nth-child(3) { top: 48%; left: 8%; animation-duration: 9s, 30s; }
+		.floating-icons span:nth-child(4) { top: 66%; right: 12%; animation-duration: 12s, 32s; }
+		.floating-icons span:nth-child(5) { top: 78%; left: 42%; animation-duration: 10s, 29s; }
+		@keyframes float {
+			0% { transform: translateY(0); }
+			50% { transform: translateY(-12px); }
+			100% { transform: translateY(0); }
+		}
+		@keyframes drift {
+			0% { transform: translateX(0) rotate(0deg); }
+			50% { transform: translateX(6px) rotate(4deg); }
+			100% { transform: translateX(0) rotate(0deg); }
+		}
+		.container { width: min(1200px, 92%); margin: 0 auto; position: relative; z-index: 1; }
 		.topbar { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 18px 0; }
 		.brand { display: flex; align-items: center; justify-content: center; text-align: center; gap: 12px; font-weight: 800; }
 		.brand img { width: 64px; height: 64px; object-fit: contain; }
 		.pill { display: inline-flex; gap: 8px; align-items: center; padding: 10px 14px; background: rgba(0,0,0,0.03); border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 14px; }
 		.hero { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 32px; align-items: center; padding: 24px 0 12px; }
-		.hero::before { content: ''; position: absolute; inset: -8% 48% 26% -8%; background: radial-gradient(circle at 30% 30%, rgba(198,161,91,0.34), rgba(120,78,44,0.26) 42%, transparent 70%); filter: blur(26px); animation: floatGlow 14s ease-in-out infinite; z-index: 0; pointer-events: none; }
 		.hero > * { position: relative; z-index: 1; }
-		.hero img { width: 100%; border-radius: 16px; object-fit: cover; box-shadow: 0 30px 60px var(--shadow); border: 1px solid var(--border); background: var(--card); }
-		@keyframes floatGlow {
-			0% { transform: translate3d(-16px, 4px, 0) scale(0.98); opacity: 0.9; }
-			50% { transform: translate3d(18px, -10px, 0) scale(1.06); opacity: 1; }
-			100% { transform: translate3d(-12px, 6px, 0) scale(1); opacity: 0.94; }
-		}
+		.hero img { width: 100%; border-radius: 16px; object-fit: cover; box-shadow: 0 30px 60px var(--shadow); border: 1px solid var(--border); background: transparent; mix-blend-mode: multiply; filter: drop-shadow(0 12px 24px rgba(0,0,0,0.22)); }
 		h1 { margin: 8px 0 16px; font-size: clamp(28px, 4vw, 42px); line-height: 1.2; }
 		h2 { margin: 0 0 12px; }
 		p { color: var(--muted); line-height: 1.75; margin: 0; }
@@ -313,6 +324,13 @@ function Landing() {
 	return (
 		<div className="landing-page" dir="rtl">
 			<style>{css}</style>
+			<div className="floating-icons" aria-hidden>
+				<span>💄</span>
+				<span>💅</span>
+				<span>✨</span>
+				<span>👑</span>
+				<span>🌸</span>
+			</div>
 			<div className="container">
 				<div className="topbar">
 					<div className="brand">
