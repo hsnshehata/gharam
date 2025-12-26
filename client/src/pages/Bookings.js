@@ -582,9 +582,38 @@ function Bookings() {
               <Col md={6}>
                 <Form.Group>
                   <Form.Label>العربون</Form.Label>
-                  <Form.Control type="number" value={formData.deposit} onChange={(e) => setFormData({ ...formData, deposit: e.target.value })} />
+                  <Form.Control
+                    type="number"
+                    value={formData.deposit}
+                    onChange={(e) => setFormData({ ...formData, deposit: e.target.value })}
+                    disabled={!!editItem}
+                    readOnly={!!editItem}
+                  />
                 </Form.Group>
               </Col>
+              {editItem?.installments?.length > 0 && (
+                <Col md={12}>
+                  <h6 className="mt-3">الأقساط المدفوعة (عرض فقط)</h6>
+                  <Table striped bordered hover size="sm">
+                    <thead>
+                      <tr>
+                        <th>المبلغ</th>
+                        <th>التاريخ</th>
+                        <th>الموظف</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {editItem.installments.map((inst, index) => (
+                        <tr key={index}>
+                          <td>{inst.amount} جنيه</td>
+                          <td>{new Date(inst.date).toLocaleDateString()}</td>
+                          <td>{inst.employeeId?.username || 'غير معروف'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </Col>
+              )}
               <Col md={12} className="mt-3">
                 <Button type="submit" className="me-2" disabled={editSubmitting}>
                   {editSubmitting ? 'جارٍ الحفظ...' : 'حفظ التعديلات'}

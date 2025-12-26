@@ -7,6 +7,7 @@
     "start": "node server.js",
     "client": "cd client && npm start",
     "dev": "concurrently \"npm start\" \"npm run client\"",
+    "clone:db": "node scripts/cloneMongoCluster.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -19,6 +20,7 @@
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.18.0"
+    "mongoose": "^8.18.0",
+    "mongodb": "^6.11.0"
   }
 }

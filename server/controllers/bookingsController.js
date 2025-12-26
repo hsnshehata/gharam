@@ -52,6 +52,7 @@ exports.addBooking = async (req, res) => {
       - returnedPrice
       + (hairStraightening ? parseFloat(hairStraighteningPrice) : 0)
       + (hairDye ? parseFloat(hairDyePrice) : 0);
+
     const remaining = total - deposit;
 
     const receiptNumber = Math.floor(1000000 + Math.random() * 9000000).toString();
@@ -121,6 +122,9 @@ exports.updateBooking = async (req, res) => {
   const employeeId = req.user.id;
 
   try {
+    const oldBooking = await Booking.findById(req.params.id);
+    if (!oldBooking) return res.status(404).json({ msg: 'Booking not found' });
+
     const pkg = await Package.findById(packageId);
     if (!pkg) return res.status(404).json({ msg: 'Package not found' });
 
@@ -158,7 +162,12 @@ exports.updateBooking = async (req, res) => {
       - returnedPrice
       + (hairStraightening ? parseFloat(hairStraighteningPrice) : 0)
       + (hairDye ? parseFloat(hairDyePrice) : 0);
-    const remaining = total - deposit;
+
+    const installmentsPaid = Array.isArray(oldBooking.installments)
+      ? oldBooking.installments.reduce((sum, inst) => sum + (Number(inst.amount) || 0), 0)
+      : 0;
+    const paid = (Number(deposit) || 0) + installmentsPaid;
+    const remaining = Math.max(total - paid, 0);
 
     // جلب خدمات الباكدجات
     const packageIds = [packageId, hennaPackageId, photographyPackageId].filter(id => id);
@@ -189,9 +198,6 @@ exports.updateBooking = async (req, res) => {
       executed: false,
       executedBy: null
     }));
-
-    const oldBooking = await Booking.findById(req.params.id);
-    if (!oldBooking) return res.status(404).json({ msg: 'Booking not found' });
 
     const changes = {};
     if (oldBooking.total !== total) changes.total = total;

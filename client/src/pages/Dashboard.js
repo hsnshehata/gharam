@@ -969,10 +969,35 @@ function Dashboard({ user }) {
                     type="number"
                     value={bookingFormData.deposit}
                     onChange={(e) => setBookingFormData({ ...bookingFormData, deposit: e.target.value })}
+                    disabled={!!editBooking}
+                    readOnly={!!editBooking}
                     required
                   />
                 </Form.Group>
               </Col>
+              {editBooking?.installments?.length > 0 && (
+                <Col md={12}>
+                  <h6 className="mt-3">الأقساط المدفوعة (عرض فقط)</h6>
+                  <Table striped bordered hover size="sm">
+                    <thead>
+                      <tr>
+                        <th>المبلغ</th>
+                        <th>التاريخ</th>
+                        <th>الموظف</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {editBooking.installments.map((inst, index) => (
+                        <tr key={index}>
+                          <td>{inst.amount} جنيه</td>
+                          <td>{new Date(inst.date).toLocaleDateString()}</td>
+                          <td>{inst.employeeId?.username || 'غير معروف'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </Col>
+              )}
               <Col md={3}>
                 <Form.Group>
                   <Form.Label>الإجمالي: {total} جنيه</Form.Label>
