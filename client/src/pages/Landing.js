@@ -142,8 +142,8 @@ function Landing() {
 	const [showChat, setShowChat] = useState(false);
 	const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
 	const [theme, setTheme] = useState(() => {
-		if (typeof window === 'undefined') return 'light';
-		return localStorage.getItem('theme') || 'light';
+		if (typeof window === 'undefined') return 'dark';
+		return localStorage.getItem('theme') || 'dark';
 	});
 
 	const palette = themes[theme];
@@ -151,7 +151,10 @@ function Landing() {
 	const availabilityBadge = availability ? availabilityCopy[availability.status] : null;
 
 	useEffect(() => {
+		if (typeof document === 'undefined') return;
 		localStorage.setItem('theme', theme);
+		if (theme === 'dark') document.body.classList.add('theme-dark');
+		else document.body.classList.remove('theme-dark');
 	}, [theme]);
 
 	useEffect(() => {
