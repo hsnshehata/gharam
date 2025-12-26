@@ -326,7 +326,7 @@ function Landing() {
 
 				<section className="hero reveal">
 					<div>
-						<img src="/gharam.jpg" alt="غرام سلطان تحمل شهادة البورد الأمريكي" loading="lazy" />
+						<img src="/Gharam.png" alt="غرام سلطان تحمل شهادة البورد الأمريكي" loading="lazy" />
 					</div>
 					<div>
 						<h1>إطلالة ساحرة مع خبيرة الميكب غرام سلطان</h1>
