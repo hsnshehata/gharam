@@ -11,6 +11,9 @@ const THREADS_LINK = 'https://www.threads.net/@gharamsoltan';
 const SUPPORT_LINK = 'https://zainbot.com/chat/ghazal';
 const LANDLINE = '0472570908';
 const API_BASE = (process.env.REACT_APP_API_BASE || 'http://localhost:5000').replace(/\/$/, '');
+const CANONICAL_URL = 'https://gharamsoltan.com/';
+const BUSINESS_NAME = 'غرام سلطان بيوتي سنتر وستوديو';
+const BUSINESS_DESCRIPTION = 'ميكب ارتيست وتصوير احترافي وحجز باكدجات زفاف، صبغة وفرد شعر، ومساج ضد الجاذبية في كفر الشيخ. حجزي أونلاين وتابعي التوافر الفوري.';
 
 const INSTAGRAM_SVG = (
 	<path
@@ -149,6 +152,73 @@ function Landing() {
 	const palette = themes[theme];
 	const selectedReviews = useMemo(() => shuffle(googleReviews).slice(0, 12), []);
 	const availabilityBadge = availability ? availabilityCopy[availability.status] : null;
+
+	// SEO: عنوان، وصف، كانونيكال، OG/Twitter، و JSON-LD LocalBusiness
+	useEffect(() => {
+		const setMeta = (name, content, attr = 'name') => {
+			if (!content) return;
+			let el = document.head.querySelector(`meta[${attr}="${name}"]`);
+			if (!el) {
+				el = document.createElement('meta');
+				el.setAttribute(attr, name);
+				document.head.appendChild(el);
+			}
+			el.setAttribute('content', content);
+		};
+
+		document.title = `${BUSINESS_NAME} | حجز باكدجات ميكب وتصوير وصبغة شعر`;
+		setMeta('description', BUSINESS_DESCRIPTION);
+		setMeta('og:title', `${BUSINESS_NAME} | ميكب وتصوير في كفر الشيخ`, 'property');
+		setMeta('og:description', BUSINESS_DESCRIPTION, 'property');
+		setMeta('og:type', 'website', 'property');
+		setMeta('og:url', CANONICAL_URL, 'property');
+		setMeta('og:image', 'https://gharamsoltan.com/og-cover.jpg', 'property');
+		setMeta('twitter:card', 'summary_large_image');
+		setMeta('twitter:title', `${BUSINESS_NAME} | ميكب وتصوير`);
+		setMeta('twitter:description', BUSINESS_DESCRIPTION);
+		setMeta('twitter:image', 'https://gharamsoltan.com/og-cover.jpg');
+
+		let canonical = document.querySelector('link[rel="canonical"]');
+		if (!canonical) {
+			canonical = document.createElement('link');
+			canonical.setAttribute('rel', 'canonical');
+			document.head.appendChild(canonical);
+		}
+		canonical.setAttribute('href', CANONICAL_URL);
+
+		const schema = {
+			'@context': 'https://schema.org',
+			'@type': 'BeautySalon',
+			name: BUSINESS_NAME,
+			description: BUSINESS_DESCRIPTION,
+			image: 'https://gharamsoltan.com/og-cover.jpg',
+			telephone: `+20${LANDLINE}`,
+			address: {
+				'@type': 'PostalAddress',
+				addressLocality: 'كفر الشيخ',
+				addressCountry: 'EG'
+			},
+			url: CANONICAL_URL,
+			priceRange: '$$',
+			sameAs: [INSTAGRAM_LINK, FACEBOOK_LINK, TIKTOK_LINK, THREADS_LINK, MAP_LINK, WHATSAPP_LINK],
+			openingHoursSpecification: [
+				{
+					'@type': 'OpeningHoursSpecification',
+					dayOfWeek: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
+					opens: '10:00',
+					closes: '23:00'
+				}
+			]
+		};
+		let jsonLd = document.getElementById('seo-json-ld');
+		if (!jsonLd) {
+			jsonLd = document.createElement('script');
+			jsonLd.type = 'application/ld+json';
+			jsonLd.id = 'seo-json-ld';
+			document.head.appendChild(jsonLd);
+		}
+		jsonLd.textContent = JSON.stringify(schema);
+	}, []);
 
 	useEffect(() => {
 		localStorage.setItem('theme', theme);
