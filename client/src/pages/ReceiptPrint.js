@@ -168,6 +168,23 @@ const ReceiptPrint = ({ data, type }) => {
               </Table>
             </>
           )}
+          {data.hairDye && (
+            <>
+              <h6>صبغة الشعر:</h6>
+              <Table bordered size="sm">
+                <tbody>
+                  <tr key="hairDye">
+                    <td>صبغة شعر</td>
+                    <td>{data.hairDyePrice ? `${data.hairDyePrice} جنيه` : 'غير معروف'}</td>
+                  </tr>
+                  <tr key="hairDyeDate">
+                    <td>تاريخ الصبغة</td>
+                    <td>{data.hairDyeDate ? new Date(data.hairDyeDate).toLocaleDateString() : 'غير معروف'}</td>
+                  </tr>
+                </tbody>
+              </Table>
+            </>
+          )}
           <p><strong>الإجمالي: {data.total ? `${data.total} جنيه` : 'غير معروف'}</strong></p>
           <p><strong>العربون: {data.deposit ? `${data.deposit} جنيه` : 'غير معروف'}</strong></p>
           <p><strong>المتبقي: {data.remaining ? `${data.remaining} جنيه` : 'غير معروف'}</strong></p>

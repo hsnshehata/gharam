@@ -23,16 +23,17 @@ function Dashboard({ user }) {
   const [bookings, setBookings] = useState({
     makeupBookings: [],
     hairStraighteningBookings: [],
+    hairDyeBookings: [],
     photographyBookings: []
   });
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const { showToast } = useToast();
-  const setMessage = (msg) => {
+  const setMessage = useCallback((msg) => {
     if (!msg) return;
     const text = msg.toString();
     const variant = text.includes('خطأ') ? 'danger' : text.includes('مطلوبة') ? 'warning' : 'success';
     showToast(msg, variant);
-  };
+  }, [showToast]);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showInstantServiceModal, setShowInstantServiceModal] = useState(false);
   const [showExpenseAdvanceModal, setShowExpenseAdvanceModal] = useState(false);
@@ -208,7 +209,7 @@ function Dashboard({ user }) {
         axios.get('/api/users', { headers: { 'x-auth-token': localStorage.getItem('token') } })
       ]);
       setSummary(summaryRes.data);
-      setBookings(bookingsRes.data || { makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
+      setBookings(bookingsRes.data || { makeupBookings: [], hairStraighteningBookings: [], hairDyeBookings: [], photographyBookings: [] });
       setPackages(packagesData);
       setServices(servicesData);
       setUsers(usersRes.data.map(u => ({ ...u, _id: u._id?.toString() })));
@@ -216,7 +217,7 @@ function Dashboard({ user }) {
     } catch (err) {
       console.error('Fetch error:', err.response?.data || err.message);
       setMessage('خطأ في جلب البيانات');
-      setBookings({ makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
+      setBookings({ makeupBookings: [], hairStraighteningBookings: [], hairDyeBookings: [], photographyBookings: [] });
     }
   }, [date, setMessage]);
 
@@ -442,6 +443,9 @@ function Dashboard({ user }) {
       hairStraightening: booking.hairStraightening ? 'yes' : 'no',
       hairStraighteningPrice: booking.hairStraighteningPrice != null ? booking.hairStraighteningPrice.toString() : '',
       hairStraighteningDate: booking.hairStraighteningDate ? new Date(booking.hairStraighteningDate).toISOString().split('T')[0] : '',
+      hairDye: booking.hairDye ? 'yes' : 'no',
+      hairDyePrice: booking.hairDyePrice != null ? booking.hairDyePrice.toString() : '',
+      hairDyeDate: booking.hairDyeDate ? new Date(booking.hairDyeDate).toISOString().split('T')[0] : '',
       clientName: booking.clientName || '',
       clientPhone: booking.clientPhone || '',
       city: booking.city || '',
@@ -489,6 +493,7 @@ function Dashboard({ user }) {
       setBookings({
         makeupBookings: bookings.makeupBookings.map(b => (b._id === bookingId ? res.data.booking : b)),
         hairStraighteningBookings: bookings.hairStraighteningBookings.map(b => (b._id === bookingId ? res.data.booking : b)),
+        hairDyeBookings: bookings.hairDyeBookings.map(b => (b._id === bookingId ? res.data.booking : b)),
         photographyBookings: bookings.photographyBookings.map(b => (b._id === bookingId ? res.data.booking : b))
       });
       setMessage('تم إضافة القسط بنجاح');
@@ -640,6 +645,50 @@ function Dashboard({ user }) {
                 </Card.Title>
                 <Card.Text>
                   رقم الهاتف: {booking.clientPhone}<br />
+                  المدفوع: {booking.deposit} جنيه<br />
+                  المتبقي: {booking.remaining} جنيه
+                </Card.Text>
+                <Button variant="primary" className="me-2" onClick={() => handlePrint(booking)}>
+                  <FontAwesomeIcon icon={faPrint} />
+                </Button>
+                <Button variant="primary" className="me-2" onClick={() => handleBookingEdit(booking)}>
+                  <FontAwesomeIcon icon={faEdit} />
+                </Button>
+                <Button variant="primary" className="me-2" onClick={() => handleShowDetails(booking)}>
+                  <FontAwesomeIcon icon={faEye} />
+                </Button>
+                <Button variant="primary" className="me-2" onClick={() => { setDeleteItem(booking); setShowInstallmentModal(true); }}>
+                  <FontAwesomeIcon icon={faDollarSign} />
+                </Button>
+                <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }}>
+                  <FontAwesomeIcon icon={faTrash} />
+                </Button>
+              </Card.Body>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      <div className="d-flex align-items-center">
+        <h3 className="mb-0">حجوزات صبغة الشعر</h3>
+        <small className="text-muted ms-3">إجمالي الحجوزات اليوم: {bookings.hairDyeBookings.length}</small>
+      </div>
+      {bookings.hairDyeBookings.length === 0 && <Alert variant="info">لا توجد حجوزات صبغة شعر لهذا اليوم</Alert>}
+      <Row>
+        {bookings.hairDyeBookings.map((booking, idx) => (
+          <Col md={4} key={booking._id} className="mb-3">
+            <Card>
+              <Card.Body>
+                <Card.Title>
+                  <span className="me-2">{idx + 1}.</span>
+                  {booking.clientName}
+                  {Number(booking.remaining) === 0 && (
+                    <span className="badge bg-success ms-2">مدفوع بالكامل</span>
+                  )}
+                </Card.Title>
+                <Card.Text>
+                  رقم الهاتف: {booking.clientPhone}<br />
+                  تاريخ الصبغة: {booking.hairDyeDate ? new Date(booking.hairDyeDate).toLocaleDateString() : 'غير متوفر'}<br />
                   المدفوع: {booking.deposit} جنيه<br />
                   المتبقي: {booking.remaining} جنيه
                 </Card.Text>
@@ -1309,6 +1358,13 @@ function Dashboard({ user }) {
                   <p>فرد شعر: نعم</p>
                   <p>سعر فرد الشعر: {currentDetails.hairStraighteningPrice} جنيه</p>
                   <p>تاريخ فرد الشعر: {new Date(currentDetails.hairStraighteningDate).toLocaleDateString()}</p>
+                </>
+              )}
+              {currentDetails.hairDye && (
+                <>
+                  <p>صبغة شعر: نعم</p>
+                  <p>سعر الصبغة: {currentDetails.hairDyePrice} جنيه</p>
+                  <p>تاريخ الصبغة: {currentDetails.hairDyeDate ? new Date(currentDetails.hairDyeDate).toLocaleDateString() : 'غير متوفر'}</p>
                 </>
               )}
               <p>الإجمالي: {currentDetails.total} جنيه</p>

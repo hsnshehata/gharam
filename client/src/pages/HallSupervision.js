@@ -10,6 +10,7 @@ function HallSupervision() {
   const [bookings, setBookings] = useState({
     makeupBookings: [],
     hairStraighteningBookings: [],
+    hairDyeBookings: [],
     photographyBookings: []
   });
   const [instantServices, setInstantServices] = useState([]);
@@ -56,7 +57,7 @@ function HallSupervision() {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         })
       ]);
-      setBookings(bookingsRes.data || { makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
+      setBookings(bookingsRes.data || { makeupBookings: [], hairStraighteningBookings: [], hairDyeBookings: [], photographyBookings: [] });
       setInstantServices(instantRes.data.instantServices || []);
       setUsers(usersRes.data || []);
     } catch (err) {
@@ -164,6 +165,7 @@ function HallSupervision() {
     setBookings(prev => ({
       makeupBookings: prev.makeupBookings.map(b => (normalizeId(b._id) === targetId ? updatedBooking : b)),
       hairStraighteningBookings: prev.hairStraighteningBookings.map(b => (normalizeId(b._id) === targetId ? updatedBooking : b)),
+      hairDyeBookings: prev.hairDyeBookings.map(b => (normalizeId(b._id) === targetId ? updatedBooking : b)),
       photographyBookings: prev.photographyBookings.map(b => (normalizeId(b._id) === targetId ? updatedBooking : b))
     }));
 
@@ -341,9 +343,60 @@ function HallSupervision() {
     );
   };
 
+  const renderHairDyeRow = (booking) => {
+    const key = `booking-${normalizeId(booking._id)}-hairDye`;
+    return (
+      <tr key={`hair-dye-${normalizeId(booking._id)}`}>
+        <td>صبغة الشعر</td>
+        <td>{booking.hairDyePrice || 0} ج</td>
+        <td>
+          {booking.hairDyeExecuted ? (
+            <Badge bg="success">تم بواسطة {executedByName(booking.hairDyeExecutedBy)}</Badge>
+          ) : (
+            <Badge bg="secondary">لم يتم</Badge>
+          )}
+        </td>
+        <td>
+          <Form.Select
+            value={assignments[key] || ''}
+            onChange={(e) => handleAssignChange(key, e.target.value)}
+            disabled={booking.hairDyeExecuted}
+            className="assign-select"
+          >
+            <option value="">اختر الموظف</option>
+            {employeeOptions.map(emp => (
+              <option key={emp._id} value={emp._id}>{emp.username}</option>
+            ))}
+          </Form.Select>
+        </td>
+        <td className="text-center d-flex gap-1 flex-wrap justify-content-center action-cell">
+          {!booking.hairDyeExecuted ? (
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => handleAssign('booking', booking._id, 'hairDye')}
+              disabled={!assignments[key]}
+            >
+              تكليف
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline-danger"
+              onClick={() => handleReset('booking', booking._id, 'hairDye')}
+            >
+              سحب التكليف
+            </Button>
+          )}
+        </td>
+      </tr>
+    );
+  };
+
   const allBookings = [
     ...bookings.makeupBookings,
     ...bookings.hairStraighteningBookings,
+    ...bookings.hairDyeBookings,
     ...bookings.photographyBookings
   ];
 
@@ -409,6 +462,7 @@ function HallSupervision() {
                   <tbody>
                     {searchResult.data.packageServices?.map((srv, idx) => renderServiceRow(searchResult.data, srv, idx))}
                     {renderHairRow(searchResult.data)}
+                    {searchResult.data.hairDye && renderHairDyeRow(searchResult.data)}
                   </tbody>
                 </Table>
               </>
@@ -519,6 +573,7 @@ function HallSupervision() {
                         <tbody>
                           {booking.packageServices?.map((srv, srvIdx) => renderServiceRow(booking, srv, srvIdx))}
                           {renderHairRow(booking)}
+                          {booking.hairDye && renderHairDyeRow(booking)}
                         </tbody>
                       </Table>
                     </Card.Body>

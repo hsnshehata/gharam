@@ -12,7 +12,8 @@ function Bookings() {
   const [formData, setFormData] = useState({
     packageId: '', hennaPackageId: '', photographyPackageId: '', returnedServices: [],
     extraServices: [], hairStraightening: 'no', hairStraighteningPrice: 0,
-    hairStraighteningDate: '', clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: 0
+    hairStraighteningDate: '', hairDye: 'no', hairDyePrice: 0, hairDyeDate: '',
+    clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: 0
   });
   const [bookings, setBookings] = useState([]);
   const [packages, setPackages] = useState([]);
@@ -218,6 +219,9 @@ function Bookings() {
       hairStraightening: booking.hairStraightening ? 'yes' : 'no',
       hairStraighteningPrice: booking.hairStraighteningPrice || 0,
       hairStraighteningDate: booking.hairStraighteningDate ? booking.hairStraighteningDate.split('T')[0] : '',
+      hairDye: booking.hairDye ? 'yes' : 'no',
+      hairDyePrice: booking.hairDyePrice || 0,
+      hairDyeDate: booking.hairDyeDate ? booking.hairDyeDate.split('T')[0] : '',
       clientName: booking.clientName || '',
       clientPhone: booking.clientPhone || '',
       city: booking.city || '',
@@ -247,7 +251,10 @@ function Bookings() {
       returnedServices: formData.returnedServices.map(s => s.value),
       hairStraightening: formData.hairStraightening === 'yes',
       hairStraighteningPrice: parseFloat(formData.hairStraighteningPrice) || 0,
-      hairStraighteningDate: formData.hairStraighteningDate || ''
+      hairStraighteningDate: formData.hairStraighteningDate || '',
+      hairDye: formData.hairDye === 'yes',
+      hairDyePrice: parseFloat(formData.hairDyePrice) || 0,
+      hairDyeDate: formData.hairDyeDate || ''
     };
     try {
       const res = await axios.put(`/api/bookings/${editItem._id}`, submitData, {
@@ -549,6 +556,46 @@ function Bookings() {
               )}
               <Col md={6}>
                 <Form.Group>
+                  <Form.Label>خدمات الشعر - صبغة</Form.Label>
+                  <Form.Control
+                    as="select"
+                    value={formData.hairDye}
+                    onChange={(e) => setFormData({ ...formData, hairDye: e.target.value })}
+                    className="custom-select"
+                  >
+                    <option value="no">لا</option>
+                    <option value="yes">نعم</option>
+                  </Form.Control>
+                </Form.Group>
+              </Col>
+              {formData.hairDye === 'yes' && (
+                <>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label>سعر الصبغة</Form.Label>
+                      <Form.Control
+                        type="number"
+                        value={formData.hairDyePrice}
+                        onChange={(e) => setFormData({ ...formData, hairDyePrice: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group>
+                      <Form.Label>تاريخ الصبغة</Form.Label>
+                      <Form.Control
+                        type="date"
+                        value={formData.hairDyeDate}
+                        onChange={(e) => setFormData({ ...formData, hairDyeDate: e.target.value })}
+                        required
+                      />
+                    </Form.Group>
+                  </Col>
+                </>
+              )}
+              <Col md={6}>
+                <Form.Group>
                   <Form.Label>اسم العميل</Form.Label>
                   <Form.Control
                     type="text"
@@ -698,6 +745,13 @@ function Bookings() {
                   <p>فرد شعر: نعم</p>
                   <p>سعر فرد الشعر: {currentDetails.hairStraighteningPrice} جنيه</p>
                   <p>تاريخ فرد الشعر: {new Date(currentDetails.hairStraighteningDate).toLocaleDateString()}</p>
+                </>
+              )}
+              {currentDetails.hairDye && (
+                <>
+                  <p>صبغة شعر: نعم</p>
+                  <p>سعر الصبغة: {currentDetails.hairDyePrice} جنيه</p>
+                  <p>تاريخ الصبغة: {currentDetails.hairDyeDate ? new Date(currentDetails.hairDyeDate).toLocaleDateString() : 'غير متوفر'}</p>
                 </>
               )}
               <p>الإجمالي: {currentDetails.total} جنيه</p>
