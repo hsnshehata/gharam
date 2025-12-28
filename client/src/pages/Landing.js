@@ -153,8 +153,8 @@ function Landing() {
 	const palette = themes[theme];
 	const selectedReviews = useMemo(() => shuffle(googleReviews).slice(0, 12), []);
 	const availabilityBadge = availability ? availabilityCopy[availability.status] : null;
-	const spinADuration = Math.max(8, 24 / spinSpeed);
-	const spinBDuration = Math.max(10, 32 / spinSpeed);
+	const spinADuration = Math.max(14, 28 / spinSpeed);
+	const spinBDuration = Math.max(16, 36 / spinSpeed);
 
 	// SEO: عنوان، وصف، كانونيكال، OG/Twitter، و JSON-LD LocalBusiness
 	useEffect(() => {
@@ -261,8 +261,8 @@ function Landing() {
 		const handleScroll = () => {
 			if (frame) cancelAnimationFrame(frame);
 			frame = requestAnimationFrame(() => {
-				const factor = 1 + Math.min(window.scrollY / 600, 1.5);
-				setSpinSpeed((prev) => (Math.abs(prev - factor) > 0.05 ? factor : prev));
+				const factor = 1 + Math.min(window.scrollY / 1200, 0.6);
+				setSpinSpeed((prev) => (Math.abs(prev - factor) > 0.03 ? factor : prev));
 			});
 		};
 		window.addEventListener('scroll', handleScroll, { passive: true });
@@ -355,12 +355,12 @@ function Landing() {
 		.pill { display: inline-flex; gap: 8px; align-items: center; padding: 10px 14px; background: rgba(0,0,0,0.03); border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 14px; }
 		.hero { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 32px; align-items: center; padding: 24px 0 12px; }
 		.hero > * { position: relative; z-index: 1; }
-		.hero img { width: 100%; border-radius: 16px; object-fit: cover; box-shadow: none; border: none; background: transparent; mix-blend-mode: normal; filter: none; }
+		.hero img { position: relative; z-index: 1; width: 100%; border-radius: 16px; object-fit: cover; box-shadow: none; border: none; background: transparent; mix-blend-mode: normal; filter: none; }
 		.hero-visual { position: relative; display: flex; align-items: center; justify-content: center; padding: 12px; }
-		.floating-squares { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; filter: drop-shadow(0 12px 24px var(--shadow)); }
-		.square { position: absolute; border-radius: 18px; border: 2px solid transparent; mix-blend-mode: screen; opacity: 0.8; }
-		.square.gold { border-color: var(--gold); width: 85%; height: 85%; animation: spin-cw ${spinADuration}s linear infinite; }
-		.square.turquoise { border-color: var(--accent); width: 65%; height: 65%; animation: spin-ccw ${spinBDuration}s linear infinite; }
+		.floating-squares { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; filter: drop-shadow(0 12px 24px var(--shadow)); z-index: 0; }
+		.square { position: absolute; border-radius: 18px; border: 1px solid transparent; mix-blend-mode: screen; opacity: 0.55; backdrop-filter: blur(6px); }
+		.square.gold { border-color: var(--gold); background: linear-gradient(135deg, rgba(196,152,65,0.25), rgba(196,152,65,0.08)); box-shadow: 0 18px 36px rgba(196,152,65,0.18); width: 86%; height: 86%; animation: spin-cw ${spinADuration}s linear infinite; }
+		.square.turquoise { border-color: var(--accent); background: linear-gradient(135deg, rgba(31,182,166,0.22), rgba(31,182,166,0.06)); box-shadow: 0 18px 36px rgba(31,182,166,0.16); width: 66%; height: 66%; animation: spin-ccw ${spinBDuration}s linear infinite; }
 		@keyframes spin-cw { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 		@keyframes spin-ccw { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
 		h1 { margin: 8px 0 16px; font-size: clamp(28px, 4vw, 42px); line-height: 1.2; }
