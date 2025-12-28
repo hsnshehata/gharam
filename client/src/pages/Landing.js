@@ -359,7 +359,7 @@ function Landing() {
 		.hero-visual { position: relative; display: flex; align-items: center; justify-content: center; padding: 12px; }
 		.floating-squares { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; filter: drop-shadow(0 12px 24px var(--shadow)); z-index: 0; }
 		.square { position: absolute; border-radius: 18px; border: 1px solid transparent; mix-blend-mode: screen; opacity: 0.55; backdrop-filter: blur(6px); display: grid; place-items: center; }
-		.square .ring { position: absolute; inset: 0; border-radius: 18px; border: inherit; background: inherit; box-shadow: inherit; }
+		.square .ring { position: absolute; inset: 0; border-radius: 18px; border: none; background: none; box-shadow: none; pointer-events: none; }
 		.square.gold { border-color: var(--gold); background: linear-gradient(135deg, rgba(196,152,65,0.25), rgba(196,152,65,0.08)); box-shadow: 0 18px 36px rgba(196,152,65,0.18); width: 86%; height: 86%; animation: swap-large 12s ease-in-out infinite; }
 		.square.gold .ring { animation: spin-cw ${spinADuration}s linear infinite; }
 		.square.turquoise { border-color: var(--accent); background: linear-gradient(135deg, rgba(31,182,166,0.22), rgba(31,182,166,0.06)); box-shadow: 0 18px 36px rgba(31,182,166,0.16); width: 66%; height: 66%; animation: swap-small 12s ease-in-out infinite; }
