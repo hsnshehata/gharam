@@ -153,8 +153,8 @@ function Landing() {
 	const palette = themes[theme];
 	const selectedReviews = useMemo(() => shuffle(googleReviews).slice(0, 12), []);
 	const availabilityBadge = availability ? availabilityCopy[availability.status] : null;
-	const spinADuration = Math.max(14, 28 / spinSpeed);
-	const spinBDuration = Math.max(16, 36 / spinSpeed);
+	const spinADuration = Math.max(25, 35 / spinSpeed);
+	const spinBDuration = Math.max(25, 35 / spinSpeed);
 
 	// SEO: عنوان، وصف، كانونيكال، OG/Twitter، و JSON-LD LocalBusiness
 	useEffect(() => {
@@ -261,8 +261,8 @@ function Landing() {
 		const handleScroll = () => {
 			if (frame) cancelAnimationFrame(frame);
 			frame = requestAnimationFrame(() => {
-				const factor = 1 + Math.min(window.scrollY / 1200, 0.6);
-				setSpinSpeed((prev) => (Math.abs(prev - factor) > 0.03 ? factor : prev));
+				const factor = 1 + Math.min(window.scrollY / 1400, 0.4);
+				setSpinSpeed((prev) => (Math.abs(prev - factor) > 0.02 ? factor : prev));
 			});
 		};
 		window.addEventListener('scroll', handleScroll, { passive: true });
@@ -358,11 +358,16 @@ function Landing() {
 		.hero img { position: relative; z-index: 1; width: 100%; border-radius: 16px; object-fit: cover; box-shadow: none; border: none; background: transparent; mix-blend-mode: normal; filter: none; }
 		.hero-visual { position: relative; display: flex; align-items: center; justify-content: center; padding: 12px; }
 		.floating-squares { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; filter: drop-shadow(0 12px 24px var(--shadow)); z-index: 0; }
-		.square { position: absolute; border-radius: 18px; border: 1px solid transparent; mix-blend-mode: screen; opacity: 0.55; backdrop-filter: blur(6px); }
-		.square.gold { border-color: var(--gold); background: linear-gradient(135deg, rgba(196,152,65,0.25), rgba(196,152,65,0.08)); box-shadow: 0 18px 36px rgba(196,152,65,0.18); width: 86%; height: 86%; animation: spin-cw ${spinADuration}s linear infinite; }
-		.square.turquoise { border-color: var(--accent); background: linear-gradient(135deg, rgba(31,182,166,0.22), rgba(31,182,166,0.06)); box-shadow: 0 18px 36px rgba(31,182,166,0.16); width: 66%; height: 66%; animation: spin-ccw ${spinBDuration}s linear infinite; }
+		.square { position: absolute; border-radius: 18px; border: 1px solid transparent; mix-blend-mode: screen; opacity: 0.55; backdrop-filter: blur(6px); display: grid; place-items: center; }
+		.square .ring { position: absolute; inset: 0; border-radius: 18px; border: inherit; background: inherit; box-shadow: inherit; }
+		.square.gold { border-color: var(--gold); background: linear-gradient(135deg, rgba(196,152,65,0.25), rgba(196,152,65,0.08)); box-shadow: 0 18px 36px rgba(196,152,65,0.18); width: 86%; height: 86%; animation: swap-large 12s ease-in-out infinite; }
+		.square.gold .ring { animation: spin-cw ${spinADuration}s linear infinite; }
+		.square.turquoise { border-color: var(--accent); background: linear-gradient(135deg, rgba(31,182,166,0.22), rgba(31,182,166,0.06)); box-shadow: 0 18px 36px rgba(31,182,166,0.16); width: 66%; height: 66%; animation: swap-small 12s ease-in-out infinite; }
+		.square.turquoise .ring { animation: spin-ccw ${spinBDuration}s linear infinite; }
 		@keyframes spin-cw { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 		@keyframes spin-ccw { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+		@keyframes swap-large { 0%,100% { transform: scale(1); } 50% { transform: scale(0.74); } }
+		@keyframes swap-small { 0%,100% { transform: scale(1); } 50% { transform: scale(1.3); } }
 		h1 { margin: 8px 0 16px; font-size: clamp(28px, 4vw, 42px); line-height: 1.2; }
 		h2 { margin: 0 0 12px; }
 		p { color: var(--muted); line-height: 1.75; margin: 0; }
@@ -470,8 +475,8 @@ function Landing() {
 				<section className="hero reveal">
 					<div className="hero-visual">
 						<div className="floating-squares" aria-hidden>
-							<div className="square gold"></div>
-							<div className="square turquoise"></div>
+							<div className="square gold"><div className="ring"></div></div>
+							<div className="square turquoise"><div className="ring"></div></div>
 						</div>
 						<img src="/Gharam.png" alt="غرام سلطان تحمل شهادة البورد الأمريكي" loading="lazy" />
 					</div>
