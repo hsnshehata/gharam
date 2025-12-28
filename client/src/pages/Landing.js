@@ -148,10 +148,13 @@ function Landing() {
 		if (typeof window === 'undefined') return 'light';
 		return localStorage.getItem('theme') || 'light';
 	});
+	const [spinSpeed, setSpinSpeed] = useState(1);
 
 	const palette = themes[theme];
 	const selectedReviews = useMemo(() => shuffle(googleReviews).slice(0, 12), []);
 	const availabilityBadge = availability ? availabilityCopy[availability.status] : null;
+	const spinADuration = Math.max(8, 24 / spinSpeed);
+	const spinBDuration = Math.max(10, 32 / spinSpeed);
 
 	// SEO: عنوان، وصف، كانونيكال، OG/Twitter، و JSON-LD LocalBusiness
 	useEffect(() => {
@@ -253,6 +256,22 @@ function Landing() {
 		return () => observer.disconnect();
 	}, []);
 
+	useEffect(() => {
+		let frame;
+		const handleScroll = () => {
+			if (frame) cancelAnimationFrame(frame);
+			frame = requestAnimationFrame(() => {
+				const factor = 1 + Math.min(window.scrollY / 600, 1.5);
+				setSpinSpeed((prev) => (Math.abs(prev - factor) > 0.05 ? factor : prev));
+			});
+		};
+		window.addEventListener('scroll', handleScroll, { passive: true });
+		return () => {
+			if (frame) cancelAnimationFrame(frame);
+			window.removeEventListener('scroll', handleScroll);
+		};
+	}, []);
+
 	const handleCheckAvailability = async () => {
 		setError('');
 		setAvailability(null);
@@ -337,6 +356,13 @@ function Landing() {
 		.hero { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 32px; align-items: center; padding: 24px 0 12px; }
 		.hero > * { position: relative; z-index: 1; }
 		.hero img { width: 100%; border-radius: 16px; object-fit: cover; box-shadow: none; border: none; background: transparent; mix-blend-mode: normal; filter: none; }
+		.hero-visual { position: relative; display: flex; align-items: center; justify-content: center; padding: 12px; }
+		.floating-squares { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; filter: drop-shadow(0 12px 24px var(--shadow)); }
+		.square { position: absolute; border-radius: 18px; border: 2px solid transparent; mix-blend-mode: screen; opacity: 0.8; }
+		.square.gold { border-color: var(--gold); width: 85%; height: 85%; animation: spin-cw ${spinADuration}s linear infinite; }
+		.square.turquoise { border-color: var(--accent); width: 65%; height: 65%; animation: spin-ccw ${spinBDuration}s linear infinite; }
+		@keyframes spin-cw { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+		@keyframes spin-ccw { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
 		h1 { margin: 8px 0 16px; font-size: clamp(28px, 4vw, 42px); line-height: 1.2; }
 		h2 { margin: 0 0 12px; }
 		p { color: var(--muted); line-height: 1.75; margin: 0; }
@@ -442,7 +468,11 @@ function Landing() {
 				</div>
 
 				<section className="hero reveal">
-					<div>
+					<div className="hero-visual">
+						<div className="floating-squares" aria-hidden>
+							<div className="square gold"></div>
+							<div className="square turquoise"></div>
+						</div>
 						<img src="/Gharam.png" alt="غرام سلطان تحمل شهادة البورد الأمريكي" loading="lazy" />
 					</div>
 					<div>
