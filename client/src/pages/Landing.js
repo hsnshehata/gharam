@@ -582,24 +582,6 @@ function Landing() {
 					</div>
 				</section>
 
-				<section className="trust-section reveal">
-					<div className="trust-heading">ثقة واعتمادات نعتز بيها</div>
-					<div className="trust-logos">
-						<div className="trust-item">
-							<AwardIcon color="#f59e0b" />
-							<span>AMERICAN BOARD</span>
-						</div>
-						<div className="trust-item">
-							<ShieldCheckIcon color="#16a34a" />
-							<span>PRO PRODUCTS</span>
-						</div>
-						<div className="trust-item">
-							<StarIcon color="#f59e0b" />
-							<span>1100+ REVIEWS</span>
-						</div>
-					</div>
-				</section>
-
 				<section className="card why-card reveal">
 					<h3 style={{ marginTop: 0 }}>ليه تختارينا؟</h3>
 					<div style={{ color: 'var(--text)', lineHeight: 1.7, display: 'grid', gap: 8 }}>
@@ -702,18 +684,21 @@ function Landing() {
 					</div>
 				</section>
 
-				<section className="grid-3 reveal">
-					<div className="card">
-						<h3>الخبرة</h3>
-						<p>منذ 2017 خبرة واسعة وشهادات معتمدة. نواجه كل التحديات ونحل مشاكل كل عميلة باحتراف.</p>
-					</div>
-					<div className="card">
-						<h3>الوقت</h3>
-						<p>التزام بالمواعيد، سرعة وكفاءة، استجابة سريعة وجدولة مرنة تناسبك.</p>
-					</div>
-					<div className="card">
-						<h3>الجودة</h3>
-						<p>منتجات عالمية، احترافية عالية، متابعة أحدث التقنيات وتجربة عملاء مريحة من البداية للنهاية.</p>
+				<section className="trust-section reveal">
+					<div className="trust-heading">ثقة واعتمادات نعتز بيها</div>
+					<div className="trust-logos">
+						<div className="trust-item">
+							<AwardIcon color="#f59e0b" />
+							<span>AMERICAN BOARD</span>
+						</div>
+						<div className="trust-item">
+							<ShieldCheckIcon color="#16a34a" />
+							<span>PRO PRODUCTS</span>
+						</div>
+						<div className="trust-item">
+							<StarIcon color="#f59e0b" />
+							<span>1100+ REVIEWS</span>
+						</div>
 					</div>
 				</section>
 
