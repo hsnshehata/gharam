@@ -263,11 +263,24 @@ function PriceList() {
 		.brand { display: flex; align-items: center; justify-content: center; text-align: center; gap: 12px; font-weight: 800; }
 		.brand img { width: 64px; height: 64px; object-fit: contain; }
 		.pill { display: inline-flex; gap: 8px; align-items: center; padding: 10px 14px; background: rgba(0,0,0,0.03); border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 14px; }
-		.hero-panel { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 14px; display: grid; gap: 8px; box-shadow: 0 12px 26px var(--shadow); text-align: center; }
+		.hero-panel { position: relative; overflow: hidden; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 14px; display: grid; gap: 8px; box-shadow: 0 12px 26px var(--shadow); text-align: center; }
+		.hero-panel::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 20% 20%, rgba(196,152,65,0.18), transparent 45%), radial-gradient(circle at 80% 0%, rgba(31,182,166,0.15), transparent 45%), linear-gradient(135deg, rgba(196,152,65,0.08), rgba(31,182,166,0.08)); pointer-events: none; }
+		.hero-panel > * { position: relative; z-index: 1; }
+		.floating-squares { position: absolute; inset: -12px; display: grid; place-items: center; pointer-events: none; filter: drop-shadow(0 12px 24px var(--shadow)); z-index: 0; }
+		.square { position: absolute; display: grid; place-items: center; border-radius: 18px; pointer-events: none; }
+		.square .ring { position: absolute; inset: 0; border-radius: 18px; mix-blend-mode: screen; opacity: 0.65; backdrop-filter: blur(6px); }
+		.square.gold { width: 86%; height: 86%; animation: swap-large 12s ease-in-out infinite; }
+		.square.gold .ring { border: 1px solid var(--gold); background: linear-gradient(135deg, rgba(196,152,65,0.25), rgba(196,152,65,0.08)); box-shadow: 0 18px 36px rgba(196,152,65,0.18); animation: spin-cw 28s linear infinite; }
+		.square.turquoise { width: 66%; height: 66%; animation: swap-small 12s ease-in-out infinite; }
+		.square.turquoise .ring { border: 1px solid rgba(31,182,166,0.8); background: linear-gradient(135deg, rgba(31,182,166,0.22), rgba(31,182,166,0.06)); box-shadow: 0 18px 36px rgba(31,182,166,0.16); animation: spin-ccw 32s linear infinite; }
+		@keyframes spin-cw { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+		@keyframes spin-ccw { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+		@keyframes swap-large { 0%,100% { transform: scale(1); } 50% { transform: scale(0.74); } }
+		@keyframes swap-small { 0%,100% { transform: scale(1); } 50% { transform: scale(1.3); } }
 		.hero-actions { display: none; }
 		.chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; justify-content: center; }
-		.chip { padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; font-weight: 700; transition: transform 0.15s ease, box-shadow 0.15s ease; box-shadow: 0 10px 22px var(--shadow); color: var(--text); }
-		.chip:hover { transform: translateY(-2px); }
+		.chip { padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: linear-gradient(135deg, rgba(196,152,65,0.12), rgba(31,182,166,0.12)); cursor: pointer; font-weight: 700; transition: transform 0.15s ease, box-shadow 0.15s ease; box-shadow: 0 10px 22px var(--shadow); color: var(--text); display: inline-flex; align-items: center; gap: 8px; }
+		.chip:hover { transform: translateY(-2px); box-shadow: 0 12px 24px var(--shadow); }
 		.section-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
 		.section-header h2 { margin: 0; font-size: 22px; }
 		.section-cta { padding: 8px 12px; border-radius: 12px; border: 1px solid var(--border); background: rgba(0,0,0,0.03); color: var(--text); cursor: pointer; font-weight: 700; }
@@ -296,14 +309,27 @@ function PriceList() {
 					</div>
 				</div>
 				<div className="hero-panel reveal">
+					<div className="floating-squares" aria-hidden>
+						<div className="square gold"><div className="ring"></div></div>
+						<div className="square turquoise"><div className="ring"></div></div>
+					</div>
 					<div>
 						<h1>قائمة الأسعار</h1>
 						<div className="lead">كل الباكدجات والخدمات الفردية في مكان واحد مع روابط سريعة لكل قسم.</div>
 					</div>
 					<div className="chips">
-						<button className="chip" onClick={() => scrollToSection('makeup-section')}>باكدجات الميك أب</button>
-						<button className="chip" onClick={() => scrollToSection('photo-section')}>باكدجات التصوير</button>
-						<button className="chip" onClick={() => scrollToSection('services-section')}>الخدمات الفردية</button>
+						<button className="chip" onClick={() => scrollToSection('makeup-section')}>
+							<span role="img" aria-label="ميكب">💄</span>
+							<span>باكدجات الميك أب</span>
+						</button>
+						<button className="chip" onClick={() => scrollToSection('photo-section')}>
+							<span role="img" aria-label="تصوير">📸</span>
+							<span>باكدجات التصوير</span>
+						</button>
+						<button className="chip" onClick={() => scrollToSection('services-section')}>
+							<span role="img" aria-label="خدمات">🛠️</span>
+							<span>الخدمات الفردية</span>
+						</button>
 					</div>
 				</div>
 
