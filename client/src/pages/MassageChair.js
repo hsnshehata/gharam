@@ -238,30 +238,19 @@ function MassageChair() {
 					</div>
 				))}
 
-				<div className="contact reveal">
-					<h3 style={{ marginTop: 0 }}>معلومات التواصل السريعة</h3>
-					<div>📍 <a href={MAP_LINK} target="_blank" rel="noreferrer">دسوق - شارع الجيش</a></div>
-					<div>📞 <a href={`tel:${LANDLINE}`}>رقم أرضي: {LANDLINE}</a></div>
-					<div>💬 <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer">واتساب : wa.me/gharam</a></div>
-					<div className="link-row">
-						<button className="link" onClick={() => window.open(WHATSAPP_LINK, '_blank')}>احجز جلسة</button>
-						<button className="link" onClick={() => window.location.href = `tel:${LANDLINE}`}>اتصل مباشرة</button>
+				<section className="footer reveal" style={{ paddingBottom: 90, marginTop: 24 }}>
+					<div>تابعينا على السوشيال</div>
+					<div className="social-row">
+						{socialLinks.map((s) => (
+							<a key={s.href} className="social-link" href={s.href} target="_blank" rel="noreferrer" style={{ '--hover': s.color }} aria-label={s.label}>
+								<svg viewBox="0 0 448 512" role="img" aria-hidden="true" focusable="false">{s.svg}</svg>
+							</a>
+						))}
 					</div>
-
-					<section className="footer reveal" style={{ paddingBottom: 90, marginTop: 24 }}>
-						<div>تابعينا على السوشيال</div>
-						<div className="social-row">
-							{socialLinks.map((s) => (
-								<a key={s.href} className="social-link" href={s.href} target="_blank" rel="noreferrer" style={{ '--hover': s.color }} aria-label={s.label}>
-									<svg viewBox="0 0 448 512" role="img" aria-hidden="true" focusable="false">{s.svg}</svg>
-								</a>
-							))}
-						</div>
-						<div style={{ marginTop: 6, fontSize: 13 }}>
-							© غرام سلطان بيوتي سنتر · اسم يعني الثقة
-						</div>
-					</section>
-				</div>
+					<div style={{ marginTop: 6, fontSize: 13 }}>
+						© غرام سلطان بيوتي سنتر · اسم يعني الثقة
+					</div>
+				</section>
 			</div>
 
 			<div className="sticky-bar">
