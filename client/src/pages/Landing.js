@@ -129,6 +129,26 @@ const BotIcon = ({ size = 18 }) => (
 	</svg>
 );
 
+const AwardIcon = ({ size = 40, color = 'currentColor' }) => (
+	<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+		<circle cx="12" cy="8" r="5" />
+		<path d="M8.5 13.5 7 22l5-2 5 2-1.5-8.5" />
+	</svg>
+);
+
+const ShieldCheckIcon = ({ size = 40, color = 'currentColor' }) => (
+	<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+		<path d="M12 22s7-3 7-10V5l-7-3-7 3v7c0 7 7 10 7 10Z" />
+		<path d="m9 12 2 2 4-4" />
+	</svg>
+);
+
+const StarIcon = ({ size = 40, color = 'currentColor' }) => (
+	<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+		<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+	</svg>
+);
+
 const WhatsAppIcon = ({ size = 18 }) => (
 	<svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
 		<path d="M16 2.7c-7.3 0-13.3 5.9-13.3 13.2 0 2.4.6 4.6 1.8 6.6L2 30l7.6-2.4c1.9 1 4 1.5 6.1 1.5 7.3 0 13.3-5.9 13.3-13.2S23.3 2.7 16 2.7z" fill="#25d366" />
@@ -408,6 +428,12 @@ function Landing() {
 		.quick-link { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: rgba(0,0,0,0.02); color: var(--text); text-decoration: none; transition: transform 0.15s ease, box-shadow 0.15s ease; }
 		.quick-link:hover { transform: translateY(-2px); box-shadow: 0 10px 20px var(--shadow); }
 		.quick-link span.icon { font-size: 18px; }
+		.trust-section { padding: 40px 0; margin: 28px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+		.trust-heading { text-align: center; color: var(--muted); font-weight: 700; margin-bottom: 16px; letter-spacing: 0.5px; }
+		.trust-logos { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px 32px; align-items: center; }
+		.trust-item { display: inline-flex; align-items: center; gap: 12px; font-weight: 900; font-size: 22px; filter: grayscale(1); opacity: 0.4; transition: filter 0.7s ease, opacity 0.7s ease, transform 0.25s ease; }
+		.trust-item:hover { filter: grayscale(0); opacity: 1; transform: translateY(-2px); }
+		.trust-item svg { flex-shrink: 0; }
 		.reviews { margin: 30px 0 40px; }
 		.reviews-header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
 		.stars { color: #f4c150; font-size: 18px; letter-spacing: 1px; }
@@ -552,6 +578,24 @@ function Landing() {
 								</button>
 								<button className="btn btn-outline" onClick={() => window.location.href = '/massage-chair'} aria-label="تفاصيل الكرسي">💺 تفاصيل الكرسي</button>
 							</div>
+						</div>
+					</div>
+				</section>
+
+				<section className="trust-section reveal">
+					<div className="trust-heading">ثقة واعتمادات نعتز بيها</div>
+					<div className="trust-logos">
+						<div className="trust-item">
+							<AwardIcon color="#f59e0b" />
+							<span>AMERICAN BOARD</span>
+						</div>
+						<div className="trust-item">
+							<ShieldCheckIcon color="#16a34a" />
+							<span>PRO PRODUCTS</span>
+						</div>
+						<div className="trust-item">
+							<StarIcon color="#f59e0b" />
+							<span>1100+ REVIEWS</span>
 						</div>
 					</div>
 				</section>
