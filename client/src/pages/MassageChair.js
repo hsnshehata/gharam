@@ -1,23 +1,17 @@
 import React, { useEffect, useState } from 'react';
 
-const MAP_LINK = 'https://maps.app.goo.gl/AHX3MDPhyLEuvWUN8';
 const WHATSAPP_LINK = 'https://wa.me/gharam';
-const LANDLINE = '0472570908';
 const SUPPORT_LINK = 'https://zainbot.com/chat/ghazal';
+const LANDLINE = '0472570908';
 const INSTAGRAM_LINK = 'https://www.instagram.com/gharamsoltan';
 const TIKTOK_LINK = 'https://www.tiktok.com/@gharamsoltan';
 const FACEBOOK_LINK = 'https://www.facebook.com/gharam.ml';
 const THREADS_LINK = 'https://www.threads.net/@gharamsoltan';
 
-const INSTAGRAM_SVG = (
-	<path
-		fillRule="evenodd"
-		d="M224.1 141c-63.6 0-114.9 51.3-114.9 114.9s51.3 114.9 114.9 114.9S339 319.5 339 255.9 287.7 141 224.1 141zm0 189.6c-41.1 0-74.7-33.5-74.7-74.7s33.5-74.7 74.7-74.7 74.7 33.5 74.7 74.7-33.6 74.7-74.7 74.7zm146.4-194.3c0 14.9-12 26.8-26.8 26.8-14.9 0-26.8-12-26.8-26.8s12-26.8 26.8-26.8 26.8 12 26.8 26.8zm76.1 27.2c-1.7-35.9-9.9-67.7-36.2-93.9-26.2-26.2-58-34.4-93.9-36.2-37-2.1-147.9-2.1-184.9 0-35.8 1.7-67.6 9.9-93.9 36.1s-34.4 58-36.2 93.9c-2.1 37-2.1 147.9 0 184.9 1.7 35.9 9.9 67.7 36.2 93.9s58 34.4 93.9 36.2c37 2.1 147.9 2.1 184.9 0 35.9-1.7 67.7-9.9 93.9-36.2 26.2-26.2 34.4-58 36.2-93.9 2.1-37 2.1-147.8 0-184.8z"
-	/>
-);
-
 const socialLinks = [
-	{ href: INSTAGRAM_LINK, label: 'Instagram', color: '#e1306c', svg: INSTAGRAM_SVG },
+	{ href: INSTAGRAM_LINK, label: 'Instagram', color: '#e1306c', svg: (
+		<path d="M224.1 141c-63.6 0-114.9 51.3-114.9 114.9s51.3 114.9 114.9 114.9S339 319.5 339 255.9 287.7 141 224.1 141zm0 189.6c-41.1 0-74.7-33.5-74.7-74.7s33.5-74.7 74.7-74.7 74.7 33.5 74.7 74.7-33.6 74.7-74.7 74.7zm146.4-194.3c0 14.9-12 26.8-26.8 26.8-14.9 0-26.8-12-26.8-26.8s12-26.8 26.8-26.8 26.8 12 26.8 26.8zm76.1 27.2c-1.7-35.9-9.9-67.7-36.2-93.9-26.2-26.2-58-34.4-93.9-36.2-37-2.1-147.9-2.1-184.9 0-35.8 1.7-67.6 9.9-93.9 36.1s-34.4 58-36.2 93.9c-2.1 37-2.1 147.9 0 184.9 1.7 35.9 9.9 67.7 36.2 93.9s58 34.4 93.9 36.2c37 2.1 147.9 2.1 184.9 0 35.9-1.7 67.7-9.9 93.9-36.2 26.2-26.2 34.4-58 36.2-93.9 2.1-37 2.1-147.8 0-184.8zM398.8 388c-7.8 19.6-22.9 34.7-42.6 42.6-29.5 11.7-99.5 9-132.1 9s-102.7 2.6-132.1-9c-19.6-7.8-34.7-22.9-42.6-42.6-11.7-29.5-9-99.5-9-132.1s-2.6-102.7 9-132.1c7.8-19.6 22.9-34.7 42.6-42.6 29.5-11.7 99.5-9 132.1-9s102.7-2.6 132.1 9c19.6 7.8 34.7 22.9 42.6 42.6 11.7 29.5 9 99.5 9 132.1s2.7 102.7-9 132.1z" />
+	)},
 	{ href: FACEBOOK_LINK, label: 'Facebook', color: '#1877f2', svg: (
 		<path d="M279.14 288l14.22-92.66h-88.91v-60.13c0-25.35 12.42-50.06 52.24-50.06h40.42V6.26S260.43 0 225.36 0c-73.22 0-121.08 44.38-121.08 124.72v70.62H22.89V288h81.39v224h100.17V288z" />
 	)},
@@ -53,63 +47,155 @@ const themes = {
 	}
 };
 
-const sections = [
+const makeupPackages = [
 	{
-		title: 'أقفل الموبايل، خد نفس عميق، واستعد لأروع تجربة مساج هتحسها في حياتك! 😌✨',
-		description: 'كرسي المساج الذكي ضد الجاذبية متاح دلوقتي في السنتر... حجزك جاهز؟ 😉🔥',
-		image: 'https://www.irestonline.com.au/wp-content/uploads/2024/04/02-brown.jpg'
-	},
-	{
-		title: 'ضد الجاذبية',
-		image: 'https://www.irestonline.com.au/wp-content/uploads/2024/04/04-brown.jpg',
-		list: [
-			'يعمل بتقنية انعدام الجاذبية لتوزيع الضغط بالتساوي.',
-			'يساعد على تحسين الدورة الدموية والاسترخاء العميق.',
-			'يسمح للجسم بالوصول إلى حالة الراحة المثالية أثناء التدليك.'
+		title: 'باكدج زفاف سبيشيال',
+		price: '4,500 ج',
+		items: [
+			'ميك أب زفاف',
+			'لف طرحة أو تسريحة',
+			'وش وحواجب',
+			'تنضيف بشرة كامل',
+			'تركيب رموش',
+			'تركيب عدسات',
+			'فيك نيلز',
+			'تأجير طرحة وتاج'
 		]
 	},
 	{
-		title: 'يعمل بذكاء فائق لاستهداف العضلات',
-		image: 'https://www.irestonline.com.au/wp-content/uploads/2024/04/06-brown.jpg',
-		list: [
-			'يستخدم مستشعرات متقدمة لتحليل استجابة العضلات.',
-			'يوفر تدليكًا مخصصًا بناءً على استجابة الجسم.',
-			'يساعد على تخفيف توتر العضلات بطريقة ذكية وفعالة.'
+		title: 'باكدج زفاف سبيشيال بلس',
+		price: '5,500 ج',
+		items: [
+			'ميك أب زفاف',
+			'تسريحة شعر أو لف طرحة',
+			'وش وحواجب',
+			'تنضيف بشرة كامل',
+			'تركيب رموش',
+			'تركيب عدسات',
+			'فيك نيلز',
+			'حمام مغربي',
+			'حمام عطري',
+			'صنفرة للجسم',
+			'3 رسومات حنة',
+			'تأجير تاج وطرحة',
+			'تأجير خاتم - حلق - عقد',
+			'بديكير ومنيكير',
+			'سشوار'
 		]
 	},
 	{
-		title: '3D مساج',
-		image: 'https://www.irestonline.com.au/wp-content/uploads/2024/04/waist-heating3.gif',
-		list: [
-			'تكنولوجيا ثلاثية الأبعاد لتحفيز العضلات بطرق متعددة.',
-			'وسادة تسخين الظهر.',
-			'يحاكي تقنيات التدليك الاحترافية لتحفيز نقاط التوتر.',
-			'يمنح تدليكًا أعمق ليصل إلى الطبقات العميقة من العضلات.'
+		title: 'باكدج حنة أورجينال',
+		price: '3,000 ج',
+		items: [
+			'ميك أب',
+			'لف طرحة أو تسريحة',
+			'تركيب رموش',
+			'تركيب عدسات',
+			'فيك نيلز',
+			'تأجير هيربيز أو تاج'
 		]
 	},
 	{
-		title: 'فوائد المساج',
-		image: 'https://www.irestonline.com.au/wp-content/uploads/2024/04/02-green.jpg',
-		list: [
-			'تحسين الدورة الدموية وتعزيز تدفق الدم إلى العضلات.',
-			'تخفيف التوتر وتقليل الضغط العصبي بشكل فعال.',
-			'المساعدة في تخفيف آلام الظهر والرقبة الناتجة عن الجلوس الطويل.',
-			'تحسين جودة النوم والاسترخاء العميق للجسم والعقل.',
-			'تحفيز عملية التعافي للعضلات بعد التمارين الرياضية.'
+		title: 'باكدج خطوبة/شبكة',
+		price: '3,500 ج',
+		items: [
+			'ميك أب خطوبة',
+			'لف طرحة أو تسريحة',
+			'وش وحواجب',
+			'تنضيف بشرة كامل',
+			'تركيب رموش',
+			'تركيب عدسات',
+			'فيك نيلز',
+			'تأجير هيربيز أوتاج',
+			'سشوار'
 		]
 	}
 ];
 
-function MassageChair() {
+const photoPackages = [
+	{
+		title: 'باكدج تصوير ألبوم 20×30',
+		price: '1,600ج (استوديو) · 2,700ج (لوكيشن)',
+		items: [
+			'ألبوم 20×30 (10 مناظر خلفيات سيشن)',
+			'فوتوبلوك 50×60',
+			'ألبوم ميني',
+			'40 كارت مكرر'
+		]
+	},
+	{
+		title: 'باكدج تصوير ألبوم 30×40',
+		price: '2,200ج (استوديو) · 3,200ج (لوكيشن)',
+		items: [
+			'ألبوم 30×40 (12 منظر خلفيات سيشن)',
+			'فوتوبلوك 50×60',
+			'ألبوم ميني',
+			'40 كارت مكرر'
+		]
+	}
+];
+
+const services = [
+	{ name: 'وش وحواجب', price: '50 جنيه' },
+	{ name: 'ديرما بلانينج', price: '70 جنيه' },
+	{ name: 'شيفينج', price: '70 جنيه' },
+	{ name: 'تنظيف بشرة سوفت', price: '200 جنيه' },
+	{ name: 'تنظيف بشرة هارد بروفيشنال', price: '300 جنيه' },
+	{ name: 'سشوار', price: '150 جنيه' },
+	{ name: 'بيبي ليس (مكواة شعر)', price: '150 جنيه' },
+	{ name: 'تاتو حواجب', price: '30 جنيه' },
+	{ name: 'حواجب وشنب', price: '35 جنيه' },
+	{ name: 'باديكير قدم', price: '200 جنيه' },
+	{ name: 'باديكير يد', price: '100 جنيه' },
+	{ name: '1 رسمة حنة', price: '35 جنيه' },
+	{ name: 'تركيب أظافر عادية', price: '100 جنيه' },
+	{ name: 'تركيب أظافر ستراس', price: '150 جنيه' },
+	{ name: 'تركيب أظافر مرسومة', price: '200 جنيه' },
+	{ name: 'إكستنشن', price: '250 جنيه' },
+	{ name: 'صبغة لون شعر', price: '500-1000 جنيه' },
+	{ name: 'خصل شعر', price: '500-1000 جنيه' },
+	{ name: 'مجموعات العناية بالشعر', price: '450 - 600 - 650 جنيه' },
+	{ name: 'حواجب فقط', price: '25 جنيه' },
+	{ name: 'قص شعر', price: 'يبدأ من 50 جنيه' },
+	{ name: 'غسيل شعر', price: '20 جنيه' },
+	{ name: 'بوكيه ورد', price: '350 - 700 جنيه' },
+	{ name: '3 رسومات حنة', price: '100 جنيه' },
+	{ name: 'تنظيف وش (شمع)', price: '70 جنيه' },
+	{ name: 'تنظيف شنب فقط', price: '10 جنيه' },
+	{ name: 'تشقير حواجب', price: '30 جنيه' },
+	{ name: 'سشوار وليس للأطفال', price: '200 جنيه' },
+	{ name: 'صبغة شعر بدون أمونيا', price: 'تبدأ من 500 جنيه' },
+	{ name: 'تسريحات الأطفال', price: '350 جنيه' },
+	{ name: 'قص أطراف', price: '20 جنيه' },
+	{ name: 'ماسك', price: '30 جنيه' },
+	{ name: 'جلسة لتقصيف الشعر', price: '200 جنيه' },
+	{ name: 'جلسة لتساقط الشعر', price: '200 جنيه' },
+	{ name: 'جلسة ديتوكس لقشرة الشعر', price: '200 جنيه' },
+	{ name: 'شمع أنف فقط', price: '10 جنيه' },
+	{ name: 'شمع أنف خارجي', price: '20 جنيه' },
+	{ name: 'التوينكل (ستراس الأسنان)', price: '150 - 200 جنيه' },
+	{ name: 'اللاشز هير باي هير (رموش شعرة بشعرة)', price: '150 - 200 جنيه' },
+	{ name: 'الحمامات (عطري + صنفرة + مغربي)', price: '700 جنيه' },
+	{ name: 'تركيب الشعر بالسنتر', price: '70 جنيه لكل جرام شعر' },
+	{ name: 'الفيلر المعالج', price: 'يبدأ من 1500 جنيه' },
+	{ name: 'كرسي المساج الذكي', price: '100 - 200 - 250 جنيه حسب الجلسة' }
+];
+
+function PriceList() {
 	const [theme, setTheme] = useState(() => {
 		if (typeof window === 'undefined') return 'light';
 		return localStorage.getItem('theme') || 'light';
 	});
 	const [showChat, setShowChat] = useState(false);
 	const palette = themes[theme];
-	const toggleTheme = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+
+	const handlePackageWhatsApp = (title) => {
+		const message = encodeURIComponent(`أريد حجز باكدج ${title}`);
+		window.open(`${WHATSAPP_LINK}?text=${message}`, '_blank');
+	};
 
 	useEffect(() => {
+		document.body.setAttribute('data-theme', theme);
 		localStorage.setItem('theme', theme);
 	}, [theme]);
 
@@ -136,6 +222,13 @@ function MassageChair() {
 	}, []);
 
 
+	const toggleTheme = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+
+	const scrollToSection = (id) => {
+		const el = document.getElementById(id);
+		if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	};
+
 	const css = `
 		:root {
 			--bg: ${palette.bg};
@@ -146,40 +239,97 @@ function MassageChair() {
 			--gold: ${palette.gold};
 			--shadow: ${palette.shadow};
 		}
-		.page { background: var(--bg); min-height: 100vh; color: var(--text); font-family: 'Tajawal', 'Arial', sans-serif; }
-		.container { width: min(1200px, 92%); margin: 0 auto; padding: 28px 0 72px; }
-		h1 { margin: 0 0 12px; font-size: clamp(26px, 4vw, 38px); }
-		.section { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin: 14px 0; box-shadow: 0 12px 26px var(--shadow); }
-		.section h2 { margin: 0 0 10px; font-size: 20px; color: var(--text); }
-		.section p { color: var(--muted); margin: 0 0 12px; line-height: 1.6; }
-		.section ul { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.6; }
-		.section img { width: 100%; border-radius: 12px; margin: 10px 0; object-fit: cover; }
-		.btn { border: none; cursor: pointer; padding: 12px 18px; border-radius: 12px; font-weight: 700; transition: transform 0.15s ease, box-shadow 0.15s ease; color: #0f0b0a; }
-		.btn:hover { transform: translateY(-2px); box-shadow: 0 12px 28px var(--shadow); }
-		.contact { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-top: 20px; box-shadow: 0 10px 20px var(--shadow); }
-		.contact a { color: var(--gold); text-decoration: none; }
-		.contact div { margin: 6px 0; }
-		.link-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
-		.link { padding: 10px 14px; background: linear-gradient(135deg, var(--gold), #e6c27b); color: #0f0b0a; border-radius: 10px; font-weight: 700; border: none; cursor: pointer; }
-		.sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; padding: 10px 14px; background: ${theme === 'light' ? 'rgba(255,255,255,0.96)' : 'rgba(24,18,16,0.92)'}; border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 20px 40px var(--shadow); z-index: 100; }
-		.sticky-bar .btn { padding: 12px 14px; }
+		.price-page { background: var(--bg); color: var(--text); min-height: 100vh; font-family: 'Tajawal', 'Arial', sans-serif; position: relative; overflow: hidden; }
+		.container { width: min(1180px, 92%); margin: 0 auto; padding: 28px 0 72px; position: relative; z-index: 1; }
+		.floating-icons { position: fixed; inset: 0; pointer-events: auto; z-index: 0; }
+		.floating-icons span { position: absolute; font-size: 40px; opacity: 0.22; animation: float 6s ease-in-out infinite, drift 14s linear infinite; transition: transform 0.28s ease, opacity 0.18s ease; cursor: default; }
+		.floating-icons span:hover { opacity: 0.4; transform: scale(1.18) rotate(6deg); }
+		.floating-icons span:nth-child(1) { top: 10%; left: 14%; animation-duration: 6.5s, 16s; }
+		.floating-icons span:nth-child(2) { top: 26%; right: 14%; animation-duration: 6s, 15s; }
+		.floating-icons span:nth-child(3) { top: 50%; left: 6%; animation-duration: 6.2s, 17s; }
+		.floating-icons span:nth-child(4) { top: 64%; right: 10%; animation-duration: 6.8s, 16.5s; }
+		.floating-icons span:nth-child(5) { top: 80%; left: 44%; animation-duration: 6.1s, 15.5s; }
+		.sparkles { position: fixed; inset: 0; pointer-events: none; z-index: 0; mix-blend-mode: screen; }
+		.sparkles span { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 60%); opacity: 0.5; animation: twinkle 2.6s ease-in-out infinite; }
+		.sparkles span:nth-child(1) { top: 14%; left: 32%; animation-delay: 0.2s; }
+		.sparkles span:nth-child(2) { top: 38%; right: 24%; animation-delay: 0.6s; }
+		.sparkles span:nth-child(3) { top: 58%; left: 22%; animation-delay: 1.1s; }
+		.sparkles span:nth-child(4) { top: 72%; right: 30%; animation-delay: 0.4s; }
+		.sparkles span:nth-child(5) { top: 18%; right: 48%; animation-delay: 1s; }
+		.sparkles span:nth-child(6) { top: 66%; left: 52%; animation-delay: 1.4s; }
+		.sparkles span:nth-child(7) { top: 30%; left: 12%; animation-delay: 0.8s; }
+		.sparkles span:nth-child(8) { top: 82%; right: 12%; animation-delay: 1.6s; }
+		@keyframes twinkle { 0%, 100% { transform: scale(0.6); opacity: 0.2; } 50% { transform: scale(1.4); opacity: 0.8; } }
+		@keyframes float { 0% { transform: translateY(0); } 50% { transform: translateY(-18px); } 100% { transform: translateY(0); } }
+		@keyframes drift { 0% { transform: translateX(0) rotate(0deg); } 50% { transform: translateX(12px) rotate(6deg); } 100% { transform: translateX(0) rotate(0deg); } }
+		h1 { margin: 0 0 8px; font-size: clamp(28px, 4vw, 40px); }
+		.lead { color: var(--muted); line-height: 1.7; margin-bottom: 18px; font-size: 15px; }
+		.section { margin: 28px 0; }
+		.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+		.card { background: var(--card) !important; color: var(--text) !important; border: 1px solid var(--border) !important; border-radius: 16px; padding: 16px; box-shadow: 0 12px 26px var(--shadow); position: relative; overflow: hidden; }
+		.card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(145deg, rgba(198,161,91,0.08), rgba(31,182,166,0.08)); opacity: 0.7; pointer-events: none; }
+		.card > * { position: relative; z-index: 1; }
+		.card h3 { margin: 0 0 8px; font-size: 18px; color: var(--text); }
+		.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+		.tag { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid rgba(198,161,91,0.4); background: rgba(198,161,91,0.12); color: var(--text); font-weight: 700; font-size: 13px; }
+		.price { font-weight: 800; color: var(--gold); margin-bottom: 10px; }
+		ul { padding-left: 18px; margin: 0; color: var(--muted); line-height: 1.6; }
+		.btn { margin-top: 12px; padding: 10px 14px; border: none; border-radius: 10px; background: linear-gradient(135deg, var(--gold), #e6c27b); color: #0f0b0a; font-weight: 700; cursor: pointer; box-shadow: 0 10px 24px var(--shadow); transition: transform 0.15s ease, box-shadow 0.15s ease; }
+		.btn:hover { transform: translateY(-2px); box-shadow: 0 12px 26px var(--shadow); }
 		.btn-ghost { background: rgba(0,0,0,0.03); color: var(--text); border: 1px solid var(--border); }
+		.services { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-top: 12px; }
+		.service { background: var(--card) !important; color: var(--text) !important; border: 1px solid var(--border) !important; border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 8px 18px var(--shadow); }
+		.service span:last-child { color: var(--gold); font-weight: 800; }
 		.topbar { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 18px 0; }
 		.brand { display: flex; align-items: center; justify-content: center; text-align: center; gap: 12px; font-weight: 800; }
 		.brand img { width: 64px; height: 64px; object-fit: contain; }
 		.pill { display: inline-flex; gap: 8px; align-items: center; padding: 10px 14px; background: rgba(0,0,0,0.03); border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 14px; }
+		.hero-panel { position: relative; overflow: hidden; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 14px; display: grid; gap: 8px; box-shadow: 0 12px 26px var(--shadow); text-align: center; }
+		.hero-panel::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 20% 20%, rgba(196,152,65,0.18), transparent 45%), radial-gradient(circle at 80% 0%, rgba(31,182,166,0.15), transparent 45%), linear-gradient(135deg, rgba(196,152,65,0.08), rgba(31,182,166,0.08)); pointer-events: none; }
+		.hero-panel > * { position: relative; z-index: 1; }
+		.floating-squares { position: absolute; inset: -12px; display: grid; place-items: center; pointer-events: none; filter: drop-shadow(0 12px 24px var(--shadow)); z-index: 0; }
+		.square { position: absolute; display: grid; place-items: center; border-radius: 18px; pointer-events: none; }
+		.square .ring { position: absolute; inset: 0; border-radius: 18px; mix-blend-mode: screen; opacity: 0.65; backdrop-filter: blur(6px); }
+		.square.gold { width: 86%; height: 86%; animation: swap-large 12s ease-in-out infinite; }
+		.square.gold .ring { border: 1px solid var(--gold); background: linear-gradient(135deg, rgba(196,152,65,0.25), rgba(196,152,65,0.08)); box-shadow: 0 18px 36px rgba(196,152,65,0.18); animation: spin-cw 28s linear infinite; }
+		.square.turquoise { width: 66%; height: 66%; animation: swap-small 12s ease-in-out infinite; }
+		.square.turquoise .ring { border: 1px solid rgba(31,182,166,0.8); background: linear-gradient(135deg, rgba(31,182,166,0.22), rgba(31,182,166,0.06)); box-shadow: 0 18px 36px rgba(31,182,166,0.16); animation: spin-ccw 32s linear infinite; }
+		@keyframes spin-cw { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+		@keyframes spin-ccw { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+		@keyframes swap-large { 0%,100% { transform: scale(1); } 50% { transform: scale(0.74); } }
+		@keyframes swap-small { 0%,100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+		.hero-actions { display: none; }
+		.chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; justify-content: center; }
+		.chip { padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: linear-gradient(135deg, rgba(196,152,65,0.12), rgba(31,182,166,0.12)); cursor: pointer; font-weight: 700; transition: transform 0.15s ease, box-shadow 0.15s ease; box-shadow: 0 10px 22px var(--shadow); color: var(--text); display: inline-flex; align-items: center; gap: 8px; }
+		.chip:hover { transform: translateY(-2px); box-shadow: 0 12px 24px var(--shadow); }
+		.section-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+		.section-header h2 { margin: 0; font-size: 22px; }
+		.section-cta { padding: 8px 12px; border-radius: 12px; border: 1px solid var(--border); background: rgba(0,0,0,0.03); color: var(--text); cursor: pointer; font-weight: 700; }
 		.footer { margin: 28px 0 56px; text-align: center; color: var(--muted); font-size: 14px; }
+		.sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; padding: 10px 14px; background: ${theme === 'light' ? 'rgba(255,255,255,0.96)' : 'rgba(24,18,16,0.92)'}; border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 20px 40px var(--shadow); z-index: 100; }
+		.sticky-bar .btn { padding: 12px 14px; }
 		.social-row { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 12px; }
 		.social-link { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); border-radius: 10px; transition: color 0.2s ease, transform 0.2s ease; }
-		.social-link svg { width: 28px; height: 28px; fill: currentColor; }
+		.social-link svg { width: 24px; height: 24px; fill: currentColor; }
 		.social-link:hover { transform: translateY(-2px); color: var(--hover, var(--gold)); }
 		.reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
 		.reveal.visible { opacity: 1; transform: translateY(0); }
 	`; 
 
 	return (
-		<div className="page" dir="rtl">
+		<div className="price-page" dir="rtl">
 			<style>{css}</style>
+			<div className="floating-icons" aria-hidden>
+				<span>💄</span>
+				<span>💅</span>
+				<span>✨</span>
+				<span>👑</span>
+				<span>🌸</span>
+			</div>
+			<div className="sparkles" aria-hidden>
+				<span></span><span></span><span></span><span></span>
+				<span></span><span></span><span></span><span></span>
+			</div>
 			<div className="container">
 				<div className="topbar reveal">
 					<div className="brand">
@@ -190,46 +340,109 @@ function MassageChair() {
 						</div>
 					</div>
 				</div>
-				<h1>كرسي المساج الذكي</h1>
-				{sections.map((sec) => (
-					<div className="section reveal" key={sec.title}>
-						<h2>{sec.title}</h2>
-						{sec.description && <p>{sec.description}</p>}
-						{sec.image && <img src={sec.image} alt={sec.title} loading="lazy" />}
-						{sec.list && (
-							<ul>
-								{sec.list.map((item) => (
-									<li key={item}>{item}</li>
-								))}
-							</ul>
-						)}
+				<div className="hero-panel reveal">
+					<div className="floating-squares" aria-hidden>
+						<div className="square gold"><div className="ring"></div></div>
+						<div className="square turquoise"><div className="ring"></div></div>
 					</div>
-				))}
-
-				<div className="contact reveal">
-					<h3 style={{ marginTop: 0 }}>معلومات التواصل السريعة</h3>
-					<div>📍 <a href={MAP_LINK} target="_blank" rel="noreferrer">دسوق - شارع الجيش</a></div>
-					<div>📞 <a href={`tel:${LANDLINE}`}>رقم أرضي: {LANDLINE}</a></div>
-					<div>💬 <a href={WHATSAPP_LINK} target="_blank" rel="noreferrer">واتساب : wa.me/gharam</a></div>
-					<div className="link-row">
-						<button className="link" onClick={() => window.open(WHATSAPP_LINK, '_blank')}>احجز جلسة</button>
-						<button className="link" onClick={() => window.location.href = `tel:${LANDLINE}`}>اتصل مباشرة</button>
+					<div>
+						<h1>قائمة الأسعار</h1>
+						<div className="lead">كل الباكدجات والخدمات الفردية في مكان واحد مع روابط سريعة لكل قسم.</div>
 					</div>
-
-					<section className="footer reveal" style={{ paddingBottom: 90, marginTop: 24 }}>
-						<div>تابعينا على السوشيال</div>
-						<div className="social-row">
-							{socialLinks.map((s) => (
-								<a key={s.href} className="social-link" href={s.href} target="_blank" rel="noreferrer" style={{ '--hover': s.color }} aria-label={s.label}>
-									<svg viewBox="0 0 448 512" role="img" aria-hidden="true" focusable="false">{s.svg}</svg>
-								</a>
-							))}
-						</div>
-						<div style={{ marginTop: 6, fontSize: 13 }}>
-							© غرام سلطان بيوتي سنتر · اسم يعني الثقة
-						</div>
-					</section>
+					<div className="chips">
+						<button className="chip" onClick={() => scrollToSection('makeup-section')}>
+							<span role="img" aria-label="ميكب">💄</span>
+							<span>باكدجات الميك أب</span>
+						</button>
+						<button className="chip" onClick={() => scrollToSection('photo-section')}>
+							<span role="img" aria-label="تصوير">📸</span>
+							<span>باكدجات التصوير</span>
+						</button>
+						<button className="chip" onClick={() => scrollToSection('services-section')}>
+							<span role="img" aria-label="خدمات">🛠️</span>
+							<span>الخدمات الفردية</span>
+						</button>
+					</div>
 				</div>
+
+				<div className="section reveal" id="makeup-section">
+					<div className="section-header">
+						<h2>باكدجات الميك أب</h2>
+						<button className="section-cta" onClick={() => handlePackageWhatsApp('ميكب')}>تأكيد حجز سريع</button>
+					</div>
+					<div className="cards">
+						{makeupPackages.map((pkg) => (
+							<div className="card reveal" key={pkg.title}>
+								<div className="card-head">
+									<h3>{pkg.title}</h3>
+									<span className="tag">مفضل</span>
+								</div>
+								<div className="price">{pkg.price}</div>
+								<ul>
+									{pkg.items.map((item) => (
+										<li key={item}>{item}</li>
+									))}
+								</ul>
+								<button className="btn" onClick={() => handlePackageWhatsApp(pkg.title)}>احجز الآن</button>
+							</div>
+						))}
+					</div>
+				</div>
+
+				<div className="section reveal" id="photo-section">
+					<div className="section-header">
+						<h2>باكدجات التصوير</h2>
+						<button className="section-cta" onClick={() => handlePackageWhatsApp('تصوير')}>اسألي عن توافر المواعيد</button>
+					</div>
+					<div className="cards">
+						{photoPackages.map((pkg) => (
+							<div className="card reveal" key={pkg.title}>
+								<div className="card-head">
+									<h3>{pkg.title}</h3>
+									<span className="tag">يشمل ألبوم</span>
+								</div>
+								<div className="price">{pkg.price}</div>
+								<ul>
+									{pkg.items.map((item) => (
+										<li key={item}>{item}</li>
+									))}
+								</ul>
+								<button className="btn" onClick={() => handlePackageWhatsApp(pkg.title)}>احجز الآن</button>
+							</div>
+						))}
+					</div>
+				</div>
+
+				<div className="section reveal" id="services-section">
+					<div className="section-header">
+						<h2>أسعار الخدمات الفردية</h2>
+						<button className="section-cta" onClick={() => window.open(WHATSAPP_LINK, '_blank')}>اسألي عن خدمة محددة</button>
+					</div>
+					<div className="services">
+						{services.map((s) => (
+							<div className="service reveal" key={s.name}>
+								<span>{s.name}</span>
+								<span>{s.price}</span>
+							</div>
+						))}
+					</div>
+				</div>
+
+				<section className="footer reveal" style={{ paddingBottom: 90, marginTop: 24 }}>
+					<div>تابعينا على السوشيال</div>
+					<div className="social-row">
+						{socialLinks.map((s) => (
+							<a key={s.href} className="social-link" href={s.href} target="_blank" rel="noreferrer" style={{ '--hover': s.color }} aria-label={s.label}>
+								<svg viewBox="0 0 448 512" role="img" aria-hidden="true" focusable="false" style={{ width: 28, height: 28 }}>
+									{s.svg}
+								</svg>
+							</a>
+						))}
+					</div>
+					<div style={{ marginTop: 6, fontSize: 13 }}>
+						© غرام سلطان بيوتي سنتر · اسم يعني الثقة
+					</div>
+				</section>
 			</div>
 
 			<div className="sticky-bar">
@@ -295,4 +508,4 @@ function MassageChair() {
 	);
 }
 
-export default MassageChair;
+export default PriceList;
