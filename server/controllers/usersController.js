@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
+const { resetAllSalaries } = require('../services/salaryResetService');
 
 const LEVEL_THRESHOLDS = [0, 3000, 8000, 18000, 38000, 73000, 118000, 178000, 268000, 418000];
 const COIN_VALUES = [0, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600];
@@ -130,6 +131,18 @@ exports.updateUser = async (req, res) => {
     res.json({ msg: 'User updated successfully', user });
   } catch (err) {
     console.error(err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports.resetSalaries = async (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ msg: 'صلاحية غير كافية' });
+
+  try {
+    const result = await resetAllSalaries('manual-api');
+    res.json({ msg: 'تم إعادة شحن رواتب جميع الموظفين', result });
+  } catch (err) {
+    console.error('Error resetting salaries:', err);
     res.status(500).json({ msg: 'Server error' });
   }
 };

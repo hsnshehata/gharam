@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
+const { startSalaryResetScheduler } = require('./services/salaryResetService');
 
 dotenv.config();
 
@@ -12,7 +13,10 @@ app.use(express.json());
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected'))
+  .then(() => {
+    console.log('MongoDB connected');
+    startSalaryResetScheduler();
+  })
   .catch(err => console.log(err));
 
 // Routes
