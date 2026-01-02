@@ -263,10 +263,10 @@ function PriceList() {
 		.brand { display: flex; align-items: center; justify-content: center; text-align: center; gap: 12px; font-weight: 800; }
 		.brand img { width: 64px; height: 64px; object-fit: contain; }
 		.pill { display: inline-flex; gap: 8px; align-items: center; padding: 10px 14px; background: rgba(0,0,0,0.03); border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 14px; }
-		.hero-panel { background: linear-gradient(120deg, rgba(198,161,91,0.18), rgba(31,182,166,0.18)); border: 1px solid var(--border); border-radius: 18px; padding: 18px; display: grid; gap: 10px; box-shadow: 0 12px 26px var(--shadow); }
-		.hero-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-		.chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
-		.chip { padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); cursor: pointer; font-weight: 700; transition: transform 0.15s ease, box-shadow 0.15s ease; box-shadow: 0 10px 22px var(--shadow); }
+		.hero-panel { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 14px; display: grid; gap: 8px; box-shadow: 0 12px 26px var(--shadow); text-align: center; }
+		.hero-actions { display: none; }
+		.chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; justify-content: center; }
+		.chip { padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; font-weight: 700; transition: transform 0.15s ease, box-shadow 0.15s ease; box-shadow: 0 10px 22px var(--shadow); color: var(--text); }
 		.chip:hover { transform: translateY(-2px); }
 		.section-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
 		.section-header h2 { margin: 0; font-size: 22px; }
@@ -298,11 +298,7 @@ function PriceList() {
 				<div className="hero-panel reveal">
 					<div>
 						<h1>قائمة الأسعار</h1>
-						<div className="lead">كل الباكدجات والخدمات الفردية في مكان واحد مع روابط سريعة للتواصل.</div>
-					</div>
-					<div className="hero-actions">
-						<button className="btn" onClick={() => handlePackageWhatsApp('باكدج زفاف سبيشيال بلس')}>احجزي واتساب الآن</button>
-						<button className="btn-ghost" onClick={() => window.location.href = `tel:${LANDLINE}`}>📞 اتصال سريع</button>
+						<div className="lead">كل الباكدجات والخدمات الفردية في مكان واحد مع روابط سريعة لكل قسم.</div>
 					</div>
 					<div className="chips">
 						<button className="chip" onClick={() => scrollToSection('makeup-section')}>باكدجات الميك أب</button>
