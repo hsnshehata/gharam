@@ -224,6 +224,11 @@ function PriceList() {
 
 	const toggleTheme = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
 
+	const scrollToSection = (id) => {
+		const el = document.getElementById(id);
+		if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	};
+
 	const css = `
 		:root {
 			--bg: ${palette.bg};
@@ -235,27 +240,40 @@ function PriceList() {
 			--shadow: ${palette.shadow};
 		}
 		.price-page { background: var(--bg); color: var(--text); min-height: 100vh; font-family: 'Tajawal', 'Arial', sans-serif; }
-		.container { width: min(1200px, 92%); margin: 0 auto; padding: 28px 0 72px; }
-		h1 { margin: 0 0 12px; font-size: clamp(26px, 4vw, 38px); }
-		.lead { color: var(--muted); line-height: 1.6; margin-bottom: 18px; }
-		.section { margin: 24px 0; }
+		.container { width: min(1180px, 92%); margin: 0 auto; padding: 28px 0 72px; }
+		h1 { margin: 0 0 8px; font-size: clamp(28px, 4vw, 40px); }
+		.lead { color: var(--muted); line-height: 1.7; margin-bottom: 18px; font-size: 15px; }
+		.section { margin: 28px 0; }
 		.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
-		.card { background: var(--card) !important; color: var(--text) !important; border: 1px solid var(--border) !important; border-radius: 14px; padding: 16px; box-shadow: 0 12px 26px var(--shadow); }
+		.card { background: var(--card) !important; color: var(--text) !important; border: 1px solid var(--border) !important; border-radius: 16px; padding: 16px; box-shadow: 0 12px 26px var(--shadow); position: relative; overflow: hidden; }
+		.card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(145deg, rgba(198,161,91,0.08), rgba(31,182,166,0.08)); opacity: 0.7; pointer-events: none; }
+		.card > * { position: relative; z-index: 1; }
 		.card h3 { margin: 0 0 8px; font-size: 18px; color: var(--text); }
+		.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+		.tag { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid rgba(198,161,91,0.4); background: rgba(198,161,91,0.12); color: var(--text); font-weight: 700; font-size: 13px; }
 		.price { font-weight: 800; color: var(--gold); margin-bottom: 10px; }
 		ul { padding-left: 18px; margin: 0; color: var(--muted); line-height: 1.6; }
-		.btn { margin-top: 12px; padding: 10px 14px; border: none; border-radius: 10px; background: linear-gradient(135deg, var(--gold), #e6c27b); color: #0f0b0a; font-weight: 700; cursor: pointer; }
+		.btn { margin-top: 12px; padding: 10px 14px; border: none; border-radius: 10px; background: linear-gradient(135deg, var(--gold), #e6c27b); color: #0f0b0a; font-weight: 700; cursor: pointer; box-shadow: 0 10px 24px var(--shadow); transition: transform 0.15s ease, box-shadow 0.15s ease; }
+		.btn:hover { transform: translateY(-2px); box-shadow: 0 12px 26px var(--shadow); }
+		.btn-ghost { background: rgba(0,0,0,0.03); color: var(--text); border: 1px solid var(--border); }
 		.services { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-top: 12px; }
-		.service { background: var(--card) !important; color: var(--text) !important; border: 1px solid var(--border) !important; border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; box-shadow: 0 8px 18px var(--shadow); }
-		.breadcrumb { margin-bottom: 16px; color: var(--muted); }
+		.service { background: var(--card) !important; color: var(--text) !important; border: 1px solid var(--border) !important; border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 8px 18px var(--shadow); }
+		.service span:last-child { color: var(--gold); font-weight: 800; }
 		.topbar { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 18px 0; }
 		.brand { display: flex; align-items: center; justify-content: center; text-align: center; gap: 12px; font-weight: 800; }
 		.brand img { width: 64px; height: 64px; object-fit: contain; }
 		.pill { display: inline-flex; gap: 8px; align-items: center; padding: 10px 14px; background: rgba(0,0,0,0.03); border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 14px; }
+		.hero-panel { background: linear-gradient(120deg, rgba(198,161,91,0.18), rgba(31,182,166,0.18)); border: 1px solid var(--border); border-radius: 18px; padding: 18px; display: grid; gap: 10px; box-shadow: 0 12px 26px var(--shadow); }
+		.hero-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+		.chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+		.chip { padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); cursor: pointer; font-weight: 700; transition: transform 0.15s ease, box-shadow 0.15s ease; box-shadow: 0 10px 22px var(--shadow); }
+		.chip:hover { transform: translateY(-2px); }
+		.section-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+		.section-header h2 { margin: 0; font-size: 22px; }
+		.section-cta { padding: 8px 12px; border-radius: 12px; border: 1px solid var(--border); background: rgba(0,0,0,0.03); color: var(--text); cursor: pointer; font-weight: 700; }
 		.footer { margin: 28px 0 56px; text-align: center; color: var(--muted); font-size: 14px; }
 		.sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; padding: 10px 14px; background: ${theme === 'light' ? 'rgba(255,255,255,0.96)' : 'rgba(24,18,16,0.92)'}; border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 20px 40px var(--shadow); z-index: 100; }
 		.sticky-bar .btn { padding: 12px 14px; }
-		.btn-ghost { background: rgba(0,0,0,0.03); color: var(--text); border: 1px solid var(--border); }
 		.social-row { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 12px; }
 		.social-link { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); border-radius: 10px; transition: color 0.2s ease, transform 0.2s ease; }
 		.social-link svg { width: 24px; height: 24px; fill: currentColor; }
@@ -277,16 +295,34 @@ function PriceList() {
 						</div>
 					</div>
 				</div>
-				<div className="breadcrumb">غرام سلطان • قائمة الأسعار</div>
-				<h1>قائمة الأسعار</h1>
-				<div className="lead">باكدجات الميك أب، باكدجات التصوير، وأسعار الخدمات الفردية في مكان واحد.</div>
+				<div className="hero-panel reveal">
+					<div>
+						<h1>قائمة الأسعار</h1>
+						<div className="lead">كل الباكدجات والخدمات الفردية في مكان واحد مع روابط سريعة للتواصل.</div>
+					</div>
+					<div className="hero-actions">
+						<button className="btn" onClick={() => handlePackageWhatsApp('باكدج زفاف سبيشيال بلس')}>احجزي واتساب الآن</button>
+						<button className="btn-ghost" onClick={() => window.location.href = `tel:${LANDLINE}`}>📞 اتصال سريع</button>
+					</div>
+					<div className="chips">
+						<button className="chip" onClick={() => scrollToSection('makeup-section')}>باكدجات الميك أب</button>
+						<button className="chip" onClick={() => scrollToSection('photo-section')}>باكدجات التصوير</button>
+						<button className="chip" onClick={() => scrollToSection('services-section')}>الخدمات الفردية</button>
+					</div>
+				</div>
 
-				<div className="section reveal">
-					<h2>باكدجات الميك أب</h2>
+				<div className="section reveal" id="makeup-section">
+					<div className="section-header">
+						<h2>باكدجات الميك أب</h2>
+						<button className="section-cta" onClick={() => handlePackageWhatsApp('ميكب')}>تأكيد حجز سريع</button>
+					</div>
 					<div className="cards">
 						{makeupPackages.map((pkg) => (
 							<div className="card reveal" key={pkg.title}>
-								<h3>{pkg.title}</h3>
+								<div className="card-head">
+									<h3>{pkg.title}</h3>
+									<span className="tag">مفضل</span>
+								</div>
 								<div className="price">{pkg.price}</div>
 								<ul>
 									{pkg.items.map((item) => (
@@ -299,12 +335,18 @@ function PriceList() {
 					</div>
 				</div>
 
-				<div className="section reveal">
-					<h2>باكدجات التصوير</h2>
+				<div className="section reveal" id="photo-section">
+					<div className="section-header">
+						<h2>باكدجات التصوير</h2>
+						<button className="section-cta" onClick={() => handlePackageWhatsApp('تصوير')}>اسألي عن توافر المواعيد</button>
+					</div>
 					<div className="cards">
 						{photoPackages.map((pkg) => (
 							<div className="card reveal" key={pkg.title}>
-								<h3>{pkg.title}</h3>
+								<div className="card-head">
+									<h3>{pkg.title}</h3>
+									<span className="tag">يشمل ألبوم</span>
+								</div>
 								<div className="price">{pkg.price}</div>
 								<ul>
 									{pkg.items.map((item) => (
@@ -317,13 +359,16 @@ function PriceList() {
 					</div>
 				</div>
 
-				<div className="section reveal">
-					<h2>أسعار الخدمات الفردية</h2>
+				<div className="section reveal" id="services-section">
+					<div className="section-header">
+						<h2>أسعار الخدمات الفردية</h2>
+						<button className="section-cta" onClick={() => window.open(WHATSAPP_LINK, '_blank')}>اسألي عن خدمة محددة</button>
+					</div>
 					<div className="services">
 						{services.map((s) => (
 							<div className="service reveal" key={s.name}>
 								<span>{s.name}</span>
-								<span style={{ color: 'var(--gold)', fontWeight: 700 }}>{s.price}</span>
+								<span>{s.price}</span>
 							</div>
 						))}
 					</div>
