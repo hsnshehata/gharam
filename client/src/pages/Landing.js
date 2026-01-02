@@ -457,7 +457,7 @@ function Landing() {
 		.social-link { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); border-radius: 10px; transition: color 0.2s ease, transform 0.2s ease; }
 		.social-link svg { width: 28px; height: 28px; fill: currentColor; }
 		.social-link:hover { transform: translateY(-2px); color: var(--hover, var(--gold)); }
-		.sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 8px 10px; background: ${theme === 'light' ? 'rgba(255,255,255,0.96)' : 'rgba(24,18,16,0.92)'}; border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 20px 40px var(--shadow); z-index: 100; width: auto; max-width: calc(100% - 24px); }
+		.sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 8px 10px; background: ${theme === 'light' ? 'rgba(255,255,255,0.96)' : 'rgba(24,18,16,0.92)'}; border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 20px 40px var(--shadow); z-index: 100; width: fit-content; max-width: calc(100% - 24px); }
 		.sticky-bar .btn { padding: 10px 12px; }
 		.support-floating { position: fixed; bottom: 20px; right: 20px; z-index: 120; }
 		.chat-frame { position: fixed; bottom: 20px; right: 20px; width: 360px; max-width: 90vw; height: 520px; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.35); z-index: 121; }
@@ -466,7 +466,7 @@ function Landing() {
 		.modal-card { position: relative; }
 		@media (max-width: 768px) {
 			hero { grid-template-columns: 1fr; padding-top: 12px; }
-			.sticky-bar { width: calc(100% - 24px); justify-content: space-between; background: ${theme === 'light' ? 'rgba(255,255,255,0.98)' : 'rgba(24,18,16,0.95)'}; }
+			.sticky-bar { justify-content: center; background: ${theme === 'light' ? 'rgba(255,255,255,0.98)' : 'rgba(24,18,16,0.95)'}; }
 			.topbar { flex-direction: column; align-items: flex-start; }
 		}
 	`;
@@ -512,7 +512,7 @@ function Landing() {
 							احصلي على أحدث صيحات الميكب والتصوير الاحترافي بلمسة تجمع الخبرة والابتكار.
 							راحة فاخرة بضغطة زر مع كرسي المساج الذكي ضد الجاذبية.
 						</p>
-						<div className="pill">جودة منتجات عالمية • اهتمام بالتفاصيل • راحة فاخرة</div>
+						<div className="pill">جودة عالمية • اهتمام بالتفاصيل • راحة فاخرة</div>
 						<div className="cta-row center">
 							<button className="btn btn-prices" onClick={() => window.location.href = '/prices'} aria-label="أسعار الخدمات">
 								<span role="img" aria-label="قائمة">💸</span>
@@ -525,12 +525,12 @@ function Landing() {
 				<section className="availability reveal">
 					<div className="card">
 						<span className="badge">تأكيد التوافر</span>
-						<h2 style={{ margin: '8px 0 12px' }}>تأكدي إن اليوم فاضي للباكدج</h2>
+						<h2 style={{ margin: '8px 0 12px' }}>تأكدي إن اليوم متاح للحجز</h2>
 						<form onSubmit={(e) => { e.preventDefault(); handleCheckAvailability(); }}>
 							<div>
 								<label>نوع الباكدج</label>
 								<select value={packageType} onChange={(e) => setPackageType(e.target.value)}>
-									<option value="makeup">ميك أب / حنة / حجز صالون</option>
+									<option value="makeup">ميك أب </option>
 									<option value="photo">تصوير</option>
 								</select>
 							</div>
