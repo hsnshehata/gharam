@@ -2011,16 +2011,6 @@ export const googleReviews = [
     text: 'الخدمه تحفه وخطيرة والمكان تحفههههه '
   },
   {
-    author: 'Samar Elbana',
-    relativeTime: 'قبل 4 أشهر',
-    text: 'Mohammed Karam       قبل 4 أشهر Shaimaa Draz       قبل 4 أشهر مى محروس       قبل 4 أشهر Rana Amar       قبل 4 أشهر Asmaaebrahim       قبل 4 أشهر حنان محمد       قبل 4 أشهر Doaa Mohamed       قبل 4 أشهر غآده آلبودآا       قبل 4 أشهر Lamiaa Mohamed       قبل 4 أشهر Ramadan Wedn       قبل 4 أشهر شيماء شعيب       قبل 4 أشهر basmala Marzouk       قبل 4 أشهر Yasmin Abdullah       قبل 4 أشهر'
-  },
-  {
-    author: 'محمد عزت',
-    relativeTime: 'قبل 4 أشهر',
-    text: 'رامي الرشيدي       قبل 4 أشهر Shahd Makled       قبل 4 أشهر Nay ra       قبل 4 أشهر Ranya Mohy       قبل 4 أشهر Donia Ahmed       قبل 4 أشهر Rania Soph       قبل 4 أشهر Nada Abo ahmed       قبل 4 أشهر Aya Mohamed Elareny       قبل 4 أشهر yosra Alareny       قبل 4 أشهر aya abdo       قبل 4 أشهر Sara Morsi       قبل 4 أشهر ASER AYHAM       قبل 4 أشهر رحمه بدوي الحلفاوي       قبل 4 أشهر منه الشيخ       قبل 4 أشهر Shaimaa Eladb       قبل 4 أشهر Dodo       قبل 4 أشهر Reham Elhadad       قبل 4 أشهر'
-  },
-  {
     author: 'ابراهيم شخيخ',
     relativeTime: 'قبل 4 أشهر',
     text: 'المكان حلو جدا والمعامله خطيرة ماشاء الله '
@@ -4368,7 +4358,7 @@ export const googleReviews = [
   {
     author: 'Malak Diab',
     relativeTime: 'قبل سنة',
-    text: 'هو في قص شعر ولا لا ولو في بكام '
+    text: 'عملت ميكب عندك كان تحفه بجد تسلم ايدك '
   },
   {
     author: 'Hanen Wael',
