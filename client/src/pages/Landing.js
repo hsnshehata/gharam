@@ -323,6 +323,7 @@ function Landing() {
 			--accent: ${palette.accent};
 			--overlay: ${palette.overlay};
 			--shadow: ${palette.shadow};
+			--social-base: ${theme === 'dark' ? '#f7f3ee' : palette.muted};
 		}
 		body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Tajawal', 'Arial', sans-serif; }
 		.landing-page { background: var(--bg); min-height: 100vh; position: relative; overflow: hidden; }
@@ -428,6 +429,7 @@ function Landing() {
 		.quick-link { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: rgba(0,0,0,0.02); color: var(--text); text-decoration: none; transition: transform 0.15s ease, box-shadow 0.15s ease; }
 		.quick-link:hover { transform: translateY(-2px); box-shadow: 0 10px 20px var(--shadow); }
 		.quick-link span.icon { font-size: 18px; }
+		.quick-link svg { width: 26px; height: 26px; fill: currentColor; }
 		.trust-section { padding: 40px 0; margin: 28px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 		.trust-heading { text-align: center; color: var(--muted); font-weight: 700; margin-bottom: 16px; letter-spacing: 0.5px; }
 		.trust-logos { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px 32px; align-items: center; }
@@ -454,7 +456,7 @@ function Landing() {
 		.review-card p { margin: 8px 0 0; color: var(--muted); line-height: 1.5; }
 		.footer { margin: 28px 0 56px; text-align: center; color: var(--muted); font-size: 14px; }
 		.social-row { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 12px; }
-		.social-link { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); border-radius: 10px; transition: color 0.2s ease, transform 0.2s ease; }
+		.social-link { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; color: var(--social-base); border-radius: 10px; transition: color 0.2s ease, transform 0.2s ease; }
 		.social-link svg { width: 28px; height: 28px; fill: currentColor; }
 		.social-link:hover { transform: translateY(-2px); color: var(--hover, var(--gold)); }
 		.sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 8px 10px; background: ${theme === 'light' ? 'rgba(255,255,255,0.96)' : 'rgba(24,18,16,0.92)'}; border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 20px 40px var(--shadow); z-index: 100; width: fit-content; max-width: calc(100% - 24px); }
