@@ -634,6 +634,7 @@ function Landing() {
 							</button>
 						</div>
 					</div>
+					<p style={{ color: 'var(--muted)', margin: '0 0 10px', fontWeight: 600 }}>تابعي غرام سلطان على السوشيال عشان تشوفي أحدث لوكات العرايس، الكواليس، والعروض الخاصة.</p>
 					<div className="quick-links">
 						{socialLinksNoWhatsApp.map((s) => (
 							<a className="quick-link" key={s.href} href={s.href} target="_blank" rel="noreferrer">
