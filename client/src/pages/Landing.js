@@ -627,7 +627,7 @@ function Landing() {
 						</div>
 						<div className="contact-card" style={{ borderColor: '#1aa19355' }}>
 							<span className="contact-title"><BotIcon size={18} />دعم فوري</span>
-							<span className="contact-desc">زري البوت لأسئلة سريعة.</span>
+							<span className="contact-desc">ردود فورية بالذكاء الاصطتناعي للأسئلة الشائعة.</span>
 							<button className="btn" style={{ background: '#1aa193', color: '#0f0b0a', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => setShowChat(true)}>
 								<BotIcon size={18} />
 								<span>افتحي البوت</span>
@@ -649,7 +649,7 @@ function Landing() {
 					<div className="reviews-header">
 						<div>
 							<div className="badge" style={{ background: 'rgba(244,193,80,0.15)' }}>الناس قالت إيه عن غرام سلطان؟</div>
-							<h2 style={{ margin: '6px 0' }}>5.0 · أكثر من 1100 مراجعة</h2>
+							<h2 style={{ margin: '6px 0' }}>5.0 ·  أكثر من 1100 مراجعة على جوجل</h2>
 							<div className="stars">★★★★★</div>
 							<div style={{ color: 'var(--muted)', fontSize: 14 }}>دي عينة من تقييمات وتجارب عملاء حقيقيين  ، تقدري تشوفي باقي الريفيوهات من جوجل أو السوشيال.
 
@@ -709,7 +709,7 @@ function Landing() {
 
 				<section className="footer reveal" style={{ paddingBottom: 90 }}>
 					<div>تابعينا على السوشيال</div>
-					<div style={{ color: 'var(--muted)', marginTop: 6, fontSize: 14 }}>تابعي غرام سلطان على السوشيال عشان تشوفي أحدث لوكات العرايس، الكواليس، والعروض الخاصة.</div>
+					<div style={{ color: 'var(--muted)', marginTop: 6, fontSize: 14 }}>عشان تشوفي أحدث لوكات العرايس، الكواليس، والعروض .</div>
 					<div className="social-row">
 						{socialLinks.map((s) => (
 							<a key={s.href} className="social-link" href={s.href} target="_blank" rel="noreferrer" style={{ '--hover': s.color }} aria-label={s.label}>
