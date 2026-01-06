@@ -708,6 +708,7 @@ function Landing() {
 
 				<section className="footer reveal" style={{ paddingBottom: 90 }}>
 					<div>تابعينا على السوشيال</div>
+					<div style={{ color: 'var(--muted)', marginTop: 6, fontSize: 14 }}>تابعي غرام سلطان على السوشيال عشان تشوفي أحدث لوكات العرايس، الكواليس، والعروض الخاصة.</div>
 					<div className="social-row">
 						{socialLinks.map((s) => (
 							<a key={s.href} className="social-link" href={s.href} target="_blank" rel="noreferrer" style={{ '--hover': s.color }} aria-label={s.label}>
