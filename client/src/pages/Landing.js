@@ -647,10 +647,12 @@ function Landing() {
 				<section className="reviews reveal">
 					<div className="reviews-header">
 						<div>
-							<div className="badge" style={{ background: 'rgba(244,193,80,0.15)' }}>تقييمات جوجل</div>
+							<div className="badge" style={{ background: 'rgba(244,193,80,0.15)' }}>الناس قالت إيه عن غرام سلطان؟</div>
 							<h2 style={{ margin: '6px 0' }}>5.0 · أكثر من 1100 مراجعة</h2>
 							<div className="stars">★★★★★</div>
-							<div style={{ color: 'var(--muted)', fontSize: 14 }}>غرام سلطان بيوتي سنتر وستوديو · شارع الجيش، دسوق</div>
+							<div style={{ color: 'var(--muted)', fontSize: 14 }}>دي عينة من تقييمات وتجارب عملاء حقيقيين  ، تقدري تشوفي باقي الريفيوهات من جوجل أو السوشيال.
+
+</div>
 						</div>
 						<div className="cta-row">
 							<button className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => window.open('https://g.page/r/CeoPiyI-r3niEAE/review', '_blank')} aria-label="اكتبي تقييمك">
