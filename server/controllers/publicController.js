@@ -1,4 +1,13 @@
 const Booking = require('../models/Booking');
+const GOOGLE_FIELDS = 'rating,user_ratings_total,reviews';
+
+const FALLBACK_RESPONSE = {
+  msg: 'تعذر جلب تقييمات جوجل حالياً',
+  rating: 5,
+  totalReviews: 1100,
+  reviews: [],
+  source: 'fallback'
+};
 
 exports.checkAvailability = async (req, res) => {
   const { date, packageType } = req.query;
@@ -41,5 +50,50 @@ exports.checkAvailability = async (req, res) => {
   } catch (err) {
     console.error('Availability error:', err);
     res.status(500).json({ status: 'error', msg: 'Server error' });
+  }
+};
+
+exports.getGoogleReviews = async (_req, res) => {
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+  const placeId = process.env.GOOGLE_PLACE_ID;
+
+  if (typeof fetch !== 'function') {
+    return res.status(200).json({ ...FALLBACK_RESPONSE, msg: 'الخادم محتاج تحديث لإصدار Node يدعم fetch قبل جلب تقييمات جوجل' });
+  }
+
+  if (!apiKey || !placeId) {
+    return res.status(200).json({ ...FALLBACK_RESPONSE, msg: 'برجاء ضبط GOOGLE_PLACES_API_KEY و GOOGLE_PLACE_ID في ملف البيئة' });
+  }
+
+  const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${apiKey}&fields=${GOOGLE_FIELDS}&reviews_sort=newest&reviews_no_translations=true`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Google API HTTP ${response.status}`);
+
+    const data = await response.json();
+    if (data.status !== 'OK') throw new Error(`Google API status ${data.status}`);
+
+    const result = data.result || {};
+    const reviews = Array.isArray(result.reviews) ? result.reviews.slice(0, 12).map((r) => ({
+      author: r.author_name,
+      relativeTime: r.relative_time_description,
+      text: r.text,
+      rating: r.rating,
+      photoUrl: r.profile_photo_url,
+      authorUrl: r.author_url,
+      time: r.time,
+      timeISO: r.time ? new Date(r.time * 1000).toISOString() : undefined
+    })) : [];
+
+    res.json({
+      rating: result.rating,
+      totalReviews: result.user_ratings_total,
+      reviews,
+      source: 'google'
+    });
+  } catch (err) {
+    console.error('Google reviews error:', err.message);
+    res.status(200).json(FALLBACK_RESPONSE);
   }
 };
