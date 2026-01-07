@@ -4,6 +4,7 @@ import { googleReviews } from '../data/googleReviews';
 
 const WHATSAPP_LINK = 'https://wa.me/gharam';
 const MAP_LINK = 'https://maps.app.goo.gl/cpF8J7rw6ScxZwiv5';
+const MAP_EMBED_URL = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1098.7427180615887!2d30.649189727778985!3d31.12134932679913!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14f65b4cd1f4431f%3A0xe279af3e228b0fea!2z2LrYsdin2YUg2LPZhNi32KfZhiDYqNmK2YjYqtmKINiz2YbYqtixINmI2LPYqtmI2K_ZitmI!5e1!3m2!1sar!2seg!4v1767756045239!5m2!1sar!2seg';
 const TIKTOK_LINK = 'https://www.tiktok.com/@gharamsoltan';
 const INSTAGRAM_LINK = 'https://www.instagram.com/gharamsoltan';
 const FACEBOOK_LINK = 'https://www.facebook.com/gharam.ml';
@@ -43,7 +44,6 @@ const socialLinks = [
 ];
 
 const socialLinksNoWhatsApp = socialLinks.filter((s) => s.label !== 'WhatsApp');
-
 const themes = {
 	light: {
 		bg: '#f9f6f1',
@@ -67,43 +67,6 @@ const themes = {
 		overlay: '#241915',
 		shadow: 'rgba(0,0,0,0.28)'
 	}
-};
-
-const featuredPackages = [
-	{
-		label: 'باكدج الميك أب الأكثر طلبًا',
-		title: 'باكدج زفاف سبيشيال بلس',
-		price: '5,500 ج',
-		points: ['تنضيف بشرة كامل + حمام مغربي وعطري', 'صنفرة للجسم + 3 رسومات حنة', 'تسريحة/لفة + رموش + عدسات + فيك نيلز', 'تأجير تاج/طرحة + بديكير ومنيكير + سشوار']
-	},
-	{
-		label: 'باكدج التصوير الأكثر طلبًا',
-		title: 'باكدج تصوير ألبوم 20×30',
-		price: '1,600ج (استوديو) · 2,700ج (لوكيشن)',
-		points: ['ألبوم 20×30 (10 مناظر)', 'فوتوبلوك 50×60', 'ألبوم ميني', '40 كارت مكرر']
-	}
-];
-
-const availabilityCopy = {
-	busy: { title: 'اليوم كامل', message: 'اليوم مشغول ولا يمكن حجزه حالياً.' },
-	nearly: { title: 'يكاد يكتمل', message: 'اليوم على وشك الاكتمال، أسرعي في التواصل لتأكيد الميعاد.' },
-	available: { title: 'متاح للحجز', message: 'اليوم متاح، احجزي دلوقتي قبل ما المواعيد تتملي.' }
-};
-
-const shuffle = (arr) => {
-	const copy = [...arr];
-	for (let i = copy.length - 1; i > 0; i -= 1) {
-		const j = Math.floor(Math.random() * (i + 1));
-		[copy[i], copy[j]] = [copy[j], copy[i]];
-	}
-	return copy;
-};
-
-const colorFromName = (name) => {
-	const palette = ['#f5b342', '#5bc0de', '#4dd4ac', '#d56bff', '#ff7b7b', '#7ba7ff', '#ffc36b'];
-	let sum = 0;
-	for (let i = 0; i < name.length; i += 1) sum += name.charCodeAt(i);
-	return palette[sum % palette.length];
 };
 
 const PhoneIcon = ({ size = 18 }) => (
@@ -156,6 +119,71 @@ const WhatsAppIcon = ({ size = 18 }) => (
 	</svg>
 );
 
+const featuredPackages = [
+	{
+		label: 'باكدج الميك أب الأكثر طلبًا',
+		title: 'باكدج زفاف سبيشيال بلس',
+		price: '5,500 ج',
+		points: ['تنضيف بشرة كامل + حمام مغربي وعطري', 'صنفرة للجسم + 3 رسومات حنة', 'تسريحة/لفة + رموش + عدسات + فيك نيلز', 'تأجير تاج/طرحة + بديكير ومنيكير + سشوار']
+	},
+	{
+		label: 'باكدج التصوير الأكثر طلبًا',
+		title: 'باكدج تصوير ألبوم 20×30',
+		price: '1,600ج (استوديو) · 2,700ج (لوكيشن)',
+		points: ['ألبوم 20×30 (10 مناظر)', 'فوتوبلوك 50×60', 'ألبوم ميني', '40 كارت مكرر']
+	}
+];
+
+const availabilityCopy = {
+	busy: { title: 'اليوم كامل', message: 'اليوم مشغول ولا يمكن حجزه حالياً.' },
+	nearly: { title: 'يكاد يكتمل', message: 'اليوم على وشك الاكتمال، أسرعي في التواصل لتأكيد الميعاد.' },
+	available: { title: 'متاح للحجز', message: 'اليوم متاح، احجزي دلوقتي قبل ما المواعيد تتملي.' }
+};
+
+const shuffle = (arr) => {
+	const copy = [...arr];
+	for (let i = copy.length - 1; i > 0; i -= 1) {
+		const j = Math.floor(Math.random() * (i + 1));
+		[copy[i], copy[j]] = [copy[j], copy[i]];
+	}
+	return copy;
+};
+
+const colorFromName = (name) => {
+	const palette = ['#f5b342', '#5bc0de', '#4dd4ac', '#d56bff', '#ff7b7b', '#7ba7ff', '#ffc36b'];
+	let sum = 0;
+	for (let i = 0; i < name.length; i += 1) sum += name.charCodeAt(i);
+	return palette[sum % palette.length];
+};
+
+const renderStars = (rating) => {
+	const value = Math.min(5, Math.max(1, Math.round(rating || 5)));
+	return '★'.repeat(value).padEnd(5, '☆');
+};
+
+const mergeReviews = (primary, secondary, limit) => {
+	const seen = new Set();
+	const merged = [];
+	const add = (item) => {
+		const key = `${item.author || ''}-${item.text?.slice(0, 40) || ''}`;
+		if (seen.has(key)) return;
+		seen.add(key);
+		merged.push(item);
+	};
+	(primary || []).forEach(add);
+	(secondary || []).forEach(add);
+	return merged.slice(0, limit);
+};
+const formatReviewDate = (rev) => {
+	if (rev?.time || rev?.timeISO) {
+		const date = rev.timeISO ? new Date(rev.timeISO) : new Date(rev.time * 1000);
+		if (!Number.isNaN(date.getTime())) {
+			return date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' });
+		}
+	}
+	return rev?.relativeTime || 'تقييم حديث';
+};
+
 function Landing() {
 	const [packageType, setPackageType] = useState('makeup');
 	const [date, setDate] = useState('');
@@ -169,12 +197,24 @@ function Landing() {
 		return localStorage.getItem('theme') || 'light';
 	});
 	const [spinSpeed, setSpinSpeed] = useState(1);
+	const DESIRED_REVIEW_COUNT = 12;
+	const fallbackReviews = useMemo(() => shuffle(googleReviews).slice(0, DESIRED_REVIEW_COUNT), []);
+	const [reviewsData, setReviewsData] = useState({
+		rating: 5,
+		totalReviews: 1100,
+		reviews: fallbackReviews,
+		source: 'fallback'
+	});
+	const [reviewsLoading, setReviewsLoading] = useState(false);
+	const [reviewsError, setReviewsError] = useState('');
 
 	const palette = themes[theme];
-	const selectedReviews = useMemo(() => shuffle(googleReviews).slice(0, 12), []);
 	const availabilityBadge = availability ? availabilityCopy[availability.status] : null;
 	const spinADuration = Math.max(25, 35 / spinSpeed);
 	const spinBDuration = Math.max(25, 35 / spinSpeed);
+	const formattedRating = typeof reviewsData.rating === 'number' ? reviewsData.rating.toFixed(1) : '5.0';
+	const formattedTotalReviews = reviewsData.totalReviews ? reviewsData.totalReviews.toLocaleString('en-US') : '1100+';
+	const isGoogleReviews = reviewsData.source === 'google';
 
 	// SEO: عنوان، وصف، كانونيكال، OG/Twitter، و JSON-LD LocalBusiness
 	useEffect(() => {
@@ -312,6 +352,41 @@ function Landing() {
 		}
 	};
 
+	useEffect(() => {
+		let isMounted = true;
+		const fetchReviews = async () => {
+			setReviewsLoading(true);
+			setReviewsError('');
+			try {
+				const res = await axios.get(`${API_BASE}/api/public/google-reviews`);
+				if (!isMounted) return;
+				const payload = res.data || {};
+				const remoteReviews = Array.isArray(payload.reviews) ? payload.reviews : [];
+				const mergedReviews = mergeReviews(remoteReviews, fallbackReviews, DESIRED_REVIEW_COUNT);
+				const source = payload.source || (remoteReviews.length ? 'google' : 'fallback');
+				const totalReviews = payload.totalReviews || mergedReviews.length || fallbackReviews.length;
+				setReviewsData({
+					rating: typeof payload.rating === 'number' ? payload.rating : 5,
+					totalReviews,
+					reviews: mergedReviews,
+					source
+				});
+			} catch (err) {
+				if (isMounted) {
+					setReviewsError('تعذر جلب آخر تقييمات جوجل الآن. بنعرض عينة محفوظة مؤقتاً.');
+					setReviewsData((prev) => ({ ...prev, reviews: prev.reviews?.length ? prev.reviews : fallbackReviews, source: 'fallback' }));
+				}
+			} finally {
+				if (isMounted) setReviewsLoading(false);
+			}
+		};
+
+		fetchReviews();
+		return () => {
+			isMounted = false;
+		};
+	}, [fallbackReviews]);
+
 	const css = `
 		:root {
 			--bg: ${palette.bg};
@@ -430,6 +505,9 @@ function Landing() {
 		.quick-link:hover { transform: translateY(-2px); box-shadow: 0 10px 20px var(--shadow); }
 		.quick-link span.icon { font-size: 18px; }
 		.quick-link svg { width: 26px; height: 26px; fill: currentColor; }
+		.map-embed-card { margin: 22px 0; }
+		.map-frame { position: relative; width: 100%; padding-top: 56%; border-radius: 14px; overflow: hidden; box-shadow: 0 14px 28px var(--shadow); border: 1px solid var(--border); background: var(--card); }
+		.map-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 		.trust-section { padding: 40px 0; margin: 28px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 		.trust-heading { text-align: center; color: var(--muted); font-weight: 700; margin-bottom: 16px; letter-spacing: 0.5px; }
 		.trust-logos { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px 32px; align-items: center; }
@@ -441,6 +519,8 @@ function Landing() {
 		.stars { color: #f4c150; font-size: 18px; letter-spacing: 1px; }
 		.review-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 16px; }
 		.review-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; min-height: 170px; box-shadow: 0 14px 28px var(--shadow); }
+		.review-card.google { border-color: rgba(31,182,166,0.35); box-shadow: 0 16px 30px rgba(31,182,166,0.18); }
+		.review-meta { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 		.package-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin: 20px 0; }
 		.package-card { position: relative; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: 0 14px 28px var(--shadow); display: grid; gap: 10px; }
 		.package-label { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 999px; border: 1px solid rgba(198,161,91,0.4); background: rgba(198,161,91,0.12); color: var(--text); font-weight: 700; width: fit-content; }
@@ -451,9 +531,12 @@ function Landing() {
 		.reveal.visible { opacity: 1; transform: translateY(0); }
 		.review-head { display: flex; align-items: center; gap: 10px; }
 		.avatar { width: 40px; height: 40px; border-radius: 50%; color: #fff; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+		.avatar-img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); }
 		.review-card h5 { margin: 0; font-size: 15px; color: var(--text); }
 		.review-card small { color: var(--muted); }
 		.review-card p { margin: 8px 0 0; color: var(--muted); line-height: 1.5; }
+		.google-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(66,133,244,0.12); color: #1a73e8; padding: 4px 10px; border-radius: 999px; font-weight: 700; border: 1px solid rgba(66,133,244,0.2); font-size: 12px; }
+		.fallback-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(198,161,91,0.14); color: var(--text); padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(198,161,91,0.3); font-size: 12px; }
 		.footer { margin: 28px 0 56px; text-align: center; color: var(--muted); font-size: 14px; }
 		.social-row { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 12px; }
 		.social-link { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; color: var(--social-base); border-radius: 10px; transition: color 0.2s ease, transform 0.2s ease; }
@@ -523,6 +606,7 @@ function Landing() {
 						</div>
 					</div>
 				</section>
+
 
 				<section className="availability reveal">
 					<div className="card">
@@ -648,12 +732,15 @@ function Landing() {
 				<section className="reviews reveal">
 					<div className="reviews-header">
 						<div>
-							<div className="badge" style={{ background: 'rgba(244,193,80,0.15)' }}>الناس قالت إيه عن غرام سلطان؟</div>
-							<h2 style={{ margin: '6px 0' }}>5.0 ·  أكثر من 1100 مراجعة على جوجل</h2>
-							<div className="stars">★★★★★</div>
-							<div style={{ color: 'var(--muted)', fontSize: 14 }}>دي عينة من تقييمات وتجارب عملاء حقيقيين  ، تقدري تشوفي باقي الريفيوهات من جوجل أو السوشيال.
-
-</div>
+							<div className="badge" style={{ background: isGoogleReviews ? 'rgba(66,133,244,0.12)' : 'rgba(244,193,80,0.15)', borderColor: isGoogleReviews ? 'rgba(66,133,244,0.25)' : undefined }}>
+								{isGoogleReviews ? 'ريفيوهات مباشرة من جوجل' : 'عينة محفوظة تظهر لو اتصال جوجل اتعطل'}
+							</div>
+							<h2 style={{ margin: '6px 0' }}>{formattedRating} · {formattedTotalReviews} مراجعة</h2>
+							<div className="stars" aria-label="متوسط التقييم">{renderStars(reviewsData.rating)}</div>
+							<div style={{ color: 'var(--muted)', fontSize: 14 }}>
+								{reviewsLoading ? 'بنجيب آخر تقييمات جوجل...' : isGoogleReviews ? 'القائمة دي جاية من جوجل مباشرة.' : 'جوجل مش متاح دلوقتي فبنعرّض العينة المخزنة مؤقتاً.'}
+								{reviewsError && <div style={{ color: '#d9534f', marginTop: 4 }}>{reviewsError}</div>}
+							</div>
 						</div>
 						<div className="cta-row">
 							<button className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => window.open('https://g.page/r/CeoPiyI-r3niEAE/review', '_blank')} aria-label="اكتبي تقييمك">
@@ -663,26 +750,48 @@ function Landing() {
 						</div>
 					</div>
 					<div className="review-grid">
-						{selectedReviews.map((rev, idx) => {
+						{reviewsData.reviews.map((rev, idx) => {
 							const letter = rev.author?.trim()?.charAt(0)?.toUpperCase() || 'ج';
 							const bg = colorFromName(rev.author || 'ج');
 							return (
-								<div className="review-card" key={`${rev.author}-${idx}`}>
+								<div className={`review-card ${isGoogleReviews ? 'google' : ''}`} key={`${rev.author}-${idx}`}>
 									<div className="review-head">
-										<div className="avatar" style={{ background: bg }}>{letter}</div>
+										{rev.photoUrl ? (
+											<img className="avatar-img" src={rev.photoUrl} alt={`صورة ${rev.author || 'العميل'}`} loading="lazy" />
+										) : (
+											<div className="avatar" style={{ background: bg }}>{letter}</div>
+										)}
 										<div>
-											<h5>{rev.author}</h5>
-											<small>{rev.relativeTime}</small>
+											<h5>
+												{rev.authorUrl ? (
+													<a href={rev.authorUrl} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
+														{rev.author || 'عميلة من جوجل'}
+													</a>
+												) : (
+													rev.author || 'عميلة من جوجل'
+												)}
+											</h5>
+											<small>{formatReviewDate(rev)}</small>
 										</div>
 									</div>
-									<div className="stars" style={{ fontSize: 15, marginTop: 6 }}>★★★★★</div>
+									<div className="review-meta">
+										<div className="stars" style={{ fontSize: 15 }}>{renderStars(rev.rating)}</div>
+										<span className={isGoogleReviews ? 'google-chip' : 'fallback-chip'}>
+											{isGoogleReviews ? 'Google' : 'عينة محفوظة'}
+										</span>
+									</div>
 									<p>{rev.text}</p>
 								</div>
 							);
 						})}
 					</div>
 					<div className="cta-row" style={{ marginTop: 12 }}>
-						<button className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => window.open('https://g.page/r/CeoPiyI-r3niEAE', '_blank')} aria-label="عرض كل التقييمات">
+						<button
+							className="btn btn-outline"
+							style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+							onClick={() => window.open('https://www.google.com/search?hl=ar-EG&gl=eg&q=%D8%BA%D8%B1%D8%A7%D9%85+%D8%B3%D9%84%D8%B7%D8%A7%D9%86+%D8%A8%D9%8A%D9%88%D8%AA%D9%8A+%D8%B3%D9%86%D8%AA%D8%B1+%D9%88%D8%B3%D8%AA%D9%88%D8%AF%D9%8A%D9%88%D8%8C+%D8%B4%D8%A7%D8%B1%D8%B9+%D8%A7%D9%84%D8%AC%D9%8A%D8%B4%D8%8C+%D9%85%D8%AF%D9%8A%D9%86%D8%A9+%D8%AF%D8%B3%D9%88%D9%82%D8%8C+%D8%AF%D8%B3%D9%88%D9%82%D8%8C+%D9%83%D9%81%D8%B1+%D8%A7%D9%84%D8%B4%D9%8A%D8%AE%D8%8C%D8%8C+%D9%85%D8%B1%D9%83%D8%B2+%D8%AF%D8%B3%D9%88%D9%82%D8%8C+%D9%85%D8%AD%D8%A7%D9%81%D8%B8%D8%A9+%D9%83%D9%81%D8%B1+%D8%A7%D9%84%D8%B4%D9%8A%D8%AE&ludocid=16319267406156074986&lsig=AB86z5VCcixidYfBfDrLEBDseQnu&hl=ar&gl=EG#lrd=0x14f65b4cd1f4431f:0xe279af3e228b0fea,1', '_blank')}
+							aria-label="عرض كل التقييمات"
+						>
 							<span>★</span>
 							<span>عرض كل التقييمات</span>
 						</button>
@@ -707,9 +816,29 @@ function Landing() {
 					</div>
 				</section>
 
+				<section className="card map-embed-card reveal">
+					<h2 style={{ marginTop: 0, marginBottom: 8 }}>موقعنا على الخريطة</h2>
+					<p style={{ color: 'var(--muted)', margin: '0 0 12px' }}>شوفي اللوكيشن مباشرة أو افتحيه في خرائط جوجل.</p>
+					<div className="map-frame">
+						<iframe
+							title="Gharam Sultan Location"
+							src={MAP_EMBED_URL}
+							allowFullScreen
+							loading="lazy"
+							referrerPolicy="no-referrer-when-downgrade"
+						/>
+					</div>
+					<div className="cta-row" style={{ marginTop: 12 }}>
+						<button className="btn btn-outline" onClick={() => window.location.href = MAP_LINK} aria-label="افتحي الخريطة">
+							<span>🗺️</span>
+							<span style={{ marginInlineStart: 6 }}>افتحي في جوجل ماب</span>
+						</button>
+					</div>
+				</section>
+
 				<section className="footer reveal" style={{ paddingBottom: 90 }}>
 					<div>تابعينا على السوشيال</div>
-					<div style={{ color: 'var(--muted)', marginTop: 6, fontSize: 14 }}>عشان تشوفي أحدث لوكات العرايس، الكواليس، والعروض .</div>
+					<div style={{ color: 'var(--muted)', marginTop: 6, fontSize: 14 }}>تابعي غرام سلطان على السوشيال عشان تشوفي أحدث لوكات العرايس، الكواليس، والعروض الخاصة.</div>
 					<div className="social-row">
 						{socialLinks.map((s) => (
 							<a key={s.href} className="social-link" href={s.href} target="_blank" rel="noreferrer" style={{ '--hover': s.color }} aria-label={s.label}>
