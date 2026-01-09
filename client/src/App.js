@@ -147,7 +147,7 @@ function AppContent() {
           />
           <Route
             path="/employee-dashboard"
-            element={user && user.role === 'employee' ? <EmployeeDashboard user={user} /> : <Navigate to="/login" />}
+            element={user ? <EmployeeDashboard user={user} /> : <Navigate to="/login" />}
           />
           <Route path="/" element={<Navigate to={getHomePath(user)} replace />} />
             </Routes>
