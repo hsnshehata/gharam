@@ -55,6 +55,7 @@ function Navbar({ user, setUser }) {
               <Nav.Link as={Link} to="/bookings" onClick={closeMenu}>الحجوزات</Nav.Link>
               <Nav.Link as={Link} to="/instant-services" onClick={closeMenu}>الخدمات الفورية</Nav.Link>
               <Nav.Link as={Link} to="/expenses-advances" onClick={closeMenu}>المصروفات والسلف</Nav.Link>
+              <Nav.Link as={Link} to="/employee-dashboard" onClick={closeMenu}>لوحة الموظف</Nav.Link>
               <Nav.Link as={Link} to="/employee-reports" onClick={closeMenu}>تقارير الموظفين</Nav.Link>
               <Nav.Link as={Link} to="/packages-services" onClick={closeMenu}>إضافة باكدجات/خدمات</Nav.Link>
               <Nav.Link as={Link} to="/points-admin" onClick={closeMenu}>نقاط الموظفين</Nav.Link>
@@ -69,12 +70,14 @@ function Navbar({ user, setUser }) {
               <Nav.Link as={Link} to="/bookings" onClick={closeMenu}>الحجوزات</Nav.Link>
               <Nav.Link as={Link} to="/instant-services" onClick={closeMenu}>الخدمات الفورية</Nav.Link>
               <Nav.Link as={Link} to="/expenses-advances" onClick={closeMenu}>المصروفات والسلف</Nav.Link>
+              <Nav.Link as={Link} to="/employee-dashboard" onClick={closeMenu}>لوحة الموظف</Nav.Link>
               <Nav.Link as={Link} to="/employee-reports" onClick={closeMenu}>تقارير الموظفين</Nav.Link>
             </>
           )}
           {user.role === 'hallSupervisor' && (
             <>
               <Nav.Link as={Link} to="/hall-supervision" onClick={closeMenu}>اشراف الصالة</Nav.Link>
+              <Nav.Link as={Link} to="/employee-dashboard" onClick={closeMenu}>لوحة الموظف</Nav.Link>
             </>
           )}
           {user.role === 'employee' && (
