@@ -447,6 +447,16 @@ function HallSupervision() {
             {searchResult.type === 'booking' ? (
               <>
                 <p>اسم العميل: {searchResult.data.clientName}</p>
+                <p>
+                  الباكدج: {' '}
+                  {(() => {
+                    const names = [];
+                    if (searchResult.data.package?.name) names.push(searchResult.data.package.name);
+                    if (searchResult.data.hennaPackage?.name) names.push(searchResult.data.hennaPackage.name);
+                    if (searchResult.data.photographyPackage?.name) names.push(searchResult.data.photographyPackage.name);
+                    return names.length > 0 ? names.join(' + ') : 'غير محدد';
+                  })()}
+                </p>
                 <p>رقم الوصل: {searchResult.data.receiptNumber}</p>
                 <p>تاريخ المناسبة: {searchResult.data.eventDate ? new Date(searchResult.data.eventDate).toLocaleDateString() : 'غير متوفر'}</p>
                 <Table striped bordered hover size="sm" responsive>
@@ -550,11 +560,22 @@ function HallSupervision() {
           ) : (
             <Row>
               {allBookings.map((booking, idx) => (
-                <Col xs={12} key={booking._id} className="mb-3">
+                <Col xs={12} key={`${booking._id}-${idx}`} className="mb-3">
                   <Card>
                     <Card.Body>
                       <Card.Title className="d-flex justify-content-between align-items-start">
-                        <span>{idx + 1}. {booking.clientName}</span>
+                        <div>
+                          <span>{idx + 1}. {booking.clientName}</span>
+                          <div className="text-secondary small mt-1" style={{ fontSize: '0.9rem' }}>
+                            {(() => {
+                              const names = [];
+                              if (booking.package?.name) names.push(booking.package.name);
+                              if (booking.hennaPackage?.name) names.push(booking.hennaPackage.name);
+                              if (booking.photographyPackage?.name) names.push(booking.photographyPackage.name);
+                              return names.length > 0 ? names.join(' + ') : '';
+                            })()}
+                          </div>
+                        </div>
                         <span className="text-muted">رقم الوصل: {booking.receiptNumber}</span>
                       </Card.Title>
                       <Card.Text className="mb-2">
