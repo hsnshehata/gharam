@@ -530,6 +530,15 @@ function Dashboard({ user }) {
     setShowDetailsModal(true);
   };
 
+  // عرض التغييرات بأمان حتى لو الحقل changes ناقص من الـ backend
+  const renderUpdateChanges = (changes) => {
+    const normalized = changes || {};
+    if (normalized.created) return 'إنشاء الحجز';
+    const keys = Object.keys(normalized);
+    if (!keys.length) return 'غير معروف';
+    return keys.map((key) => `${key}: ${normalized[key]}`).join(', ');
+  };
+
   return (
     <Container className="mt-5">
       <div className="dashboard-hero card p-4 mb-4">
@@ -1393,7 +1402,7 @@ function Dashboard({ user }) {
                   </Table>
                 </>
               )}
-              {currentDetails.updates.length > 0 && (
+              {currentDetails.updates?.length > 0 && (
                 <>
                   <h5 className="mt-3">سجل التعديلات</h5>
                   <Table striped bordered hover size="sm">
@@ -1408,13 +1417,7 @@ function Dashboard({ user }) {
                       {currentDetails.updates.map((update, index) => (
                         <tr key={index}>
                           <td>{new Date(update.date).toLocaleDateString()}</td>
-                          <td>
-                            {update.changes.created
-                              ? 'إنشاء الحجز'
-                              : Object.keys(update.changes).length > 0
-                              ? Object.entries(update.changes).map(([key, value]) => `${key}: ${value}`).join(', ')
-                              : 'غير معروف'}
-                          </td>
+                          <td>{renderUpdateChanges(update.changes)}</td>
                           <td>{update.employeeId?.username || 'غير معروف'}</td>
                         </tr>
                       ))}
