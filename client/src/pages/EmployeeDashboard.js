@@ -17,14 +17,9 @@ const COIN_COLORS = {
 };
 
 function EmployeeDashboard({ user }) {
-  const [bookings, setBookings] = useState({
-    makeupBookings: [],
-    hairStraighteningBookings: [],
-    photographyBookings: []
-  });
-  const [instantServices, setInstantServices] = useState([]);
   const [date] = useState(new Date().toISOString().split('T')[0]);
   const [receiptNumber, setReceiptNumber] = useState('');
+  const [executedServices, setExecutedServices] = useState([]);
   const [showPointsModal, setShowPointsModal] = useState(false);
   const [pointsData, setPointsData] = useState(null);
   const [showQrModal, setShowQrModal] = useState(false);
@@ -64,17 +59,11 @@ function EmployeeDashboard({ user }) {
   const fetchAllData = useCallback(async () => {
     setLoadingData(true);
     try {
-      const [bookingsRes, instantRes] = await Promise.all([
-        axios.get(`/api/today-work?date=${date}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        }),
-        axios.get(`/api/instant-services?date=${date}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        })
-      ]);
+      const executedRes = await axios.get(`/api/users/executed-services?date=${date}`, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
       await Promise.all([fetchPointsSummary(), fetchPendingGifts(), fetchTodayGifts()]);
-      setBookings(bookingsRes.data || { makeupBookings: [], hairStraighteningBookings: [], photographyBookings: [] });
-      setInstantServices(instantRes.data.instantServices || []);
+      setExecutedServices(executedRes.data?.services || []);
     } catch (err) {
       console.error('Fetch error:', err.response?.data || err.message);
       showToast('خطأ في جلب البيانات', 'danger');
@@ -102,13 +91,6 @@ function EmployeeDashboard({ user }) {
 
   const getCoinColor = useCallback((level) => COIN_COLORS[level] || COIN_COLORS.default, []);
 
-  const isSameEmployee = useCallback((executedBy) => {
-    const employeeId = user?._id || user?.id;
-    const executedId = typeof executedBy === 'object' ? (executedBy?._id || executedBy?.id) : executedBy;
-    if (!employeeId || !executedId) return false;
-    return executedId.toString() === employeeId.toString();
-  }, [user]);
-
   useEffect(() => {
     fetchAllData();
   }, [fetchAllData]);
@@ -121,28 +103,31 @@ function EmployeeDashboard({ user }) {
     }
     try {
       console.log('Searching for receipt:', normalized);
-      const [bookingRes, instantRes] = await Promise.all([
-        axios.get(`/api/bookings?receiptNumber=${normalized}`, {
+      const [bookingRes, instantRes] = await Promise.allSettled([
+        axios.get(`/api/bookings/receipt/${normalized}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         }),
-        axios.get(`/api/instant-services?receiptNumber=${normalized}`, {
+        axios.get(`/api/instant-services/receipt/${normalized}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         })
       ]);
 
-      if (bookingRes.data.bookings.length > 0) {
-        const booking = bookingRes.data.bookings[0];
-        console.log('Found booking:', booking);
+      const booking = bookingRes.status === 'fulfilled' ? bookingRes.value.data.booking : null;
+      const instantService = instantRes.status === 'fulfilled' ? instantRes.value.data.instantService : null;
+
+      if (booking) {
         setPointsData({ type: 'booking', data: booking });
         setShowPointsModal(true);
-      } else if (instantRes.data.instantServices.length > 0) {
-        const instantService = instantRes.data.instantServices[0];
-        console.log('Found instant service:', instantService);
+        return;
+      }
+
+      if (instantService) {
         setPointsData({ type: 'instant', data: instantService });
         setShowPointsModal(true);
-      } else {
-        showToast('لم يتم العثور على حجز أو خدمة فورية بهذا الرقم', 'warning');
+        return;
       }
+
+      showToast('لم يتم العثور على حجز أو خدمة فورية بهذا الرقم', 'warning');
     } catch (err) {
       console.error('Receipt search error:', err.response?.data || err.message);
       showToast(err.response?.data?.msg || 'خطأ في البحث عن الوصل', 'danger');
@@ -259,23 +244,10 @@ function EmployeeDashboard({ user }) {
       console.log('Execute service response:', res.data);
       showToast(`تم تنفيذ الخدمة بنجاح وإضافة ${res.data.points} نقطة`, 'success');
 
-      if (type === 'booking') {
-        setPointsData(prev => ({
-          ...prev,
-          data: res.data.booking
-        }));
-        setBookings(prev => ({
-          makeupBookings: prev.makeupBookings.map(b => (b._id === recordId ? res.data.booking : b)),
-          hairStraighteningBookings: prev.hairStraighteningBookings.map(b => (b._id === recordId ? res.data.booking : b)),
-          photographyBookings: prev.photographyBookings.map(b => (b._id === recordId ? res.data.booking : b))
-        }));
-      } else {
-        setPointsData(prev => ({
-          ...prev,
-          data: res.data.instantService
-        }));
-        setInstantServices(prev => prev.map(s => (s._id === recordId ? res.data.instantService : s)));
-      }
+      setPointsData(prev => ({
+        ...prev,
+        data: type === 'booking' ? res.data.booking : res.data.instantService
+      }));
 
       await fetchAllData();
     } catch (err) {
@@ -308,77 +280,7 @@ function EmployeeDashboard({ user }) {
   const canConvert = convertiblePoints >= 1000;
   const remainingSalary = pointsSummary?.remainingSalary || 0;
 
-  const executedServices = useMemo(() => {
-    const employeeId = user?._id || user?.id;
-    if (!employeeId) return [];
-
-    const collected = [];
-
-    const pushService = (payload) => collected.push({
-      receiptNumber: payload.receiptNumber || 'غير متاح',
-      serviceName: payload.serviceName || 'خدمة',
-      clientName: payload.clientName || '—',
-      points: payload.points || 0,
-      source: payload.source || 'booking',
-      executedAt: payload.executedAt || null
-    });
-
-    const iterateBooking = (booking) => {
-      const receiptNumber = booking.receiptNumber;
-      const clientName = booking.clientName || '—';
-
-      (booking.packageServices || []).forEach((srv) => {
-        if (srv.executed && isSameEmployee(srv.executedBy)) {
-          const points = Math.round((srv.price || 0) * 0.15);
-          pushService({
-            receiptNumber,
-            serviceName: srv.name || 'خدمة باكدج',
-            clientName,
-            points,
-            source: 'booking'
-          });
-        }
-      });
-
-      if (booking.hairStraightening && booking.hairStraighteningExecuted && isSameEmployee(booking.hairStraighteningExecutedBy)) {
-        const points = Math.round((booking.hairStraighteningPrice || 0) * 0.15);
-        pushService({
-          receiptNumber,
-          serviceName: 'فرد الشعر',
-          clientName,
-          points,
-          source: 'booking'
-        });
-      }
-    };
-
-    (bookings.makeupBookings || []).forEach(iterateBooking);
-    (bookings.hairStraighteningBookings || []).forEach(iterateBooking);
-    (bookings.photographyBookings || []).forEach(iterateBooking);
-
-    (instantServices || []).forEach((svc) => {
-      const receiptNumber = svc.receiptNumber;
-      (svc.services || []).forEach((srv) => {
-        if (srv.executed && isSameEmployee(srv.executedBy)) {
-          const points = Math.round((srv.price || 0) * 0.15);
-          pushService({
-            receiptNumber,
-            serviceName: srv.name || 'خدمة فورية',
-            clientName: '—',
-            points,
-            source: 'instant',
-            executedAt: svc.createdAt || null
-          });
-        }
-      });
-    });
-
-    return collected.sort((a, b) => {
-      const timeA = a.executedAt ? new Date(a.executedAt).getTime() : 0;
-      const timeB = b.executedAt ? new Date(b.executedAt).getTime() : 0;
-      return timeB - timeA;
-    });
-  }, [bookings, instantServices, isSameEmployee, user]);
+  const executedServicesList = useMemo(() => executedServices, [executedServices]);
 
   return (
     <Container className="mt-5">
@@ -531,11 +433,11 @@ function EmployeeDashboard({ user }) {
           {loadingData ? 'جاري التحديث...' : 'تحديث البيانات'}
         </Button>
       </div>
-      {executedServices.length === 0 && (
+      {executedServicesList.length === 0 && (
         <Alert variant="info">لسه ما نفذت خدمات النهارده</Alert>
       )}
       <Row>
-        {executedServices.map((srv, idx) => (
+        {executedServicesList.map((srv, idx) => (
           <Col md={4} key={`${srv.receiptNumber}-${idx}`} className="mb-3">
             <Card className="service-card">
               <Card.Body>
@@ -548,9 +450,7 @@ function EmployeeDashboard({ user }) {
                 {srv.source !== 'instant' && (
                   <Card.Text className="text-muted small">العروسة: {srv.clientName}</Card.Text>
                 )}
-                {srv.source === 'instant' && (
-                  <Card.Text className="text-muted small">وقت التنفيذ: {formatTime(srv.executedAt)}</Card.Text>
-                )}
+                <Card.Text className="text-muted small">وقت التنفيذ: {formatTime(srv.executedAt)}</Card.Text>
               </Card.Body>
             </Card>
           </Col>
