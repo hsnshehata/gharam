@@ -42,12 +42,25 @@ const bookingSchema = new mongoose.Schema({
   receiptNumber: { type: String, unique: true },
   barcode: { type: String },
   createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+  _deleted: { type: Boolean, default: false },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   updates: [{
     date: { type: Date, default: Date.now },
     changes: { type: Object },
     employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
   }]
+});
+
+// تحديث ختم التعديل تلقائياً لأي عملية حفظ أو تعديل
+bookingSchema.pre('save', function updateTimestamp(next) {
+  this.updatedAt = new Date();
+  next();
+});
+
+bookingSchema.pre('findOneAndUpdate', function setUpdateTimestamp(next) {
+  this.set({ updatedAt: new Date() });
+  next();
 });
 
 module.exports = mongoose.model('Booking', bookingSchema);

@@ -1,0 +1,38 @@
+bucket_definitions:
+  employee_data:
+    parameters:
+      - user_id: token.user_id
+      - role: token.role
+    data:
+      - SELECT * FROM bookings WHERE createdBy = token.user_id
+      - SELECT * FROM bookings WHERE packageServices.executedBy = token.user_id
+      - SELECT * FROM bookings WHERE hairStraighteningExecutedBy = token.user_id
+      - SELECT * FROM bookings WHERE hairDyeExecutedBy = token.user_id
+      - SELECT * FROM instantservices WHERE employeeId = token.user_id
+      - SELECT * FROM instantservices WHERE services.executedBy = token.user_id
+      - SELECT * FROM expenses WHERE userId = token.user_id OR createdBy = token.user_id
+      - SELECT * FROM advances WHERE userId = token.user_id OR createdBy = token.user_id
+      - SELECT * FROM deductions WHERE userId = token.user_id OR createdBy = token.user_id
+      - SELECT * FROM users WHERE _id = token.user_id
+      - SELECT * FROM packages
+      - SELECT * FROM services
+  admin_data:
+    parameters:
+      - user_id: token.user_id
+      - role: token.role
+    data:
+      - SELECT * FROM bookings
+      - SELECT * FROM instantservices
+      - SELECT * FROM expenses
+      - SELECT * FROM advances
+      - SELECT * FROM deductions
+      - SELECT * FROM users
+      - SELECT * FROM packages
+      - SELECT * FROM services
+      - SELECT * FROM systemsettings
+
+bucket_assignments:
+  - bucket: admin_data
+    filter: token.role IN ('admin','supervisor','hallSupervisor')
+  - bucket: employee_data
+    filter: token.role = 'employee'
