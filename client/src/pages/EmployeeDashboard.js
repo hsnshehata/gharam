@@ -21,7 +21,12 @@ const COIN_COLORS = {
 };
 
 const newId = (prefix = 'loc') => (crypto.randomUUID ? crypto.randomUUID() : `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`);
-const normalizeId = (entity) => (entity?._id || entity?.id || '').toString();
+const normalizeId = (entity) => {
+  if (entity === null || entity === undefined) return '';
+  if (typeof entity === 'string' || typeof entity === 'number') return entity.toString();
+  if (typeof entity === 'object') return (entity._id || entity.id || '').toString();
+  return '';
+};
 
 const isInRange = (dateValue, start, end) => {
   if (!dateValue) return false;
