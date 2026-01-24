@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Container } from 'react-bootstrap';
 import axios from 'axios';
-import { useRxdb } from '../db/RxdbProvider';
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
 
-function Login({ setUser, setToken }) {
+function Login({ setUser }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [remember, setRemember] = useState(false);
   const navigate = useNavigate();
-  const { status } = useRxdb() || {};
 
   useEffect(() => {
     const saved = localStorage.getItem('savedUsername');
@@ -33,9 +31,6 @@ function Login({ setUser, setToken }) {
       const res = await axios.post('/api/auth/login', { username, password });
       console.log('Login response:', res.data);
       localStorage.setItem('token', res.data.token);
-      localStorage.setItem('cachedUser', JSON.stringify(res.data.user));
-      if (setToken) setToken(res.data.token);
-      // تحديث أي مستمعي RxDB ببساطة عبر localStorage، App سيقرأ التوكن ويبدأ المزامنة
       if (remember) {
         localStorage.setItem('savedUsername', username);
       } else {
@@ -89,11 +84,6 @@ function Login({ setUser, setToken }) {
             />
           </div>
           {message && <div className="alert alert-danger mt-2">{message}</div>}
-          {status && (
-            <div className="mt-2 text-muted" style={{ fontSize: '0.9rem' }}>
-              الحالة: {status.syncing ? '🟡 جاري المزامنة' : status.online ? '🟢 متصل' : '🔴 غير متصل'}
-            </div>
-          )}
           <Button variant="primary" type="submit" className="mt-3">تسجيل الدخول</Button>
         </Form>
       </div>

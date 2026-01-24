@@ -38,20 +38,7 @@ const userSchema = new mongoose.Schema({
     status: { type: String, enum: ['pending', 'applied'], default: 'applied' },
     openedAt: { type: Date, default: null }
   }],
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
-  _deleted: { type: Boolean, default: false }
-});
-
-// تحديث ختم التعديل تلقائياً لأي عملية حفظ أو تعديل
-userSchema.pre('save', function updateTimestamp(next) {
-  this.updatedAt = new Date();
-  next();
-});
-
-userSchema.pre('findOneAndUpdate', function setUpdateTimestamp(next) {
-  this.set({ updatedAt: new Date() });
-  next();
+  createdAt: { type: Date, default: Date.now }
 });
 
 module.exports = mongoose.model('User', userSchema);

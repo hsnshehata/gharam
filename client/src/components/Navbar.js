@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Navbar as BootstrapNavbar, Nav } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 
-function Navbar({ user, setUser, setToken }) {
+function Navbar({ user, setUser }) {
   const [dark, setDark] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -96,13 +96,7 @@ function Navbar({ user, setUser, setToken }) {
             {dark ? '☀️ فاتح' : '🌙 داكن'}
           </button>
 
-          <Nav.Link onClick={() => {
-            closeMenu();
-            localStorage.removeItem('token');
-            if (setToken) setToken(null);
-            if (setUser) setUser(null);
-            window.location.href = '/login';
-          }}>
+          <Nav.Link onClick={() => { closeMenu(); localStorage.removeItem('token'); if (setUser) setUser(null); window.location.href = '/login'; }}>
             تسجيل الخروج
           </Nav.Link>
         </Nav>

@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Container, Row, Col, Card, Button, Form, Modal, Pagination, Table } from 'react-bootstrap';
+import axios from 'axios';
+import { getServices } from '../utils/apiCache';
 import Select from 'react-select';
 import ReceiptPrint, { printReceiptElement } from './ReceiptPrint';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPrint, faEdit, faEye, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { useToast } from '../components/ToastProvider';
-import { useRxdb } from '../db/RxdbProvider';
-
-const PAGE_SIZE = 9;
 
 function InstantServices({ user }) {
   const [formData, setFormData] = useState({ employeeId: '', services: [] });
@@ -34,7 +33,6 @@ function InstantServices({ user }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchNameReceipt, setSearchNameReceipt] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
-  const { collections, queueOperation } = useRxdb() || {};
 
   // Custom styles للـ react-select — neutralized to use CSS variables (black/white theme)
   const customStyles = {
@@ -149,44 +147,28 @@ function InstantServices({ user }) {
     })
   };
 
-  // تحميل البيانات محلياً من RxDB مع فلترة وباجينج
   useEffect(() => {
-    if (!collections?.services || !collections?.users || !collections?.instantServices) return;
-
-    const svcSub = collections.services
-      .find({ selector: { _deleted: { $ne: true }, type: 'instant' } })
-      .$.subscribe((docs) => setServices(docs.map((d) => d.toJSON())));
-
-    const usrSub = collections.users
-      .find({ selector: { _deleted: { $ne: true } } })
-      .$.subscribe((docs) => setUsers(docs.map((d) => d.toJSON())));
-
-    const instSub = collections.instantServices
-      .find({ selector: { _deleted: { $ne: true } } })
-      .$.subscribe((docs) => {
-        const all = docs.map((d) => d.toJSON());
-        const filtered = all.filter((item) => {
-          const q = searchNameReceipt.trim();
-          if (!q) return true;
-          const hasText = (item.receiptNumber || '').includes(q) || (item.services || []).some((s) => (s.name || '').includes(q));
-          return hasText;
-        });
-        const sorted = filtered.sort((a, b) => new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0));
-        const pages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-        const current = Math.min(currentPage, pages);
-        const start = (current - 1) * PAGE_SIZE;
-        const pageItems = sorted.slice(start, start + PAGE_SIZE);
-        setTotalPages(pages);
-        setCurrentPage(current);
-        setInstantServices(pageItems);
-      });
-
-    return () => {
-      svcSub?.unsubscribe();
-      usrSub?.unsubscribe();
-      instSub?.unsubscribe();
+    const fetchData = async () => {
+      try {
+        const [servicesData, usersRes, instantRes] = await Promise.all([
+          getServices(),
+          axios.get('/api/users', { headers: { 'x-auth-token': localStorage.getItem('token') } }),
+          axios.get(`/api/instant-services?page=${currentPage}&search=${searchNameReceipt}`, { headers: { 'x-auth-token': localStorage.getItem('token') } })
+        ]);
+        console.log('Services response:', servicesData);
+        console.log('Users response:', usersRes.data);
+        console.log('Instant services response:', instantRes.data);
+        setServices(servicesData);
+        setUsers(usersRes.data);
+        setInstantServices(instantRes.data.instantServices);
+        setTotalPages(instantRes.data.pages);
+      } catch (err) {
+        console.error('Fetch error:', err.response?.data || err.message);
+        setMessage('خطأ في جلب البيانات');
+      }
     };
-  }, [collections, currentPage, searchNameReceipt]);
+    fetchData();
+  }, [currentPage, searchNameReceipt, setMessage]);
 
   useEffect(() => {
     const calculateTotal = () => {
@@ -200,33 +182,6 @@ function InstantServices({ user }) {
     calculateTotal();
   }, [formData.services, services]);
 
-  const usersMap = useMemo(() => {
-    const map = new Map();
-    users.forEach((u) => {
-      if (u?._id) map.set(u._id.toString(), u);
-    });
-    return map;
-  }, [users]);
-
-  const getUsername = useCallback((value) => {
-    if (!value) return 'غير معروف';
-    const id = (value?._id || value || '').toString();
-    const found = id ? usersMap.get(id) : null;
-    if (found?.username) return found.username;
-    if (typeof value === 'object' && value.username) return value.username;
-    return 'غير معروف';
-  }, [usersMap]);
-
-  const newId = () => (crypto.randomUUID ? crypto.randomUUID() : `inst-${Date.now()}-${Math.random().toString(16).slice(2)}`);
-
-  const upsertLocal = async (doc, op = 'update') => {
-    if (!collections?.instantServices) throw new Error('قاعدة البيانات غير جاهزة');
-    const withTs = { ...doc, updatedAt: new Date().toISOString() };
-    await collections.instantServices.upsert(withTs);
-    if (queueOperation) await queueOperation('instantServices', op, withTs);
-    return withTs;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.services.length) {
@@ -234,58 +189,45 @@ function InstantServices({ user }) {
       return;
     }
     if (submitLoading) return;
-
-    const selectedServices = formData.services.map((s) => s.value);
-    const resolvedServices = selectedServices.map((id) => {
-      const srv = services.find((s) => s._id === id);
-      return srv
-        ? { _id: srv._id, name: srv.name, price: srv.price, executed: false, executedBy: null, executedAt: null }
-        : { _id: id, name: 'خدمة', price: 0, executed: false };
-    });
-    const totalPrice = resolvedServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
-
+    const submitData = {
+      employeeId: formData.employeeId || null,
+      services: formData.services.map(s => s.value)
+    };
     setSubmitLoading(true);
     setShowCreateModal(false);
     try {
       if (editItem) {
-        const updated = {
-          ...editItem,
-          employeeId: formData.employeeId || null,
-          services: resolvedServices,
-          total: totalPrice
-        };
-        const saved = await upsertLocal(updated, 'update');
-        setCurrentReceipt({ ...saved, employeeName: getUsername(saved.employeeId) });
-        setMessage('تم تعديل الخدمة الفورية محلياً وسيتم رفعها عند الاتصال');
+        const res = await axios.put(`/api/instant-services/${editItem._id}`, submitData, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        });
+        setInstantServices(instantServices.map(s => (s._id === editItem._id ? res.data.instantService : s)));
+        setMessage('تم تعديل الخدمة الفورية بنجاح');
+        setCurrentReceipt(res.data.instantService);
+        setShowReceiptModal(true);
       } else {
-        const newDoc = {
-          _id: newId(),
-          employeeId: formData.employeeId || null,
-          services: resolvedServices,
-          total: totalPrice,
-          createdAt: new Date().toISOString(),
-          receiptNumber: '',
-          barcode: ''
-        };
-        const saved = await upsertLocal(newDoc, 'insert');
-        setCurrentReceipt({ ...saved, employeeName: getUsername(saved.employeeId) });
-        setMessage('تم إضافة الخدمة الفورية محلياً وسيتم رفعها عند الاتصال');
+        const res = await axios.post('/api/instant-services', submitData, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        });
+        setInstantServices([res.data.instantService, ...instantServices]);
+        setMessage('تم إضافة الخدمة الفورية بنجاح');
+        setCurrentReceipt(res.data.instantService);
+        setShowReceiptModal(true);
       }
-      setShowReceiptModal(true);
       setFormData({ employeeId: '', services: [] });
       setEditItem(null);
     } catch (err) {
-      console.error('Submit error:', err);
-      setMessage('خطأ في إضافة/تعديل الخدمة الفورية');
+      console.error('Submit error:', err.response?.data || err.message);
+      setMessage(err.response?.data?.msg || 'خطأ في إضافة/تعديل الخدمة الفورية');
     } finally {
       setSubmitLoading(false);
     }
   };
 
   const handleEdit = (service) => {
+    console.log('Editing service:', service);
     setEditItem(service);
     setFormData({
-      employeeId: service.employeeId?._id || service.employeeId || '',
+      employeeId: service.employeeId?._id || '',
       services: service.services.map((srv, index) => ({
         value: srv._id ? srv._id.toString() : `service-${index}`,
         label: srv.name || 'غير معروف'
@@ -296,21 +238,23 @@ function InstantServices({ user }) {
 
   const handleDelete = async () => {
     try {
-      if (!deleteItem) return;
-      await upsertLocal({ ...deleteItem, _deleted: true }, 'delete');
-      setMessage('تم حذف الخدمة الفورية محلياً وسيتم رفعها عند الاتصال');
+      await axios.delete(`/api/instant-services/${deleteItem._id}`, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      setInstantServices(instantServices.filter(s => s._id !== deleteItem._id));
+      setMessage('تم حذف الخدمة الفورية بنجاح');
       setShowDeleteModal(false);
       setDeleteItem(null);
     } catch (err) {
-      console.error('Delete error:', err);
-      setMessage('خطأ في الحذف');
+      console.error('Delete error:', err.response?.data || err.message);
+      setMessage(err.response?.data?.msg || 'خطأ في الحذف');
       setShowDeleteModal(false);
     }
   };
 
   const handlePrint = (service) => {
     console.log('Printing service:', service);
-    setCurrentReceipt({ ...service, employeeName: getUsername(service.employeeId) });
+    setCurrentReceipt(service);
     setShowReceiptModal(true);
   };
 
@@ -333,8 +277,19 @@ function InstantServices({ user }) {
     setShowDetailsModal(true);
   };
 
-  const handleSearch = () => {
-    setCurrentPage(1);
+  const handleSearch = async () => {
+    try {
+      const res = await axios.get(`/api/instant-services?search=${searchNameReceipt}`, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      console.log('Search response:', res.data);
+      setInstantServices(res.data.instantServices);
+      setCurrentPage(1);
+      setTotalPages(res.data.pages);
+    } catch (err) {
+      console.error('Search error:', err.response?.data || err.message);
+      setMessage(err.response?.data?.msg || 'خطأ في البحث');
+    }
   };
 
   return (
@@ -429,7 +384,7 @@ function InstantServices({ user }) {
       <Row>
         {instantServices.map(service => {
           const executedService = service.services.find(srv => srv.executed && srv.executedBy);
-          const displayName = executedService ? getUsername(executedService.executedBy) : 'غير محدد';
+          const displayName = executedService ? executedService.executedBy.username : 'غير محدد';
           return (
             <Col md={4} key={service._id} className="mb-3">
               <Card>
@@ -505,7 +460,7 @@ function InstantServices({ user }) {
             <div>
               <p>رقم الوصل: {currentDetails.receiptNumber}</p>
               <p>تاريخ الخدمة: {new Date(currentDetails.createdAt).toLocaleDateString()}</p>
-              <p>الموظف: {currentDetails.services.find(srv => srv.executed && srv.executedBy) ? getUsername(currentDetails.services.find(srv => srv.executed && srv.executedBy).executedBy) : 'غير محدد'}</p>
+              <p>الموظف: {currentDetails.services.find(srv => srv.executed && srv.executedBy) ? currentDetails.services.find(srv => srv.executed && srv.executedBy).executedBy.username : 'غير محدد'}</p>
               <h5>الخدمات:</h5>
               <Table striped bordered hover>
                 <thead>
@@ -522,7 +477,7 @@ function InstantServices({ user }) {
                       <td>{srv.price ? `${srv.price} جنيه` : 'غير معروف'}</td>
                       <td>
                         {srv.executed ? (
-                          `نفذت بواسطة ${getUsername(srv.executedBy)}`
+                          `نفذت بواسطة ${srv.executedBy?.username || 'غير معروف'}`
                         ) : (
                           'لم يتم التنفيذ'
                         )}

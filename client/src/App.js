@@ -19,8 +19,6 @@ import MassageChair from './pages/MassageChair';
 import PointsAdmin from './pages/PointsAdmin';
 import Navbar from './components/Navbar';
 import { ToastProvider } from './components/ToastProvider';
-import { RxdbProvider } from './db/RxdbProvider';
-import SyncStatusFloating from './components/SyncStatusFloating';
 import './App.css';
 
 const API_BASE = (process.env.REACT_APP_API_BASE || '').replace(/\/$/, '');
@@ -37,68 +35,34 @@ const isStandaloneApp = () => {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 };
 
-const readCachedUser = () => {
-  try {
-    const raw = localStorage.getItem('cachedUser');
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch (err) {
-    console.error('Failed to read cached user', err);
-    return null;
-  }
-};
-
 function AppContent() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [token, setToken] = useState(() => localStorage.getItem('token'));
   const navigate = useNavigate();
   const location = useLocation();
 
   React.useEffect(() => {
     const loadUser = async () => {
-      const existingToken = localStorage.getItem('token');
-      if (!existingToken) {
-        setAuthLoading(false);
-        return;
-      }
-      const cachedUser = readCachedUser();
-
-      // في وضع أوفلاين اعتمد على المستخدم المخزن
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-        if (cachedUser) {
-          setUser(cachedUser);
-          setToken(existingToken);
-        }
+      const token = localStorage.getItem('token');
+      if (!token) {
         setAuthLoading(false);
         return;
       }
       try {
         const res = await fetch(`${API_BASE}/api/auth/me`, {
-          headers: { 'x-auth-token': existingToken }
+          headers: { 'x-auth-token': token }
         });
         if (!res.ok) {
           // token invalid or expired
           localStorage.removeItem('token');
-          localStorage.removeItem('cachedUser');
-          setToken(null);
           setAuthLoading(false);
           return;
         }
         const data = await res.json();
         setUser(data.user);
-        setToken(existingToken);
-        localStorage.setItem('cachedUser', JSON.stringify(data.user));
       } catch (err) {
         console.error('Failed to load user:', err);
-        // لو المشكلة من الشبكة، استخدم الكاش
-        if (cachedUser) {
-          setUser(cachedUser);
-          setToken(existingToken);
-        } else {
-          localStorage.removeItem('token');
-          setToken(null);
-        }
+        localStorage.removeItem('token');
       } finally {
         setAuthLoading(false);
       }
@@ -120,7 +84,6 @@ function AppContent() {
   }, [authLoading, user, location.pathname, navigate]);
 
   return (
-    <RxdbProvider token={token}>
       <ToastProvider>
       <div className="App">
         {authLoading ? (
@@ -132,9 +95,9 @@ function AppContent() {
           </div>
         ) : (
           <>
-            {user && <Navbar user={user} setUser={setUser} setToken={setToken} />}
+            {user && <Navbar user={user} setUser={setUser} />}
             <Routes>
-          <Route path="/login" element={<Login setUser={setUser} setToken={setToken} />} />
+          <Route path="/login" element={<Login setUser={setUser} />} />
           <Route path="/landing" element={<Landing />} />
           <Route path="/prices" element={<PriceList />} />
           <Route path="/massage-chair" element={<MassageChair />} />
@@ -144,15 +107,15 @@ function AppContent() {
           />
           <Route
             path="/bookings"
-            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <Bookings user={user} /> : <Navigate to="/login" />}
+            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <Bookings /> : <Navigate to="/login" />}
           />
           <Route
             path="/instant-services"
-            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <InstantServices user={user} /> : <Navigate to="/login" />}
+            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <InstantServices /> : <Navigate to="/login" />}
           />
           <Route
             path="/expenses-advances"
-            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <ExpensesAdvances user={user} /> : <Navigate to="/login" />}
+            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <ExpensesAdvances /> : <Navigate to="/login" />}
           />
           <Route
             path="/packages-services"
@@ -188,12 +151,10 @@ function AppContent() {
           />
           <Route path="/" element={<Navigate to={getHomePath(user)} replace />} />
             </Routes>
-            {user && <SyncStatusFloating />}
           </>
         )}
       </div>
       </ToastProvider>
-    </RxdbProvider>
   );
 }
 

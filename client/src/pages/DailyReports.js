@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Card, Alert, Form, Button, Table, Spinner, Badge } from 'react-bootstrap';
-import { useRxdb } from '../db/RxdbProvider';
+import axios from 'axios';
 
 const currency = (v) => `${Number(v || 0).toLocaleString('ar-EG')} ج`;
 
@@ -92,36 +92,11 @@ const typeLabels = {
   advance: 'سلفة'
 };
 
-const msInDay = 1000 * 60 * 60 * 24;
-
-const flattenPoints = (points) => {
-  if (!Array.isArray(points)) return [];
-  return points.flatMap((p) => (Array.isArray(p) ? p : [p])).filter(Boolean);
-};
-
-const between = (dateLike, start, end) => {
-  const d = new Date(dateLike);
-  if (Number.isNaN(d.getTime())) return false;
-  if (start && d < start) return false;
-  if (end && d > end) return false;
-  return true;
-};
-
 function Reports() {
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
   const monthStr = todayStr.slice(0, 7);
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-
-  const { collections } = useRxdb() || {};
-
-  const [bookings, setBookings] = useState([]);
-  const [instantServices, setInstantServices] = useState([]);
-  const [expenses, setExpenses] = useState([]);
-  const [advances, setAdvances] = useState([]);
-  const [packages, setPackages] = useState([]);
-  const [services, setServices] = useState([]);
-  const [users, setUsers] = useState([]);
 
   const [activeTab, setActiveTab] = useState('daily');
   const [date, setDate] = useState(todayStr);
@@ -134,349 +109,66 @@ function Reports() {
   const [loading, setLoading] = useState({ daily: false, monthly: false, range: false });
   const [showAllMonthlyDays, setShowAllMonthlyDays] = useState(false);
 
-  const usersMap = useMemo(() => {
-    const map = new Map();
-    users.forEach((u) => {
-      const key = (u._id && u._id.toString()) || u.id || u.userId || u.username;
-      if (key) map.set(key, u);
-    });
-    return map;
-  }, [users]);
-
-  const packagesMap = useMemo(() => {
-    const map = new Map();
-    packages.forEach((p) => {
-      const key = (p._id && p._id.toString()) || p.id;
-      if (key) map.set(key, p);
-    });
-    return map;
-  }, [packages]);
-
-  const servicesMap = useMemo(() => {
-    const map = new Map();
-    services.forEach((s) => {
-      const key = (s._id && s._id.toString()) || s.id;
-      if (key) map.set(key, s);
-    });
-    return map;
-  }, [services]);
-
-  const buildReport = useMemo(() => {
-    return ({ startDate, endDate, includeOperations = false, includeDailyBreakdown = false }) => {
-      if (!startDate || !endDate) return { summary: {}, operations: [], analytics: {} };
-
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-        return { summary: {}, operations: [], analytics: {} };
-      }
-
-      const dailyMap = new Map();
-      const addToDay = (date, amount) => {
-        if (!includeDailyBreakdown || !date) return;
-        const d = new Date(date);
-        if (Number.isNaN(d.getTime())) return;
-        d.setHours(0, 0, 0, 0);
-        const iso = d.toISOString().slice(0, 10);
-        dailyMap.set(iso, (dailyMap.get(iso) || 0) + (amount || 0));
-      };
-
-      const bookingsInRange = bookings.filter((b) => between(b.createdAt, start, end));
-      const bookingsWithInstallments = bookings.filter((b) => Array.isArray(b.installments) && b.installments.some((inst) => between(inst.date, start, end)));
-
-      const totalDepositFromBookings = bookingsInRange.reduce((sum, booking) => {
-        const installmentsSum = (booking.installments || []).reduce((s, inst) => s + (inst.amount || 0), 0);
-        const initialDeposit = (booking.deposit || 0) - installmentsSum;
-        addToDay(booking.createdAt, initialDeposit);
-        return sum + initialDeposit;
-      }, 0);
-
-      const totalInstallments = bookingsWithInstallments.reduce((sum, booking) => {
-        const instSum = (booking.installments || [])
-          .filter((inst) => between(inst.date, start, end))
-          .reduce((s, inst) => {
-            addToDay(inst.date, inst.amount || 0);
-            return s + (inst.amount || 0);
-          }, 0);
-        return sum + instSum;
-      }, 0);
-
-      const totalDeposit = totalDepositFromBookings + totalInstallments;
-
-      const instantInRange = instantServices.filter((i) => between(i.createdAt, start, end));
-      const totalInstantServices = instantInRange.reduce((sum, service) => {
-        addToDay(service.createdAt, service.total || 0);
-        return sum + (service.total || 0);
-      }, 0);
-
-      const expensesInRange = expenses.filter((e) => between(e.createdAt, start, end));
-      const totalExpenses = expensesInRange.reduce((sum, expense) => sum + (expense.amount || 0), 0);
-
-      const advancesInRange = advances.filter((a) => between(a.createdAt, start, end));
-      const totalAdvances = advancesInRange.reduce((sum, advance) => sum + (advance.amount || 0), 0);
-
-      const net = totalDeposit + totalInstantServices - totalExpenses - totalAdvances;
-
-      const packageMix = { makeup: 0, photography: 0, unknown: 0 };
-      const topPackagesMap = new Map();
-
-      bookingsInRange.forEach((booking) => {
-        const installmentsSum = (booking.installments || []).reduce((s, inst) => s + (inst.amount || 0), 0);
-        const initialDeposit = (booking.deposit || 0) - installmentsSum;
-        const pkgId = (booking.package && booking.package._id) || booking.package;
-        const pkg = pkgId ? packagesMap.get(pkgId) : null;
-        const pkgType = pkg?.type || 'unknown';
-        const pkgName = pkg?.name || 'باكدج غير محدد';
-        packageMix[pkgType] = (packageMix[pkgType] || 0) + initialDeposit;
-        const current = topPackagesMap.get(pkgName) || { name: pkgName, count: 0, amount: 0 };
-        topPackagesMap.set(pkgName, { name: pkgName, count: current.count + 1, amount: current.amount + initialDeposit });
-      });
-
-      bookingsWithInstallments.forEach((booking) => {
-        const pkgId = (booking.package && booking.package._id) || booking.package;
-        const pkg = pkgId ? packagesMap.get(pkgId) : null;
-        const pkgType = pkg?.type || 'unknown';
-        const pkgName = pkg?.name || 'باكدج غير محدد';
-        (booking.installments || [])
-          .filter((inst) => between(inst.date, start, end))
-          .forEach((inst) => {
-            packageMix[pkgType] = (packageMix[pkgType] || 0) + (inst.amount || 0);
-            const current = topPackagesMap.get(pkgName) || { name: pkgName, count: 0, amount: 0 };
-            topPackagesMap.set(pkgName, { name: pkgName, count: current.count, amount: current.amount + (inst.amount || 0) });
-          });
-      });
-
-      const topPackages = Array.from(topPackagesMap.values())
-        .sort((a, b) => b.amount - a.amount)
-        .slice(0, 5);
-
-      const topServicesMap = new Map();
-      instantInRange.forEach((service) => {
-        (service.services || []).forEach((s) => {
-          const name = s.name || servicesMap.get(s._id)?.name || 'خدمة';
-          const current = topServicesMap.get(name) || { name, count: 0, amount: 0 };
-          topServicesMap.set(name, { name, count: current.count + 1, amount: current.amount + (s.price || 0) });
-        });
-      });
-
-      const topServices = Array.from(topServicesMap.values())
-        .sort((a, b) => (b.count - a.count) || (b.amount - a.amount))
-        .slice(0, 5);
-
-      const daysCount = Math.max(1, Math.round((end - start) / msInDay) + 1);
-      const gross = totalDeposit + totalInstantServices;
-      const expenseRatio = gross ? Number(((totalExpenses + totalAdvances) / gross).toFixed(3)) : 0;
-      const averageNetPerDay = Number((net / daysCount).toFixed(2));
-
-      const topEarners = users
-        .map((u) => {
-          const total = flattenPoints(u.points)
-            .filter((p) => between(p.date, start, end))
-            .reduce((sum, p) => sum + (p.amount || 0), 0);
-          return { username: u.username, role: u.role, points: total };
-        })
-        .filter((u) => u.points > 0)
-        .sort((a, b) => b.points - a.points)
-        .slice(0, 5);
-
-      const dailyRevenue = includeDailyBreakdown
-        ? (() => {
-            const days = [];
-            for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-              const iso = new Date(d).toISOString().slice(0, 10);
-              days.push({ date: iso, total: Number((dailyMap.get(iso) || 0).toFixed(2)) });
-            }
-            return days;
-          })()
-        : [];
-
-      const revenueStreams = [
-        { label: 'حجوزات وأقساط', value: totalDeposit },
-        { label: 'شغل فوري', value: totalInstantServices }
-      ];
-
-      const outflows = [
-        { label: 'مصروفات', value: totalExpenses },
-        { label: 'سلف', value: totalAdvances }
-      ];
-
-      const resolveUser = (id) => {
-        const key = (id && id.toString && id.toString()) || id;
-        return usersMap.get(key)?.username || 'غير معروف';
-      };
-
-      const operations = includeOperations
-        ? [
-            ...bookingsInRange.map((booking) => {
-              const installmentsSum = (booking.installments || []).reduce((s, inst) => s + (inst.amount || 0), 0);
-              const initialDeposit = (booking.deposit || 0) - installmentsSum;
-              const pkgId = (booking.package && booking.package._id) || booking.package;
-              const pkg = pkgId ? packagesMap.get(pkgId) : null;
-              return {
-                type: 'booking',
-                details: `حجز لـ ${booking.clientName || '-'}${pkg ? ` (باكدج: ${pkg.name || '-'})` : ''}`,
-                amount: initialDeposit,
-                createdAt: booking.createdAt,
-                createdBy: resolveUser(booking.createdBy)
-              };
-            }),
-            ...bookingsWithInstallments.flatMap((booking) =>
-              (booking.installments || [])
-                .filter((inst) => between(inst.date, start, end))
-                .map((inst) => ({
-                  type: 'installment',
-                  details: `قسط لـ ${booking.clientName || '-'}${booking.receiptNumber ? ` (وصل ${booking.receiptNumber})` : ''}`,
-                  amount: inst.amount || 0,
-                  createdAt: inst.date,
-                  createdBy: resolveUser(inst.employeeId)
-                }))
-            ),
-            ...instantInRange.map((service) => ({
-              type: 'instantService',
-              details: `خدمة فورية (${(service.services || []).map((s) => s.name || servicesMap.get(s._id)?.name || 'خدمة').join(', ')})`,
-              amount: service.total || 0,
-              createdAt: service.createdAt,
-              createdBy: resolveUser(service.employeeId)
-            })),
-            ...expensesInRange.map((expense) => ({
-              type: 'expense',
-              details: expense.details,
-              amount: expense.amount || 0,
-              createdAt: expense.createdAt,
-              createdBy: resolveUser(expense.createdBy || expense.userId)
-            })),
-            ...advancesInRange.map((advance) => ({
-              type: 'advance',
-              details: `سلفة لـ ${resolveUser(advance.userId)}`,
-              amount: advance.amount || 0,
-              createdAt: advance.createdAt,
-              createdBy: resolveUser(advance.createdBy || advance.userId)
-            }))
-          ].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-        : [];
-
-      return {
-        summary: {
-          totalDeposit,
-          totalInstantServices,
-          totalExpenses,
-          totalAdvances,
-          net
-        },
-        operations,
-        analytics: {
-          revenueStreams,
-          outflows,
-          packageMix,
-          topPackages,
-          topServices,
-          topEarners,
-          stats: {
-            gross,
-            expenseRatio,
-            averageNetPerDay,
-            daysCount
-          },
-          dailyRevenue
-        }
-      };
-    };
-  }, [advances, bookings, expenses, instantServices, packagesMap, servicesMap, users, usersMap]);
-
-  useEffect(() => {
-    if (!collections) return undefined;
-    const subs = [];
-
-    const listen = (col, setter) => {
-      if (!col) return;
-      const sub = col
-        .find({ selector: { _deleted: { $eq: false } } })
-        .$.subscribe((docs) => setter(docs.map((d) => (d.toJSON ? d.toJSON() : d))));
-      subs.push(sub);
-    };
-
-    listen(collections.bookings, setBookings);
-    listen(collections.instantServices, setInstantServices);
-    listen(collections.expenses, setExpenses);
-    listen(collections.advances, setAdvances);
-    listen(collections.packages, setPackages);
-    listen(collections.services, setServices);
-    listen(collections.users, setUsers);
-
-    return () => subs.forEach((s) => s && s.unsubscribe && s.unsubscribe());
-  }, [collections]);
-
-  const fetchDaily = () => {
-    if (!collections) {
-      setMessage('البيانات لسه بتتحمل');
-      return;
-    }
+  const fetchDaily = async () => {
     setLoading((p) => ({ ...p, daily: true }));
     setMessage('');
-    const startDate = new Date(date);
-    startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(startDate);
-    endDate.setHours(23, 59, 59, 999);
-    const report = buildReport({ startDate, endDate, includeOperations: true });
-    setDailyData(report);
-    setLoading((p) => ({ ...p, daily: false }));
+    try {
+      const res = await axios.get(`/api/reports/daily?date=${date}`, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      setDailyData(res.data);
+    } catch (err) {
+      setMessage('خطأ في جلب التقرير اليومي');
+    } finally {
+      setLoading((p) => ({ ...p, daily: false }));
+    }
   };
 
-  const fetchMonthly = () => {
-    if (!collections) {
-      setMessage('البيانات لسه بتتحمل');
-      return;
-    }
+  const fetchMonthly = async () => {
     setLoading((p) => ({ ...p, monthly: true }));
     setMessage('');
-    const target = month ? new Date(`${month}-01`) : new Date();
-    if (Number.isNaN(target.getTime())) {
-      setMessage('شهر غير صالح');
+    try {
+      const res = await axios.get(`/api/reports/monthly?month=${month}`, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      setMonthlyData(res.data);
+    } catch (err) {
+      setMessage('خطأ في جلب التقرير الشهري');
+    } finally {
       setLoading((p) => ({ ...p, monthly: false }));
-      return;
     }
-    const startDate = new Date(target.getFullYear(), target.getMonth(), 1, 0, 0, 0, 0);
-    const endDate = new Date(target.getFullYear(), target.getMonth() + 1, 0, 23, 59, 59, 999);
-    const payload = buildReport({ startDate, endDate, includeDailyBreakdown: true });
-    payload.meta = { label: startDate.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' }) };
-    setMonthlyData(payload);
-    setLoading((p) => ({ ...p, monthly: false }));
   };
 
-  const fetchRange = () => {
-    if (!collections) {
-      setMessage('البيانات لسه بتتحمل');
-      return;
-    }
+  const fetchRange = async () => {
     if (!range.from || !range.to) {
       setMessage('حدد شهر البداية وشهر النهاية');
       return;
     }
-    const fromDate = new Date(`${range.from}-01`);
+    const fromDate = `${range.from}-01`;
     const [toYear, toMonth] = range.to.split('-').map(Number);
-    const endDate = new Date(toYear, toMonth, 0, 23, 59, 59, 999);
-    if (Number.isNaN(fromDate.getTime()) || Number.isNaN(endDate.getTime())) {
-      setMessage('التواريخ غير صالحة');
-      return;
-    }
-    const startDate = new Date(fromDate.getFullYear(), fromDate.getMonth(), 1, 0, 0, 0, 0);
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setHours(23, 59, 59, 999);
+    const endDateObj = new Date(toYear, toMonth, 0, 23, 59, 59, 999);
+    const toDate = endDateObj.toISOString().split('T')[0];
+
     setLoading((p) => ({ ...p, range: true }));
     setMessage('');
-    const payload = buildReport({ startDate, endDate, includeDailyBreakdown: true });
-    payload.meta = { from: range.from, to: range.to };
-    setRangeData(payload);
-    setLoading((p) => ({ ...p, range: false }));
+    try {
+      const res = await axios.get(`/api/reports/range?from=${fromDate}&to=${toDate}`, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      setRangeData(res.data);
+    } catch (err) {
+      setMessage('خطأ في جلب تقرير الفترة');
+    } finally {
+      setLoading((p) => ({ ...p, range: false }));
+    }
   };
 
   useEffect(() => {
-    if (!collections) return;
     fetchDaily();
     fetchMonthly();
     fetchRange();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [collections, buildReport]);
+  }, []);
 
   const monthlyFromDaily = (daily = []) => {
     const map = new Map();

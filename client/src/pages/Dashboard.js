@@ -1,32 +1,31 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table } from 'react-bootstrap';
+import axios from 'axios';
+import { getPackages, getServices } from '../utils/apiCache';
 import Select from 'react-select';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faPrint, faEdit, faEye, faDollarSign, faTrash } from '@fortawesome/free-solid-svg-icons';
 import ReceiptPrint, { printReceiptElement } from '../pages/ReceiptPrint';
 import { Link } from 'react-router-dom';
 import { useToast } from '../components/ToastProvider';
-import { useRxdb } from '../db/RxdbProvider';
 import { getRecentEntries, saveRecentEntry } from '../utils/recentEntries';
 
-const newId = (prefix = 'loc') => (crypto.randomUUID ? crypto.randomUUID() : `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`);
-
-const between = (dateLike, start, end) => {
-  const d = new Date(dateLike);
-  if (Number.isNaN(d.getTime())) return false;
-  if (start && d < start) return false;
-  if (end && d > end) return false;
-  return true;
-};
-
-const isSameDay = (dateLike, target) => {
-  const d = new Date(dateLike);
-  if (Number.isNaN(d.getTime())) return false;
-  return d.toDateString() === target.toDateString();
-};
-
 function Dashboard({ user }) {
-  const { collections, queueOperation } = useRxdb() || {};
+  const [summary, setSummary] = useState({
+    bookingCount: 0,
+    totalDeposit: 0,
+    instantServiceCount: 0,
+    totalInstantServices: 0,
+    totalExpenses: 0,
+    totalAdvances: 0,
+    net: 0
+  });
+  const [bookings, setBookings] = useState({
+    makeupBookings: [],
+    hairStraighteningBookings: [],
+    hairDyeBookings: [],
+    photographyBookings: []
+  });
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const { showToast } = useToast();
   const setMessage = useCallback((msg) => {
@@ -35,7 +34,6 @@ function Dashboard({ user }) {
     const variant = text.includes('خطأ') ? 'danger' : text.includes('مطلوبة') ? 'warning' : 'success';
     showToast(msg, variant);
   }, [showToast]);
-
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [showInstantServiceModal, setShowInstantServiceModal] = useState(false);
   const [showExpenseAdvanceModal, setShowExpenseAdvanceModal] = useState(false);
@@ -47,7 +45,6 @@ function Dashboard({ user }) {
   const [currentDetails, setCurrentDetails] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
   const [installmentAmount, setInstallmentAmount] = useState('');
-
   const [bookingFormData, setBookingFormData] = useState({
     packageId: '', hennaPackageId: '', photographyPackageId: '', extraServices: [], returnedServices: [],
     hairStraightening: 'no', hairStraighteningPrice: '', hairStraighteningDate: '',
@@ -56,15 +53,9 @@ function Dashboard({ user }) {
   });
   const [instantServiceFormData, setInstantServiceFormData] = useState({ employeeId: '', services: [] });
   const [expenseAdvanceFormData, setExpenseAdvanceFormData] = useState({ type: 'expense', details: '', amount: '', userId: '' });
-
-  const [rawBookings, setRawBookings] = useState([]);
-  const [rawInstantServices, setRawInstantServices] = useState([]);
-  const [rawExpenses, setRawExpenses] = useState([]);
-  const [rawAdvances, setRawAdvances] = useState([]);
   const [packages, setPackages] = useState([]);
   const [services, setServices] = useState([]);
   const [users, setUsers] = useState([]);
-
   const [editBooking, setEditBooking] = useState(null);
   const [editItem, setEditItem] = useState(null);
   const [instantServiceTotal, setInstantServiceTotal] = useState(0);
@@ -76,18 +67,6 @@ function Dashboard({ user }) {
   const [expenseSubmitting, setExpenseSubmitting] = useState(false);
   const [installmentSubmitting, setInstallmentSubmitting] = useState(false);
   const [recentEntries, setRecentEntries] = useState({});
-
-  const startOfDay = useMemo(() => {
-    const d = new Date(date);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, [date]);
-
-  const endOfDay = useMemo(() => {
-    const d = new Date(startOfDay);
-    d.setHours(23, 59, 59, 999);
-    return d;
-  }, [startOfDay]);
 
   // Custom styles للـ react-select — neutralized to use CSS variables (black/white theme)
   const customStyles = {
@@ -213,289 +192,149 @@ function Dashboard({ user }) {
   }, []);
 
   const userOptions = useMemo(() => (
-    users.map(u => ({
-      value: u._id?.toString(),
-      label: `${u.username} (المتبقي: ${u.remainingSalary} جنيه)`
+    users.map(user => ({
+      value: user._id?.toString(),
+      label: `${user.username} (المتبقي: ${user.remainingSalary} جنيه)`
     }))
   ), [users]);
 
-  // اشتراكات RxDB
-  useEffect(() => {
-    if (!collections) return undefined;
-    const subs = [];
-
-    const listen = (col, setter, selector = { _deleted: { $ne: true } }) => {
-      if (!col) return;
-      const sub = col.find({ selector }).$.subscribe((docs) => setter(docs.map((d) => (d.toJSON ? d.toJSON() : d))));
-      subs.push(sub);
-    };
-
-    listen(collections.bookings, setRawBookings);
-    listen(collections.instantServices, setRawInstantServices);
-    listen(collections.expenses, setRawExpenses);
-    listen(collections.advances, setRawAdvances);
-    listen(collections.packages, setPackages);
-    listen(collections.services, setServices);
-    listen(collections.users, setUsers);
-
-    return () => subs.forEach((s) => s && s.unsubscribe && s.unsubscribe());
-  }, [collections]);
-
-  const usersMap = useMemo(() => {
-    const map = new Map();
-    users.forEach((u) => {
-      const key = (u._id && u._id.toString()) || u.id || u.userId;
-      if (key) map.set(key, u);
-    });
-    return map;
-  }, [users]);
-
-  const packagesMap = useMemo(() => {
-    const map = new Map();
-    packages.forEach((p) => {
-      const key = (p._id && p._id.toString()) || p.id;
-      if (key) map.set(key, p);
-    });
-    return map;
-  }, [packages]);
-
-  const servicesMap = useMemo(() => {
-    const map = new Map();
-    services.forEach((s) => {
-      const key = (s._id && s._id.toString()) || s.id;
-      if (key) map.set(key, s);
-    });
-    return map;
-  }, [services]);
-
-  const hydrateBooking = useCallback((booking) => {
-    if (!booking) return booking;
-    const pkg = booking.package ? packagesMap.get(booking.package._id || booking.package) : null;
-    const hennaPkg = booking.hennaPackage ? packagesMap.get(booking.hennaPackage._id || booking.hennaPackage) : null;
-    const photoPkg = booking.photographyPackage ? packagesMap.get(booking.photographyPackage._id || booking.photographyPackage) : null;
-    const extra = (booking.extraServices || []).map((id) => servicesMap.get(id?._id || id) || { _id: id, name: 'خدمة', price: 0 });
-    const returned = (booking.returnedServices || []).map((id) => servicesMap.get(id?._id || id) || { _id: id, name: 'خدمة', price: 0, packageId: pkg || null });
-    const insts = (booking.installments || []).map((inst) => ({
-      ...inst,
-      employeeId: usersMap.get(inst.employeeId?._id || inst.employeeId) || inst.employeeId
-    }));
-    const updates = (booking.updates || []).map((u) => ({
-      ...u,
-      employeeId: usersMap.get(u.employeeId?._id || u.employeeId) || u.employeeId
-    }));
-    return {
-      ...booking,
-      package: pkg || booking.package,
-      hennaPackage: hennaPkg || booking.hennaPackage,
-      photographyPackage: photoPkg || booking.photographyPackage,
-      extraServices: extra,
-      returnedServices: returned,
-      installments: insts,
-      updates,
-      createdBy: usersMap.get(booking.createdBy?._id || booking.createdBy) || booking.createdBy,
-      hairStraighteningExecutedBy: usersMap.get(booking.hairStraighteningExecutedBy) || booking.hairStraighteningExecutedBy,
-      hairDyeExecutedBy: usersMap.get(booking.hairDyeExecutedBy) || booking.hairDyeExecutedBy
-    };
-  }, [packagesMap, servicesMap, usersMap]);
-
-  // فلترة الخدمات الخاصة بالباكدج المختار
-  useEffect(() => {
-    const selectedIds = [bookingFormData.packageId, bookingFormData.hennaPackageId, bookingFormData.photographyPackageId].filter(Boolean);
-    if (selectedIds.length === 0) {
-      setSelectedPackageServices([]);
-      return;
+  // تحميل البيانات حسب التاريخ الحالي لإعادة الاستخدام بعد أي عملية ناجحة
+  const loadDashboardData = useCallback(async () => {
+    try {
+      const [summaryRes, bookingsRes, packagesData, servicesData, usersRes] = await Promise.all([
+        axios.get(`/api/dashboard/summary?date=${date}`, { headers: { 'x-auth-token': localStorage.getItem('token') } }),
+        axios.get(`/api/today-work?date=${date}`, { headers: { 'x-auth-token': localStorage.getItem('token') } }),
+        getPackages(),
+        getServices(),
+        axios.get('/api/users', { headers: { 'x-auth-token': localStorage.getItem('token') } })
+      ]);
+      setSummary(summaryRes.data);
+      setBookings(bookingsRes.data || { makeupBookings: [], hairStraighteningBookings: [], hairDyeBookings: [], photographyBookings: [] });
+      setPackages(packagesData);
+      setServices(servicesData);
+      setUsers(usersRes.data.map(u => ({ ...u, _id: u._id?.toString() })));
+      // no inline alert; do nothing
+    } catch (err) {
+      console.error('Fetch error:', err.response?.data || err.message);
+      setMessage('خطأ في جلب البيانات');
+      setBookings({ makeupBookings: [], hairStraighteningBookings: [], hairDyeBookings: [], photographyBookings: [] });
     }
-    const filtered = services.filter((srv) => selectedIds.includes((srv.packageId && srv.packageId._id) || srv.packageId));
-    setSelectedPackageServices(filtered.map((srv) => ({ value: srv._id, label: `${srv.name}${srv.packageId ? ` (${srv.packageId.name || ''})` : ''}`, price: srv.price })));
-  }, [bookingFormData.packageId, bookingFormData.hennaPackageId, bookingFormData.photographyPackageId, services]);
+  }, [date, setMessage]);
 
-  // حساب الإجمالي والمبلغ المتبقي للحجز
   useEffect(() => {
-    let tempTotal = 0;
-    const pkg = packages.find((p) => p._id === bookingFormData.packageId);
-    if (pkg) tempTotal += pkg.price || 0;
+    loadDashboardData();
+  }, [loadDashboardData]);
 
-    const hennaPkg = packages.find((p) => p._id === bookingFormData.hennaPackageId);
-    if (hennaPkg) tempTotal += hennaPkg.price || 0;
+  useEffect(() => {
+    const calculateSelectedPackageServices = async () => {
+      const selectedIds = [bookingFormData.packageId, bookingFormData.hennaPackageId, bookingFormData.photographyPackageId].filter(id => id);
+      if (selectedIds.length > 0) {
+        try {
+          const res = await axios.get('/api/packages/services', {
+            headers: { 'x-auth-token': localStorage.getItem('token') }
+          });
+          const filteredServices = res.data.filter(srv => selectedIds.includes(srv.packageId?._id.toString()));
+          setSelectedPackageServices(filteredServices.map(srv => ({
+            value: srv._id,
+            label: `${srv.name} (${srv.packageId.name})`,
+            price: srv.price
+          })));
+        } catch (err) {
+          console.error('Fetch package services error:', err.response?.data || err.message);
+        }
+      } else {
+        setSelectedPackageServices([]);
+      }
+    };
+    calculateSelectedPackageServices();
+  }, [bookingFormData.packageId, bookingFormData.hennaPackageId, bookingFormData.photographyPackageId]);
 
-    const photoPkg = packages.find((p) => p._id === bookingFormData.photographyPackageId);
-    if (photoPkg) tempTotal += photoPkg.price || 0;
+  useEffect(() => {
+    const calculateTotal = () => {
+      let tempTotal = 0;
+      const selectedPkg = packages.find(pkg => pkg._id === bookingFormData.packageId);
+      if (selectedPkg) tempTotal += selectedPkg.price;
 
-    bookingFormData.extraServices.forEach((id) => {
-      const srv = services.find((s) => s._id === id.value);
-      if (srv) tempTotal += srv.price || 0;
-    });
+      const hennaPkg = packages.find(pkg => pkg._id === bookingFormData.hennaPackageId);
+      if (hennaPkg) tempTotal += hennaPkg.price;
 
-    bookingFormData.returnedServices.forEach((id) => {
-      const srv = selectedPackageServices.find((s) => s.value === id.value);
-      if (srv) tempTotal -= srv.price || 0;
-    });
+      const photoPkg = packages.find(pkg => pkg._id === bookingFormData.photographyPackageId);
+      if (photoPkg) tempTotal += photoPkg.price;
 
-    const hairPrice = bookingFormData.hairStraightening === 'yes' ? Number(bookingFormData.hairStraighteningPrice) || 0 : 0;
-    const hairDyePrice = bookingFormData.hairDye === 'yes' ? Number(bookingFormData.hairDyePrice) || 0 : 0;
-    tempTotal += hairPrice + hairDyePrice;
+      bookingFormData.extraServices.forEach(id => {
+        const srv = services.find(s => s._id === id.value);
+        if (srv) tempTotal += srv.price;
+      });
 
-    const depositValue = Number(bookingFormData.deposit) || 0;
-    setTotal(tempTotal);
-    setRemaining(tempTotal - depositValue);
+      bookingFormData.returnedServices.forEach(id => {
+        const srv = selectedPackageServices.find(s => s.value === id.value);
+        if (srv) tempTotal -= srv.price;
+      });
+
+      const hairPrice = bookingFormData.hairStraightening === 'yes'
+        ? Number(bookingFormData.hairStraighteningPrice) || 0
+        : 0;
+      const hairDyePrice = bookingFormData.hairDye === 'yes'
+        ? Number(bookingFormData.hairDyePrice) || 0
+        : 0;
+      tempTotal += hairPrice + hairDyePrice;
+
+      const depositValue = Number(bookingFormData.deposit) || 0;
+
+      setTotal(tempTotal);
+      setRemaining(tempTotal - depositValue);
+    };
+    calculateTotal();
   }, [bookingFormData, packages, services, selectedPackageServices]);
 
-  // إجمالي الخدمة الفورية
   useEffect(() => {
-    let tempTotal = 0;
-    instantServiceFormData.services.forEach((id) => {
-      const srv = services.find((s) => s._id === id.value);
-      if (srv) tempTotal += srv.price || 0;
-    });
-    setInstantServiceTotal(tempTotal);
-  }, [instantServiceFormData.services, services]);
-
-  const upsertLocal = useCallback(async (collectionName, doc, op = 'update') => {
-    const col = collections?.[collectionName];
-    if (!col) throw new Error('قاعدة البيانات غير جاهزة');
-    const withTs = { ...doc, updatedAt: new Date().toISOString() };
-    await col.upsert(withTs);
-    if (queueOperation) await queueOperation(collectionName, op, withTs);
-    return withTs;
-  }, [collections, queueOperation]);
-
-  const dayBookings = useMemo(() => {
-    return rawBookings
-      .filter((b) => (
-        isSameDay(b.eventDate, startOfDay) ||
-        isSameDay(b.hennaDate, startOfDay) ||
-        isSameDay(b.hairStraighteningDate, startOfDay) ||
-        isSameDay(b.hairDyeDate, startOfDay)
-      ))
-      .map(hydrateBooking);
-  }, [rawBookings, startOfDay, hydrateBooking]);
-
-  const categorized = useMemo(() => {
-    const makeupBookings = dayBookings.filter((booking) => (
-      (booking.package?.type === 'makeup' && isSameDay(booking.eventDate, startOfDay)) ||
-      (booking.hennaPackage && isSameDay(booking.hennaDate, startOfDay))
-    ));
-    const hairStraighteningBookings = dayBookings.filter((booking) => booking.hairStraightening && isSameDay(booking.hairStraighteningDate, startOfDay));
-    const hairDyeBookings = dayBookings.filter((booking) => booking.hairDye && isSameDay(booking.hairDyeDate, startOfDay));
-    const photographyBookings = dayBookings.filter((booking) => (
-      (booking.photographyPackage && isSameDay(booking.eventDate, startOfDay)) ||
-      (booking.photographyPackage && isSameDay(booking.hennaDate, startOfDay))
-    ));
-    return { makeupBookings, hairStraighteningBookings, hairDyeBookings, photographyBookings };
-  }, [dayBookings, startOfDay]);
-
-  const summary = useMemo(() => {
-    const newBookings = rawBookings.filter((b) => between(b.createdAt, startOfDay, endOfDay));
-    const totalDepositFromBookings = newBookings.reduce((sum, b) => sum + (Number(b.deposit) || 0), 0);
-    const totalInstallments = rawBookings.reduce((sum, b) => {
-      const instSum = (b.installments || []).filter((inst) => between(inst.date, startOfDay, endOfDay)).reduce((s, inst) => s + (Number(inst.amount) || 0), 0);
-      return sum + instSum;
-    }, 0);
-    const totalDeposit = totalDepositFromBookings + totalInstallments;
-
-    const instantToday = rawInstantServices.filter((i) => between(i.createdAt, startOfDay, endOfDay));
-    const totalInstantServices = instantToday.reduce((sum, s) => sum + (Number(s.total) || 0), 0);
-
-    const expensesToday = rawExpenses.filter((e) => between(e.createdAt, startOfDay, endOfDay));
-    const advancesToday = rawAdvances.filter((a) => between(a.createdAt, startOfDay, endOfDay));
-
-    const totalExpenses = expensesToday.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
-    const totalAdvances = advancesToday.reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
-
-    const net = totalDeposit + totalInstantServices - totalExpenses - totalAdvances;
-
-    // أعلى مجمع نقاط
-    let topCollector = '—';
-    let maxPoints = -Infinity;
-    users.forEach((u) => {
-      const totalPoints = (u.points || [])
-        .filter((p) => between(p.date, startOfDay, endOfDay))
-        .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-      if (totalPoints > maxPoints) {
-        maxPoints = totalPoints;
-        topCollector = u.username;
-      }
-    });
-
-    return {
-      bookingCount: newBookings.length,
-      totalDeposit,
-      instantServiceCount: instantToday.length,
-      totalInstantServices,
-      totalExpenses,
-      totalAdvances,
-      net,
-      hairStraighteningCount: instantToday.length,
-      topCollector
+    const calculateInstantServiceTotal = () => {
+      let tempTotal = 0;
+      instantServiceFormData.services.forEach(id => {
+        const srv = services.find(s => s._id === id.value);
+        if (srv) tempTotal += srv.price;
+      });
+      setInstantServiceTotal(tempTotal);
     };
-  }, [rawBookings, rawInstantServices, rawExpenses, rawAdvances, users, startOfDay, endOfDay]);
+    calculateInstantServiceTotal();
+  }, [instantServiceFormData.services, services]);
 
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     if (bookingSubmitting) return;
-    const depositValue = Number(bookingFormData.deposit) || 0;
-    const hairStraighteningPrice = bookingFormData.hairStraightening === 'yes' ? Number(bookingFormData.hairStraighteningPrice) || 0 : 0;
-    const hairDyePrice = bookingFormData.hairDye === 'yes' ? Number(bookingFormData.hairDyePrice) || 0 : 0;
-
-    const pkg = packages.find((p) => p._id === bookingFormData.packageId);
-    const hennaPkg = packages.find((p) => p._id === bookingFormData.hennaPackageId);
-    const photoPkg = packages.find((p) => p._id === bookingFormData.photographyPackageId);
-
-    const extraIds = bookingFormData.extraServices.map((s) => s.value);
-    const returnedIds = bookingFormData.returnedServices.map((s) => s.value);
-
-    const extraTotal = extraIds.reduce((sum, id) => {
-      const srv = services.find((s) => s._id === id);
-      return sum + (srv?.price || 0);
-    }, 0);
-    const returnedTotal = returnedIds.reduce((sum, id) => {
-      const srv = services.find((s) => s._id === id);
-      return sum + (srv?.price || 0);
-    }, 0);
-
-    const totalPrice = (pkg?.price || 0) + (hennaPkg?.price || 0) + (photoPkg?.price || 0) + extraTotal - returnedTotal + hairStraighteningPrice + hairDyePrice;
-
-    const baseDoc = {
-      _id: editBooking?._id || newId('book'),
-      package: bookingFormData.packageId || null,
-      hennaPackage: bookingFormData.hennaPackageId || null,
-      photographyPackage: bookingFormData.photographyPackageId || null,
-      returnedServices: returnedIds,
-      extraServices: extraIds,
+    const submitData = {
+      ...bookingFormData,
+      deposit: Number(bookingFormData.deposit) || 0,
+      hairStraighteningPrice: bookingFormData.hairStraightening === 'yes' ? Number(bookingFormData.hairStraighteningPrice) || 0 : 0,
+      hairDyePrice: bookingFormData.hairDye === 'yes' ? Number(bookingFormData.hairDyePrice) || 0 : 0,
+      packageId: bookingFormData.packageId || null,
+      hennaPackageId: bookingFormData.hennaPackageId || null,
+      photographyPackageId: bookingFormData.photographyPackageId || null,
+      extraServices: bookingFormData.extraServices.map(s => s.value),
+      returnedServices: bookingFormData.returnedServices.map(s => s.value),
       hairStraightening: bookingFormData.hairStraightening === 'yes',
-      hairStraighteningPrice,
-      hairStraighteningDate: bookingFormData.hairStraighteningDate || null,
-      hairStraighteningExecuted: false,
-      hairStraighteningExecutedBy: null,
-      hairDye: bookingFormData.hairDye === 'yes',
-      hairDyePrice,
-      hairDyeDate: bookingFormData.hairDyeDate || null,
-      hairDyeExecuted: false,
-      hairDyeExecutedBy: null,
-      clientName: bookingFormData.clientName,
-      clientPhone: bookingFormData.clientPhone,
-      city: bookingFormData.city,
-      eventDate: bookingFormData.eventDate,
-      hennaDate: bookingFormData.hennaDate || null,
-      deposit: depositValue,
-      installments: editBooking?.installments || [],
-      total: totalPrice,
-      remaining: Math.max(0, totalPrice - depositValue - (editBooking?.installments || []).reduce((s, inst) => s + (Number(inst.amount) || 0), 0)),
-      receiptNumber: editBooking?.receiptNumber || '',
-      barcode: editBooking?.barcode || '',
-      createdAt: editBooking?.createdAt || new Date().toISOString(),
-      createdBy: editBooking?.createdBy || user?._id || user?.id || null,
-      updates: editBooking?.updates || [],
-      _deleted: false
+      hairDye: bookingFormData.hairDye === 'yes'
     };
-
     setBookingSubmitting(true);
     setShowBookingModal(false);
     try {
-      const saved = await upsertLocal('bookings', baseDoc, editBooking ? 'update' : 'insert');
-      setMessage(`تم ${editBooking ? 'تعديل' : 'إضافة'} الحجز محلياً وسيتم رفعه عند الاتصال`);
-      setCurrentReceipt({ ...saved, type: 'booking' });
-      setShowReceiptModal(true);
+      if (editBooking) {
+        const res = await axios.put(`/api/bookings/${editBooking._id}`, submitData, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        });
+        setMessage('تم تعديل الحجز بنجاح');
+        setCurrentReceipt({ ...res.data.booking, type: 'booking' });
+        setShowReceiptModal(true);
+        loadDashboardData();
+      } else {
+        const res = await axios.post('/api/bookings', submitData, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        });
+        setMessage('تم إضافة الحجز بنجاح');
+        setCurrentReceipt({ ...res.data.booking, type: 'booking' });
+        setShowReceiptModal(true);
+        loadDashboardData();
+      }
       setBookingFormData({
         packageId: '', hennaPackageId: '', photographyPackageId: '', extraServices: [], returnedServices: [],
         hairStraightening: 'no', hairStraighteningPrice: '', hairStraighteningDate: '',
@@ -504,8 +343,8 @@ function Dashboard({ user }) {
       });
       setEditBooking(null);
     } catch (err) {
-      console.error('Booking submit error:', err);
-      setMessage('خطأ في إضافة/تعديل الحجز محلياً');
+      console.error('Booking submit error:', err.response?.data || err.message);
+      setMessage(err.response?.data?.msg || 'خطأ في إضافة/تعديل الحجز');
     } finally {
       setBookingSubmitting(false);
     }
@@ -518,39 +357,35 @@ function Dashboard({ user }) {
       return;
     }
     if (instantSubmitting) return;
-
-    const selectedServices = instantServiceFormData.services.map((s) => s.value);
-    const resolvedServices = selectedServices.map((id) => {
-      const srv = services.find((s) => s._id === id);
-      const base = srv
-        ? { _id: srv._id, name: srv.name, price: srv.price }
-        : { _id: id?.toString?.() || `${id}`, name: 'خدمة', price: 0 };
-      return { ...base, executed: false, executedBy: '', executedAt: null };
-    });
-    const totalPrice = resolvedServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
-
+    const submitData = {
+      employeeId: instantServiceFormData.employeeId || null,
+      services: instantServiceFormData.services.map(s => s.value)
+    };
     setInstantSubmitting(true);
     setShowInstantServiceModal(false);
     try {
-      const doc = {
-        _id: editItem?._id || newId('inst'),
-        employeeId: instantServiceFormData.employeeId || '',
-        services: resolvedServices,
-        total: totalPrice,
-        createdAt: editItem?.createdAt || new Date().toISOString(),
-        receiptNumber: editItem?.receiptNumber || '',
-        barcode: editItem?.barcode || '',
-        _deleted: false
-      };
-      const saved = await upsertLocal('instantServices', doc, editItem ? 'update' : 'insert');
-      setCurrentReceipt({ ...saved, type: 'instant' });
-      setShowReceiptModal(true);
-      setMessage(`تم ${editItem ? 'تعديل' : 'إضافة'} الخدمة الفورية محلياً وسيتم رفعها عند الاتصال`);
+      if (editItem) {
+        const res = await axios.put(`/api/instant-services/${editItem._id}`, submitData, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        });
+        setMessage('تم تعديل الخدمة الفورية بنجاح');
+        setCurrentReceipt({ ...res.data.instantService, type: 'instant' });
+        setShowReceiptModal(true);
+        loadDashboardData();
+      } else {
+        const res = await axios.post('/api/instant-services', submitData, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        });
+        setMessage('تم إضافة الخدمة الفورية بنجاح');
+        setCurrentReceipt({ ...res.data.instantService, type: 'instant' });
+        setShowReceiptModal(true);
+        loadDashboardData();
+      }
       setInstantServiceFormData({ employeeId: '', services: [] });
       setEditItem(null);
     } catch (err) {
-      console.error('Instant service submit error:', err);
-      setMessage('خطأ في إضافة/تعديل الخدمة الفورية');
+      console.error('Instant service submit error:', err.response?.data || err.message);
+      setMessage(err.response?.data?.msg || 'خطأ في إضافة/تعديل الخدمة الفورية');
     } finally {
       setInstantSubmitting(false);
     }
@@ -571,7 +406,7 @@ function Dashboard({ user }) {
         setMessage('سبب الخصم مطلوب');
         return;
       }
-      const selectedUser = users.find((u) => u._id === expenseAdvanceFormData.userId);
+      const selectedUser = users.find(u => u._id === expenseAdvanceFormData.userId);
       if (selectedUser && parseFloat(expenseAdvanceFormData.amount) > selectedUser.remainingSalary) {
         setMessage(expenseAdvanceFormData.type === 'advance' ? 'السلفة أكبر من المتبقي من الراتب' : 'الخصم أكبر من المتبقي من الراتب');
         return;
@@ -580,29 +415,18 @@ function Dashboard({ user }) {
     if (expenseSubmitting) return;
     setExpenseSubmitting(true);
     setShowExpenseAdvanceModal(false);
-
-    const baseDoc = {
-      _id: newId('exp'),
-      details: expenseAdvanceFormData.details,
-      amount: Number(expenseAdvanceFormData.amount) || 0,
-      userId: expenseAdvanceFormData.userId || null,
-      createdBy: user?._id || user?.id || null,
-      createdAt: new Date().toISOString(),
-      _deleted: false
-    };
-
-    let targetCollection = 'expenses';
-    if (expenseAdvanceFormData.type === 'advance') targetCollection = 'advances';
-    if (expenseAdvanceFormData.type === 'deduction') targetCollection = 'deductions';
-
+    const expensePayload = { ...expenseAdvanceFormData, amount: Number(expenseAdvanceFormData.amount) || 0 };
     try {
-      await upsertLocal(targetCollection, baseDoc, 'insert');
-      const typeLabel = expenseAdvanceFormData.type === 'expense' ? 'المصروف' : expenseAdvanceFormData.type === 'advance' ? 'السلفة' : 'الخصم الإداري';
-      setMessage(`تم إضافة ${typeLabel} محلياً وسيتم رفعه عند الاتصال`);
+      const res = await axios.post('/api/expenses-advances', expensePayload, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      const typeLabel = res.data.type === 'expense' ? 'المصروف' : res.data.type === 'advance' ? 'السلفة' : 'الخصم الإداري';
+      setMessage(`تم إضافة ${typeLabel} بنجاح`);
       setExpenseAdvanceFormData({ type: 'expense', details: '', amount: '', userId: '' });
+      loadDashboardData();
     } catch (err) {
-      console.error('Expense/Advance submit error:', err);
-      setMessage('خطأ في إضافة العملية');
+      console.error('Expense/Advance submit error:', err.response?.data || err.message);
+      setMessage(err.response?.data?.msg || 'خطأ في إضافة العملية');
     } finally {
       setExpenseSubmitting(false);
     }
@@ -611,22 +435,22 @@ function Dashboard({ user }) {
   const handleBookingEdit = (booking) => {
     setEditBooking(booking);
     setBookingFormData({
-      packageId: booking.package?._id || booking.package || '',
-      hennaPackageId: booking.hennaPackage?._id || booking.hennaPackage || '',
-      photographyPackageId: booking.photographyPackage?._id || booking.photographyPackage || '',
-      extraServices: (booking.extraServices || []).map((srv) => ({ value: srv._id || srv, label: srv.name || '' })),
-      returnedServices: (booking.returnedServices || []).map((srv) => ({ value: srv._id || srv, label: srv.name ? `${srv.name}${srv.packageId?.name ? ` (${srv.packageId.name})` : ''}` : '' })),
+      packageId: booking.package?._id || '',
+      hennaPackageId: booking.hennaPackage?._id || '',
+      photographyPackageId: booking.photographyPackage?._id || '',
+      extraServices: booking.extraServices.map(srv => ({ value: srv._id, label: srv.name })) || [],
+      returnedServices: booking.returnedServices.map(srv => ({ value: srv._id, label: `${srv.name} (${srv.packageId.name})` })) || [],
       hairStraightening: booking.hairStraightening ? 'yes' : 'no',
       hairStraighteningPrice: booking.hairStraighteningPrice != null ? booking.hairStraighteningPrice.toString() : '',
-      hairStraighteningDate: booking.hairStraighteningDate ? booking.hairStraighteningDate.split('T')[0] : '',
+      hairStraighteningDate: booking.hairStraighteningDate ? new Date(booking.hairStraighteningDate).toISOString().split('T')[0] : '',
       hairDye: booking.hairDye ? 'yes' : 'no',
       hairDyePrice: booking.hairDyePrice != null ? booking.hairDyePrice.toString() : '',
-      hairDyeDate: booking.hairDyeDate ? booking.hairDyeDate.split('T')[0] : '',
+      hairDyeDate: booking.hairDyeDate ? new Date(booking.hairDyeDate).toISOString().split('T')[0] : '',
       clientName: booking.clientName || '',
       clientPhone: booking.clientPhone || '',
       city: booking.city || '',
-      eventDate: booking.eventDate ? booking.eventDate.split('T')[0] : '',
-      hennaDate: booking.hennaDate ? booking.hennaDate.split('T')[0] : '',
+      eventDate: booking.eventDate ? new Date(booking.eventDate).toISOString().split('T')[0] : '',
+      hennaDate: booking.hennaDate ? new Date(booking.hennaDate).toISOString().split('T')[0] : '',
       deposit: booking.deposit != null ? booking.deposit.toString() : ''
     });
     setShowBookingModal(true);
@@ -639,13 +463,16 @@ function Dashboard({ user }) {
       return;
     }
     try {
-      await upsertLocal('bookings', { ...deleteItem, _deleted: true }, 'update');
-      setMessage('تم حذف الحجز محلياً وسيتم رفعه عند الاتصال');
+      await axios.delete(`/api/bookings/${deleteItem._id}`, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      setMessage('تم حذف الحجز بنجاح');
       setShowDeleteModal(false);
       setDeleteItem(null);
+      loadDashboardData();
     } catch (err) {
-      console.error('Delete error:', err);
-      setMessage('خطأ في الحذف');
+      console.error('Delete error:', err.response?.data || err.message);
+      setMessage(err.response?.data?.msg || 'خطأ في الحذف');
       setShowDeleteModal(false);
     }
   };
@@ -660,22 +487,21 @@ function Dashboard({ user }) {
     setInstallmentSubmitting(true);
     setShowInstallmentModal(false);
     try {
-      const target = rawBookings.find((b) => b._id === bookingId);
-      if (!target) throw new Error('الحجز غير موجود محلياً');
-      const newInstallment = {
-        amount: amountNumber,
-        date: new Date().toISOString(),
-        employeeId: user?.id || user?._id || null
-      };
-      const installments = [...(target.installments || []), newInstallment];
-      const paidSoFar = (target.deposit || 0) + installments.reduce((s, inst) => s + (Number(inst.amount) || 0), 0);
-      const remainingValue = Math.max(0, (target.total || 0) - paidSoFar);
-      await upsertLocal('bookings', { ...target, installments, remaining: remainingValue }, 'update');
-      setMessage('تم إضافة القسط محلياً وسيتم رفعه عند الاتصال');
+      const res = await axios.post(`/api/bookings/${bookingId}/installment`, { amount: amountNumber }, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      setBookings({
+        makeupBookings: bookings.makeupBookings.map(b => (b._id === bookingId ? res.data.booking : b)),
+        hairStraighteningBookings: bookings.hairStraighteningBookings.map(b => (b._id === bookingId ? res.data.booking : b)),
+        hairDyeBookings: bookings.hairDyeBookings.map(b => (b._id === bookingId ? res.data.booking : b)),
+        photographyBookings: bookings.photographyBookings.map(b => (b._id === bookingId ? res.data.booking : b))
+      });
+      setMessage('تم إضافة القسط بنجاح');
       setInstallmentAmount('');
+      loadDashboardData();
     } catch (err) {
-      console.error('Installment error:', err);
-      setMessage('خطأ في إضافة القسط');
+      console.error('Installment error:', err.response?.data || err.message);
+      setMessage(err.response?.data?.msg || 'خطأ في إضافة القسط');
     } finally {
       setInstallmentSubmitting(false);
     }
@@ -695,12 +521,22 @@ function Dashboard({ user }) {
     }
     if (!visible) visible = document.querySelector('.receipt-content');
     if (!visible) return;
+
     printReceiptElement(visible);
   };
 
   const handleShowDetails = (booking) => {
     setCurrentDetails(booking);
     setShowDetailsModal(true);
+  };
+
+  // عرض التغييرات بأمان حتى لو الحقل changes ناقص من الـ backend
+  const renderUpdateChanges = (changes) => {
+    const normalized = changes || {};
+    if (normalized.created) return 'إنشاء الحجز';
+    const keys = Object.keys(normalized);
+    if (!keys.length) return 'غير معروف';
+    return keys.map((key) => `${key}: ${normalized[key]}`).join(', ');
   };
 
   return (
@@ -717,11 +553,11 @@ function Dashboard({ user }) {
             </div>
             <div className="metric-pill">
               <span>حجوزات ميك آب</span>
-              <strong>{categorized.makeupBookings?.length || 0}</strong>
+              <strong>{bookings.makeupBookings?.length || 0}</strong>
             </div>
             <div className="metric-pill">
               <span>حجوزات تصوير</span>
-              <strong>{categorized.photographyBookings?.length || 0}</strong>
+              <strong>{bookings.photographyBookings?.length || 0}</strong>
             </div>
             <div className="metric-pill">
               <span>الصافي</span>
@@ -758,17 +594,17 @@ function Dashboard({ user }) {
 
       <div className="d-flex align-items-center">
         <h3 className="mb-0">حجوزات الميك آب</h3>
-        <small className="text-muted ms-3">إجمالي الحجوزات اليوم: {categorized.makeupBookings.length}</small>
+        <small className="text-muted ms-3">إجمالي الحجوزات اليوم: {bookings.makeupBookings.length}</small>
       </div>
-      {categorized.makeupBookings.length === 0 && <Alert variant="info">لا توجد حجوزات ميك آب لهذا اليوم</Alert>}
+      {bookings.makeupBookings.length === 0 && <Alert variant="info">لا توجد حجوزات ميك آب لهذا اليوم</Alert>}
       <Row>
-        {categorized.makeupBookings.map((booking, idx) => (
+        {bookings.makeupBookings.map((booking, idx) => (
           <Col md={4} key={booking._id} className="mb-3">
             <Card>
               <Card.Body>
                 <Card.Title>
                   <span className="me-2">{idx + 1}.</span>
-                  {booking.clientName} ({isSameDay(booking.eventDate, startOfDay) ? 'زفاف/شبكة' : 'حنة'})
+                  {booking.clientName} ({new Date(booking.eventDate).toDateString() === new Date(date).toDateString() ? 'زفاف/شبكة' : 'حنة'})
                   {Number(booking.remaining) === 0 && (
                     <span className="badge bg-success ms-2">مدفوع بالكامل</span>
                   )}
@@ -801,11 +637,11 @@ function Dashboard({ user }) {
 
       <div className="d-flex align-items-center">
         <h3 className="mb-0">حجوزات فرد الشعر</h3>
-        <small className="text-muted ms-3">إجمالي الحجوزات اليوم: {categorized.hairStraighteningBookings.length}</small>
+        <small className="text-muted ms-3">إجمالي الحجوزات اليوم: {bookings.hairStraighteningBookings.length}</small>
       </div>
-      {categorized.hairStraighteningBookings.length === 0 && <Alert variant="info">لا توجد حجوزات فرد شعر لهذا اليوم</Alert>}
+      {bookings.hairStraighteningBookings.length === 0 && <Alert variant="info">لا توجد حجوزات فرد شعر لهذا اليوم</Alert>}
       <Row>
-        {categorized.hairStraighteningBookings.map((booking, idx) => (
+        {bookings.hairStraighteningBookings.map((booking, idx) => (
           <Col md={4} key={booking._id} className="mb-3">
             <Card>
               <Card.Body>
@@ -844,11 +680,11 @@ function Dashboard({ user }) {
 
       <div className="d-flex align-items-center">
         <h3 className="mb-0">حجوزات صبغة الشعر</h3>
-        <small className="text-muted ms-3">إجمالي الحجوزات اليوم: {categorized.hairDyeBookings.length}</small>
+        <small className="text-muted ms-3">إجمالي الحجوزات اليوم: {bookings.hairDyeBookings.length}</small>
       </div>
-      {categorized.hairDyeBookings.length === 0 && <Alert variant="info">لا توجد حجوزات صبغة شعر لهذا اليوم</Alert>}
+      {bookings.hairDyeBookings.length === 0 && <Alert variant="info">لا توجد حجوزات صبغة شعر لهذا اليوم</Alert>}
       <Row>
-        {categorized.hairDyeBookings.map((booking, idx) => (
+        {bookings.hairDyeBookings.map((booking, idx) => (
           <Col md={4} key={booking._id} className="mb-3">
             <Card>
               <Card.Body>
@@ -888,17 +724,17 @@ function Dashboard({ user }) {
 
       <div className="d-flex align-items-center">
         <h3 className="mb-0">حجوزات التصوير</h3>
-        <small className="text-muted ms-3">إجمالي الحجوزات اليوم: {categorized.photographyBookings.length}</small>
+        <small className="text-muted ms-3">إجمالي الحجوزات اليوم: {bookings.photographyBookings.length}</small>
       </div>
-      {categorized.photographyBookings.length === 0 && <Alert variant="info">لا توجد حجوزات تصوير لهذا اليوم</Alert>}
+      {bookings.photographyBookings.length === 0 && <Alert variant="info">لا توجد حجوزات تصوير لهذا اليوم</Alert>}
       <Row>
-        {categorized.photographyBookings.map((booking, idx) => (
+        {bookings.photographyBookings.map((booking, idx) => (
           <Col md={4} key={booking._id} className="mb-3">
             <Card>
               <Card.Body>
                 <Card.Title>
                   <span className="me-2">{idx + 1}.</span>
-                  {booking.clientName} ({isSameDay(booking.eventDate, startOfDay) ? 'زفاف/شبكة' : 'حنة'})
+                  {booking.clientName} ({new Date(booking.eventDate).toDateString() === new Date(date).toDateString() ? 'زفاف/شبكة' : 'حنة'})
                   {Number(booking.remaining) === 0 && (
                     <span className="badge bg-success ms-2">مدفوع بالكامل</span>
                   )}
@@ -1023,7 +859,7 @@ function Dashboard({ user }) {
                     required
                   >
                     <option value="">اختر باكدج</option>
-                    {packages.map((pkg) => (
+                    {packages.map(pkg => (
                       <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
                     ))}
                   </Form.Control>
@@ -1038,7 +874,7 @@ function Dashboard({ user }) {
                     onChange={(e) => setBookingFormData({ ...bookingFormData, hennaPackageId: e.target.value })}
                   >
                     <option value="">لا يوجد</option>
-                    {packages.filter((pkg) => pkg.type === 'makeup').map((pkg) => (
+                    {packages.filter(pkg => pkg.type === 'makeup').map(pkg => (
                       <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
                     ))}
                   </Form.Control>
@@ -1066,7 +902,7 @@ function Dashboard({ user }) {
                     onChange={(e) => setBookingFormData({ ...bookingFormData, photographyPackageId: e.target.value })}
                   >
                     <option value="">لا يوجد</option>
-                    {packages.filter((pkg) => pkg.type === 'photography').map((pkg) => (
+                    {packages.filter(pkg => pkg.type === 'photography').map(pkg => (
                       <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
                     ))}
                   </Form.Control>
@@ -1173,7 +1009,7 @@ function Dashboard({ user }) {
                   <Form.Label>خدمات إضافية (اختياري)</Form.Label>
                   <Select
                     isMulti
-                    options={services.filter((srv) => srv.type === 'instant').map((srv) => ({ value: srv._id, label: srv.name, price: srv.price }))}
+                    options={services.filter(srv => srv.type === 'instant').map(srv => ({ value: srv._id, label: srv.name, price: srv.price }))}
                     value={bookingFormData.extraServices}
                     onChange={(selected) => setBookingFormData({ ...bookingFormData, extraServices: selected })}
                     isSearchable
@@ -1268,8 +1104,8 @@ function Dashboard({ user }) {
                     onChange={(e) => setInstantServiceFormData({ ...instantServiceFormData, employeeId: e.target.value })}
                   >
                     <option value="">لا يوجد</option>
-                    {users.map((u) => (
-                      <option key={u._id} value={u._id}>{u.username}</option>
+                    {users.map(user => (
+                      <option key={user._id} value={user._id}>{user.username}</option>
                     ))}
                   </Form.Control>
                 </Form.Group>
@@ -1279,7 +1115,7 @@ function Dashboard({ user }) {
                   <Form.Label>الخدمات</Form.Label>
                   <Select
                     isMulti
-                    options={services.filter((srv) => srv.type === 'instant').map((srv) => ({ value: srv._id, label: srv.name }))}
+                    options={services.filter(srv => srv.type === 'instant').map(srv => ({ value: srv._id, label: srv.name }))}
                     value={instantServiceFormData.services}
                     onChange={(selected) => setInstantServiceFormData({ ...instantServiceFormData, services: selected })}
                     isSearchable
@@ -1372,7 +1208,7 @@ function Dashboard({ user }) {
                       <Form.Label>اسم الموظف</Form.Label>
                       <Select
                         options={userOptions}
-                        value={userOptions.find((opt) => opt.value === expenseAdvanceFormData.userId?.toString()) || null}
+                        value={userOptions.find(opt => opt.value === expenseAdvanceFormData.userId?.toString()) || null}
                         onChange={(selected) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, userId: selected ? selected.value.toString() : '' })}
                         isSearchable
                         placeholder="اختر الموظف..."
@@ -1401,7 +1237,7 @@ function Dashboard({ user }) {
                       <Form.Label>اسم الموظف</Form.Label>
                       <Select
                         options={userOptions}
-                        value={userOptions.find((opt) => opt.value === expenseAdvanceFormData.userId?.toString()) || null}
+                        value={userOptions.find(opt => opt.value === expenseAdvanceFormData.userId?.toString()) || null}
                         onChange={(selected) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, userId: selected ? selected.value.toString() : '' })}
                         isSearchable
                         placeholder="اختر الموظف..."
@@ -1515,22 +1351,22 @@ function Dashboard({ user }) {
               <p>اسم العميل: {currentDetails.clientName}</p>
               <p>رقم الهاتف: {currentDetails.clientPhone}</p>
               <p>المدينة: {currentDetails.city || 'غير متوفر'}</p>
-              <p>تاريخ المناسبة: {currentDetails.eventDate ? new Date(currentDetails.eventDate).toLocaleDateString() : 'غير متوفر'}</p>
+              <p>تاريخ المناسبة: {new Date(currentDetails.eventDate).toLocaleDateString()}</p>
               {currentDetails.hennaDate && <p>تاريخ الحنة: {new Date(currentDetails.hennaDate).toLocaleDateString()}</p>}
               <p>الباكدج: {currentDetails.package?.name || 'غير محدد'}</p>
-              {currentDetails.hennaPackage && <p>باكدج حنة: {currentDetails.hennaPackage.name || '-'}</p>}
-              {currentDetails.photographyPackage && <p>باكدج تصوير: {currentDetails.photographyPackage.name || '-'}</p>}
-              {currentDetails.returnedServices?.length > 0 && (
-                <p>الخدمات المرتجعة: {currentDetails.returnedServices.map((srv) => srv.name || srv._id).join(', ')}</p>
+              {currentDetails.hennaPackage && <p>باكدج حنة: {currentDetails.hennaPackage.name}</p>}
+              {currentDetails.photographyPackage && <p>باكدج تصوير: {currentDetails.photographyPackage.name}</p>}
+              {currentDetails.returnedServices.length > 0 && (
+                <p>الخدمات المرتجعة: {currentDetails.returnedServices.map(srv => srv.name).join(', ')}</p>
               )}
-              {currentDetails.extraServices?.length > 0 && (
-                <p>الخدمات الإضافية: {currentDetails.extraServices.map((srv) => srv.name || srv._id).join(', ')}</p>
+              {currentDetails.extraServices.length > 0 && (
+                <p>الخدمات الإضافية: {currentDetails.extraServices.map(srv => srv.name).join(', ')}</p>
               )}
               {currentDetails.hairStraightening && (
                 <>
                   <p>فرد شعر: نعم</p>
                   <p>سعر فرد الشعر: {currentDetails.hairStraighteningPrice} جنيه</p>
-                  <p>تاريخ فرد الشعر: {currentDetails.hairStraighteningDate ? new Date(currentDetails.hairStraighteningDate).toLocaleDateString() : 'غير متوفر'}</p>
+                  <p>تاريخ فرد الشعر: {new Date(currentDetails.hairStraighteningDate).toLocaleDateString()}</p>
                 </>
               )}
               {currentDetails.hairDye && (
@@ -1543,7 +1379,7 @@ function Dashboard({ user }) {
               <p>الإجمالي: {currentDetails.total} جنيه</p>
               <p>العربون: {currentDetails.deposit} جنيه</p>
               <p>المتبقي: {currentDetails.remaining} جنيه</p>
-              {currentDetails.installments?.length > 0 && (
+              {currentDetails.installments.length > 0 && (
                 <>
                   <h5 className="mt-3">عمليات الأقساط</h5>
                   <Table striped bordered hover size="sm">
@@ -1581,7 +1417,7 @@ function Dashboard({ user }) {
                       {currentDetails.updates.map((update, index) => (
                         <tr key={index}>
                           <td>{new Date(update.date).toLocaleDateString()}</td>
-                          <td>{update.changes ? Object.keys(update.changes).map((key) => `${key}: ${update.changes[key]}`).join(', ') : 'غير معروف'}</td>
+                          <td>{renderUpdateChanges(update.changes)}</td>
                           <td>{update.employeeId?.username || 'غير معروف'}</td>
                         </tr>
                       ))}

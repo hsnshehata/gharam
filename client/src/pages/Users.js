@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal } from 'react-bootstrap';
+import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons';
-import { useRxdb } from '../db/RxdbProvider';
 
 function Users() {
   const [users, setUsers] = useState([]);
@@ -28,25 +28,20 @@ function Users() {
     monthlySalary: 0,
     phone: ''
   });
-  const { collections, queueOperation } = useRxdb() || {};
-
-  const newId = () => (crypto.randomUUID ? crypto.randomUUID() : `user-${Date.now()}-${Math.random().toString(16).slice(2)}`);
-
-  const upsertLocal = async (doc, op = 'update') => {
-    if (!collections?.users) throw new Error('قاعدة البيانات غير جاهزة');
-    const withTs = { ...doc, updatedAt: new Date().toISOString() };
-    await collections.users.upsert(withTs);
-    if (queueOperation) await queueOperation('users', op, withTs);
-    return withTs;
-  };
 
   useEffect(() => {
-    if (!collections?.users) return;
-    const sub = collections.users
-      .find({ selector: { _deleted: { $ne: true } } })
-      .$.subscribe((docs) => setUsers(docs.map((d) => d.toJSON())));
-    return () => sub?.unsubscribe();
-  }, [collections]);
+    const fetchUsers = async () => {
+      try {
+        const res = await axios.get('/api/users', {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        });
+        setUsers(res.data);
+      } catch (err) {
+        setMessage('خطأ في جلب الموظفين');
+      }
+    };
+    fetchUsers();
+  }, []);
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
@@ -57,26 +52,14 @@ function Users() {
     if (addSubmitting) return;
     setAddSubmitting(true);
     try {
-      const newUser = {
-        _id: newId(),
-        username: addFormData.username,
-        password: addFormData.password, // سيُهش عند الرفع للسيرفر
-        role: addFormData.role,
-        monthlySalary: Number(addFormData.monthlySalary) || 0,
-        phone: addFormData.phone || '',
-        remainingSalary: Number(addFormData.monthlySalary) || 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        _deleted: false,
-        points: [],
-        efficiencyCoins: [],
-        coinsRedeemed: []
-      };
-      await upsertLocal(newUser, 'insert');
-      setMessage('تم إضافة الموظف محلياً وسيتم رفعه عند الاتصال');
+      const res = await axios.post('/api/users', addFormData, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      setUsers([res.data.user, ...users]);
+      setMessage(res.data.msg);
       setAddFormData({ username: '', password: '', confirmPassword: '', role: 'employee', monthlySalary: 0, phone: '' });
     } catch (err) {
-      setMessage('خطأ في إضافة الموظف');
+      setMessage(err.response?.data?.msg || 'خطأ في إضافة الموظف');
     } finally {
       setAddSubmitting(false);
     }
@@ -92,22 +75,24 @@ function Users() {
     setEditSubmitting(true);
     try {
       const updateData = {
-        ...editItem,
         username: editFormData.username,
         role: editFormData.role,
-        monthlySalary: Number(editFormData.monthlySalary) || 0,
-        phone: editFormData.phone || '',
-        remainingSalary: editItem.remainingSalary ?? editItem.monthlySalary,
+        monthlySalary: editFormData.monthlySalary,
+        phone: editFormData.phone
       };
       if (editFormData.password) {
         updateData.password = editFormData.password;
+        updateData.confirmPassword = editFormData.confirmPassword;
       }
-      await upsertLocal(updateData, 'update');
-      setMessage('تم تعديل الموظف محلياً وسيتم رفعه عند الاتصال');
+      const res = await axios.put(`/api/users/${editItem._id}`, updateData, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      setUsers(users.map(user => (user._id === editItem._id ? res.data.user : user)));
+      setMessage('تم تعديل الموظف بنجاح');
       setEditItem(null);
       setEditFormData({ username: '', password: '', confirmPassword: '', role: 'employee', monthlySalary: 0, phone: '' });
     } catch (err) {
-      setMessage('خطأ في تعديل الموظف');
+      setMessage(err.response?.data?.msg || 'خطأ في تعديل الموظف');
     } finally {
       setEditSubmitting(false);
     }
@@ -127,12 +112,15 @@ function Users() {
 
   const handleDelete = async () => {
     try {
-      await upsertLocal({ ...deleteItem, _deleted: true }, 'delete');
-      setMessage('تم حذف الموظف محلياً وسيتم رفعه عند الاتصال');
+      await axios.delete(`/api/users/${deleteItem._id}`, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      setUsers(users.filter(user => user._id !== deleteItem._id));
+      setMessage('تم حذف الموظف بنجاح');
       setShowDeleteModal(false);
       setDeleteItem(null);
     } catch (err) {
-      setMessage('خطأ في الحذف');
+      setMessage(err.response?.data?.msg || 'خطأ في الحذف');
       setShowDeleteModal(false);
     }
   };

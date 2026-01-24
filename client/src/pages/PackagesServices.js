@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Button, Container, Alert, Tabs, Tab, Card, Row, Col, Modal } from 'react-bootstrap';
-import { useRxdb } from '../db/RxdbProvider';
+import axios from 'axios';
 
 function PackagesServices() {
   const [packageForm, setPackageForm] = useState({ name: '', price: 0, type: 'makeup' });
@@ -13,52 +13,44 @@ function PackagesServices() {
   const [editItem, setEditItem] = useState(null);
   const [pkgSubmitting, setPkgSubmitting] = useState(false);
   const [srvSubmitting, setSrvSubmitting] = useState(false);
-  const { collections, queueOperation } = useRxdb() || {};
-
-  const newId = (prefix) => (crypto.randomUUID ? crypto.randomUUID() : `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`);
-
-  const upsertLocal = async (collectionName, doc, op = 'update') => {
-    const col = collections?.[collectionName];
-    if (!col) throw new Error('قاعدة البيانات غير جاهزة');
-    const withTs = { ...doc, updatedAt: new Date().toISOString() };
-    await col.upsert(withTs);
-    if (queueOperation) await queueOperation(collectionName, op, withTs);
-    return withTs;
-  };
 
   useEffect(() => {
-    if (!collections?.packages || !collections?.services) return;
-
-    const pkgSub = collections.packages
-      .find({ selector: { _deleted: { $ne: true } } })
-      .$.subscribe((docs) => setPackages(docs.map((d) => d.toJSON())));
-
-    const srvSub = collections.services
-      .find({ selector: { _deleted: { $ne: true } } })
-      .$.subscribe((docs) => setServices(docs.map((d) => d.toJSON())));
-
-    return () => {
-      pkgSub?.unsubscribe();
-      srvSub?.unsubscribe();
+    const fetchData = async () => {
+      try {
+        const pkgRes = await axios.get('/api/packages/packages', {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        });
+        const srvRes = await axios.get('/api/packages/services', {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        });
+        setPackages(pkgRes.data);
+        setServices(srvRes.data);
+      } catch (err) {
+        setMessage('خطأ في جلب البيانات');
+      }
     };
-  }, [collections]);
+    fetchData();
+  }, []);
 
   const handlePackageSubmit = async (e) => {
     e.preventDefault();
     if (pkgSubmitting) return;
     setPkgSubmitting(true);
     try {
-      const doc = {
-        _id: editItem?._id || newId('pkg'),
-        name: packageForm.name,
-        price: Number(packageForm.price) || 0,
-        type: packageForm.type,
-        createdAt: editItem?.createdAt || new Date().toISOString(),
-        _deleted: false
-      };
-      await upsertLocal('packages', doc, editItem ? 'update' : 'insert');
-      setMessage(`تم ${editItem ? 'تعديل' : 'إضافة'} الباكدج محلياً وسيتم رفعه عند الاتصال`);
-      setEditItem(null);
+      if (editItem) {
+        const res = await axios.put(`/api/packages/package/${editItem._id}`, packageForm, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        });
+        setPackages(packages.map(pkg => (pkg._id === editItem._id ? res.data.pkg : pkg)));
+        setMessage('تم تعديل الباكدج بنجاح');
+        setEditItem(null);
+      } else {
+        const res = await axios.post('/api/packages/package', packageForm, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        });
+        setPackages([...packages, res.data.pkg]);
+        setMessage('تم إضافة الباكدج بنجاح');
+      }
       setPackageForm({ name: '', price: 0, type: 'makeup' });
     } catch (err) {
       setMessage('خطأ في إضافة/تعديل الباكدج');
@@ -72,18 +64,20 @@ function PackagesServices() {
     if (srvSubmitting) return;
     setSrvSubmitting(true);
     try {
-      const doc = {
-        _id: editItem?._id || newId('srv'),
-        name: serviceForm.name,
-        price: Number(serviceForm.price) || 0,
-        type: serviceForm.type,
-        packageId: serviceForm.type === 'package' ? serviceForm.packageId || null : null,
-        createdAt: editItem?.createdAt || new Date().toISOString(),
-        _deleted: false
-      };
-      await upsertLocal('services', doc, editItem ? 'update' : 'insert');
-      setMessage(`تم ${editItem ? 'تعديل' : 'إضافة'} الخدمة محلياً وسيتم رفعها عند الاتصال`);
-      setEditItem(null);
+      if (editItem) {
+        const res = await axios.put(`/api/packages/service/${editItem._id}`, serviceForm, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        });
+        setServices(services.map(srv => (srv._id === editItem._id ? res.data.service : srv)));
+        setMessage('تم تعديل الخدمة بنجاح');
+        setEditItem(null);
+      } else {
+        const res = await axios.post('/api/packages/service', serviceForm, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        });
+        setServices([...services, res.data.service]);
+        setMessage('تم إضافة الخدمة بنجاح');
+      }
       setServiceForm({ name: '', price: 0, type: 'instant', packageId: '' });
     } catch (err) {
       setMessage('خطأ في إضافة/تعديل الخدمة');
@@ -97,7 +91,7 @@ function PackagesServices() {
       setPackageForm({ name: item.name, price: item.price, type: item.type });
       setEditItem(item);
     } else {
-      setServiceForm({ name: item.name, price: item.price, type: item.type, packageId: item.packageId?._id || item.packageId || '' });
+      setServiceForm({ name: item.name, price: item.price, type: item.type, packageId: item.packageId?._id || '' });
       setEditItem(item);
     }
   };
@@ -105,11 +99,17 @@ function PackagesServices() {
   const handleDelete = async () => {
     try {
       if (deleteItem.type === 'package') {
-        await upsertLocal('packages', { ...deleteItem, _deleted: true }, 'delete');
-        setMessage('تم حذف الباكدج محلياً وسيتم رفعه عند الاتصال');
+        await axios.delete(`/api/packages/package/${deleteItem._id}`, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        });
+        setPackages(packages.filter(pkg => pkg._id !== deleteItem._id));
+        setMessage('تم حذف الباكدج بنجاح');
       } else {
-        await upsertLocal('services', { ...deleteItem, _deleted: true }, 'delete');
-        setMessage('تم حذف الخدمة محلياً وسيتم رفعها عند الاتصال');
+        await axios.delete(`/api/packages/service/${deleteItem._id}`, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        });
+        setServices(services.filter(srv => srv._id !== deleteItem._id));
+        setMessage('تم حذف الخدمة بنجاح');
       }
       setShowDeleteModal(false);
       setDeleteItem(null);

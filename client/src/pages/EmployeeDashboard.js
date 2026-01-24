@@ -1,568 +1,76 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table } from 'react-bootstrap';
+import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheck, faQrcode, faGift, faCoins, faBolt, faRotateRight } from '@fortawesome/free-solid-svg-icons';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useToast } from '../components/ToastProvider';
-import { useRxdb } from '../db/RxdbProvider';
-
-const LEVEL_THRESHOLDS = [0, 3000, 8000, 18000, 38000, 73000, 118000, 178000, 268000, 418000];
-const COIN_VALUES = [0, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600];
-const MAX_LEVEL = 10;
 
 const COIN_COLORS = {
-  1: '#c0c7d1',
-  2: '#d4af37',
-  3: '#e74c3c',
-  4: '#27ae60',
-  5: '#2980b9',
-  6: '#8e44ad',
+  1: '#c0c7d1', // فضي
+  2: '#d4af37', // ذهبي
+  3: '#e74c3c', // أحمر
+  4: '#27ae60', // أخضر
+  5: '#2980b9', // أزرق
+  6: '#8e44ad', // أرجواني
   default: '#2c3e50'
 };
 
-const newId = (prefix = 'loc') => (crypto.randomUUID ? crypto.randomUUID() : `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`);
-const normalizeId = (entity) => {
-  if (entity === null || entity === undefined) return '';
-  if (typeof entity === 'string' || typeof entity === 'number') return entity.toString();
-  if (typeof entity === 'object') return (entity._id || entity.id || '').toString();
-  return '';
-};
-
-const isInRange = (dateValue, start, end) => {
-  if (!dateValue) return false;
-  const dt = new Date(dateValue);
-  if (Number.isNaN(dt.getTime())) return false;
-  return dt >= start && dt <= end;
-};
-
-const getLevel = (totalPoints = 0) => {
-  for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i -= 1) {
-    if (totalPoints >= LEVEL_THRESHOLDS[i]) {
-      return Math.min(i + 1, MAX_LEVEL);
-    }
-  }
-  return 1;
-};
-
-const getCoinValue = (level) => {
-  const lvl = Math.min(level, MAX_LEVEL);
-  return COIN_VALUES[lvl] || 100;
-};
-
 function EmployeeDashboard({ user }) {
-  const { collections, queueOperation } = useRxdb() || {};
   const [date] = useState(new Date().toISOString().split('T')[0]);
   const [receiptNumber, setReceiptNumber] = useState('');
-  const [pointsData, setPointsData] = useState(null);
+  const [executedServices, setExecutedServices] = useState([]);
   const [showPointsModal, setShowPointsModal] = useState(false);
+  const [pointsData, setPointsData] = useState(null);
   const [showQrModal, setShowQrModal] = useState(false);
+  const [pointsSummary, setPointsSummary] = useState(null);
+  const [pendingGifts, setPendingGifts] = useState([]);
+  const [todayGifts, setTodayGifts] = useState([]);
   const [redeemCount, setRedeemCount] = useState(1);
   const [showRedeemModal, setShowRedeemModal] = useState(false);
   const [converting, setConverting] = useState(false);
   const [convertCelebration, setConvertCelebration] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
-  const [rawBookings, setRawBookings] = useState([]);
-  const [rawInstantServices, setRawInstantServices] = useState([]);
-  const [users, setUsers] = useState([]);
   const qrCodeScanner = useRef(null);
   const { showToast } = useToast();
 
-  const startOfDay = useMemo(() => {
-    const d = new Date(date);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, [date]);
-
-  const endOfDay = useMemo(() => {
-    const d = new Date(startOfDay);
-    d.setHours(23, 59, 59, 999);
-    return d;
-  }, [startOfDay]);
-
-  const upsertLocal = useCallback(async (collectionName, doc, op = 'update') => {
-    const col = collections?.[collectionName];
-    if (!col) throw new Error('قاعدة البيانات غير جاهزة');
-    const payload = { ...doc, updatedAt: new Date().toISOString() };
-    await col.upsert(payload);
-    if (queueOperation) await queueOperation(collectionName, op, payload);
-    return payload;
-  }, [collections, queueOperation]);
-
-  useEffect(() => {
-    if (!collections) return undefined;
-    const subs = [];
-    const listen = (col, setter) => {
-      if (!col) return;
-      const sub = col.find({ selector: { _deleted: { $ne: true } } }).$.subscribe((docs) => {
-        setter(docs.map((d) => (d.toJSON ? d.toJSON() : d)));
-      });
-      subs.push(sub);
-    };
-    listen(collections.bookings, setRawBookings);
-    listen(collections.instantServices, setRawInstantServices);
-    listen(collections.users, setUsers);
-    return () => subs.forEach((s) => s && s.unsubscribe && s.unsubscribe());
-  }, [collections]);
-
-  const usersMap = useMemo(() => {
-    const map = new Map();
-    users.forEach((u) => {
-      const key = normalizeId(u);
-      if (key) map.set(key, u);
+  const fetchPointsSummary = useCallback(async () => {
+    const pointsRes = await axios.get(`/api/users/points/summary`, {
+      headers: { 'x-auth-token': localStorage.getItem('token') }
     });
-    return map;
-  }, [users]);
-
-  const getUsername = useCallback((value) => {
-    const id = normalizeId(value);
-    if (!id) return 'غير معروف';
-    const found = usersMap.get(id);
-    if (found?.username) return found.username;
-    if (typeof value === 'object' && value.username) return value.username;
-    return 'غير معروف';
-  }, [usersMap]);
-
-  const currentUserId = useMemo(() => normalizeId(user), [user]);
-  const currentUser = useMemo(() => usersMap.get(currentUserId) || null, [usersMap, currentUserId]);
-
-  const ensurePointsArrays = (draft) => {
-    if (!Array.isArray(draft.points)) draft.points = [];
-    if (!Array.isArray(draft.efficiencyCoins)) draft.efficiencyCoins = [];
-    if (!Array.isArray(draft.coinsRedeemed)) draft.coinsRedeemed = [];
-  };
-
-  const recomputeConvertible = useCallback((draft) => {
-    const coinsEarned = (draft.efficiencyCoins?.length || 0) + (draft.coinsRedeemed?.length || 0);
-    draft.convertiblePoints = Math.max(0, (draft.totalPoints || 0) - coinsEarned * 1000);
-    return draft;
+    setPointsSummary(pointsRes.data);
   }, []);
 
-  const mutateUser = useCallback(async (mutator, op = 'update') => {
-    if (!currentUserId) throw new Error('لا يوجد مستخدم');
-    const base = {
-      ...currentUser,
-      points: Array.isArray(currentUser?.points) ? [...currentUser.points] : [],
-      efficiencyCoins: Array.isArray(currentUser?.efficiencyCoins) ? [...currentUser.efficiencyCoins] : [],
-      coinsRedeemed: Array.isArray(currentUser?.coinsRedeemed) ? [...currentUser.coinsRedeemed] : []
-    };
-    ensurePointsArrays(base);
-    const updated = mutator(base) || base;
-    recomputeConvertible(updated);
-    updated.level = getLevel(updated.totalPoints || 0);
-    await upsertLocal('users', updated, op);
-    return updated;
-  }, [currentUser, currentUserId, recomputeConvertible, upsertLocal]);
-
-  const addWorkPoints = useCallback(async (amount, meta = {}) => {
-    if (!currentUser) return;
-    await mutateUser((draft) => {
-      ensurePointsArrays(draft);
-      draft.points.push({
-        _id: newId('point'),
-        amount,
-        date: new Date().toISOString(),
-        bookingId: meta.bookingId || null,
-        instantServiceId: meta.instantServiceId || null,
-        serviceId: meta.serviceId || null,
-        serviceName: meta.serviceName || null,
-        receiptNumber: meta.receiptNumber || null,
-        type: meta.type || 'work',
-        note: meta.note || null,
-        status: 'applied'
-      });
-      draft.totalPoints = (draft.totalPoints || 0) + amount;
-      draft.convertiblePoints = (draft.convertiblePoints || 0) + amount;
-      return draft;
+  const fetchPendingGifts = useCallback(async () => {
+    const res = await axios.get('/api/users/gifts/pending', {
+      headers: { 'x-auth-token': localStorage.getItem('token') }
     });
-  }, [currentUser, mutateUser]);
+    setPendingGifts(res.data?.gifts || []);
+  }, []);
 
-  const pointsSummary = useMemo(() => {
-    if (!currentUser) return null;
-    const totalPoints = currentUser.totalPoints || 0;
-    const level = getLevel(totalPoints);
-    const coins = currentUser.efficiencyCoins || [];
-    const coinsByLevel = coins.reduce((acc, c) => {
-      const lvl = c.level || level;
-      acc[lvl] = (acc[lvl] || 0) + 1;
-      return acc;
-    }, {});
-    const coinsTotalValue = coins.reduce((sum, c) => sum + (c.value || 0), 0);
-    const convertiblePoints = currentUser.convertiblePoints ?? Math.max(0, totalPoints - coins.length * 1000);
-    const currentLevelStart = LEVEL_THRESHOLDS[level - 1] || 0;
-    const nextLevelTarget = level >= MAX_LEVEL ? LEVEL_THRESHOLDS[MAX_LEVEL - 1] : LEVEL_THRESHOLDS[level];
-    const progressCurrent = Math.max(0, totalPoints - currentLevelStart);
-    const progressNeeded = level >= MAX_LEVEL ? 0 : Math.max(1, nextLevelTarget - currentLevelStart);
-    const progressPercent = level >= MAX_LEVEL ? 100 : Math.min(100, Math.round((progressCurrent / progressNeeded) * 100));
-
-    return {
-      totalPoints,
-      level,
-      currentCoinValue: getCoinValue(level),
-      convertiblePoints,
-      remainingSalary: currentUser.remainingSalary || 0,
-      coins: {
-        totalCount: coins.length,
-        totalValue: coinsTotalValue,
-        byLevel: coinsByLevel
-      },
-      progress: {
-        current: progressCurrent,
-        target: progressNeeded,
-        nextLevelTarget,
-        percent: progressPercent
-      }
-    };
-  }, [currentUser]);
-
-  const pendingGifts = useMemo(() => (
-    (currentUser?.points || []).filter((p) => p.type === 'gift' && p.status === 'pending')
-  ), [currentUser]);
-
-  const todayGifts = useMemo(() => (
-    (currentUser?.points || [])
-      .filter((p) => p.type === 'gift' && p.status === 'applied' && isInRange(p.openedAt || p.date, startOfDay, endOfDay))
-      .map((p) => ({
-        _id: p._id,
-        amount: p.amount,
-        note: p.note,
-        giftedByName: p.giftedByName || 'الإدارة',
-        openedAt: p.openedAt || p.date
-      }))
-  ), [currentUser, startOfDay, endOfDay]);
-
-  const executedServices = useMemo(() => {
-    if (!currentUserId) return [];
-    const executedList = [];
-    const pushItem = (payload) => executedList.push(payload);
-
-    rawBookings.forEach((b) => {
-      (b.packageServices || []).forEach((srv) => {
-        if (srv.executed && (srv.executedBy?._id || srv.executedBy)?.toString() === currentUserId && isInRange(srv.executedAt, startOfDay, endOfDay)) {
-          pushItem({
-            source: 'booking',
-            receiptNumber: b.receiptNumber || '-',
-            serviceName: srv.name || 'خدمة باكدج',
-            clientName: b.clientName || '—',
-            points: Math.round((srv.price || 0) * 0.15),
-            executedAt: srv.executedAt || b.createdAt,
-            executedBy: usersMap.get(currentUserId)?.username || null
-          });
-        }
-      });
-
-      if (b.hairStraighteningExecuted && (b.hairStraighteningExecutedBy?._id || b.hairStraighteningExecutedBy)?.toString() === currentUserId && isInRange(b.hairStraighteningExecutedAt, startOfDay, endOfDay)) {
-        pushItem({
-          source: 'booking',
-          receiptNumber: b.receiptNumber || '-',
-          serviceName: 'فرد الشعر',
-          clientName: b.clientName || '—',
-          points: Math.round((b.hairStraighteningPrice || 0) * 0.15),
-          executedAt: b.hairStraighteningExecutedAt || b.createdAt,
-          executedBy: usersMap.get(currentUserId)?.username || null
-        });
-      }
-
-      if (b.hairDyeExecuted && (b.hairDyeExecutedBy?._id || b.hairDyeExecutedBy)?.toString() === currentUserId && isInRange(b.hairDyeExecutedAt, startOfDay, endOfDay)) {
-        pushItem({
-          source: 'booking',
-          receiptNumber: b.receiptNumber || '-',
-          serviceName: 'صبغة الشعر',
-          clientName: b.clientName || '—',
-          points: Math.round((b.hairDyePrice || 0) * 0.15),
-          executedAt: b.hairDyeExecutedAt || b.createdAt,
-          executedBy: usersMap.get(currentUserId)?.username || null
-        });
-      }
+  const fetchTodayGifts = useCallback(async () => {
+    const res = await axios.get('/api/users/gifts/today', {
+      headers: { 'x-auth-token': localStorage.getItem('token') }
     });
+    setTodayGifts(res.data?.gifts || []);
+  }, []);
 
-    rawInstantServices.forEach((inst) => {
-      (inst.services || []).forEach((srv) => {
-        if (srv.executed && (srv.executedBy?._id || srv.executedBy)?.toString() === currentUserId && isInRange(srv.executedAt, startOfDay, endOfDay)) {
-          pushItem({
-            source: 'instant',
-            receiptNumber: inst.receiptNumber || '-',
-            serviceName: srv.name || 'خدمة فورية',
-            clientName: '—',
-            points: Math.round((srv.price || 0) * 0.15),
-            executedAt: srv.executedAt || inst.createdAt,
-            executedBy: usersMap.get(currentUserId)?.username || null
-          });
-        }
-      });
-    });
-
-    executedList.sort((a, b) => (new Date(b.executedAt || 0).getTime()) - (new Date(a.executedAt || 0).getTime()));
-    return executedList;
-  }, [currentUserId, rawBookings, rawInstantServices, startOfDay, endOfDay, usersMap]);
-
-  const handleReceiptSearch = useCallback((searchValue) => {
-    const normalized = (searchValue ?? '').toString().trim();
-    if (!normalized) {
-      showToast('الرجاء إدخال رقم الوصل', 'warning');
-      return;
-    }
-
-    const booking = rawBookings.find((b) => b.receiptNumber?.toString() === normalized || b.barcode?.toString() === normalized);
-    const instantService = rawInstantServices.find((i) => i.receiptNumber?.toString() === normalized || i.barcode?.toString() === normalized);
-
-    if (booking) {
-      setPointsData({ type: 'booking', data: booking });
-      setShowPointsModal(true);
-      return;
-    }
-    if (instantService) {
-      setPointsData({ type: 'instant', data: instantService });
-      setShowPointsModal(true);
-      return;
-    }
-    showToast('لم يتم العثور على حجز أو خدمة فورية بهذا الرقم', 'warning');
-  }, [rawBookings, rawInstantServices, showToast]);
-
-  const handleOpenQrModal = () => {
-    setShowQrModal(true);
-  };
-
-  useEffect(() => {
-    if (showQrModal) {
-      qrCodeScanner.current = new Html5Qrcode('qr-reader');
-      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-      qrCodeScanner.current.start(
-        { facingMode: 'environment' },
-        config,
-        (decodedText) => {
-          handleReceiptSearch(decodedText);
-          qrCodeScanner.current.stop().catch((err) => console.error('Stop error:', err));
-          setShowQrModal(false);
-        },
-        (error) => {
-          if (!error.includes('NotFoundException')) {
-            console.warn('QR scan warning:', error);
-          }
-        }
-      ).catch((err) => {
-        console.error('Start error:', err);
-        showToast('خطأ في تشغيل الكاميرا: تأكد من إذن الكاميرا', 'danger');
-        setShowQrModal(false);
-      });
-    }
-
-    return () => {
-      if (qrCodeScanner.current) {
-        try {
-          qrCodeScanner.current.stop().catch((err) => console.error('Stop error:', err));
-          qrCodeScanner.current = null;
-        } catch (err) {
-          console.error('Cleanup error:', err);
-        }
-      }
-    };
-  }, [showQrModal, showToast, handleReceiptSearch]);
-
-  const handleReceiptSubmit = async (e) => {
-    e.preventDefault();
-    if (!receiptNumber) {
-      showToast('الرجاء إدخال رقم الوصل', 'warning');
-      return;
-    }
-    await handleReceiptSearch(receiptNumber);
-  };
-
-  const handleConvertPoints = async () => {
-    if (!pointsSummary) return;
-    const convertible = Math.floor((pointsSummary.convertiblePoints || 0) / 1000);
-    if (convertible < 1) {
-      showToast('لا توجد نقاط كافية للتحويل', 'warning');
-      return;
-    }
+  const fetchAllData = useCallback(async () => {
+    setLoadingData(true);
     try {
-      setConverting(true);
-      await mutateUser((draft) => {
-        ensurePointsArrays(draft);
-        const level = getLevel(draft.totalPoints || 0);
-        const coinValue = getCoinValue(level);
-        for (let i = 0; i < convertible; i += 1) {
-          draft.efficiencyCoins.push({
-            level,
-            value: coinValue,
-            earnedAt: new Date().toISOString(),
-            sourcePointId: null,
-            receiptNumber: null
-          });
-        }
-        draft.convertiblePoints = Math.max(0, (draft.convertiblePoints || 0) - (convertible * 1000));
-        return draft;
+      const executedRes = await axios.get(`/api/users/executed-services?date=${date}`, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
       });
-      showToast(`تم تحويل ${convertible} عملة جديدة`, 'success');
-      setConvertCelebration(true);
-      setTimeout(() => setConvertCelebration(false), 1200);
+      await Promise.all([fetchPointsSummary(), fetchPendingGifts(), fetchTodayGifts()]);
+      setExecutedServices(executedRes.data?.services || []);
     } catch (err) {
-      console.error('Convert error:', err);
-      showToast('تعذر تحويل النقاط الآن', 'danger');
+      console.error('Fetch error:', err.response?.data || err.message);
+      showToast('خطأ في جلب البيانات', 'danger');
     } finally {
-      setConverting(false);
+      setLoadingData(false);
     }
-  };
-
-  const handleRedeemCoins = async () => {
-    if (!pointsSummary) return;
-    if (!redeemCount || redeemCount <= 0) {
-      showToast('اختار عدد العملات للاستبدال', 'warning');
-      return;
-    }
-    if (redeemCount > pointsSummary.coins.totalCount) {
-      showToast('عدد العملات المطلوب أكبر من المتاح', 'warning');
-      return;
-    }
-    try {
-      setRedeeming(true);
-      await mutateUser((draft) => {
-        ensurePointsArrays(draft);
-        const coinsToRedeem = draft.efficiencyCoins.slice(0, redeemCount);
-        draft.efficiencyCoins = draft.efficiencyCoins.slice(redeemCount);
-        const totalValue = coinsToRedeem.reduce((sum, c) => sum + (c.value || 0), 0);
-        coinsToRedeem.forEach((c) => {
-          draft.coinsRedeemed.push({
-            level: c.level,
-            value: c.value,
-            redeemedAt: new Date().toISOString(),
-            sourcePointId: c.sourcePointId || null
-          });
-        });
-        draft.remainingSalary = (draft.remainingSalary || 0) + totalValue;
-        return draft;
-      });
-      showToast('تم استبدال العملات وإضافتها للراتب الحالي', 'success');
-      setShowRedeemModal(false);
-    } catch (err) {
-      console.error('Redeem error:', err);
-      showToast('تعذر استبدال العملات', 'danger');
-    } finally {
-      setRedeeming(false);
-    }
-  };
-
-  const handleExecuteService = async (serviceId, type, recordId) => {
-    const employeeId = currentUserId;
-    if (!employeeId) {
-      showToast('حساب الموظف غير محدد، سجل دخول تاني وحاول', 'danger');
-      return;
-    }
-    try {
-      if (type === 'booking') {
-        const booking = rawBookings.find((b) => normalizeId(b) === recordId);
-        if (!booking) throw new Error('الحجز غير موجود محلياً');
-        const updated = { ...booking };
-        let points = 0;
-        let serviceName = 'غير معروف';
-        const now = new Date().toISOString();
-
-        if (serviceId === 'hairStraightening' || serviceId === 'hairDye') {
-          const isStraightening = serviceId === 'hairStraightening';
-          const enabled = isStraightening ? updated.hairStraightening : updated.hairDye;
-          const already = isStraightening ? updated.hairStraighteningExecuted : updated.hairDyeExecuted;
-          if (!enabled || already) {
-            showToast('الخدمة تم تنفيذها أو غير مفعّلة', 'warning');
-            return;
-          }
-          if (isStraightening) {
-            updated.hairStraighteningExecuted = true;
-            updated.hairStraighteningExecutedBy = employeeId;
-            updated.hairStraighteningExecutedAt = now;
-            points = (updated.hairStraighteningPrice || 0) * 0.15;
-            serviceName = 'فرد الشعر';
-          } else {
-            updated.hairDyeExecuted = true;
-            updated.hairDyeExecutedBy = employeeId;
-            updated.hairDyeExecutedAt = now;
-            points = (updated.hairDyePrice || 0) * 0.15;
-            serviceName = 'صبغة الشعر';
-          }
-        } else {
-          const srv = (updated.packageServices || []).find((s) => normalizeId(s) === serviceId || normalizeId(s._id) === serviceId);
-          if (!srv) {
-            showToast('الخدمة غير موجودة في الحجز', 'warning');
-            return;
-          }
-          if (srv.executed) {
-            showToast('الخدمة منفذة بالفعل', 'warning');
-            return;
-          }
-          srv.executed = true;
-          srv.executedBy = employeeId;
-          srv.executedAt = now;
-          points = (srv.price || 0) * 0.15;
-          serviceName = srv.name || 'خدمة باكدج';
-          updated.packageServices = [...updated.packageServices];
-        }
-
-        await upsertLocal('bookings', updated, 'update');
-        await addWorkPoints(points, {
-          bookingId: updated._id,
-          serviceId: serviceId === 'hairStraightening' || serviceId === 'hairDye' ? null : serviceId,
-          serviceName,
-          receiptNumber: updated.receiptNumber || null,
-          type: 'work'
-        });
-        setPointsData({ type: 'booking', data: updated });
-        setShowPointsModal(true);
-        showToast('تم تنفيذ الخدمة محلياً وسيتم رفعها عند الاتصال', 'success');
-      } else {
-        const instant = rawInstantServices.find((i) => normalizeId(i) === recordId);
-        if (!instant) throw new Error('الخدمة الفورية غير موجودة محلياً');
-        const updated = { ...instant };
-        const srv = (updated.services || []).find((s) => normalizeId(s) === serviceId || normalizeId(s._id) === serviceId);
-        if (!srv) {
-          showToast('الخدمة غير موجودة', 'warning');
-          return;
-        }
-        if (srv.executed) {
-          showToast('الخدمة منفذة بالفعل', 'warning');
-          return;
-        }
-        const now = new Date().toISOString();
-        srv.executed = true;
-        srv.executedBy = employeeId;
-        srv.executedAt = now;
-        updated.services = [...updated.services];
-
-        await upsertLocal('instantServices', updated, 'update');
-        await addWorkPoints((srv.price || 0) * 0.15, {
-          instantServiceId: updated._id,
-          serviceId,
-          serviceName: srv.name || 'خدمة فورية',
-          receiptNumber: updated.receiptNumber || null,
-          type: 'work'
-        });
-        setPointsData({ type: 'instant', data: updated });
-        setShowPointsModal(true);
-        showToast('تم تنفيذ الخدمة محلياً وسيتم رفعها عند الاتصال', 'success');
-      }
-    } catch (err) {
-      console.error('Execute service error:', err);
-      showToast('خطأ في تنفيذ الخدمة محلياً', 'danger');
-    }
-  };
-
-  const handleOpenGift = async (giftId) => {
-    try {
-      await mutateUser((draft) => {
-        ensurePointsArrays(draft);
-        const target = (draft.points || []).find((p) => p._id?.toString() === giftId && p.type === 'gift' && p.status === 'pending');
-        if (!target) return draft;
-        target.status = 'applied';
-        target.openedAt = new Date().toISOString();
-        const amount = Number(target.amount) || 0;
-        draft.totalPoints = (draft.totalPoints || 0) + amount;
-        draft.convertiblePoints = (draft.convertiblePoints || 0) + amount;
-        return draft;
-      });
-      showToast('تم فتح الهدية وإضافة النقاط', 'success');
-    } catch (err) {
-      console.error('Gift open error:', err);
-      showToast('تعذر فتح الهدية الآن', 'danger');
-    }
-  };
+  }, [date, fetchPointsSummary, fetchPendingGifts, fetchTodayGifts, showToast]);
 
   const formatNumber = useCallback((num = 0) => new Intl.NumberFormat('en-US').format(Math.max(0, num)), []);
 
@@ -583,14 +91,187 @@ function EmployeeDashboard({ user }) {
 
   const getCoinColor = useCallback((level) => COIN_COLORS[level] || COIN_COLORS.default, []);
 
-  const fetchAllData = useCallback(() => {
-    setLoadingData(true);
-    setTimeout(() => setLoadingData(false), 250);
-  }, []);
-
   useEffect(() => {
     fetchAllData();
   }, [fetchAllData]);
+
+  const handleReceiptSearch = useCallback(async (searchValue) => {
+    const normalized = (searchValue ?? '').toString().trim();
+    if (!normalized) {
+      showToast('الرجاء إدخال رقم الوصل', 'warning');
+      return;
+    }
+    try {
+      console.log('Searching for receipt:', normalized);
+      const [bookingRes, instantRes] = await Promise.allSettled([
+        axios.get(`/api/bookings/receipt/${normalized}`, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        }),
+        axios.get(`/api/instant-services/receipt/${normalized}`, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        })
+      ]);
+
+      const booking = bookingRes.status === 'fulfilled' ? bookingRes.value.data.booking : null;
+      const instantService = instantRes.status === 'fulfilled' ? instantRes.value.data.instantService : null;
+
+      if (booking) {
+        setPointsData({ type: 'booking', data: booking });
+        setShowPointsModal(true);
+        return;
+      }
+
+      if (instantService) {
+        setPointsData({ type: 'instant', data: instantService });
+        setShowPointsModal(true);
+        return;
+      }
+
+      showToast('لم يتم العثور على حجز أو خدمة فورية بهذا الرقم', 'warning');
+    } catch (err) {
+      console.error('Receipt search error:', err.response?.data || err.message);
+      showToast(err.response?.data?.msg || 'خطأ في البحث عن الوصل', 'danger');
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    if (showQrModal) {
+      qrCodeScanner.current = new Html5Qrcode("qr-reader");
+      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+      qrCodeScanner.current.start(
+        { facingMode: "environment" },
+        config,
+        (decodedText) => {
+          handleReceiptSearch(decodedText);
+          qrCodeScanner.current.stop().catch((err) => console.error('Stop error:', err));
+          setShowQrModal(false);
+        },
+        (error) => {
+          if (!error.includes('NotFoundException')) {
+            // Ignore transient decode errors to avoid noisy toasts while scanning
+            console.warn('QR scan warning:', error);
+          }
+        }
+      ).catch((err) => {
+        console.error('Start error:', err);
+        showToast('خطأ في تشغيل الكاميرا: تأكد من إذن الكاميرا', 'danger');
+        setShowQrModal(false);
+      });
+    }
+
+    return () => {
+      if (qrCodeScanner.current) {
+        try {
+          qrCodeScanner.current.stop().catch((err) => console.error('Stop error:', err));
+          qrCodeScanner.current = null;
+        } catch (err) {
+          console.error('Cleanup error:', err);
+        }
+      }
+    };
+  }, [showQrModal, handleReceiptSearch, showToast]);
+
+  const handleReceiptSubmit = async (e) => {
+    e.preventDefault();
+    if (!receiptNumber) {
+      showToast('الرجاء إدخال رقم الوصل', 'warning');
+      return;
+    }
+    await handleReceiptSearch(receiptNumber);
+  };
+
+  const handleConvertPoints = async () => {
+    if (!pointsSummary || (pointsSummary.convertiblePoints || 0) < 1000) {
+      showToast('لا توجد نقاط كافية للتحويل', 'warning');
+      return;
+    }
+    try {
+      setConverting(true);
+      const res = await axios.post('/api/users/convert-points', {}, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      showToast(`تم تحويل ${res.data.mintedCoins} عملة جديدة`, 'success');
+      setConvertCelebration(true);
+      setTimeout(() => setConvertCelebration(false), 1200);
+      await Promise.all([fetchPointsSummary(), fetchPendingGifts(), fetchTodayGifts()]);
+    } catch (err) {
+      console.error('Convert error:', err.response?.data || err.message);
+      showToast(err.response?.data?.msg || 'تعذر تحويل النقاط الآن', 'danger');
+    } finally {
+      setConverting(false);
+    }
+  };
+
+  const handleRedeemCoins = async () => {
+    if (!redeemCount || redeemCount <= 0) {
+      showToast('اختار عدد العملات للاستبدال', 'warning');
+      return;
+    }
+    if (redeemCount > coinsCount) {
+      showToast('عدد العملات المطلوب أكبر من المتاح', 'warning');
+      return;
+    }
+    try {
+      setRedeeming(true);
+      const res = await axios.post('/api/users/redeem-coins', { count: redeemCount }, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      showToast(`تم استبدال ${res.data.redeemedCoins} عملة بقيمة ${res.data.totalValue} جنيه`, 'success');
+      await Promise.all([fetchPointsSummary(), fetchPendingGifts(), fetchTodayGifts()]);
+      setShowRedeemModal(false);
+    } catch (err) {
+      console.error('Redeem error:', err.response?.data || err.message);
+      showToast(err.response?.data?.msg || 'تعذر استبدال العملات', 'danger');
+    } finally {
+      setRedeeming(false);
+    }
+  };
+
+  const handleExecuteService = async (serviceId, type, recordId) => {
+    const employeeId = user?._id || user?.id;
+    if (!employeeId) {
+      showToast('حساب الموظف غير محدد، سجل دخول تاني وحاول', 'danger');
+      return;
+    }
+    try {
+      console.log('Executing service:', { serviceId, type, recordId, employeeId });
+      const endpoint = type === 'booking' 
+        ? `/api/bookings/execute-service/${recordId}/${serviceId}`
+        : `/api/instant-services/execute-service/${recordId}/${serviceId}`;
+      const res = await axios.post(endpoint, { employeeId }, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      console.log('Execute service response:', res.data);
+      showToast(`تم تنفيذ الخدمة بنجاح وإضافة ${res.data.points} نقطة`, 'success');
+
+      setPointsData(prev => ({
+        ...prev,
+        data: type === 'booking' ? res.data.booking : res.data.instantService
+      }));
+
+      await fetchAllData();
+    } catch (err) {
+      console.error('Execute service error:', err.response?.data || err.message);
+      showToast(err.response?.data?.msg || 'خطأ في تنفيذ الخدمة', 'danger');
+    }
+  };
+
+  const handleOpenQrModal = () => {
+    setShowQrModal(true);
+  };
+
+  const handleOpenGift = async (giftId) => {
+    try {
+      const res = await axios.post(`/api/users/gifts/open/${giftId}`, {}, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      showToast(res.data.msg || 'تم فتح الهدية', 'success');
+      await Promise.all([fetchPointsSummary(), fetchPendingGifts(), fetchTodayGifts()]);
+    } catch (err) {
+      console.error('Gift open error:', err.response?.data || err.message);
+      showToast(err.response?.data?.msg || 'تعذر فتح الهدية الآن', 'danger');
+    }
+  };
 
   const coinsCount = pointsSummary?.coins?.totalCount || 0;
   const topCoinLevel = getTopCoinLevel(pointsSummary?.coins?.byLevel || {});
@@ -860,10 +541,10 @@ function EmployeeDashboard({ user }) {
                   <p>تاريخ المناسبة: {new Date(pointsData.data.eventDate).toLocaleDateString()}</p>
                   {pointsData.data.hennaDate && <p>تاريخ الحنة: {new Date(pointsData.data.hennaDate).toLocaleDateString()}</p>}
                   {pointsData.data.returnedServices?.length > 0 && (
-                    <p>الخدمات المرتجعة: {pointsData.data.returnedServices.map((srv) => srv.name).join(', ')}</p>
+                    <p>الخدمات المرتجعة: {pointsData.data.returnedServices.map(srv => srv.name).join(', ')}</p>
                   )}
                   {pointsData.data.extraServices?.length > 0 && (
-                    <p>الخدمات الإضافية: {pointsData.data.extraServices.map((srv) => srv.name).join(', ')}</p>
+                    <p>الخدمات الإضافية: {pointsData.data.extraServices.map(srv => srv.name).join(', ')}</p>
                   )}
                   <h5>الخدمات:</h5>
                   <Table striped bordered hover>
@@ -885,7 +566,7 @@ function EmployeeDashboard({ user }) {
                             <td>{srv.price ? `${srv.price} جنيه` : 'غير معروف'}</td>
                             <td>
                               {srv.executed ? (
-                                `نفذت بواسطة ${getUsername(srv.executedBy)}`
+                                `نفذت بواسطة ${srv.executedBy?.username || 'غير معروف'}`
                               ) : (
                                 'لم يتم الاستلام'
                               )}
@@ -908,11 +589,11 @@ function EmployeeDashboard({ user }) {
                           <td>فرد شعر</td>
                           <td>{pointsData.data.hairStraighteningPrice ? `${pointsData.data.hairStraighteningPrice} جنيه` : 'غير معروف'}</td>
                           <td>
-                              {pointsData.data.hairStraighteningExecuted ? (
-                                `نفذت بواسطة ${getUsername(pointsData.data.hairStraighteningExecutedBy)}`
-                              ) : (
-                                'لم يتم الاستلام'
-                              )}
+                            {pointsData.data.hairStraighteningExecuted ? (
+                              `نفذت بواسطة ${pointsData.data.hairStraighteningExecutedBy?.username || 'غير معروف'}`
+                            ) : (
+                              'لم يتم الاستلام'
+                            )}
                           </td>
                           <td>
                             {!pointsData.data.hairStraighteningExecuted && (
@@ -933,7 +614,7 @@ function EmployeeDashboard({ user }) {
                 <>
                   <p>رقم الوصل: {pointsData.data.receiptNumber}</p>
                   <p>تاريخ الخدمة: {new Date(pointsData.data.createdAt).toLocaleDateString()}</p>
-                  <p>الموظف: {pointsData.data.services.find((srv) => srv.executed && srv.executedBy) ? getUsername(pointsData.data.services.find((srv) => srv.executed && srv.executedBy).executedBy) : 'غير محدد'}</p>
+                  <p>الموظف: {pointsData.data.services.find(srv => srv.executed && srv.executedBy) ? pointsData.data.services.find(srv => srv.executed && srv.executedBy).executedBy.username : 'غير محدد'}</p>
                   <h5>الخدمات:</h5>
                   <Table striped bordered hover>
                     <thead>
@@ -951,7 +632,7 @@ function EmployeeDashboard({ user }) {
                           <td>{srv.price ? `${srv.price} جنيه` : 'غير معروف'}</td>
                           <td>
                             {srv.executed ? (
-                              `نفذت بواسطة ${getUsername(srv.executedBy)}`
+                              `نفذت بواسطة ${srv.executedBy?.username || 'غير معروف'}`
                             ) : (
                               'لم يتم الاستلام'
                             )}

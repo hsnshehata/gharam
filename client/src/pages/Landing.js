@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
 import { googleReviews } from '../data/googleReviews';
 
 const WHATSAPP_LINK = 'https://wa.me/gharam';
@@ -14,18 +15,6 @@ const API_BASE = (process.env.REACT_APP_API_BASE || 'http://localhost:5000').rep
 const CANONICAL_URL = 'https://gharamsoltan.com/';
 const BUSINESS_NAME = 'غرام سلطان بيوتي سنتر وستوديو';
 const BUSINESS_DESCRIPTION = 'ميكب ارتيست وتصوير احترافي وحجز باكدجات زفاف، صبغة وفرد شعر، ومساج ضد الجاذبية في كفر الشيخ. حجزي أونلاين وتابعي التوافر الفوري.';
-
-const fetchJson = async (url, options = {}) => {
-	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), options.timeout || 8000);
-	try {
-		const res = await fetch(url, { ...options, signal: controller.signal });
-		if (!res.ok) throw new Error(`HTTP ${res.status}`);
-		return await res.json();
-	} finally {
-		clearTimeout(timer);
-	}
-};
 
 const INSTAGRAM_SVG = (
 	<path
@@ -353,9 +342,8 @@ function Landing() {
 		}
 		setLoading(true);
 		try {
-			const params = new URLSearchParams({ date, packageType });
-			const data = await fetchJson(`${API_BASE}/api/public/availability?${params.toString()}`);
-			setAvailability(data);
+			const res = await axios.get(`${API_BASE}/api/public/availability`, { params: { date, packageType } });
+			setAvailability(res.data);
 			setShowAvailabilityModal(true);
 		} catch (err) {
 			setError('حصل خطأ في الاستعلام، جربي تاني.');
@@ -370,9 +358,9 @@ function Landing() {
 			setReviewsLoading(true);
 			setReviewsError('');
 			try {
-				const data = await fetchJson(`${API_BASE}/api/public/google-reviews`);
+				const res = await axios.get(`${API_BASE}/api/public/google-reviews`);
 				if (!isMounted) return;
-				const payload = data || {};
+				const payload = res.data || {};
 				const remoteReviews = Array.isArray(payload.reviews) ? payload.reviews : [];
 				const mergedReviews = mergeReviews(remoteReviews, fallbackReviews, DESIRED_REVIEW_COUNT);
 				const source = payload.source || (remoteReviews.length ? 'google' : 'fallback');
