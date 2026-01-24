@@ -33,6 +33,7 @@ function Login({ setUser, setToken }) {
       const res = await axios.post('/api/auth/login', { username, password });
       console.log('Login response:', res.data);
       localStorage.setItem('token', res.data.token);
+      localStorage.setItem('cachedUser', JSON.stringify(res.data.user));
       if (setToken) setToken(res.data.token);
       // تحديث أي مستمعي RxDB ببساطة عبر localStorage، App سيقرأ التوكن ويبدأ المزامنة
       if (remember) {
