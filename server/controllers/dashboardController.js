@@ -4,6 +4,8 @@ const Expense = require('../models/Expense');
 const Advance = require('../models/Advance');
 const User = require('../models/User');
 
+const toNumber = (v) => Number(v) || 0;
+
 exports.getDashboardSummary = async (req, res) => {
   const { date } = req.query; // التاريخ على شكل YYYY-MM-DD
   try {
@@ -18,7 +20,7 @@ exports.getDashboardSummary = async (req, res) => {
     }).populate('package');
 
     // حساب إجمالي العرابين من الحجوزات الجديدة
-    const totalDepositFromBookings = bookings.reduce((sum, booking) => sum + booking.deposit, 0);
+    const totalDepositFromBookings = bookings.reduce((sum, booking) => sum + toNumber(booking.deposit), 0);
 
     // تجميع سريع للأقساط في اليوم الحالي لتفادي أي حالات تفويت
     const installmentAgg = await Booking.aggregate([
@@ -36,7 +38,7 @@ exports.getDashboardSummary = async (req, res) => {
       }
     ]);
 
-    const totalInstallments = installmentAgg.length ? installmentAgg[0].total : 0;
+    const totalInstallments = toNumber(installmentAgg.length ? installmentAgg[0].total : 0);
 
     // إجمالي العرابين = عرابين الحجوزات الجديدة + كل الأقساط المضافة اليوم
     const totalDeposit = totalDepositFromBookings + totalInstallments;
@@ -62,9 +64,9 @@ exports.getDashboardSummary = async (req, res) => {
     // حساب الإجماليات
     const bookingCount = bookings.length;
     const instantServiceCount = instantServices.length;
-    const totalInstantServices = instantServices.reduce((sum, service) => sum + service.total, 0);
-    const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-    const totalAdvances = advances.reduce((sum, advance) => sum + advance.amount, 0);
+    const totalInstantServices = instantServices.reduce((sum, service) => sum + toNumber(service.total), 0);
+    const totalExpenses = expenses.reduce((sum, expense) => sum + toNumber(expense.amount), 0);
+    const totalAdvances = advances.reduce((sum, advance) => sum + toNumber(advance.amount), 0);
     const net = totalDeposit + totalInstantServices - totalExpenses - totalAdvances;
 
     // حساب الموظف الأعلى تحصيلاً بناءً على نقاط الموظفين في هذا اليوم
