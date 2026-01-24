@@ -19,7 +19,8 @@ exports.addInstantService = async (req, res) => {
         name: srv.name,
         price: srv.price,
         executed: !!employeeId, // executed: true لو فيه employeeId
-        executedBy: employeeId || null // executedBy: employeeId لو موجود
+        executedBy: employeeId || null, // executedBy: employeeId لو موجود
+        executedAt: employeeId ? new Date() : null
       };
       if (employeeId) {
         totalPoints += srv.price * 0.15; // احتساب النقاط
@@ -84,7 +85,8 @@ exports.updateInstantService = async (req, res) => {
         name: srv.name,
         price: srv.price,
         executed: !!employeeId, // executed: true لو فيه employeeId
-        executedBy: employeeId || null // executedBy: employeeId لو موجود
+        executedBy: employeeId || null, // executedBy: employeeId لو موجود
+        executedAt: employeeId ? new Date() : null
       };
       if (employeeId) {
         totalPoints += srv.price * 0.15; // احتساب النقاط
@@ -190,6 +192,25 @@ exports.getInstantServices = async (req, res) => {
   }
 };
 
+// جلب خدمة فورية برقم الوصل بدقة
+exports.getInstantServiceByReceipt = async (req, res) => {
+  const receiptNumber = (req.params.receiptNumber || '').toString().trim();
+  if (!receiptNumber) return res.status(400).json({ msg: 'رقم الوصل غير صالح' });
+
+  try {
+    const instantService = await InstantService.findOne({ receiptNumber })
+      .populate('employeeId', 'username')
+      .populate('services.executedBy', 'username');
+
+    if (!instantService) return res.status(404).json({ msg: 'لم يتم العثور على خدمة فورية بهذا الرقم' });
+
+    return res.json({ instantService });
+  } catch (err) {
+    console.error('Error in getInstantServiceByReceipt:', err);
+    return res.status(500).json({ msg: 'خطأ في السيرفر' });
+  }
+};
+
 exports.executeService = async (req, res) => {
   const { id, serviceId } = req.params;
   const { employeeId } = req.body;
@@ -231,6 +252,7 @@ exports.executeService = async (req, res) => {
 
     service.executed = true;
     service.executedBy = employeeId;
+    service.executedAt = new Date();
     const points = service.price * 0.15;
 
     await addPointsAndConvertInternal(employeeId, points, {
@@ -281,6 +303,7 @@ exports.resetService = async (req, res) => {
 
     service.executed = false;
     service.executedBy = null;
+    service.executedAt = null;
 
     await instantService.save();
 
