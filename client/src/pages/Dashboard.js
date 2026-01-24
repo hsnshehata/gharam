@@ -522,7 +522,10 @@ function Dashboard({ user }) {
     const selectedServices = instantServiceFormData.services.map((s) => s.value);
     const resolvedServices = selectedServices.map((id) => {
       const srv = services.find((s) => s._id === id);
-      return srv ? { _id: srv._id, name: srv.name, price: srv.price, executed: false, executedBy: null, executedAt: null } : { _id: id, name: 'خدمة', price: 0, executed: false };
+      const base = srv
+        ? { _id: srv._id, name: srv.name, price: srv.price }
+        : { _id: id?.toString?.() || `${id}`, name: 'خدمة', price: 0 };
+      return { ...base, executed: false, executedBy: '', executedAt: null };
     });
     const totalPrice = resolvedServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0);
 
@@ -531,7 +534,7 @@ function Dashboard({ user }) {
     try {
       const doc = {
         _id: editItem?._id || newId('inst'),
-        employeeId: instantServiceFormData.employeeId || null,
+        employeeId: instantServiceFormData.employeeId || '',
         services: resolvedServices,
         total: totalPrice,
         createdAt: editItem?.createdAt || new Date().toISOString(),
