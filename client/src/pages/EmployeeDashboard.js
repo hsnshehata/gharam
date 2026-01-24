@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheck, faQrcode, faGift, faCoins, faBolt } from '@fortawesome/free-solid-svg-icons';
+import { faCheck, faQrcode, faGift, faCoins, faBolt, faRotateRight } from '@fortawesome/free-solid-svg-icons';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useToast } from '../components/ToastProvider';
 import { useRxdb } from '../db/RxdbProvider';
@@ -56,6 +56,7 @@ function EmployeeDashboard({ user }) {
   const [converting, setConverting] = useState(false);
   const [convertCelebration, setConvertCelebration] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
+  const [loadingData, setLoadingData] = useState(false);
   const [rawBookings, setRawBookings] = useState([]);
   const [rawInstantServices, setRawInstantServices] = useState([]);
   const [users, setUsers] = useState([]);
@@ -304,6 +305,10 @@ function EmployeeDashboard({ user }) {
     showToast('لم يتم العثور على حجز أو خدمة فورية بهذا الرقم', 'warning');
   }, [rawBookings, rawInstantServices, showToast]);
 
+  const handleOpenQrModal = () => {
+    setShowQrModal(true);
+  };
+
   useEffect(() => {
     if (showQrModal) {
       qrCodeScanner.current = new Html5Qrcode('qr-reader');
@@ -342,6 +347,10 @@ function EmployeeDashboard({ user }) {
 
   const handleReceiptSubmit = async (e) => {
     e.preventDefault();
+    if (!receiptNumber) {
+      showToast('الرجاء إدخال رقم الوصل', 'warning');
+      return;
+    }
     await handleReceiptSearch(receiptNumber);
   };
 
@@ -541,13 +550,37 @@ function EmployeeDashboard({ user }) {
     }
   };
 
+  const formatNumber = useCallback((num = 0) => new Intl.NumberFormat('en-US').format(Math.max(0, num)), []);
+
+  const formatTime = useCallback((dt) => {
+    if (!dt) return '—';
+    const dateObj = new Date(dt);
+    if (Number.isNaN(dateObj.getTime())) return '—';
+    return dateObj.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  }, []);
+
+  const getTopCoinLevel = useCallback((byLevel = {}) => {
+    const levels = Object.keys(byLevel || {})
+      .map(Number)
+      .filter((lvl) => !Number.isNaN(lvl) && byLevel[lvl] > 0);
+    if (levels.length === 0) return 1;
+    return Math.max(...levels);
+  }, []);
+
+  const getCoinColor = useCallback((level) => COIN_COLORS[level] || COIN_COLORS.default, []);
+
+  const fetchAllData = useCallback(() => {
+    setLoadingData(true);
+    setTimeout(() => setLoadingData(false), 250);
+  }, []);
+
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
+
   const coinsCount = pointsSummary?.coins?.totalCount || 0;
-  const topCoinLevel = (() => {
-    const byLevel = pointsSummary?.coins?.byLevel || {};
-    const levels = Object.keys(byLevel).map(Number).filter((lvl) => !Number.isNaN(lvl) && byLevel[lvl] > 0);
-    return levels.length ? Math.max(...levels) : 1;
-  })();
-  const topCoinColor = COIN_COLORS[topCoinLevel] || COIN_COLORS.default;
+  const topCoinLevel = getTopCoinLevel(pointsSummary?.coins?.byLevel || {});
+  const topCoinColor = getCoinColor(topCoinLevel);
   const convertiblePoints = pointsSummary?.convertiblePoints || 0;
   const canConvert = convertiblePoints >= 1000;
   const remainingSalary = pointsSummary?.remainingSalary || 0;
@@ -571,12 +604,14 @@ function EmployeeDashboard({ user }) {
                   <div className="text-muted small">افتح الصندوق علشان النقاط تضاف لرصيدك</div>
                 </div>
               </div>
-              <div className="d-flex flex-wrap gap-2">
-                {pendingGifts.map((gift) => (
-                  <Button key={gift._id} variant="outline-primary" onClick={() => handleOpenGift(gift._id)}>
-                    <FontAwesomeIcon icon={faGift} className="me-2" />
-                    {gift.amount} نقطة - {gift.note || 'هدية نقاط'}
-                  </Button>
+              <div className="d-flex flex-column gap-2 flex-fill">
+                {pendingGifts.map((g) => (
+                  <div key={g._id} className="d-flex flex-wrap align-items-center gap-2 justify-content-between gift-row">
+                    <div className="text-muted small">من: {g.giftedByName || 'الإدارة'} — السبب: {g.note || 'هدية تقدير'}</div>
+                    <Button variant="success" className="gift-open-btn" onClick={() => handleOpenGift(g._id)}>
+                      افتح +{g.amount} نقطة
+                    </Button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -584,159 +619,216 @@ function EmployeeDashboard({ user }) {
         </Card>
       )}
 
-      {todayGifts.length > 0 && (
-        <Alert variant="success" className="d-flex align-items-center gap-2">
-          <FontAwesomeIcon icon={faGift} />
-          <span>تم فتح {todayGifts.length} هدية اليوم.</span>
-        </Alert>
-      )}
+      <Row className="mb-4 justify-content-center">
+        <Col md={8} lg={6}>
+          <div className="scan-panel text-center">
+            <Button variant="primary" onClick={handleOpenQrModal} className="scan-btn simple-scan-btn">
+              <FontAwesomeIcon icon={faQrcode} className="me-2" />
+              مسح الباركود
+            </Button>
+            <Form onSubmit={handleReceiptSubmit} className="mt-3">
+              <Form.Group>
+                <Form.Label>أو اكتب رقم الوصل</Form.Label>
+                <div className="d-flex gap-2">
+                  <Form.Control
+                    type="text"
+                    value={receiptNumber}
+                    onChange={(e) => setReceiptNumber(e.target.value)}
+                    placeholder="أدخل رقم الوصل"
+                  />
+                  <Button type="submit" variant="outline-primary">بحث</Button>
+                </div>
+              </Form.Group>
+            </Form>
+          </div>
+        </Col>
+      </Row>
 
-      <Row className="mb-4">
-        <Col md={8}>
-          <Card className="h-100">
-            <Card.Body className="d-flex flex-column gap-3">
-              <div className="d-flex align-items-center justify-content-between">
-                <div>
-                  <Card.Title className="mb-1">رصيدك</Card.Title>
-                  <div className="text-muted">النقاط والعملات المتاحة حالياً</div>
-                </div>
-                <div className="text-end">
-                  <div className="fs-4 fw-bold">{pointsSummary?.totalPoints || 0} نقطة</div>
-                  <div className="text-muted">مستوى L{pointsSummary?.level || 1}</div>
-                </div>
-              </div>
-              <div className="d-flex flex-wrap gap-3 align-items-center">
-                <div className="d-flex align-items-center gap-2">
-                  <div className="coin" style={{ background: topCoinColor }} />
-                  <div>
-                    <div className="text-muted small">عدد العملات</div>
-                    <div className="fw-bold">{coinsCount}</div>
+      <Card className="mb-4 points-card">
+        <Card.Body>
+          <Card.Title>لوحة المكافآت</Card.Title>
+          {pointsSummary ? (
+            <>
+              <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 points-top">
+                <div className="coin-chip">
+                  <div
+                    className="coin-illustration"
+                    style={{ background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.7), rgba(255,255,255,0.1)), linear-gradient(135deg, ${topCoinColor}, ${topCoinColor}aa)` }}
+                  >
+                    <span className="coin-glow" />
+                    <span className="coin-level">L{topCoinLevel}</span>
+                  </div>
+                  <div className="coin-meta">
+                    <div className="coin-title">أعلى عملة وصلت لها</div>
+                    <div className="coin-count-text">
+                      <FontAwesomeIcon icon={faCoins} className="me-2" />
+                      {coinsCount}
+                    </div>
+                    <div className="coin-desc">اللون يعكس مستوى العملة الحالي</div>
                   </div>
                 </div>
-                <div>
-                  <div className="text-muted small">رصيد قابل للتحويل</div>
-                  <div className="fw-bold">{convertiblePoints} نقطة</div>
+
+                <div className="level-progress-wrap">
+                  <div className="d-flex align-items-center gap-2 mb-1">
+                    <span className="text-muted small">المستوى الحالي</span>
+                    <span className="level-badge">L{pointsSummary.level}</span>
+                  </div>
+                  <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pointsSummary.progress?.percent || 0}>
+                    <div
+                      className="progress-bar"
+                      style={{ width: `${pointsSummary.progress?.percent || 0}%` }}
+                    />
+                  </div>
+                  <div className="small text-muted mt-1">
+                    متبقي: {Math.max(0, (pointsSummary.progress?.target || 0) - (pointsSummary.progress?.current || 0))} نقطة للوصول للمستوى التالي
+                  </div>
                 </div>
-                <div>
-                  <div className="text-muted small">الراتب المتبقي</div>
-                  <div className="fw-bold">{remainingSalary} ج</div>
+
+                {coinsCount > 0 && (
+                  <Button variant="outline-success" className="gift-btn" onClick={() => { setRedeemCount(1); setShowRedeemModal(true); }}>
+                    <FontAwesomeIcon icon={faGift} className="me-2" /> استبدال العملات
+                  </Button>
+                )}
+              </div>
+
+              <div className="counter-block mt-3">
+                <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                  <div>
+                    <div className="small text-muted">عداد النقاط القابلة للتحويل</div>
+                    <div className={`points-counter ${convertCelebration ? 'burst' : ''}`}>
+                      {formatNumber(convertiblePoints)}
+                    </div>
+                  </div>
+                  <div className="text-end">
+                    <div className="small text-muted">قيمة العملة الحالية</div>
+                    <div className="fw-bold">{formatNumber(pointsSummary.currentCoinValue)} جنيه</div>
+                    <div className="small text-muted mt-1">متبقي راتب الشهر: {formatNumber(remainingSalary)} جنيه</div>
+                  </div>
                 </div>
+
+                {canConvert ? (
+                  <Button
+                    className={`convert-btn mt-2 ${convertCelebration ? 'celebrate' : ''}`}
+                    onClick={handleConvertPoints}
+                    disabled={converting}
+                  >
+                    <FontAwesomeIcon icon={faBolt} className="me-2" />
+                    حوّل كل 1000 نقطة إلى عملة
+                  </Button>
+                ) : (
+                  <div className="text-muted small mt-2">اجمع {formatNumber(Math.max(0, 1000 - convertiblePoints))} نقطة إضافية علشان تحوّل أول عملة</div>
+                )}
               </div>
-              <div className="d-flex flex-wrap gap-2">
-                <Button variant="primary" disabled={!canConvert || converting} onClick={handleConvertPoints}>
-                  <FontAwesomeIcon icon={faCoins} className="me-2" />
-                  {converting ? 'جارٍ التحويل...' : 'حوّل 1000 نقطة = عملة'}
-                </Button>
-                <Button variant="outline-primary" onClick={() => setShowRedeemModal(true)} disabled={coinsCount === 0}>
-                  <FontAwesomeIcon icon={faBolt} className="me-2" />
-                  استبدال العملات
-                </Button>
-                <Button variant="outline-secondary" onClick={() => setShowQrModal(true)}>
-                  <FontAwesomeIcon icon={faQrcode} className="me-2" />
-                  اسكان QR للوصل
-                </Button>
-              </div>
-              {convertCelebration && (
-                <div className="alert alert-success mb-0">مبروك! تم سك عملات جديدة 🎉</div>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col md={4}>
-          <Card className="h-100">
-            <Card.Body>
-              <Card.Title>بحث برقم الوصل</Card.Title>
-              <Form onSubmit={handleReceiptSubmit} className="d-flex gap-2">
-                <Form.Control
-                  type="text"
-                  value={receiptNumber}
-                  onChange={(e) => setReceiptNumber(e.target.value)}
-                  placeholder="اكتب رقم الوصل أو امسح QR"
-                />
-                <Button type="submit" variant="primary">بحث</Button>
-              </Form>
-            </Card.Body>
-          </Card>
-        </Col>
+            </>
+          ) : (
+            <div>جارٍ التحميل...</div>
+          )}
+        </Card.Body>
+      </Card>
+
+      <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h3 className="mb-0">الخدمات اللي نفذتها النهارده</h3>
+        <Button
+          variant="outline-light"
+          className="refresh-btn"
+          onClick={fetchAllData}
+          disabled={loadingData}
+        >
+          <FontAwesomeIcon icon={faRotateRight} className="me-2" />
+          {loadingData ? 'جاري التحديث...' : 'تحديث البيانات'}
+        </Button>
+      </div>
+      {executedServicesList.length === 0 && (
+        <Alert variant="info">لسه ما نفذت خدمات النهارده</Alert>
+      )}
+      <Row>
+        {executedServicesList.map((srv, idx) => (
+          <Col md={4} key={`${srv.receiptNumber}-${idx}`} className="mb-3">
+            <Card className="service-card">
+              <Card.Body>
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <span className="service-type">{srv.source === 'instant' ? 'خدمة فورية' : 'باكدج'}</span>
+                  <span className="points-pill">+{formatNumber(srv.points)} نقطة</span>
+                </div>
+                <Card.Title className="mb-2">{srv.serviceName}</Card.Title>
+                <Card.Text className="mb-1">رقم الوصل: {srv.receiptNumber}</Card.Text>
+                {srv.source !== 'instant' && (
+                  <Card.Text className="text-muted small">العروسة: {srv.clientName}</Card.Text>
+                )}
+                <Card.Text className="text-muted small">وقت التنفيذ: {formatTime(srv.executedAt)}</Card.Text>
+              </Card.Body>
+            </Card>
+          </Col>
+        ))}
       </Row>
 
-      <Row className="mb-4">
-        <Col md={12}>
-          <Card>
-            <Card.Body>
-              <div className="d-flex align-items-center justify-content-between mb-3">
-                <div>
-                  <Card.Title className="mb-1">الشغل المنفذ اليوم</Card.Title>
-                  <div className="text-muted">التاريخ: {new Date(date).toLocaleDateString()}</div>
-                </div>
-                <span className="badge bg-primary">{executedServicesList.length} خدمة</span>
-              </div>
-              {executedServicesList.length === 0 ? (
-                <Alert variant="info">لا يوجد شغل منفذ النهاردة</Alert>
-              ) : (
-                <Table striped responsive>
-                  <thead>
-                    <tr>
-                      <th>المصدر</th>
-                      <th>الخدمة</th>
-                      <th>النقاط</th>
-                      <th>وقت التنفيذ</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {executedServicesList.map((srv, idx) => (
-                      <tr key={`${srv.receiptNumber}-${idx}`}>
-                        <td>{srv.source === 'booking' ? 'حجز' : 'فورية'} #{srv.receiptNumber}</td>
-                        <td>{srv.serviceName}</td>
-                        <td>{srv.points}</td>
-                        <td>{srv.executedAt ? new Date(srv.executedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-
-      {pointsData && (
+      {todayGifts.length > 0 && (
         <Card className="mb-4">
           <Card.Body>
-            <Card.Title>بيانات الوصل</Card.Title>
-            <div className="d-flex flex-wrap gap-3 align-items-center mb-3">
-              <div className="badge bg-secondary">نوع: {pointsData.type === 'booking' ? 'حجز' : 'فورية'}</div>
-              <div className="badge bg-light text-dark">رقم الوصل: {pointsData.data?.receiptNumber || '—'}</div>
+            <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+              <Card.Title className="mb-0">الهدايا اللي استلمتها النهارده</Card.Title>
             </div>
-            <Button variant="outline-primary" className="me-2" onClick={() => handleExecuteService('hairStraightening', 'booking', pointsData.data?._id)}>
-              تفعيل فرد الشعر
-            </Button>
-            <Button variant="outline-primary" className="me-2" onClick={() => handleExecuteService('hairDye', 'booking', pointsData.data?._id)}>
-              تفعيل صبغة الشعر
-            </Button>
-            {(pointsData.data?.packageServices || pointsData.data?.services || []).map((srv) => (
-              <Button
-                key={srv._id?._id || srv._id}
-                variant={srv.executed ? 'success' : 'primary'}
-                className="me-2 mt-2"
-                disabled={srv.executed}
-                onClick={() => handleExecuteService(srv._id?._id || srv._id, pointsData.type === 'booking' ? 'booking' : 'instant', pointsData.data?._id)}
-              >
-                {srv.executed ? <FontAwesomeIcon icon={faCheck} className="me-2" /> : null}
-                {srv.name || 'خدمة'} - {srv.price || 0} ج
-              </Button>
-            ))}
+            <Row>
+              {todayGifts.map((g) => (
+                <Col md={4} key={g._id} className="mb-3">
+                  <Card className="gift-log-card h-100">
+                    <Card.Body>
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <span className="badge bg-success">+{g.amount} نقطة</span>
+                        <span className="text-muted small">{g.openedAt ? new Date(g.openedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                      </div>
+                      <div className="fw-bold mb-1">من: {g.giftedByName || 'الإدارة'}</div>
+                      <div className="text-muted small">السبب: {g.note || 'هدية تقدير'}</div>
+                    </Card.Body>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
           </Card.Body>
         </Card>
       )}
 
-      <Modal show={showQrModal} onHide={() => setShowQrModal(false)} centered>
+      <Modal show={showRedeemModal} onHide={() => setShowRedeemModal(false)}>
         <Modal.Header closeButton>
-          <Modal.Title>امسح QR للوصول</Modal.Title>
+          <Modal.Title>استبدال العملات</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <div id="qr-reader" style={{ width: '100%' }} />
+          <div className="d-flex align-items-center gap-2 mb-3">
+            <FontAwesomeIcon icon={faGift} />
+            <span>معاك {formatNumber(coinsCount)} عملة بقيمة إجمالية {formatNumber(pointsSummary?.coins?.totalValue || 0)} جنيه</span>
+          </div>
+          <Form.Group>
+            <Form.Label>عدد العملات للاستبدال</Form.Label>
+            <Form.Control
+              type="number"
+              min={1}
+              max={coinsCount}
+              value={redeemCount}
+              onChange={(e) => setRedeemCount(Number(e.target.value))}
+            />
+          </Form.Group>
         </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowRedeemModal(false)}>إغلاق</Button>
+          <Button variant="success" onClick={handleRedeemCoins} disabled={redeeming}>
+            <FontAwesomeIcon icon={faGift} className="me-2" />
+            {redeeming ? 'جاري الاستبدال...' : 'تأكيد الاستبدال'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal show={showQrModal} onHide={() => setShowQrModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>مسح الباركود</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div id="qr-reader" style={{ width: '100%', height: '300px' }} />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowQrModal(false)}>
+            إغلاق
+          </Button>
+        </Modal.Footer>
       </Modal>
 
       <Modal show={showPointsModal} onHide={() => setShowPointsModal(false)} size="lg">
@@ -746,37 +838,131 @@ function EmployeeDashboard({ user }) {
         <Modal.Body>
           {pointsData && (
             <div>
-              <p>رقم الوصل: {pointsData.data?.receiptNumber || '—'}</p>
-              <p>النوع: {pointsData.type === 'booking' ? 'حجز' : 'خدمة فورية'}</p>
-              {pointsData.type === 'booking' && (
+              {pointsData.type === 'booking' ? (
                 <>
-                  <p>اسم العميل: {pointsData.data?.clientName || '—'}</p>
-                  <p>خدمات الباكدج: {(pointsData.data?.packageServices || []).length}</p>
+                  <p>اسم العميل: {pointsData.data.clientName}</p>
+                  <p>رقم الهاتف: {pointsData.data.clientPhone}</p>
+                  <p>رقم الوصل: {pointsData.data.receiptNumber}</p>
+                  <p>تاريخ المناسبة: {new Date(pointsData.data.eventDate).toLocaleDateString()}</p>
+                  {pointsData.data.hennaDate && <p>تاريخ الحنة: {new Date(pointsData.data.hennaDate).toLocaleDateString()}</p>}
+                  {pointsData.data.returnedServices?.length > 0 && (
+                    <p>الخدمات المرتجعة: {pointsData.data.returnedServices.map((srv) => srv.name).join(', ')}</p>
+                  )}
+                  {pointsData.data.extraServices?.length > 0 && (
+                    <p>الخدمات الإضافية: {pointsData.data.extraServices.map((srv) => srv.name).join(', ')}</p>
+                  )}
+                  <h5>الخدمات:</h5>
+                  <Table striped bordered hover>
+                    <thead>
+                      <tr>
+                        <th>اسم الخدمة</th>
+                        <th>السعر</th>
+                        <th>الحالة</th>
+                        <th>استلام</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pointsData.data.packageServices?.map((srv, index) => {
+                        const serviceId = typeof srv._id === 'object' && srv._id._id ? srv._id._id.toString() : (srv._id ? srv._id.toString() : `service-${index}`);
+                        const rowKey = serviceId || `service-${index}`;
+                        return (
+                          <tr key={rowKey}>
+                            <td>{srv.name || 'غير معروف'}</td>
+                            <td>{srv.price ? `${srv.price} جنيه` : 'غير معروف'}</td>
+                            <td>
+                              {srv.executed ? (
+                                `نفذت بواسطة ${srv.executedBy?.username || 'غير معروف'}`
+                              ) : (
+                                'لم يتم الاستلام'
+                              )}
+                            </td>
+                            <td>
+                              {!srv.executed && (
+                                <Button
+                                  variant="success"
+                                  onClick={() => handleExecuteService(serviceId, 'booking', pointsData.data._id)}
+                                >
+                                  <FontAwesomeIcon icon={faCheck} /> استلام
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {pointsData.data.hairStraightening && (
+                        <tr key="hairStraightening">
+                          <td>فرد شعر</td>
+                          <td>{pointsData.data.hairStraighteningPrice ? `${pointsData.data.hairStraighteningPrice} جنيه` : 'غير معروف'}</td>
+                          <td>
+                            {pointsData.data.hairStraighteningExecuted ? (
+                              `نفذت بواسطة ${pointsData.data.hairStraighteningExecutedBy?.username || 'غير معروف'}`
+                            ) : (
+                              'لم يتم الاستلام'
+                            )}
+                          </td>
+                          <td>
+                            {!pointsData.data.hairStraighteningExecuted && (
+                              <Button
+                                variant="success"
+                                onClick={() => handleExecuteService('hairStraightening', 'booking', pointsData.data._id)}
+                              >
+                                <FontAwesomeIcon icon={faCheck} /> استلام
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </Table>
                 </>
-              )}
-              {pointsData.type === 'instant' && (
-                <p>إجمالي: {pointsData.data?.total || 0} ج</p>
+              ) : (
+                <>
+                  <p>رقم الوصل: {pointsData.data.receiptNumber}</p>
+                  <p>تاريخ الخدمة: {new Date(pointsData.data.createdAt).toLocaleDateString()}</p>
+                  <p>الموظف: {pointsData.data.services.find((srv) => srv.executed && srv.executedBy) ? pointsData.data.services.find((srv) => srv.executed && srv.executedBy).executedBy.username : 'غير محدد'}</p>
+                  <h5>الخدمات:</h5>
+                  <Table striped bordered hover>
+                    <thead>
+                      <tr>
+                        <th>اسم الخدمة</th>
+                        <th>السعر</th>
+                        <th>الحالة</th>
+                        <th>استلام</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pointsData.data.services?.map((srv, index) => (
+                        <tr key={srv._id ? srv._id.toString() : `service-${index}`}>
+                          <td>{srv.name || 'غير معروف'}</td>
+                          <td>{srv.price ? `${srv.price} جنيه` : 'غير معروف'}</td>
+                          <td>
+                            {srv.executed ? (
+                              `نفذت بواسطة ${srv.executedBy?.username || 'غير معروف'}`
+                            ) : (
+                              'لم يتم الاستلام'
+                            )}
+                          </td>
+                          <td>
+                            {!srv.executed && (
+                              <Button
+                                variant="success"
+                                onClick={() => handleExecuteService(srv._id ? srv._id.toString() : '', 'instant', pointsData.data._id)}
+                              >
+                                <FontAwesomeIcon icon={faCheck} /> استلام
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                </>
               )}
             </div>
           )}
         </Modal.Body>
-      </Modal>
-
-      <Modal show={showRedeemModal} onHide={() => setShowRedeemModal(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>استبدال العملات</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form.Group>
-            <Form.Label>عدد العملات</Form.Label>
-            <Form.Control type="number" min="1" max={coinsCount} value={redeemCount} onChange={(e) => setRedeemCount(Number(e.target.value) || 0)} />
-          </Form.Group>
-        </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowRedeemModal(false)}>إلغاء</Button>
-          <Button variant="primary" onClick={handleRedeemCoins} disabled={redeeming || coinsCount === 0}>
-            {redeeming ? 'جارٍ الاستبدال...' : 'استبدال'}
-          </Button>
+          <Button variant="secondary" onClick={() => setShowPointsModal(false)}>إغلاق</Button>
         </Modal.Footer>
       </Modal>
     </Container>
