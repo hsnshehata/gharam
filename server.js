@@ -37,6 +37,7 @@ app.use('/api/reports', require('./server/routes/reports'));
 app.use('/api/dashboard', require('./server/routes/dashboard'));
 app.use('/api/today-work', require('./server/routes/todayWork'));
 app.use('/api/public', require('./server/routes/public'));
+app.use('/api/sync', require('./server/routes/sync'));
 console.log('Routes registered successfully');
 
 // Serve React app
