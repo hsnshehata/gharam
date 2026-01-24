@@ -1,4 +1,6 @@
 const User = require('../models/User');
+const Booking = require('../models/Booking');
+const InstantService = require('../models/InstantService');
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const { resetAllSalaries } = require('../services/salaryResetService');
@@ -6,6 +8,13 @@ const { resetAllSalaries } = require('../services/salaryResetService');
 const LEVEL_THRESHOLDS = [0, 3000, 8000, 18000, 38000, 73000, 118000, 178000, 268000, 418000];
 const COIN_VALUES = [0, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600];
 const MAX_LEVEL = 10;
+
+const isInRange = (dateValue, start, end) => {
+  if (!dateValue) return false;
+  const dt = new Date(dateValue);
+  if (Number.isNaN(dt.getTime())) return false;
+  return dt >= start && dt <= end;
+};
 
 const getLevel = (totalPoints = 0) => {
   for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i -= 1) {
@@ -524,6 +533,131 @@ exports.redeemCoins = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+// جلب كل الخدمات اللي نفذها الموظف في تاريخ محدد (حسب وقت التنفيذ الفعلي)
+exports.getExecutedServices = async (req, res) => {
+  const { date } = req.query;
+  const employeeId = req.user.id;
+
+  const start = date ? new Date(date) : new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setHours(23, 59, 59, 999);
+
+  try {
+    const bookings = await Booking.find({
+      $or: [
+        {
+          packageServices: {
+            $elemMatch: {
+              executed: true,
+              executedBy: employeeId,
+              executedAt: { $gte: start, $lte: end }
+            }
+          }
+        },
+        {
+          hairStraighteningExecuted: true,
+          hairStraighteningExecutedBy: employeeId,
+          hairStraighteningExecutedAt: { $gte: start, $lte: end }
+        },
+        {
+          hairDyeExecuted: true,
+          hairDyeExecutedBy: employeeId,
+          hairDyeExecutedAt: { $gte: start, $lte: end }
+        }
+      ]
+    })
+      .select('receiptNumber clientName packageServices hairStraightening hairStraighteningPrice hairStraighteningExecuted hairStraighteningExecutedBy hairStraighteningExecutedAt hairDye hairDyePrice hairDyeExecuted hairDyeExecutedBy hairDyeExecutedAt createdAt')
+      .populate('packageServices.executedBy', 'username')
+      .populate('hairStraighteningExecutedBy hairDyeExecutedBy', 'username')
+      .lean();
+
+    const instantServices = await InstantService.find({
+      services: {
+        $elemMatch: {
+          executed: true,
+          executedBy: employeeId,
+          executedAt: { $gte: start, $lte: end }
+        }
+      }
+    })
+      .select('receiptNumber services createdAt')
+      .populate('services.executedBy', 'username')
+      .lean();
+
+    const executedList = [];
+
+    const pushItem = (payload) => executedList.push(payload);
+
+    bookings.forEach((b) => {
+      (b.packageServices || []).forEach((srv) => {
+        if (srv.executed && srv.executedBy && isInRange(srv.executedAt, start, end)) {
+          pushItem({
+            source: 'booking',
+            receiptNumber: b.receiptNumber || '-',
+            serviceName: srv.name || 'خدمة باكدج',
+            clientName: b.clientName || '—',
+            points: Math.round((srv.price || 0) * 0.15),
+            executedAt: srv.executedAt || b.createdAt,
+            executedBy: srv.executedBy?.username || null
+          });
+        }
+      });
+
+      if (b.hairStraighteningExecuted && b.hairStraighteningExecutedBy && isInRange(b.hairStraighteningExecutedAt, start, end)) {
+        pushItem({
+          source: 'booking',
+          receiptNumber: b.receiptNumber || '-',
+          serviceName: 'فرد الشعر',
+          clientName: b.clientName || '—',
+          points: Math.round((b.hairStraighteningPrice || 0) * 0.15),
+          executedAt: b.hairStraighteningExecutedAt || b.createdAt,
+          executedBy: b.hairStraighteningExecutedBy?.username || null
+        });
+      }
+
+      if (b.hairDyeExecuted && b.hairDyeExecutedBy && isInRange(b.hairDyeExecutedAt, start, end)) {
+        pushItem({
+          source: 'booking',
+          receiptNumber: b.receiptNumber || '-',
+          serviceName: 'صبغة الشعر',
+          clientName: b.clientName || '—',
+          points: Math.round((b.hairDyePrice || 0) * 0.15),
+          executedAt: b.hairDyeExecutedAt || b.createdAt,
+          executedBy: b.hairDyeExecutedBy?.username || null
+        });
+      }
+    });
+
+    instantServices.forEach((inst) => {
+      (inst.services || []).forEach((srv) => {
+        if (srv.executed && srv.executedBy && isInRange(srv.executedAt, start, end)) {
+          pushItem({
+            source: 'instant',
+            receiptNumber: inst.receiptNumber || '-',
+            serviceName: srv.name || 'خدمة فورية',
+            clientName: '—',
+            points: Math.round((srv.price || 0) * 0.15),
+            executedAt: srv.executedAt || inst.createdAt,
+            executedBy: srv.executedBy?.username || null
+          });
+        }
+      });
+    });
+
+    executedList.sort((a, b) => {
+      const aTime = a.executedAt ? new Date(a.executedAt).getTime() : 0;
+      const bTime = b.executedAt ? new Date(b.executedAt).getTime() : 0;
+      return bTime - aTime;
+    });
+
+    return res.json({ services: executedList });
+  } catch (err) {
+    console.error('Error in getExecutedServices:', err);
+    return res.status(500).json({ msg: 'خطأ في السيرفر' });
   }
 };
 
