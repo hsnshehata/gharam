@@ -7,7 +7,8 @@ const instantServiceSchema = new mongoose.Schema({
     name: { type: String, required: true },
     price: { type: Number, required: true },
     executed: { type: Boolean, default: false },
-    executedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }
+    executedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    executedAt: { type: Date }
   }],
   total: { type: Number, required: true },
   receiptNumber: { type: String, unique: true },
