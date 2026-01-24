@@ -16,6 +16,7 @@ router.get('/gifts/today', authenticate, usersController.listTodayGifts);
 router.post('/gifts/open/:giftId', authenticate, usersController.openGift);
 router.post('/points', authenticate, usersController.addPoints);
 router.get('/points/summary', authenticate, usersController.getPointsSummary);
+router.get('/executed-services', authenticate, usersController.getExecutedServices);
 router.post('/convert-points', authenticate, usersController.convertPointsToCoins);
 router.post('/redeem-coins', authenticate, usersController.redeemCoins);
 
