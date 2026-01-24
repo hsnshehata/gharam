@@ -85,7 +85,8 @@ exports.addBooking = async (req, res) => {
       name: srv.name,
       price: srv.price,
       executed: false,
-      executedBy: null
+      executedBy: null,
+      executedAt: null
     }));
 
     const booking = new Booking({
@@ -186,7 +187,8 @@ exports.updateBooking = async (req, res) => {
         name: srv.name,
         price: srv.price,
         executed: false,
-        executedBy: null
+        executedBy: null,
+        executedAt: null
       }));
       packageServices = [...packageServices, ...formattedExtraServices];
     }
@@ -196,7 +198,8 @@ exports.updateBooking = async (req, res) => {
       name: srv.name,
       price: srv.price,
       executed: false,
-      executedBy: null
+      executedBy: null,
+      executedAt: null
     }));
 
     const changes = {};
@@ -301,6 +304,24 @@ exports.getBookings = async (req, res) => {
   }
 };
 
+// جلب حجز واحد برقم الوصل بدقة لتفادي الالتباس بين الوصلات
+exports.getBookingByReceipt = async (req, res) => {
+  const receiptNumber = (req.params.receiptNumber || '').toString().trim();
+  if (!receiptNumber) return res.status(400).json({ msg: 'رقم الوصل غير صالح' });
+
+  try {
+    const booking = await Booking.findOne({ receiptNumber })
+      .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy hairStraighteningExecutedBy hairDyeExecutedBy packageServices.executedBy');
+
+    if (!booking) return res.status(404).json({ msg: 'لم يتم العثور على حجز بهذا الرقم' });
+
+    return res.json({ booking });
+  } catch (err) {
+    console.error('Error in getBookingByReceipt:', err);
+    return res.status(500).json({ msg: 'خطأ في السيرفر' });
+  }
+};
+
 exports.executeService = async (req, res) => {
   const { id, serviceId } = req.params;
   const employeeId = req.body.employeeId || req.user.id;
@@ -322,11 +343,13 @@ exports.executeService = async (req, res) => {
         if (isStraightening) {
           booking.hairStraighteningExecuted = true;
           booking.hairStraighteningExecutedBy = employeeId;
+          booking.hairStraighteningExecutedAt = new Date();
           points = (booking.hairStraighteningPrice || 0) * 0.15;
           serviceName = 'فرد الشعر';
         } else {
           booking.hairDyeExecuted = true;
           booking.hairDyeExecutedBy = employeeId;
+          booking.hairDyeExecutedAt = new Date();
           points = (booking.hairDyePrice || 0) * 0.15;
           serviceName = 'صبغة الشعر';
         }
@@ -339,6 +362,7 @@ exports.executeService = async (req, res) => {
       if (service.executed) return res.status(400).json({ msg: 'Service already executed' });
       service.executed = true;
       service.executedBy = employeeId;
+      service.executedAt = new Date();
       points = service.price * 0.15;
       serviceName = service.name || 'خدمة باكدج';
     }
@@ -384,9 +408,11 @@ exports.resetService = async (req, res) => {
       if (isStraightening) {
         booking.hairStraighteningExecuted = false;
         booking.hairStraighteningExecutedBy = null;
+        booking.hairStraighteningExecutedAt = null;
       } else {
         booking.hairDyeExecuted = false;
         booking.hairDyeExecutedBy = null;
+        booking.hairDyeExecutedAt = null;
       }
     } else {
       const service = booking.packageServices.find(srv => srv._id.toString() === serviceId);
@@ -398,6 +424,7 @@ exports.resetService = async (req, res) => {
       points = service.price * 0.15;
       service.executed = false;
       service.executedBy = null;
+      service.executedAt = null;
     }
 
     if (oldEmployeeId) {
