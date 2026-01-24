@@ -7,6 +7,7 @@ router.post('/', authenticate, instantServicesController.addInstantService);
 router.put('/:id', authenticate, instantServicesController.updateInstantService);
 router.delete('/:id', authenticate, instantServicesController.deleteInstantService);
 router.get('/', authenticate, instantServicesController.getInstantServices);
+router.get('/receipt/:receiptNumber', authenticate, instantServicesController.getInstantServiceByReceipt);
 router.post('/execute-service/:id/:serviceId', authenticate, instantServicesController.executeService);
 router.post('/reset-service/:id/:serviceId', authenticate, instantServicesController.resetService);
 
