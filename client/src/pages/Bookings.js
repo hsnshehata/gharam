@@ -780,7 +780,7 @@ function Bookings() {
                   </Table>
                 </>
               )}
-              {currentDetails.updates.length > 0 && (
+              {Array.isArray(currentDetails.updates) && currentDetails.updates.length > 0 && (
                 <>
                   <h5 className="mt-3">سجل التعديلات</h5>
                   <Table striped bordered hover size="sm">
@@ -796,11 +796,11 @@ function Bookings() {
                         <tr key={index}>
                           <td>{new Date(update.date).toLocaleDateString()}</td>
                           <td>
-                            {update.changes.created
-                              ? 'إنشاء الحجز'
-                              : Object.keys(update.changes).length > 0
-                              ? Object.entries(update.changes).map(([key, value]) => `${key}: ${value}`).join(', ')
-                              : 'غير معروف'}
+                              {update?.changes?.created
+                                ? 'إنشاء الحجز'
+                                : update?.changes && Object.keys(update.changes || {}).length > 0
+                                ? Object.entries(update.changes || {}).map(([key, value]) => `${key}: ${value}`).join(', ')
+                                : 'غير معروف'}
                           </td>
                           <td>{update.employeeId?.username || 'غير معروف'}</td>
                         </tr>
