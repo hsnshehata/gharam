@@ -7,6 +7,7 @@ const Service = require('../models/Service');
 const User = require('../models/User');
 
 const msInDay = 1000 * 60 * 60 * 24;
+const toNumber = (v) => Number(v) || 0;
 
 const flattenPoints = (points) => {
   if (!Array.isArray(points)) return [];
@@ -56,12 +57,12 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false, 
     key.setHours(0, 0, 0, 0);
     const iso = key.toISOString().slice(0, 10);
     const current = dailyMap.get(iso) || 0;
-    dailyMap.set(iso, current + (amount || 0));
+    dailyMap.set(iso, current + toNumber(amount));
   };
 
   const totalDepositFromBookings = bookings.reduce((sum, booking) => {
-    const installmentsSum = booking.installments.reduce((s, inst) => s + inst.amount, 0);
-    const initialDeposit = booking.deposit - installmentsSum;
+    const installmentsSum = booking.installments.reduce((s, inst) => s + toNumber(inst.amount), 0);
+    const initialDeposit = toNumber(booking.deposit) - installmentsSum;
     addToDay(booking.createdAt, initialDeposit);
     return sum + initialDeposit;
   }, 0);
@@ -73,28 +74,29 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false, 
         .filter((installment) => {
           const installmentDate = new Date(installment.date);
           const inRange = installmentDate >= startDate && installmentDate <= endDate;
-          if (inRange) addToDay(installment.date, installment.amount);
+          if (inRange) addToDay(installment.date, toNumber(installment.amount));
           return inRange;
         })
-        .reduce((s, installment) => s + installment.amount, 0)
+        .reduce((s, installment) => s + toNumber(installment.amount), 0)
     );
   }, 0);
 
   const totalDeposit = totalDepositFromBookings + totalInstallments;
   const totalInstantServices = instantServices.reduce((sum, service) => {
-    addToDay(service.createdAt, service.total);
-    return sum + service.total;
+    const total = toNumber(service.total);
+    addToDay(service.createdAt, total);
+    return sum + total;
   }, 0);
-  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const totalAdvances = advances.reduce((sum, advance) => sum + advance.amount, 0);
+  const totalExpenses = expenses.reduce((sum, expense) => sum + toNumber(expense.amount), 0);
+  const totalAdvances = advances.reduce((sum, advance) => sum + toNumber(advance.amount), 0);
   const net = totalDeposit + totalInstantServices - totalExpenses - totalAdvances;
 
   const packageMix = { makeup: 0, photography: 0, unknown: 0 };
   const topPackagesMap = new Map();
 
   bookings.forEach((booking) => {
-    const installmentsSum = booking.installments.reduce((s, inst) => s + inst.amount, 0);
-    const initialDeposit = booking.deposit - installmentsSum;
+    const installmentsSum = booking.installments.reduce((s, inst) => s + toNumber(inst.amount), 0);
+    const initialDeposit = toNumber(booking.deposit) - installmentsSum;
     const pkgType = booking.package?.type || 'unknown';
     packageMix[pkgType] = (packageMix[pkgType] || 0) + initialDeposit;
     const pkgName = booking.package?.name || 'باكدج غير محدد';
@@ -111,9 +113,10 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false, 
         return d >= startDate && d <= endDate;
       })
       .forEach((inst) => {
-        packageMix[pkgType] = (packageMix[pkgType] || 0) + inst.amount;
+        const amount = toNumber(inst.amount);
+        packageMix[pkgType] = (packageMix[pkgType] || 0) + amount;
         const current = topPackagesMap.get(pkgName) || { name: pkgName, count: 0, amount: 0 };
-        topPackagesMap.set(pkgName, { name: pkgName, count: current.count + 0, amount: current.amount + inst.amount });
+        topPackagesMap.set(pkgName, { name: pkgName, count: current.count + 0, amount: current.amount + amount });
       });
   });
 
@@ -124,8 +127,9 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false, 
   const topServicesMap = new Map();
   instantServices.forEach((service) => {
     (service.services || []).forEach((s) => {
+      const price = toNumber(s.price);
       const current = topServicesMap.get(s.name) || { name: s.name, count: 0, amount: 0 };
-      topServicesMap.set(s.name, { name: s.name, count: current.count + 1, amount: current.amount + (s.price || 0) });
+      topServicesMap.set(s.name, { name: s.name, count: current.count + 1, amount: current.amount + price });
     });
   });
 
@@ -164,8 +168,8 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false, 
   const operations = includeOperations
     ? [
         ...bookings.map((booking) => {
-          const installmentsSum = booking.installments.reduce((s, inst) => s + inst.amount, 0);
-          const initialDeposit = booking.deposit - installmentsSum;
+          const installmentsSum = booking.installments.reduce((s, inst) => s + toNumber(inst.amount), 0);
+          const initialDeposit = toNumber(booking.deposit) - installmentsSum;
           return {
             type: 'booking',
             details: `حجز لـ ${booking.clientName} (باكدج: ${booking.package?.name || 'غير محدد'})`,
@@ -183,7 +187,7 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false, 
             .map((installment) => ({
               type: 'installment',
               details: `قسط لـ ${booking.clientName} (رقم الوصل: ${booking.receiptNumber})`,
-              amount: installment.amount,
+              amount: toNumber(installment.amount),
               createdAt: installment.date,
               createdBy: installment.employeeId?.username || 'غير معروف'
             }))
@@ -191,21 +195,21 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false, 
         ...instantServices.map((service) => ({
           type: 'instantService',
           details: `خدمة فورية (${service.services.map((s) => s.name).join(', ')})`,
-          amount: service.total,
+          amount: toNumber(service.total),
           createdAt: service.createdAt,
           createdBy: service.employeeId?.username || 'غير معروف'
         })),
         ...expenses.map((expense) => ({
           type: 'expense',
           details: expense.details,
-          amount: expense.amount,
+          amount: toNumber(expense.amount),
           createdAt: expense.createdAt,
           createdBy: expense.createdBy?.username || expense.userId?.username || 'غير معروف'
         })),
         ...advances.map((advance) => ({
           type: 'advance',
           details: `سلفة لـ ${advance.userId?.username || 'غير معروف'}`,
-          amount: advance.amount,
+          amount: toNumber(advance.amount),
           createdAt: advance.createdAt,
           createdBy: advance.createdBy?.username || advance.userId?.username || 'غير معروف'
         }))
