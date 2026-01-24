@@ -8,6 +8,7 @@ router.put('/:id', authenticate, bookingsController.updateBooking);
 router.delete('/:id', authenticate, bookingsController.deleteBooking);
 router.post('/:id/installment', authenticate, bookingsController.addInstallment);
 router.get('/', authenticate, bookingsController.getBookings);
+router.get('/receipt/:receiptNumber', authenticate, bookingsController.getBookingByReceipt);
 router.post('/execute-service/:id/:serviceId', authenticate, bookingsController.executeService);
 router.post('/reset-service/:id/:serviceId', authenticate, bookingsController.resetService);
 
