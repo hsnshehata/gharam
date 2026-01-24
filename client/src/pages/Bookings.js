@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Container, Row, Col, Card, Button, Form, Modal, Pagination, Table } from 'react-bootstrap';
-import axios from 'axios';
-import { getPackages, getServices } from '../utils/apiCache';
 import Select from 'react-select';
 import ReceiptPrint, { printReceiptElement } from './ReceiptPrint';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPrint, faEdit, faEye, faDollarSign, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { useToast } from '../components/ToastProvider';
+import { useRxdb } from '../db/RxdbProvider';
 
-function Bookings() {
+const PAGE_SIZE = 9;
+
+function Bookings({ user }) {
   const [formData, setFormData] = useState({
     packageId: '', hennaPackageId: '', photographyPackageId: '', returnedServices: [],
     extraServices: [], hairStraightening: 'no', hairStraighteningPrice: 0,
@@ -45,6 +46,7 @@ function Bookings() {
   const receiptRef = useRef(null); // للتحكم في طباعة الوصل
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [installmentSubmitting, setInstallmentSubmitting] = useState(false);
+  const { collections, queueOperation } = useRxdb() || {};
 
   // Custom styles للـ react-select — neutralized to use CSS variables (black/white theme)
   const customStyles = {
@@ -153,13 +155,13 @@ function Bookings() {
   };
 
   useEffect(() => {
-    // compute selected package services from already-loaded `services` state
+    // compute selected package services من البيانات المحلية
     const selectedIds = [formData.packageId, formData.hennaPackageId, formData.photographyPackageId].filter(id => id);
     if (selectedIds.length > 0 && services && services.length) {
-      const filteredServices = services.filter(srv => selectedIds.includes(srv.packageId?._id.toString()));
-      setSelectedPackageServices(filteredServices.map(srv => ({
+      const filteredServices = services.filter((srv) => selectedIds.includes((srv.packageId && srv.packageId._id) || srv.packageId));
+      setSelectedPackageServices(filteredServices.map((srv) => ({
         value: srv._id,
-        label: `${srv.name} (${srv.packageId?.name})`,
+        label: `${srv.name}${srv.packageId ? ` (${srv.packageId.name || ''})` : ''}`,
         price: srv.price
       })));
     } else {
@@ -169,37 +171,76 @@ function Bookings() {
 
   // total/remaining calculation removed — these values are computed where needed
 
+  // تحميل الباكدجات والخدمات من RxDB
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // fetch packages/services from cache (or network) and bookings in parallel
-        const [pkgData, srvData, bookingsRes] = await Promise.all([
-          getPackages(),
-          getServices(),
-          axios.get(`/api/bookings?page=${currentPage}`, { headers: { 'x-auth-token': localStorage.getItem('token') } })
-        ]);
-        setPackages(pkgData);
-        setServices(srvData);
-        setBookings(bookingsRes.data.bookings);
-        setTotalPages(bookingsRes.data.pages);
-      } catch (err) {
-        setMessage('خطأ في جلب البيانات');
-      }
+    if (!collections?.packages || !collections?.services) return;
+
+    const pkgSub = collections.packages
+      .find({ selector: { _deleted: { $ne: true } } })
+      .$.subscribe((docs) => {
+        setPackages(docs.map((d) => d.toJSON()));
+      });
+
+    const srvSub = collections.services
+      .find({ selector: { _deleted: { $ne: true } } })
+      .$.subscribe((docs) => {
+        setServices(docs.map((d) => d.toJSON()));
+      });
+
+    return () => {
+      pkgSub?.unsubscribe();
+      srvSub?.unsubscribe();
     };
-    fetchData();
-  }, [currentPage, setMessage]);
+  }, [collections]);
+
+  // تحميل الحجوزات من RxDB مع فلترة محلية وباجينج
+  useEffect(() => {
+    if (!collections?.bookings) return;
+
+    const sub = collections.bookings
+      .find({ selector: { _deleted: { $ne: true } } })
+      .$.subscribe((docs) => {
+        const all = docs.map((d) => d.toJSON());
+
+        const bySearch = all.filter((b) => {
+          const query = searchNamePhone.trim();
+          const matchesText = query
+            ? (b.clientName || '').includes(query) || (b.clientPhone || '').includes(query) || (b.receiptNumber || '').includes(query)
+            : true;
+          const matchesDate = searchDate ? (b.eventDate || '').startsWith(searchDate) : true;
+          return matchesText && matchesDate;
+        });
+
+        const sorted = bySearch.sort((a, b) => new Date(b.eventDate || b.createdAt || 0) - new Date(a.eventDate || a.createdAt || 0));
+        const pages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+        const current = Math.min(currentPage, pages);
+        const start = (current - 1) * PAGE_SIZE;
+        const pageItems = sorted.slice(start, start + PAGE_SIZE);
+
+        setTotalPages(pages);
+        setCurrentPage(current);
+        setBookings(pageItems);
+      });
+
+    return () => sub?.unsubscribe();
+  }, [collections, searchNamePhone, searchDate, currentPage]);
 
   // create/edit handlers removed from this page per requirements
 
   // edit handler removed — editing via modal removed from this page
 
+  const upsertLocal = async (booking) => {
+    if (!collections?.bookings) throw new Error('قاعدة البيانات غير جاهزة');
+    const withTs = { ...booking, updatedAt: new Date().toISOString() };
+    await collections.bookings.upsert(withTs);
+    if (queueOperation) await queueOperation('bookings', 'update', withTs);
+  };
+
   const handleDelete = async () => {
     try {
-      await axios.delete(`/api/bookings/${deleteItem._id}`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      setBookings(bookings.filter(b => b._id !== deleteItem._id));
-      setMessage('تم حذف الحجز بنجاح');
+      if (!deleteItem) return;
+      await upsertLocal({ ...deleteItem, _deleted: true });
+      setMessage('تم حذف الحجز محلياً وسيتم رفعه عند الاتصال');
       setShowDeleteModal(false);
       setDeleteItem(null);
     } catch (err) {
@@ -244,11 +285,11 @@ function Bookings() {
       eventDate: formData.eventDate,
       hennaDate: formData.hennaDate,
       deposit: parseFloat(formData.deposit) || 0,
-      packageId: formData.packageId,
-      hennaPackageId: formData.hennaPackageId,
-      photographyPackageId: formData.photographyPackageId,
-      extraServices: formData.extraServices.map(s => s.value),
-      returnedServices: formData.returnedServices.map(s => s.value),
+      package: formData.packageId,
+      hennaPackage: formData.hennaPackageId,
+      photographyPackage: formData.photographyPackageId,
+      extraServices: formData.extraServices.map((s) => s.value),
+      returnedServices: formData.returnedServices.map((s) => s.value),
       hairStraightening: formData.hairStraightening === 'yes',
       hairStraighteningPrice: parseFloat(formData.hairStraighteningPrice) || 0,
       hairStraighteningDate: formData.hairStraighteningDate || '',
@@ -256,12 +297,18 @@ function Bookings() {
       hairDyePrice: parseFloat(formData.hairDyePrice) || 0,
       hairDyeDate: formData.hairDyeDate || ''
     };
+
     try {
-      const res = await axios.put(`/api/bookings/${editItem._id}`, submitData, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      setBookings(bookings.map(b => (b._id === editItem._id ? res.data.booking : b)));
-      setMessage('تم تعديل الحجز بنجاح');
+      const existing = bookings.find((b) => b._id === editItem._id) || editItem;
+      const installmentsTotal = (existing.installments || []).reduce((sum, inst) => sum + (Number(inst.amount) || 0), 0);
+      const remaining = Math.max(0, (existing.total || 0) - (submitData.deposit || 0) - installmentsTotal);
+      const updated = {
+        ...existing,
+        ...submitData,
+        remaining
+      };
+      await upsertLocal(updated);
+      setMessage('تم تعديل الحجز محلياً وسيتم رفعه عند الاتصال');
       setEditItem(null);
     } catch (err) {
       setMessage('خطأ في تعديل الحجز');
@@ -275,11 +322,19 @@ function Bookings() {
     setInstallmentSubmitting(true);
     setShowInstallmentModal(false);
     try {
-      const res = await axios.post(`/api/bookings/${bookingId}/installment`, { amount: parseFloat(installmentAmount) }, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      setBookings(bookings.map(b => (b._id === bookingId ? res.data.booking : b)));
-      setMessage('تم إضافة القسط بنجاح');
+      const target = bookings.find((b) => b._id === bookingId);
+      if (!target) throw new Error('الحجز غير موجود محلياً');
+      const amount = parseFloat(installmentAmount) || 0;
+      const newInstallment = {
+        amount,
+        date: new Date().toISOString(),
+        employeeId: user?.id || user?._id || null
+      };
+      const installments = [...(target.installments || []), newInstallment];
+      const paidSoFar = (target.deposit || 0) + installments.reduce((sum, inst) => sum + (Number(inst.amount) || 0), 0);
+      const remaining = Math.max(0, (target.total || 0) - paidSoFar);
+      await upsertLocal({ ...target, installments, remaining });
+      setMessage('تم إضافة القسط محلياً وسيتم رفعه عند الاتصال');
       setInstallmentAmount(0);
     } catch (err) {
       setMessage('خطأ في إضافة القسط');
@@ -299,28 +354,9 @@ function Bookings() {
     setShowDetailsModal(true);
   };
 
-  const handleSearch = async () => {
-    try {
-      const query = searchNamePhone.trim();
-      const isReceipt = /^\d+$/.test(query) && query.length > 0;
-      const params = new URLSearchParams();
-      if (query) {
-        if (isReceipt) {
-          params.append('receiptNumber', query);
-        } else {
-          params.append('search', query);
-        }
-      }
-      if (searchDate) params.append('date', searchDate);
-      const res = await axios.get(`/api/bookings?${params.toString()}`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      setBookings(res.data.bookings);
-      setCurrentPage(1);
-      setTotalPages(1);
-    } catch (err) {
-      setMessage('خطأ في البحث');
-    }
+  const handleSearch = () => {
+    // البحث يتم محلياً عبر useEffect الذي يعتمد على searchNamePhone/searchDate
+    setCurrentPage(1);
   };
 
   return (

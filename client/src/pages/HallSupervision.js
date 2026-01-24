@@ -1,12 +1,36 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Container, Row, Col, Card, Alert, Form, Button, Table, Spinner, Badge, Modal } from 'react-bootstrap';
-import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faQrcode, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useToast } from '../components/ToastProvider';
+import { useRxdb } from '../db/RxdbProvider';
+
+const LEVEL_THRESHOLDS = [0, 3000, 8000, 18000, 38000, 73000, 118000, 178000, 268000, 418000];
+const MAX_LEVEL = 10;
+
+const newId = (prefix = 'loc') => (crypto.randomUUID ? crypto.randomUUID() : `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+const normalizeId = (val) => {
+  if (!val) return '';
+  if (typeof val === 'object' && val._id) return val._id.toString();
+  return val.toString();
+};
+
+const isSameDay = (value, targetDate) => {
+  if (!value || !targetDate) return false;
+  const d = new Date(value);
+  return d.toDateString() === targetDate.toDateString();
+};
+
+const getLevel = (totalPoints = 0) => {
+  for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i -= 1) {
+    if (totalPoints >= LEVEL_THRESHOLDS[i]) return Math.min(i + 1, MAX_LEVEL);
+  }
+  return 1;
+};
 
 function HallSupervision() {
+  const { collections, queueOperation } = useRxdb() || {};
   const [bookings, setBookings] = useState({
     makeupBookings: [],
     hairStraighteningBookings: [],
@@ -23,17 +47,13 @@ function HallSupervision() {
   const [searchResult, setSearchResult] = useState(null);
   const qrCodeScanner = useRef(null);
   const { showToast } = useToast();
+  const [rawBookings, setRawBookings] = useState([]);
+  const [rawInstantServices, setRawInstantServices] = useState([]);
 
   const employeeOptions = useMemo(
     () => users.filter(u => u.role === 'employee' || u.role === 'hallSupervisor'),
     [users]
   );
-
-  const normalizeId = (val) => {
-    if (!val) return '';
-    if (typeof val === 'object' && val._id) return val._id.toString();
-    return val.toString();
-  };
 
   const executedByName = (val) => {
     if (!val) return 'غير معروف';
@@ -43,68 +63,133 @@ function HallSupervision() {
     return found?.username || 'غير معروف';
   };
 
+  const upsertLocal = useCallback(async (collectionName, doc, op = 'update') => {
+    const col = collections?.[collectionName];
+    if (!col) throw new Error('قاعدة البيانات غير جاهزة');
+    const payload = { ...doc, updatedAt: new Date().toISOString() };
+    await col.upsert(payload);
+    if (queueOperation) await queueOperation(collectionName, op, payload);
+    return payload;
+  }, [collections, queueOperation]);
+
+  useEffect(() => {
+    if (!collections) return undefined;
+    const subs = [];
+    const listen = (col, setter) => {
+      if (!col) return;
+      const sub = col.find({ selector: { _deleted: { $ne: true } } }).$.subscribe((docs) => {
+        setter(docs.map((d) => (d.toJSON ? d.toJSON() : d)));
+      });
+      subs.push(sub);
+    };
+    listen(collections.bookings, setRawBookings);
+    listen(collections.instantServices, setRawInstantServices);
+    listen(collections.users, setUsers);
+    return () => subs.forEach((s) => s && s.unsubscribe && s.unsubscribe());
+  }, [collections]);
+
   const loadData = useCallback(async () => {
+    if (!collections) return;
     setLoading(true);
     try {
-      const [bookingsRes, instantRes, usersRes] = await Promise.all([
-        axios.get(`/api/today-work?date=${date}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        }),
-        axios.get(`/api/instant-services?date=${date}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        }),
-        axios.get('/api/users', {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        })
+      const [bkDocs, instDocs, userDocs] = await Promise.all([
+        collections.bookings?.find({ selector: { _deleted: { $ne: true } } }).exec(),
+        collections.instantServices?.find({ selector: { _deleted: { $ne: true } } }).exec(),
+        collections.users?.find({ selector: { _deleted: { $ne: true } } }).exec()
       ]);
-      setBookings(bookingsRes.data || { makeupBookings: [], hairStraighteningBookings: [], hairDyeBookings: [], photographyBookings: [] });
-      setInstantServices(instantRes.data.instantServices || []);
-      setUsers(usersRes.data || []);
+      setRawBookings((bkDocs || []).map((d) => (d.toJSON ? d.toJSON() : d)));
+      setRawInstantServices((instDocs || []).map((d) => (d.toJSON ? d.toJSON() : d)));
+      setUsers((userDocs || []).map((d) => (d.toJSON ? d.toJSON() : d)));
+      showToast('تم تحديث البيانات من القاعدة المحلية', 'success');
     } catch (err) {
-      console.error('Load hall supervision error:', err.response?.data || err.message);
-      showToast(err.response?.data?.msg || 'خطأ في جلب بيانات اليوم', 'danger');
+      console.error('Load hall supervision error:', err.message);
+      showToast('خطأ في جلب البيانات من القاعدة المحلية', 'danger');
     } finally {
       setLoading(false);
     }
-  }, [date, showToast]);
+  }, [collections, showToast]);
 
   useEffect(() => {
+    if (!collections) return;
     loadData();
-  }, [loadData]);
+  }, [collections, loadData]);
 
-  const handleReceiptSearch = useCallback(async (searchValue) => {
+  const startOfDay = useMemo(() => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, [date]);
+
+  const endOfDay = useMemo(() => {
+    const d = new Date(date);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  }, [date]);
+
+  useEffect(() => {
+    const filteredBookings = rawBookings.filter((b) => {
+      const hasMakeup = b.package?.type === 'makeup' && isSameDay(b.eventDate, startOfDay);
+      const hasHenna = b.hennaPackage && isSameDay(b.hennaDate, startOfDay);
+      const hasPhoto = b.photographyPackage && (isSameDay(b.eventDate, startOfDay) || isSameDay(b.hennaDate, startOfDay));
+      const hasHairStraightening = b.hairStraightening && isSameDay(b.hairStraighteningDate, startOfDay);
+      const hasHairDye = b.hairDye && isSameDay(b.hairDyeDate, startOfDay);
+      return hasMakeup || hasHenna || hasPhoto || hasHairStraightening || hasHairDye;
+    });
+
+    const makeupBookings = filteredBookings.filter((booking) => (
+      (booking.package?.type === 'makeup' && isSameDay(booking.eventDate, startOfDay)) ||
+      (booking.hennaPackage && isSameDay(booking.hennaDate, startOfDay))
+    ));
+    const hairStraighteningBookings = filteredBookings.filter((booking) => booking.hairStraightening && isSameDay(booking.hairStraighteningDate, startOfDay));
+    const hairDyeBookings = filteredBookings.filter((booking) => booking.hairDye && isSameDay(booking.hairDyeDate, startOfDay));
+    const photographyBookings = filteredBookings.filter((booking) => (
+      (booking.photographyPackage && isSameDay(booking.eventDate, startOfDay)) ||
+      (booking.photographyPackage && isSameDay(booking.hennaDate, startOfDay))
+    ));
+
+    setBookings({ makeupBookings, hairStraighteningBookings, hairDyeBookings, photographyBookings });
+  }, [rawBookings, startOfDay]);
+
+  useEffect(() => {
+    const filtered = rawInstantServices.filter((srv) => {
+      const created = srv.createdAt ? new Date(srv.createdAt) : null;
+      return created && created >= startOfDay && created <= endOfDay;
+    });
+    setInstantServices(filtered);
+  }, [rawInstantServices, startOfDay, endOfDay]);
+
+  const findBookingByReceipt = useCallback((receipt) => (
+    rawBookings.find((b) => (b.receiptNumber || '').toString() === receipt)
+  ), [rawBookings]);
+
+  const findInstantByReceipt = useCallback((receipt) => (
+    rawInstantServices.find((s) => (s.receiptNumber || '').toString() === receipt)
+  ), [rawInstantServices]);
+
+  const handleReceiptSearch = useCallback((searchValue) => {
     const normalized = (searchValue ?? '').toString().trim();
     if (!normalized) {
       showToast('الرجاء إدخال رقم الوصل', 'warning');
       return;
     }
-    try {
-      const [bookingRes, instantRes] = await Promise.all([
-        axios.get(`/api/bookings?receiptNumber=${normalized}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        }),
-        axios.get(`/api/instant-services?receiptNumber=${normalized}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        })
-      ]);
 
-      if (bookingRes.data.bookings?.length > 0) {
-        const booking = bookingRes.data.bookings[0];
-        setSearchResult({ type: 'booking', data: booking });
-        showToast('تم العثور على الحجز', 'success');
-      } else if (instantRes.data.instantServices?.length > 0) {
-        const instantService = instantRes.data.instantServices[0];
-        setSearchResult({ type: 'instant', data: instantService });
-        showToast('تم العثور على خدمة فورية', 'success');
-      } else {
-        setSearchResult(null);
-        showToast('لم يتم العثور على حجز أو خدمة فورية بهذا الرقم', 'warning');
-      }
-    } catch (err) {
-      console.error('Receipt search error:', err.response?.data || err.message);
-      showToast(err.response?.data?.msg || 'خطأ في البحث عن الوصل', 'danger');
+    const booking = findBookingByReceipt(normalized);
+    if (booking) {
+      setSearchResult({ type: 'booking', data: booking });
+      showToast('تم العثور على الحجز من القاعدة المحلية', 'success');
+      return;
     }
-  }, [showToast]);
+
+    const instantService = findInstantByReceipt(normalized);
+    if (instantService) {
+      setSearchResult({ type: 'instant', data: instantService });
+      showToast('تم العثور على خدمة فورية من القاعدة المحلية', 'success');
+      return;
+    }
+
+    setSearchResult(null);
+    showToast('لم يتم العثور على حجز أو خدمة فورية بهذا الرقم', 'warning');
+  }, [findBookingByReceipt, findInstantByReceipt, showToast]);
 
   useEffect(() => {
     if (showQrModal) {
@@ -160,6 +245,66 @@ function HallSupervision() {
     setShowQrModal(true);
   };
 
+  const ensureUserArrays = (user) => {
+    if (!Array.isArray(user.points)) user.points = [];
+    if (!Array.isArray(user.efficiencyCoins)) user.efficiencyCoins = [];
+    if (!Array.isArray(user.coinsRedeemed)) user.coinsRedeemed = [];
+  };
+
+  const recomputeConvertible = (user) => {
+    const totalCoins = (user.efficiencyCoins?.length || 0) + (user.coinsRedeemed?.length || 0);
+    user.convertiblePoints = Math.max(0, (user.totalPoints || 0) - totalCoins * 1000);
+  };
+
+  const mutateUser = useCallback(async (userId, mutator) => {
+    const target = users.find((u) => normalizeId(u._id) === normalizeId(userId));
+    if (!target) throw new Error('الموظف مش موجود محلياً');
+    const draft = {
+      ...target,
+      points: Array.isArray(target.points) ? [...target.points] : [],
+      efficiencyCoins: Array.isArray(target.efficiencyCoins) ? [...target.efficiencyCoins] : [],
+      coinsRedeemed: Array.isArray(target.coinsRedeemed) ? [...target.coinsRedeemed] : []
+    };
+    ensureUserArrays(draft);
+    const updated = mutator(draft) || draft;
+    recomputeConvertible(updated);
+    updated.level = getLevel(updated.totalPoints || 0);
+    await upsertLocal('users', updated, 'update');
+    return updated;
+  }, [upsertLocal, users]);
+
+  const addPointsToUser = useCallback(async (userId, amount, meta = {}) => {
+    await mutateUser(userId, (draft) => {
+      draft.points.push({
+        _id: newId('point'),
+        amount,
+        date: new Date().toISOString(),
+        bookingId: meta.bookingId || null,
+        serviceId: meta.serviceId || null,
+        instantServiceId: meta.instantServiceId || null,
+        serviceName: meta.serviceName || null,
+        receiptNumber: meta.receiptNumber || null,
+        type: meta.type || 'work',
+        note: meta.note || null,
+        status: 'applied'
+      });
+      draft.totalPoints = (draft.totalPoints || 0) + amount;
+      return draft;
+    });
+  }, [mutateUser]);
+
+  const removePointsFromUser = useCallback(async (userId, matchFn) => {
+    await mutateUser(userId, (draft) => {
+      const targetPoint = draft.points.find(matchFn);
+      if (!targetPoint) return draft;
+      const pointIdStr = normalizeId(targetPoint._id);
+      draft.efficiencyCoins = draft.efficiencyCoins.filter((c) => normalizeId(c.sourcePointId) !== pointIdStr);
+      draft.totalPoints = Math.max(0, (draft.totalPoints || 0) - (targetPoint.amount || 0));
+      draft.points = draft.points.filter((p) => normalizeId(p._id) !== pointIdStr);
+      return draft;
+    });
+  }, [mutateUser]);
+
   const updateBookingState = (updatedBooking) => {
     const targetId = normalizeId(updatedBooking._id);
     setBookings(prev => ({
@@ -185,60 +330,184 @@ function HallSupervision() {
       showToast('اختار موظف للتكليف أولاً', 'warning');
       return;
     }
-    try {
-      const endpoint = type === 'booking'
-        ? `/api/bookings/execute-service/${recordId}/${serviceId}`
-        : `/api/instant-services/execute-service/${recordId}/${serviceId}`;
-      const res = await axios.post(endpoint, { employeeId }, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
 
+    try {
       if (type === 'booking') {
-        updateBookingState(res.data.booking);
+        const booking = rawBookings.find((b) => normalizeId(b._id) === normalizeId(recordId));
+        if (!booking) throw new Error('الحجز مش موجود محلياً');
+        const updated = { ...booking };
+        let points = 0;
+        let serviceName = 'خدمة باكدج';
+
+        if (serviceId === 'hairStraightening' || serviceId === 'hairDye') {
+          const isStraightening = serviceId === 'hairStraightening';
+          if (isStraightening) {
+            updated.hairStraighteningExecuted = true;
+            updated.hairStraighteningExecutedBy = employeeId;
+            updated.hairStraighteningExecutedAt = new Date().toISOString();
+            points = (updated.hairStraighteningPrice || 0) * 0.15;
+            serviceName = 'فرد الشعر';
+          } else {
+            updated.hairDyeExecuted = true;
+            updated.hairDyeExecutedBy = employeeId;
+            updated.hairDyeExecutedAt = new Date().toISOString();
+            points = (updated.hairDyePrice || 0) * 0.15;
+            serviceName = 'صبغة الشعر';
+          }
+        } else {
+          updated.packageServices = (updated.packageServices || []).map((srv) => {
+            if (normalizeId(srv._id) !== serviceId) return srv;
+            points = (srv.price || 0) * 0.15;
+            serviceName = srv.name || serviceName;
+            return {
+              ...srv,
+              executed: true,
+              executedBy: employeeId,
+              executedAt: new Date().toISOString()
+            };
+          });
+        }
+
+        await upsertLocal('bookings', updated, 'update');
+        await addPointsToUser(employeeId, points, {
+          bookingId: normalizeId(updated._id),
+          serviceId: (serviceId === 'hairStraightening' || serviceId === 'hairDye') ? null : serviceId,
+          serviceName,
+          receiptNumber: updated.receiptNumber || null
+        });
+
+        updateBookingState(updated);
       } else {
-        const updatedInstant = res.data.instantService;
-        setInstantServices(prev => prev.map(s => (normalizeId(s._id) === normalizeId(recordId) ? updatedInstant : s)));
-        setSearchResult(prev => {
+        const instantService = rawInstantServices.find((s) => normalizeId(s._id) === normalizeId(recordId));
+        if (!instantService) throw new Error('الخدمة الفورية مش موجودة محلياً');
+        const updated = { ...instantService };
+        let points = 0;
+
+        updated.services = (updated.services || []).map((srv, idx) => {
+          const srvId = normalizeId(srv._id) || `instant-${idx}`;
+          if (srvId !== serviceId) return srv;
+          points = (srv.price || 0) * 0.15;
+          return {
+            ...srv,
+            executed: true,
+            executedBy: employeeId,
+            executedAt: new Date().toISOString()
+          };
+        });
+
+        await upsertLocal('instantServices', updated, 'update');
+        await addPointsToUser(employeeId, points, {
+          bookingId: null,
+          instantServiceId: normalizeId(updated._id),
+          serviceId: serviceId,
+          serviceName: updated.services?.find((s, idx) => (normalizeId(s._id) || `instant-${idx}`) === serviceId)?.name || 'خدمة فورية',
+          receiptNumber: updated.receiptNumber || null
+        });
+
+        setInstantServices((prev) => prev.map((s) => (normalizeId(s._id) === normalizeId(updated._id) ? updated : s)));
+        setSearchResult((prev) => {
           if (!prev) return prev;
-          if (prev.type === 'instant' && normalizeId(prev.data._id) === normalizeId(recordId)) {
-            return { ...prev, data: updatedInstant };
+          if (prev.type === 'instant' && normalizeId(prev.data._id) === normalizeId(updated._id)) {
+            return { ...prev, data: updated };
           }
           return prev;
         });
       }
-      showToast('تم التكليف وتسجيل النقاط بنجاح', 'success');
+
+      showToast('تم التكليف وتسجيل النقاط محلياً', 'success');
     } catch (err) {
-      console.error('Assign service error:', err.response?.data || err.message);
-      showToast(err.response?.data?.msg || 'خطأ في التكليف أو تسجيل النقاط', 'danger');
+      console.error('Assign service error:', err.message);
+      showToast(err.message || 'خطأ في التكليف أو تسجيل النقاط', 'danger');
     }
   };
 
   const handleReset = async (type, recordId, serviceId) => {
     try {
-      const endpoint = type === 'booking'
-        ? `/api/bookings/reset-service/${recordId}/${serviceId}`
-        : `/api/instant-services/reset-service/${recordId}/${serviceId}`;
-      const res = await axios.post(endpoint, {}, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-
       if (type === 'booking') {
-        updateBookingState(res.data.booking);
+        const booking = rawBookings.find((b) => normalizeId(b._id) === normalizeId(recordId));
+        if (!booking) throw new Error('الحجز مش موجود محلياً');
+        const updated = { ...booking };
+        let oldEmployeeId = null;
+
+        if (serviceId === 'hairStraightening' || serviceId === 'hairDye') {
+          const isStraightening = serviceId === 'hairStraightening';
+          const executed = isStraightening ? updated.hairStraighteningExecuted : updated.hairDyeExecuted;
+          const execBy = isStraightening ? updated.hairStraighteningExecutedBy : updated.hairDyeExecutedBy;
+          if (!executed || !execBy) throw new Error('الخدمة مش منفذة علشان تتسحب');
+          oldEmployeeId = execBy;
+          if (isStraightening) {
+            updated.hairStraighteningExecuted = false;
+            updated.hairStraighteningExecutedBy = null;
+            updated.hairStraighteningExecutedAt = null;
+          } else {
+            updated.hairDyeExecuted = false;
+            updated.hairDyeExecutedBy = null;
+            updated.hairDyeExecutedAt = null;
+          }
+        } else {
+          updated.packageServices = (updated.packageServices || []).map((srv) => {
+            if (normalizeId(srv._id) !== serviceId) return srv;
+            oldEmployeeId = srv.executedBy;
+            return {
+              ...srv,
+              executed: false,
+              executedBy: null,
+              executedAt: null
+            };
+          });
+          if (!oldEmployeeId) throw new Error('الخدمة مش منفذة علشان تتسحب');
+        }
+
+        await upsertLocal('bookings', updated, 'update');
+        if (oldEmployeeId) {
+          await removePointsFromUser(oldEmployeeId, (p) => (
+            normalizeId(p.bookingId) === normalizeId(updated._id) && (
+              ((serviceId === 'hairStraightening' || serviceId === 'hairDye') && !p.serviceId) ||
+              (serviceId !== 'hairStraightening' && serviceId !== 'hairDye' && normalizeId(p.serviceId) === serviceId)
+            )
+          ));
+        }
+
+        updateBookingState(updated);
       } else {
-        const updatedInstant = res.data.instantService;
-        setInstantServices(prev => prev.map(s => (normalizeId(s._id) === normalizeId(recordId) ? updatedInstant : s)));
-        setSearchResult(prev => {
+        const instantService = rawInstantServices.find((s) => normalizeId(s._id) === normalizeId(recordId));
+        if (!instantService) throw new Error('الخدمة الفورية مش موجودة محلياً');
+        const updated = { ...instantService };
+        let oldEmployeeId = null;
+
+        updated.services = (updated.services || []).map((srv, idx) => {
+          const srvId = normalizeId(srv._id) || `instant-${idx}`;
+          if (srvId !== serviceId) return srv;
+          oldEmployeeId = srv.executedBy;
+          return {
+            ...srv,
+            executed: false,
+            executedBy: null,
+            executedAt: null
+          };
+        });
+
+        if (!oldEmployeeId) throw new Error('الخدمة مش منفذة علشان تتسحب');
+
+        await upsertLocal('instantServices', updated, 'update');
+        await removePointsFromUser(oldEmployeeId, (p) => (
+          normalizeId(p.instantServiceId) === normalizeId(updated._id) && normalizeId(p.serviceId) === serviceId
+        ));
+
+        setInstantServices((prev) => prev.map((s) => (normalizeId(s._id) === normalizeId(updated._id) ? updated : s)));
+        setSearchResult((prev) => {
           if (!prev) return prev;
-          if (prev.type === 'instant' && normalizeId(prev.data._id) === normalizeId(recordId)) {
-            return { ...prev, data: updatedInstant };
+          if (prev.type === 'instant' && normalizeId(prev.data._id) === normalizeId(updated._id)) {
+            return { ...prev, data: updated };
           }
           return prev;
         });
       }
-      showToast('تم سحب التكليف وإرجاع المهمة كغير منفذة', 'info');
+
+      showToast('تم سحب التكليف محلياً وإلغاء النقاط', 'info');
     } catch (err) {
-      console.error('Reset service error:', err.response?.data || err.message);
-      showToast(err.response?.data?.msg || 'خطأ في سحب التكليف', 'danger');
+      console.error('Reset service error:', err.message);
+      showToast(err.message || 'خطأ في سحب التكليف', 'danger');
     }
   };
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Form, Button, Container, Alert } from 'react-bootstrap';
-import axios from 'axios';
 import { useToast } from '../components/ToastProvider';
+import { useRxdb } from '../db/RxdbProvider';
 
 function AddUser() {
   const [formData, setFormData] = useState({
@@ -13,6 +13,17 @@ function AddUser() {
     phone: ''
   });
   const { showToast } = useToast();
+  const { collections, queueOperation } = useRxdb() || {};
+
+  const newId = () => (crypto.randomUUID ? crypto.randomUUID() : `user-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
+  const upsertLocal = async (doc, op = 'update') => {
+    if (!collections?.users) throw new Error('قاعدة البيانات غير جاهزة');
+    const withTs = { ...doc, updatedAt: new Date().toISOString() };
+    await collections.users.upsert(withTs);
+    if (queueOperation) await queueOperation('users', op, withTs);
+    return withTs;
+  };
   const setMessage = (msg) => {
     if (!msg) return;
     const variant = msg.includes('خطأ') ? 'danger' : 'success';
@@ -21,14 +32,34 @@ function AddUser() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (formData.password !== formData.confirmPassword) {
+      setMessage('كلمات المرور غير متطابقة');
+      return;
+    }
     try {
-      const res = await axios.post('/api/users', formData, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      setMessage(res.data.msg);
+      const newUser = {
+        _id: newId(),
+        username: formData.username,
+        password: formData.password,
+        role: formData.role,
+        monthlySalary: Number(formData.monthlySalary) || 0,
+        remainingSalary: Number(formData.monthlySalary) || 0,
+        phone: formData.phone || '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        _deleted: false,
+        points: [],
+        efficiencyCoins: [],
+        coinsRedeemed: [],
+        totalPoints: 0,
+        convertiblePoints: 0,
+        level: 1
+      };
+      await upsertLocal(newUser, 'insert');
+      setMessage('تم إضافة الموظف محلياً وسيتم رفعه عند الاتصال');
       setFormData({ username: '', password: '', confirmPassword: '', role: 'employee', monthlySalary: 0, phone: '' });
     } catch (err) {
-      setMessage('خطأ في إضافة الموظف');
+      setMessage('خطأ في إضافة الموظف محلياً');
     }
   };
 
@@ -73,6 +104,7 @@ function AddUser() {
           >
             <option value="admin">أدمن</option>
             <option value="supervisor">مشرف</option>
+            <option value="hallSupervisor">مشرف صالة</option>
             <option value="employee">موظف</option>
           </Form.Control>
         </Form.Group>

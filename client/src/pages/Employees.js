@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal } from 'react-bootstrap';
-import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { useRxdb } from '../db/RxdbProvider';
 
 function Employees() {
   const [users, setUsers] = useState([]);
@@ -28,20 +28,25 @@ function Employees() {
     monthlySalary: 0,
     phone: ''
   });
+  const { collections, queueOperation } = useRxdb() || {};
+
+  const newId = () => (crypto.randomUUID ? crypto.randomUUID() : `user-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
+  const upsertLocal = async (doc, op = 'update') => {
+    if (!collections?.users) throw new Error('قاعدة البيانات غير جاهزة');
+    const withTs = { ...doc, updatedAt: new Date().toISOString() };
+    await collections.users.upsert(withTs);
+    if (queueOperation) await queueOperation('users', op, withTs);
+    return withTs;
+  };
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const res = await axios.get('/api/users', {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        setUsers(res.data);
-      } catch (err) {
-        setMessage('خطأ في جلب الموظفين');
-      }
-    };
-    fetchUsers();
-  }, []);
+    if (!collections?.users) return;
+    const sub = collections.users
+      .find({ selector: { _deleted: { $ne: true } } })
+      .$.subscribe((docs) => setUsers(docs.map((d) => (d.toJSON ? d.toJSON() : d))));
+    return () => sub?.unsubscribe();
+  }, [collections]);
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
@@ -52,14 +57,29 @@ function Employees() {
     if (addSubmitting) return;
     setAddSubmitting(true);
     try {
-      const res = await axios.post('/api/users', addFormData, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      setUsers([res.data.user, ...users]);
-      setMessage(res.data.msg);
+      const newUser = {
+        _id: newId(),
+        username: addFormData.username,
+        password: addFormData.password, // هيتهشش عند الرفع للسيرفر
+        role: addFormData.role,
+        monthlySalary: Number(addFormData.monthlySalary) || 0,
+        remainingSalary: Number(addFormData.monthlySalary) || 0,
+        phone: addFormData.phone || '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        _deleted: false,
+        points: [],
+        efficiencyCoins: [],
+        coinsRedeemed: [],
+        totalPoints: 0,
+        convertiblePoints: 0,
+        level: 1
+      };
+      await upsertLocal(newUser, 'insert');
+      setMessage('تم إضافة الموظف محلياً وسيتم رفعه عند الاتصال');
       setAddFormData({ username: '', password: '', confirmPassword: '', role: 'employee', monthlySalary: 0, phone: '' });
     } catch (err) {
-      setMessage(err.response?.data?.msg || 'خطأ في إضافة الموظف');
+      setMessage('خطأ في إضافة الموظف');
     } finally {
       setAddSubmitting(false);
     }
@@ -75,23 +95,22 @@ function Employees() {
     setEditSubmitting(true);
     try {
       const updateData = {
+        ...editItem,
         username: editFormData.username,
         role: editFormData.role,
-        monthlySalary: editFormData.monthlySalary,
-        phone: editFormData.phone
+        monthlySalary: Number(editFormData.monthlySalary) || 0,
+        remainingSalary: editItem.remainingSalary ?? editItem.monthlySalary,
+        phone: editFormData.phone || ''
       };
       if (editFormData.password) {
         updateData.password = editFormData.password;
       }
-      const res = await axios.put(`/api/users/${editItem._id}`, updateData, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      setUsers(users.map(user => (user._id === editItem._id ? res.data.user : user)));
-      setMessage('تم تعديل الموظف بنجاح');
+      await upsertLocal(updateData, 'update');
+      setMessage('تم تعديل الموظف محلياً وسيتم رفعه عند الاتصال');
       setEditItem(null);
       setEditFormData({ username: '', password: '', confirmPassword: '', role: 'employee', monthlySalary: 0, phone: '' });
     } catch (err) {
-      setMessage(err.response?.data?.msg || 'خطأ في تعديل الموظف');
+      setMessage('خطأ في تعديل الموظف');
     } finally {
       setEditSubmitting(false);
     }
@@ -111,15 +130,12 @@ function Employees() {
 
   const handleDelete = async () => {
     try {
-      await axios.delete(`/api/users/${deleteItem._id}`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      setUsers(users.filter(user => user._id !== deleteItem._id));
-      setMessage('تم حذف الموظف بنجاح');
+      await upsertLocal({ ...deleteItem, _deleted: true }, 'delete');
+      setMessage('تم حذف الموظف محلياً وسيتم رفعه عند الاتصال');
       setShowDeleteModal(false);
       setDeleteItem(null);
     } catch (err) {
-      setMessage(err.response?.data?.msg || 'خطأ في الحذف');
+      setMessage('خطأ في الحذف');
       setShowDeleteModal(false);
     }
   };
@@ -182,6 +198,19 @@ function Employees() {
             </Col>
             <Col md={6}>
               <Form.Group>
+                  <Form.Label>نوع الوظيفة</Form.Label>
+                  <Form.Control
+                    as="select"
+                    value={addFormData.role}
+                    onChange={(e) => setAddFormData({ ...addFormData, role: e.target.value })}
+                  >
+                    <option value="admin">أدمن</option>
+                    <option value="supervisor">مشرف</option>
+                    <option value="hallSupervisor">مشرف صالة</option>
+                    <option value="employee">موظف</option>
+                  </Form.Control>
+                </Form.Group>
+              </Col>
                 <Form.Label>الراتب الشهري</Form.Label>
                 <Form.Control
                   type="number"
@@ -224,11 +253,11 @@ function Employees() {
               <Card.Body>
                 <Card.Title>{user.username}</Card.Title>
                 <Card.Text>
-                  الدور: {user.role === 'admin' ? 'أدمن' : user.role === 'supervisor' ? 'مشرف' : 'موظف'}<br />
+                  الدور: {user.role === 'admin' ? 'أدمن' : user.role === 'supervisor' ? 'مشرف' : user.role === 'hallSupervisor' ? 'مشرف صالة' : 'موظف'}<br />
                   الراتب الشهري: {user.monthlySalary} جنيه<br />
                   رقم الهاتف: {user.phone || 'غير متوفر'}<br />
-                  النقاط: {user.points}<br />
-                  تاريخ الإضافة: {new Date(user.createdAt).toLocaleDateString()}
+                  النقاط: {user.totalPoints ?? 0}<br />
+                  تاريخ الإضافة: {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'غير متوفر'}
                 </Card.Text>
                 <Button variant="primary" className="me-2" onClick={() => handleEdit(user)}>
                   <FontAwesomeIcon icon={faEdit} /> تعديل
@@ -290,6 +319,7 @@ function Employees() {
                   >
                     <option value="admin">أدمن</option>
                     <option value="supervisor">مشرف</option>
+                     <option value="hallSupervisor">مشرف صالة</option>
                     <option value="employee">موظف</option>
                   </Form.Control>
                 </Form.Group>

@@ -19,6 +19,7 @@ import MassageChair from './pages/MassageChair';
 import PointsAdmin from './pages/PointsAdmin';
 import Navbar from './components/Navbar';
 import { ToastProvider } from './components/ToastProvider';
+import { RxdbProvider } from './db/RxdbProvider';
 import './App.css';
 
 const API_BASE = (process.env.REACT_APP_API_BASE || '').replace(/\/$/, '');
@@ -38,31 +39,35 @@ const isStandaloneApp = () => {
 function AppContent() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [token, setToken] = useState(() => localStorage.getItem('token'));
   const navigate = useNavigate();
   const location = useLocation();
 
   React.useEffect(() => {
     const loadUser = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
+      const existingToken = localStorage.getItem('token');
+      if (!existingToken) {
         setAuthLoading(false);
         return;
       }
       try {
         const res = await fetch(`${API_BASE}/api/auth/me`, {
-          headers: { 'x-auth-token': token }
+          headers: { 'x-auth-token': existingToken }
         });
         if (!res.ok) {
           // token invalid or expired
           localStorage.removeItem('token');
+          setToken(null);
           setAuthLoading(false);
           return;
         }
         const data = await res.json();
         setUser(data.user);
+        setToken(existingToken);
       } catch (err) {
         console.error('Failed to load user:', err);
         localStorage.removeItem('token');
+        setToken(null);
       } finally {
         setAuthLoading(false);
       }
@@ -84,6 +89,7 @@ function AppContent() {
   }, [authLoading, user, location.pathname, navigate]);
 
   return (
+    <RxdbProvider token={token}>
       <ToastProvider>
       <div className="App">
         {authLoading ? (
@@ -95,9 +101,9 @@ function AppContent() {
           </div>
         ) : (
           <>
-            {user && <Navbar user={user} setUser={setUser} />}
+            {user && <Navbar user={user} setUser={setUser} setToken={setToken} />}
             <Routes>
-          <Route path="/login" element={<Login setUser={setUser} />} />
+          <Route path="/login" element={<Login setUser={setUser} setToken={setToken} />} />
           <Route path="/landing" element={<Landing />} />
           <Route path="/prices" element={<PriceList />} />
           <Route path="/massage-chair" element={<MassageChair />} />
@@ -107,15 +113,15 @@ function AppContent() {
           />
           <Route
             path="/bookings"
-            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <Bookings /> : <Navigate to="/login" />}
+            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <Bookings user={user} /> : <Navigate to="/login" />}
           />
           <Route
             path="/instant-services"
-            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <InstantServices /> : <Navigate to="/login" />}
+            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <InstantServices user={user} /> : <Navigate to="/login" />}
           />
           <Route
             path="/expenses-advances"
-            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <ExpensesAdvances /> : <Navigate to="/login" />}
+            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <ExpensesAdvances user={user} /> : <Navigate to="/login" />}
           />
           <Route
             path="/packages-services"
@@ -155,6 +161,7 @@ function AppContent() {
         )}
       </div>
       </ToastProvider>
+    </RxdbProvider>
   );
 }
 

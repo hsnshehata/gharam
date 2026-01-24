@@ -1,145 +1,315 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table } from 'react-bootstrap';
-import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheck, faQrcode, faGift, faCoins, faBolt, faRotateRight } from '@fortawesome/free-solid-svg-icons';
+import { faCheck, faQrcode, faGift, faCoins, faBolt } from '@fortawesome/free-solid-svg-icons';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useToast } from '../components/ToastProvider';
+import { useRxdb } from '../db/RxdbProvider';
+
+const LEVEL_THRESHOLDS = [0, 3000, 8000, 18000, 38000, 73000, 118000, 178000, 268000, 418000];
+const COIN_VALUES = [0, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600];
+const MAX_LEVEL = 10;
 
 const COIN_COLORS = {
-  1: '#c0c7d1', // فضي
-  2: '#d4af37', // ذهبي
-  3: '#e74c3c', // أحمر
-  4: '#27ae60', // أخضر
-  5: '#2980b9', // أزرق
-  6: '#8e44ad', // أرجواني
+  1: '#c0c7d1',
+  2: '#d4af37',
+  3: '#e74c3c',
+  4: '#27ae60',
+  5: '#2980b9',
+  6: '#8e44ad',
   default: '#2c3e50'
 };
 
+const newId = (prefix = 'loc') => (crypto.randomUUID ? crypto.randomUUID() : `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+const normalizeId = (entity) => (entity?._id || entity?.id || '').toString();
+
+const isInRange = (dateValue, start, end) => {
+  if (!dateValue) return false;
+  const dt = new Date(dateValue);
+  if (Number.isNaN(dt.getTime())) return false;
+  return dt >= start && dt <= end;
+};
+
+const getLevel = (totalPoints = 0) => {
+  for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i -= 1) {
+    if (totalPoints >= LEVEL_THRESHOLDS[i]) {
+      return Math.min(i + 1, MAX_LEVEL);
+    }
+  }
+  return 1;
+};
+
+const getCoinValue = (level) => {
+  const lvl = Math.min(level, MAX_LEVEL);
+  return COIN_VALUES[lvl] || 100;
+};
+
 function EmployeeDashboard({ user }) {
+  const { collections, queueOperation } = useRxdb() || {};
   const [date] = useState(new Date().toISOString().split('T')[0]);
   const [receiptNumber, setReceiptNumber] = useState('');
-  const [executedServices, setExecutedServices] = useState([]);
-  const [showPointsModal, setShowPointsModal] = useState(false);
   const [pointsData, setPointsData] = useState(null);
+  const [showPointsModal, setShowPointsModal] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
-  const [pointsSummary, setPointsSummary] = useState(null);
-  const [pendingGifts, setPendingGifts] = useState([]);
-  const [todayGifts, setTodayGifts] = useState([]);
   const [redeemCount, setRedeemCount] = useState(1);
   const [showRedeemModal, setShowRedeemModal] = useState(false);
   const [converting, setConverting] = useState(false);
   const [convertCelebration, setConvertCelebration] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
-  const [loadingData, setLoadingData] = useState(false);
+  const [rawBookings, setRawBookings] = useState([]);
+  const [rawInstantServices, setRawInstantServices] = useState([]);
+  const [users, setUsers] = useState([]);
   const qrCodeScanner = useRef(null);
   const { showToast } = useToast();
 
-  const fetchPointsSummary = useCallback(async () => {
-    const pointsRes = await axios.get(`/api/users/points/summary`, {
-      headers: { 'x-auth-token': localStorage.getItem('token') }
-    });
-    setPointsSummary(pointsRes.data);
-  }, []);
+  const startOfDay = useMemo(() => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, [date]);
 
-  const fetchPendingGifts = useCallback(async () => {
-    const res = await axios.get('/api/users/gifts/pending', {
-      headers: { 'x-auth-token': localStorage.getItem('token') }
-    });
-    setPendingGifts(res.data?.gifts || []);
-  }, []);
+  const endOfDay = useMemo(() => {
+    const d = new Date(startOfDay);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  }, [startOfDay]);
 
-  const fetchTodayGifts = useCallback(async () => {
-    const res = await axios.get('/api/users/gifts/today', {
-      headers: { 'x-auth-token': localStorage.getItem('token') }
-    });
-    setTodayGifts(res.data?.gifts || []);
-  }, []);
-
-  const fetchAllData = useCallback(async () => {
-    setLoadingData(true);
-    try {
-      const executedRes = await axios.get(`/api/users/executed-services?date=${date}`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      await Promise.all([fetchPointsSummary(), fetchPendingGifts(), fetchTodayGifts()]);
-      setExecutedServices(executedRes.data?.services || []);
-    } catch (err) {
-      console.error('Fetch error:', err.response?.data || err.message);
-      showToast('خطأ في جلب البيانات', 'danger');
-    } finally {
-      setLoadingData(false);
-    }
-  }, [date, fetchPointsSummary, fetchPendingGifts, fetchTodayGifts, showToast]);
-
-  const formatNumber = useCallback((num = 0) => new Intl.NumberFormat('en-US').format(Math.max(0, num)), []);
-
-  const formatTime = useCallback((dt) => {
-    if (!dt) return '—';
-    const dateObj = new Date(dt);
-    if (Number.isNaN(dateObj.getTime())) return '—';
-    return dateObj.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-  }, []);
-
-  const getTopCoinLevel = useCallback((byLevel = {}) => {
-    const levels = Object.keys(byLevel || {})
-      .map(Number)
-      .filter((lvl) => !Number.isNaN(lvl) && byLevel[lvl] > 0);
-    if (levels.length === 0) return 1;
-    return Math.max(...levels);
-  }, []);
-
-  const getCoinColor = useCallback((level) => COIN_COLORS[level] || COIN_COLORS.default, []);
+  const upsertLocal = useCallback(async (collectionName, doc, op = 'update') => {
+    const col = collections?.[collectionName];
+    if (!col) throw new Error('قاعدة البيانات غير جاهزة');
+    const payload = { ...doc, updatedAt: new Date().toISOString() };
+    await col.upsert(payload);
+    if (queueOperation) await queueOperation(collectionName, op, payload);
+    return payload;
+  }, [collections, queueOperation]);
 
   useEffect(() => {
-    fetchAllData();
-  }, [fetchAllData]);
+    if (!collections) return undefined;
+    const subs = [];
+    const listen = (col, setter) => {
+      if (!col) return;
+      const sub = col.find({ selector: { _deleted: { $ne: true } } }).$.subscribe((docs) => {
+        setter(docs.map((d) => (d.toJSON ? d.toJSON() : d)));
+      });
+      subs.push(sub);
+    };
+    listen(collections.bookings, setRawBookings);
+    listen(collections.instantServices, setRawInstantServices);
+    listen(collections.users, setUsers);
+    return () => subs.forEach((s) => s && s.unsubscribe && s.unsubscribe());
+  }, [collections]);
 
-  const handleReceiptSearch = useCallback(async (searchValue) => {
+  const usersMap = useMemo(() => {
+    const map = new Map();
+    users.forEach((u) => {
+      const key = normalizeId(u);
+      if (key) map.set(key, u);
+    });
+    return map;
+  }, [users]);
+
+  const currentUserId = useMemo(() => normalizeId(user), [user]);
+  const currentUser = useMemo(() => usersMap.get(currentUserId) || null, [usersMap, currentUserId]);
+
+  const ensurePointsArrays = (draft) => {
+    if (!Array.isArray(draft.points)) draft.points = [];
+    if (!Array.isArray(draft.efficiencyCoins)) draft.efficiencyCoins = [];
+    if (!Array.isArray(draft.coinsRedeemed)) draft.coinsRedeemed = [];
+  };
+
+  const recomputeConvertible = useCallback((draft) => {
+    const coinsEarned = (draft.efficiencyCoins?.length || 0) + (draft.coinsRedeemed?.length || 0);
+    draft.convertiblePoints = Math.max(0, (draft.totalPoints || 0) - coinsEarned * 1000);
+    return draft;
+  }, []);
+
+  const mutateUser = useCallback(async (mutator, op = 'update') => {
+    if (!currentUserId) throw new Error('لا يوجد مستخدم');
+    const base = {
+      ...currentUser,
+      points: Array.isArray(currentUser?.points) ? [...currentUser.points] : [],
+      efficiencyCoins: Array.isArray(currentUser?.efficiencyCoins) ? [...currentUser.efficiencyCoins] : [],
+      coinsRedeemed: Array.isArray(currentUser?.coinsRedeemed) ? [...currentUser.coinsRedeemed] : []
+    };
+    ensurePointsArrays(base);
+    const updated = mutator(base) || base;
+    recomputeConvertible(updated);
+    updated.level = getLevel(updated.totalPoints || 0);
+    await upsertLocal('users', updated, op);
+    return updated;
+  }, [currentUser, currentUserId, recomputeConvertible, upsertLocal]);
+
+  const addWorkPoints = useCallback(async (amount, meta = {}) => {
+    if (!currentUser) return;
+    await mutateUser((draft) => {
+      ensurePointsArrays(draft);
+      draft.points.push({
+        _id: newId('point'),
+        amount,
+        date: new Date().toISOString(),
+        bookingId: meta.bookingId || null,
+        instantServiceId: meta.instantServiceId || null,
+        serviceId: meta.serviceId || null,
+        serviceName: meta.serviceName || null,
+        receiptNumber: meta.receiptNumber || null,
+        type: meta.type || 'work',
+        note: meta.note || null,
+        status: 'applied'
+      });
+      draft.totalPoints = (draft.totalPoints || 0) + amount;
+      draft.convertiblePoints = (draft.convertiblePoints || 0) + amount;
+      return draft;
+    });
+  }, [currentUser, mutateUser]);
+
+  const pointsSummary = useMemo(() => {
+    if (!currentUser) return null;
+    const totalPoints = currentUser.totalPoints || 0;
+    const level = getLevel(totalPoints);
+    const coins = currentUser.efficiencyCoins || [];
+    const coinsByLevel = coins.reduce((acc, c) => {
+      const lvl = c.level || level;
+      acc[lvl] = (acc[lvl] || 0) + 1;
+      return acc;
+    }, {});
+    const coinsTotalValue = coins.reduce((sum, c) => sum + (c.value || 0), 0);
+    const convertiblePoints = currentUser.convertiblePoints ?? Math.max(0, totalPoints - coins.length * 1000);
+    const currentLevelStart = LEVEL_THRESHOLDS[level - 1] || 0;
+    const nextLevelTarget = level >= MAX_LEVEL ? LEVEL_THRESHOLDS[MAX_LEVEL - 1] : LEVEL_THRESHOLDS[level];
+    const progressCurrent = Math.max(0, totalPoints - currentLevelStart);
+    const progressNeeded = level >= MAX_LEVEL ? 0 : Math.max(1, nextLevelTarget - currentLevelStart);
+    const progressPercent = level >= MAX_LEVEL ? 100 : Math.min(100, Math.round((progressCurrent / progressNeeded) * 100));
+
+    return {
+      totalPoints,
+      level,
+      currentCoinValue: getCoinValue(level),
+      convertiblePoints,
+      remainingSalary: currentUser.remainingSalary || 0,
+      coins: {
+        totalCount: coins.length,
+        totalValue: coinsTotalValue,
+        byLevel: coinsByLevel
+      },
+      progress: {
+        current: progressCurrent,
+        target: progressNeeded,
+        nextLevelTarget,
+        percent: progressPercent
+      }
+    };
+  }, [currentUser]);
+
+  const pendingGifts = useMemo(() => (
+    (currentUser?.points || []).filter((p) => p.type === 'gift' && p.status === 'pending')
+  ), [currentUser]);
+
+  const todayGifts = useMemo(() => (
+    (currentUser?.points || [])
+      .filter((p) => p.type === 'gift' && p.status === 'applied' && isInRange(p.openedAt || p.date, startOfDay, endOfDay))
+      .map((p) => ({
+        _id: p._id,
+        amount: p.amount,
+        note: p.note,
+        giftedByName: p.giftedByName || 'الإدارة',
+        openedAt: p.openedAt || p.date
+      }))
+  ), [currentUser, startOfDay, endOfDay]);
+
+  const executedServices = useMemo(() => {
+    if (!currentUserId) return [];
+    const executedList = [];
+    const pushItem = (payload) => executedList.push(payload);
+
+    rawBookings.forEach((b) => {
+      (b.packageServices || []).forEach((srv) => {
+        if (srv.executed && (srv.executedBy?._id || srv.executedBy)?.toString() === currentUserId && isInRange(srv.executedAt, startOfDay, endOfDay)) {
+          pushItem({
+            source: 'booking',
+            receiptNumber: b.receiptNumber || '-',
+            serviceName: srv.name || 'خدمة باكدج',
+            clientName: b.clientName || '—',
+            points: Math.round((srv.price || 0) * 0.15),
+            executedAt: srv.executedAt || b.createdAt,
+            executedBy: usersMap.get(currentUserId)?.username || null
+          });
+        }
+      });
+
+      if (b.hairStraighteningExecuted && (b.hairStraighteningExecutedBy?._id || b.hairStraighteningExecutedBy)?.toString() === currentUserId && isInRange(b.hairStraighteningExecutedAt, startOfDay, endOfDay)) {
+        pushItem({
+          source: 'booking',
+          receiptNumber: b.receiptNumber || '-',
+          serviceName: 'فرد الشعر',
+          clientName: b.clientName || '—',
+          points: Math.round((b.hairStraighteningPrice || 0) * 0.15),
+          executedAt: b.hairStraighteningExecutedAt || b.createdAt,
+          executedBy: usersMap.get(currentUserId)?.username || null
+        });
+      }
+
+      if (b.hairDyeExecuted && (b.hairDyeExecutedBy?._id || b.hairDyeExecutedBy)?.toString() === currentUserId && isInRange(b.hairDyeExecutedAt, startOfDay, endOfDay)) {
+        pushItem({
+          source: 'booking',
+          receiptNumber: b.receiptNumber || '-',
+          serviceName: 'صبغة الشعر',
+          clientName: b.clientName || '—',
+          points: Math.round((b.hairDyePrice || 0) * 0.15),
+          executedAt: b.hairDyeExecutedAt || b.createdAt,
+          executedBy: usersMap.get(currentUserId)?.username || null
+        });
+      }
+    });
+
+    rawInstantServices.forEach((inst) => {
+      (inst.services || []).forEach((srv) => {
+        if (srv.executed && (srv.executedBy?._id || srv.executedBy)?.toString() === currentUserId && isInRange(srv.executedAt, startOfDay, endOfDay)) {
+          pushItem({
+            source: 'instant',
+            receiptNumber: inst.receiptNumber || '-',
+            serviceName: srv.name || 'خدمة فورية',
+            clientName: '—',
+            points: Math.round((srv.price || 0) * 0.15),
+            executedAt: srv.executedAt || inst.createdAt,
+            executedBy: usersMap.get(currentUserId)?.username || null
+          });
+        }
+      });
+    });
+
+    executedList.sort((a, b) => (new Date(b.executedAt || 0).getTime()) - (new Date(a.executedAt || 0).getTime()));
+    return executedList;
+  }, [currentUserId, rawBookings, rawInstantServices, startOfDay, endOfDay, usersMap]);
+
+  const handleReceiptSearch = useCallback((searchValue) => {
     const normalized = (searchValue ?? '').toString().trim();
     if (!normalized) {
       showToast('الرجاء إدخال رقم الوصل', 'warning');
       return;
     }
-    try {
-      console.log('Searching for receipt:', normalized);
-      const [bookingRes, instantRes] = await Promise.allSettled([
-        axios.get(`/api/bookings/receipt/${normalized}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        }),
-        axios.get(`/api/instant-services/receipt/${normalized}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        })
-      ]);
 
-      const booking = bookingRes.status === 'fulfilled' ? bookingRes.value.data.booking : null;
-      const instantService = instantRes.status === 'fulfilled' ? instantRes.value.data.instantService : null;
+    const booking = rawBookings.find((b) => b.receiptNumber?.toString() === normalized || b.barcode?.toString() === normalized);
+    const instantService = rawInstantServices.find((i) => i.receiptNumber?.toString() === normalized || i.barcode?.toString() === normalized);
 
-      if (booking) {
-        setPointsData({ type: 'booking', data: booking });
-        setShowPointsModal(true);
-        return;
-      }
-
-      if (instantService) {
-        setPointsData({ type: 'instant', data: instantService });
-        setShowPointsModal(true);
-        return;
-      }
-
-      showToast('لم يتم العثور على حجز أو خدمة فورية بهذا الرقم', 'warning');
-    } catch (err) {
-      console.error('Receipt search error:', err.response?.data || err.message);
-      showToast(err.response?.data?.msg || 'خطأ في البحث عن الوصل', 'danger');
+    if (booking) {
+      setPointsData({ type: 'booking', data: booking });
+      setShowPointsModal(true);
+      return;
     }
-  }, [showToast]);
+    if (instantService) {
+      setPointsData({ type: 'instant', data: instantService });
+      setShowPointsModal(true);
+      return;
+    }
+    showToast('لم يتم العثور على حجز أو خدمة فورية بهذا الرقم', 'warning');
+  }, [rawBookings, rawInstantServices, showToast]);
 
   useEffect(() => {
     if (showQrModal) {
-      qrCodeScanner.current = new Html5Qrcode("qr-reader");
+      qrCodeScanner.current = new Html5Qrcode('qr-reader');
       const config = { fps: 10, qrbox: { width: 250, height: 250 } };
       qrCodeScanner.current.start(
-        { facingMode: "environment" },
+        { facingMode: 'environment' },
         config,
         (decodedText) => {
           handleReceiptSearch(decodedText);
@@ -148,7 +318,6 @@ function EmployeeDashboard({ user }) {
         },
         (error) => {
           if (!error.includes('NotFoundException')) {
-            // Ignore transient decode errors to avoid noisy toasts while scanning
             console.warn('QR scan warning:', error);
           }
         }
@@ -169,113 +338,216 @@ function EmployeeDashboard({ user }) {
         }
       }
     };
-  }, [showQrModal, handleReceiptSearch, showToast]);
+  }, [showQrModal, showToast, handleReceiptSearch]);
 
   const handleReceiptSubmit = async (e) => {
     e.preventDefault();
-    if (!receiptNumber) {
-      showToast('الرجاء إدخال رقم الوصل', 'warning');
-      return;
-    }
     await handleReceiptSearch(receiptNumber);
   };
 
   const handleConvertPoints = async () => {
-    if (!pointsSummary || (pointsSummary.convertiblePoints || 0) < 1000) {
+    if (!pointsSummary) return;
+    const convertible = Math.floor((pointsSummary.convertiblePoints || 0) / 1000);
+    if (convertible < 1) {
       showToast('لا توجد نقاط كافية للتحويل', 'warning');
       return;
     }
     try {
       setConverting(true);
-      const res = await axios.post('/api/users/convert-points', {}, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
+      await mutateUser((draft) => {
+        ensurePointsArrays(draft);
+        const level = getLevel(draft.totalPoints || 0);
+        const coinValue = getCoinValue(level);
+        for (let i = 0; i < convertible; i += 1) {
+          draft.efficiencyCoins.push({
+            level,
+            value: coinValue,
+            earnedAt: new Date().toISOString(),
+            sourcePointId: null,
+            receiptNumber: null
+          });
+        }
+        draft.convertiblePoints = Math.max(0, (draft.convertiblePoints || 0) - (convertible * 1000));
+        return draft;
       });
-      showToast(`تم تحويل ${res.data.mintedCoins} عملة جديدة`, 'success');
+      showToast(`تم تحويل ${convertible} عملة جديدة`, 'success');
       setConvertCelebration(true);
       setTimeout(() => setConvertCelebration(false), 1200);
-      await Promise.all([fetchPointsSummary(), fetchPendingGifts(), fetchTodayGifts()]);
     } catch (err) {
-      console.error('Convert error:', err.response?.data || err.message);
-      showToast(err.response?.data?.msg || 'تعذر تحويل النقاط الآن', 'danger');
+      console.error('Convert error:', err);
+      showToast('تعذر تحويل النقاط الآن', 'danger');
     } finally {
       setConverting(false);
     }
   };
 
   const handleRedeemCoins = async () => {
+    if (!pointsSummary) return;
     if (!redeemCount || redeemCount <= 0) {
       showToast('اختار عدد العملات للاستبدال', 'warning');
       return;
     }
-    if (redeemCount > coinsCount) {
+    if (redeemCount > pointsSummary.coins.totalCount) {
       showToast('عدد العملات المطلوب أكبر من المتاح', 'warning');
       return;
     }
     try {
       setRedeeming(true);
-      const res = await axios.post('/api/users/redeem-coins', { count: redeemCount }, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
+      await mutateUser((draft) => {
+        ensurePointsArrays(draft);
+        const coinsToRedeem = draft.efficiencyCoins.slice(0, redeemCount);
+        draft.efficiencyCoins = draft.efficiencyCoins.slice(redeemCount);
+        const totalValue = coinsToRedeem.reduce((sum, c) => sum + (c.value || 0), 0);
+        coinsToRedeem.forEach((c) => {
+          draft.coinsRedeemed.push({
+            level: c.level,
+            value: c.value,
+            redeemedAt: new Date().toISOString(),
+            sourcePointId: c.sourcePointId || null
+          });
+        });
+        draft.remainingSalary = (draft.remainingSalary || 0) + totalValue;
+        return draft;
       });
-      showToast(`تم استبدال ${res.data.redeemedCoins} عملة بقيمة ${res.data.totalValue} جنيه`, 'success');
-      await Promise.all([fetchPointsSummary(), fetchPendingGifts(), fetchTodayGifts()]);
+      showToast('تم استبدال العملات وإضافتها للراتب الحالي', 'success');
       setShowRedeemModal(false);
     } catch (err) {
-      console.error('Redeem error:', err.response?.data || err.message);
-      showToast(err.response?.data?.msg || 'تعذر استبدال العملات', 'danger');
+      console.error('Redeem error:', err);
+      showToast('تعذر استبدال العملات', 'danger');
     } finally {
       setRedeeming(false);
     }
   };
 
   const handleExecuteService = async (serviceId, type, recordId) => {
-    const employeeId = user?._id || user?.id;
+    const employeeId = currentUserId;
     if (!employeeId) {
       showToast('حساب الموظف غير محدد، سجل دخول تاني وحاول', 'danger');
       return;
     }
     try {
-      console.log('Executing service:', { serviceId, type, recordId, employeeId });
-      const endpoint = type === 'booking' 
-        ? `/api/bookings/execute-service/${recordId}/${serviceId}`
-        : `/api/instant-services/execute-service/${recordId}/${serviceId}`;
-      const res = await axios.post(endpoint, { employeeId }, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      console.log('Execute service response:', res.data);
-      showToast(`تم تنفيذ الخدمة بنجاح وإضافة ${res.data.points} نقطة`, 'success');
+      if (type === 'booking') {
+        const booking = rawBookings.find((b) => normalizeId(b) === recordId);
+        if (!booking) throw new Error('الحجز غير موجود محلياً');
+        const updated = { ...booking };
+        let points = 0;
+        let serviceName = 'غير معروف';
+        const now = new Date().toISOString();
 
-      setPointsData(prev => ({
-        ...prev,
-        data: type === 'booking' ? res.data.booking : res.data.instantService
-      }));
+        if (serviceId === 'hairStraightening' || serviceId === 'hairDye') {
+          const isStraightening = serviceId === 'hairStraightening';
+          const enabled = isStraightening ? updated.hairStraightening : updated.hairDye;
+          const already = isStraightening ? updated.hairStraighteningExecuted : updated.hairDyeExecuted;
+          if (!enabled || already) {
+            showToast('الخدمة تم تنفيذها أو غير مفعّلة', 'warning');
+            return;
+          }
+          if (isStraightening) {
+            updated.hairStraighteningExecuted = true;
+            updated.hairStraighteningExecutedBy = employeeId;
+            updated.hairStraighteningExecutedAt = now;
+            points = (updated.hairStraighteningPrice || 0) * 0.15;
+            serviceName = 'فرد الشعر';
+          } else {
+            updated.hairDyeExecuted = true;
+            updated.hairDyeExecutedBy = employeeId;
+            updated.hairDyeExecutedAt = now;
+            points = (updated.hairDyePrice || 0) * 0.15;
+            serviceName = 'صبغة الشعر';
+          }
+        } else {
+          const srv = (updated.packageServices || []).find((s) => normalizeId(s) === serviceId || normalizeId(s._id) === serviceId);
+          if (!srv) {
+            showToast('الخدمة غير موجودة في الحجز', 'warning');
+            return;
+          }
+          if (srv.executed) {
+            showToast('الخدمة منفذة بالفعل', 'warning');
+            return;
+          }
+          srv.executed = true;
+          srv.executedBy = employeeId;
+          srv.executedAt = now;
+          points = (srv.price || 0) * 0.15;
+          serviceName = srv.name || 'خدمة باكدج';
+          updated.packageServices = [...updated.packageServices];
+        }
 
-      await fetchAllData();
+        await upsertLocal('bookings', updated, 'update');
+        await addWorkPoints(points, {
+          bookingId: updated._id,
+          serviceId: serviceId === 'hairStraightening' || serviceId === 'hairDye' ? null : serviceId,
+          serviceName,
+          receiptNumber: updated.receiptNumber || null,
+          type: 'work'
+        });
+        setPointsData({ type: 'booking', data: updated });
+        setShowPointsModal(true);
+        showToast('تم تنفيذ الخدمة محلياً وسيتم رفعها عند الاتصال', 'success');
+      } else {
+        const instant = rawInstantServices.find((i) => normalizeId(i) === recordId);
+        if (!instant) throw new Error('الخدمة الفورية غير موجودة محلياً');
+        const updated = { ...instant };
+        const srv = (updated.services || []).find((s) => normalizeId(s) === serviceId || normalizeId(s._id) === serviceId);
+        if (!srv) {
+          showToast('الخدمة غير موجودة', 'warning');
+          return;
+        }
+        if (srv.executed) {
+          showToast('الخدمة منفذة بالفعل', 'warning');
+          return;
+        }
+        const now = new Date().toISOString();
+        srv.executed = true;
+        srv.executedBy = employeeId;
+        srv.executedAt = now;
+        updated.services = [...updated.services];
+
+        await upsertLocal('instantServices', updated, 'update');
+        await addWorkPoints((srv.price || 0) * 0.15, {
+          instantServiceId: updated._id,
+          serviceId,
+          serviceName: srv.name || 'خدمة فورية',
+          receiptNumber: updated.receiptNumber || null,
+          type: 'work'
+        });
+        setPointsData({ type: 'instant', data: updated });
+        setShowPointsModal(true);
+        showToast('تم تنفيذ الخدمة محلياً وسيتم رفعها عند الاتصال', 'success');
+      }
     } catch (err) {
-      console.error('Execute service error:', err.response?.data || err.message);
-      showToast(err.response?.data?.msg || 'خطأ في تنفيذ الخدمة', 'danger');
+      console.error('Execute service error:', err);
+      showToast('خطأ في تنفيذ الخدمة محلياً', 'danger');
     }
-  };
-
-  const handleOpenQrModal = () => {
-    setShowQrModal(true);
   };
 
   const handleOpenGift = async (giftId) => {
     try {
-      const res = await axios.post(`/api/users/gifts/open/${giftId}`, {}, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
+      await mutateUser((draft) => {
+        ensurePointsArrays(draft);
+        const target = (draft.points || []).find((p) => p._id?.toString() === giftId && p.type === 'gift' && p.status === 'pending');
+        if (!target) return draft;
+        target.status = 'applied';
+        target.openedAt = new Date().toISOString();
+        const amount = Number(target.amount) || 0;
+        draft.totalPoints = (draft.totalPoints || 0) + amount;
+        draft.convertiblePoints = (draft.convertiblePoints || 0) + amount;
+        return draft;
       });
-      showToast(res.data.msg || 'تم فتح الهدية', 'success');
-      await Promise.all([fetchPointsSummary(), fetchPendingGifts(), fetchTodayGifts()]);
+      showToast('تم فتح الهدية وإضافة النقاط', 'success');
     } catch (err) {
-      console.error('Gift open error:', err.response?.data || err.message);
-      showToast(err.response?.data?.msg || 'تعذر فتح الهدية الآن', 'danger');
+      console.error('Gift open error:', err);
+      showToast('تعذر فتح الهدية الآن', 'danger');
     }
   };
 
   const coinsCount = pointsSummary?.coins?.totalCount || 0;
-  const topCoinLevel = getTopCoinLevel(pointsSummary?.coins?.byLevel || {});
-  const topCoinColor = getCoinColor(topCoinLevel);
+  const topCoinLevel = (() => {
+    const byLevel = pointsSummary?.coins?.byLevel || {};
+    const levels = Object.keys(byLevel).map(Number).filter((lvl) => !Number.isNaN(lvl) && byLevel[lvl] > 0);
+    return levels.length ? Math.max(...levels) : 1;
+  })();
+  const topCoinColor = COIN_COLORS[topCoinLevel] || COIN_COLORS.default;
   const convertiblePoints = pointsSummary?.convertiblePoints || 0;
   const canConvert = convertiblePoints >= 1000;
   const remainingSalary = pointsSummary?.remainingSalary || 0;
@@ -299,14 +571,12 @@ function EmployeeDashboard({ user }) {
                   <div className="text-muted small">افتح الصندوق علشان النقاط تضاف لرصيدك</div>
                 </div>
               </div>
-              <div className="d-flex flex-column gap-2 flex-fill">
-                {pendingGifts.map((g) => (
-                  <div key={g._id} className="d-flex flex-wrap align-items-center gap-2 justify-content-between gift-row">
-                    <div className="text-muted small">من: {g.giftedByName || 'الإدارة'} — السبب: {g.note || 'هدية تقدير'}</div>
-                    <Button variant="success" className="gift-open-btn" onClick={() => handleOpenGift(g._id)}>
-                      افتح +{g.amount} نقطة
-                    </Button>
-                  </div>
+              <div className="d-flex flex-wrap gap-2">
+                {pendingGifts.map((gift) => (
+                  <Button key={gift._id} variant="outline-primary" onClick={() => handleOpenGift(gift._id)}>
+                    <FontAwesomeIcon icon={faGift} className="me-2" />
+                    {gift.amount} نقطة - {gift.note || 'هدية نقاط'}
+                  </Button>
                 ))}
               </div>
             </div>
@@ -314,216 +584,159 @@ function EmployeeDashboard({ user }) {
         </Card>
       )}
 
-      <Row className="mb-4 justify-content-center">
-        <Col md={8} lg={6}>
-          <div className="scan-panel text-center">
-            <Button variant="primary" onClick={handleOpenQrModal} className="scan-btn simple-scan-btn">
-              <FontAwesomeIcon icon={faQrcode} className="me-2" />
-              مسح الباركود
-            </Button>
-            <Form onSubmit={handleReceiptSubmit} className="mt-3">
-              <Form.Group>
-                <Form.Label>أو اكتب رقم الوصل</Form.Label>
-                <div className="d-flex gap-2">
-                  <Form.Control
-                    type="text"
-                    value={receiptNumber}
-                    onChange={(e) => setReceiptNumber(e.target.value)}
-                    placeholder="أدخل رقم الوصل"
-                  />
-                  <Button type="submit" variant="outline-primary">بحث</Button>
+      {todayGifts.length > 0 && (
+        <Alert variant="success" className="d-flex align-items-center gap-2">
+          <FontAwesomeIcon icon={faGift} />
+          <span>تم فتح {todayGifts.length} هدية اليوم.</span>
+        </Alert>
+      )}
+
+      <Row className="mb-4">
+        <Col md={8}>
+          <Card className="h-100">
+            <Card.Body className="d-flex flex-column gap-3">
+              <div className="d-flex align-items-center justify-content-between">
+                <div>
+                  <Card.Title className="mb-1">رصيدك</Card.Title>
+                  <div className="text-muted">النقاط والعملات المتاحة حالياً</div>
                 </div>
-              </Form.Group>
-            </Form>
-          </div>
+                <div className="text-end">
+                  <div className="fs-4 fw-bold">{pointsSummary?.totalPoints || 0} نقطة</div>
+                  <div className="text-muted">مستوى L{pointsSummary?.level || 1}</div>
+                </div>
+              </div>
+              <div className="d-flex flex-wrap gap-3 align-items-center">
+                <div className="d-flex align-items-center gap-2">
+                  <div className="coin" style={{ background: topCoinColor }} />
+                  <div>
+                    <div className="text-muted small">عدد العملات</div>
+                    <div className="fw-bold">{coinsCount}</div>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted small">رصيد قابل للتحويل</div>
+                  <div className="fw-bold">{convertiblePoints} نقطة</div>
+                </div>
+                <div>
+                  <div className="text-muted small">الراتب المتبقي</div>
+                  <div className="fw-bold">{remainingSalary} ج</div>
+                </div>
+              </div>
+              <div className="d-flex flex-wrap gap-2">
+                <Button variant="primary" disabled={!canConvert || converting} onClick={handleConvertPoints}>
+                  <FontAwesomeIcon icon={faCoins} className="me-2" />
+                  {converting ? 'جارٍ التحويل...' : 'حوّل 1000 نقطة = عملة'}
+                </Button>
+                <Button variant="outline-primary" onClick={() => setShowRedeemModal(true)} disabled={coinsCount === 0}>
+                  <FontAwesomeIcon icon={faBolt} className="me-2" />
+                  استبدال العملات
+                </Button>
+                <Button variant="outline-secondary" onClick={() => setShowQrModal(true)}>
+                  <FontAwesomeIcon icon={faQrcode} className="me-2" />
+                  اسكان QR للوصل
+                </Button>
+              </div>
+              {convertCelebration && (
+                <div className="alert alert-success mb-0">مبروك! تم سك عملات جديدة 🎉</div>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col md={4}>
+          <Card className="h-100">
+            <Card.Body>
+              <Card.Title>بحث برقم الوصل</Card.Title>
+              <Form onSubmit={handleReceiptSubmit} className="d-flex gap-2">
+                <Form.Control
+                  type="text"
+                  value={receiptNumber}
+                  onChange={(e) => setReceiptNumber(e.target.value)}
+                  placeholder="اكتب رقم الوصل أو امسح QR"
+                />
+                <Button type="submit" variant="primary">بحث</Button>
+              </Form>
+            </Card.Body>
+          </Card>
         </Col>
       </Row>
 
-      <Card className="mb-4 points-card">
-        <Card.Body>
-          <Card.Title>لوحة المكافآت</Card.Title>
-          {pointsSummary ? (
-            <>
-              <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 points-top">
-                <div className="coin-chip">
-                  <div
-                    className="coin-illustration"
-                    style={{ background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.7), rgba(255,255,255,0.1)), linear-gradient(135deg, ${topCoinColor}, ${topCoinColor}aa)` }}
-                  >
-                    <span className="coin-glow" />
-                    <span className="coin-level">L{topCoinLevel}</span>
-                  </div>
-                  <div className="coin-meta">
-                    <div className="coin-title">أعلى عملة وصلت لها</div>
-                    <div className="coin-count-text">
-                      <FontAwesomeIcon icon={faCoins} className="me-2" />
-                      {coinsCount}
-                    </div>
-                    <div className="coin-desc">اللون يعكس مستوى العملة الحالي</div>
-                  </div>
+      <Row className="mb-4">
+        <Col md={12}>
+          <Card>
+            <Card.Body>
+              <div className="d-flex align-items-center justify-content-between mb-3">
+                <div>
+                  <Card.Title className="mb-1">الشغل المنفذ اليوم</Card.Title>
+                  <div className="text-muted">التاريخ: {new Date(date).toLocaleDateString()}</div>
                 </div>
-
-                <div className="level-progress-wrap">
-                  <div className="d-flex align-items-center gap-2 mb-1">
-                    <span className="text-muted small">المستوى الحالي</span>
-                    <span className="level-badge">L{pointsSummary.level}</span>
-                  </div>
-                  <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pointsSummary.progress?.percent || 0}>
-                    <div
-                      className="progress-bar"
-                      style={{ width: `${pointsSummary.progress?.percent || 0}%` }}
-                    />
-                  </div>
-                  <div className="small text-muted mt-1">
-                    متبقي: {Math.max(0, (pointsSummary.progress?.target || 0) - (pointsSummary.progress?.current || 0))} نقطة للوصول للمستوى التالي
-                  </div>
-                </div>
-
-                {coinsCount > 0 && (
-                  <Button variant="outline-success" className="gift-btn" onClick={() => { setRedeemCount(1); setShowRedeemModal(true); }}>
-                    <FontAwesomeIcon icon={faGift} className="me-2" /> استبدال العملات
-                  </Button>
-                )}
+                <span className="badge bg-primary">{executedServicesList.length} خدمة</span>
               </div>
-
-              <div className="counter-block mt-3">
-                <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                  <div>
-                    <div className="small text-muted">عداد النقاط القابلة للتحويل</div>
-                    <div className={`points-counter ${convertCelebration ? 'burst' : ''}`}>
-                      {formatNumber(convertiblePoints)}
-                    </div>
-                  </div>
-                  <div className="text-end">
-                    <div className="small text-muted">قيمة العملة الحالية</div>
-                    <div className="fw-bold">{formatNumber(pointsSummary.currentCoinValue)} جنيه</div>
-                    <div className="small text-muted mt-1">متبقي راتب الشهر: {formatNumber(remainingSalary)} جنيه</div>
-                  </div>
-                </div>
-
-                {canConvert ? (
-                  <Button
-                    className={`convert-btn mt-2 ${convertCelebration ? 'celebrate' : ''}`}
-                    onClick={handleConvertPoints}
-                    disabled={converting}
-                  >
-                    <FontAwesomeIcon icon={faBolt} className="me-2" />
-                    حوّل كل 1000 نقطة إلى عملة
-                  </Button>
-                ) : (
-                  <div className="text-muted small mt-2">اجمع {formatNumber(Math.max(0, 1000 - convertiblePoints))} نقطة إضافية علشان تحوّل أول عملة</div>
-                )}
-              </div>
-            </>
-          ) : (
-            <div>جارٍ التحميل...</div>
-          )}
-        </Card.Body>
-      </Card>
-
-      <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-        <h3 className="mb-0">الخدمات اللي نفذتها النهارده</h3>
-        <Button
-          variant="outline-light"
-          className="refresh-btn"
-          onClick={fetchAllData}
-          disabled={loadingData}
-        >
-          <FontAwesomeIcon icon={faRotateRight} className="me-2" />
-          {loadingData ? 'جاري التحديث...' : 'تحديث البيانات'}
-        </Button>
-      </div>
-      {executedServicesList.length === 0 && (
-        <Alert variant="info">لسه ما نفذت خدمات النهارده</Alert>
-      )}
-      <Row>
-        {executedServicesList.map((srv, idx) => (
-          <Col md={4} key={`${srv.receiptNumber}-${idx}`} className="mb-3">
-            <Card className="service-card">
-              <Card.Body>
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <span className="service-type">{srv.source === 'instant' ? 'خدمة فورية' : 'باكدج'}</span>
-                  <span className="points-pill">+{formatNumber(srv.points)} نقطة</span>
-                </div>
-                <Card.Title className="mb-2">{srv.serviceName}</Card.Title>
-                <Card.Text className="mb-1">رقم الوصل: {srv.receiptNumber}</Card.Text>
-                {srv.source !== 'instant' && (
-                  <Card.Text className="text-muted small">العروسة: {srv.clientName}</Card.Text>
-                )}
-                <Card.Text className="text-muted small">وقت التنفيذ: {formatTime(srv.executedAt)}</Card.Text>
-              </Card.Body>
-            </Card>
-          </Col>
-        ))}
+              {executedServicesList.length === 0 ? (
+                <Alert variant="info">لا يوجد شغل منفذ النهاردة</Alert>
+              ) : (
+                <Table striped responsive>
+                  <thead>
+                    <tr>
+                      <th>المصدر</th>
+                      <th>الخدمة</th>
+                      <th>النقاط</th>
+                      <th>وقت التنفيذ</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {executedServicesList.map((srv, idx) => (
+                      <tr key={`${srv.receiptNumber}-${idx}`}>
+                        <td>{srv.source === 'booking' ? 'حجز' : 'فورية'} #{srv.receiptNumber}</td>
+                        <td>{srv.serviceName}</td>
+                        <td>{srv.points}</td>
+                        <td>{srv.executedAt ? new Date(srv.executedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
       </Row>
 
-      {todayGifts.length > 0 && (
+      {pointsData && (
         <Card className="mb-4">
           <Card.Body>
-            <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-              <Card.Title className="mb-0">الهدايا اللي استلمتها النهارده</Card.Title>
+            <Card.Title>بيانات الوصل</Card.Title>
+            <div className="d-flex flex-wrap gap-3 align-items-center mb-3">
+              <div className="badge bg-secondary">نوع: {pointsData.type === 'booking' ? 'حجز' : 'فورية'}</div>
+              <div className="badge bg-light text-dark">رقم الوصل: {pointsData.data?.receiptNumber || '—'}</div>
             </div>
-            <Row>
-              {todayGifts.map((g) => (
-                <Col md={4} key={g._id} className="mb-3">
-                  <Card className="gift-log-card h-100">
-                    <Card.Body>
-                      <div className="d-flex justify-content-between align-items-center mb-2">
-                        <span className="badge bg-success">+{g.amount} نقطة</span>
-                        <span className="text-muted small">{g.openedAt ? new Date(g.openedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
-                      </div>
-                      <div className="fw-bold mb-1">من: {g.giftedByName || 'الإدارة'}</div>
-                      <div className="text-muted small">السبب: {g.note || 'هدية تقدير'}</div>
-                    </Card.Body>
-                  </Card>
-                </Col>
-              ))}
-            </Row>
+            <Button variant="outline-primary" className="me-2" onClick={() => handleExecuteService('hairStraightening', 'booking', pointsData.data?._id)}>
+              تفعيل فرد الشعر
+            </Button>
+            <Button variant="outline-primary" className="me-2" onClick={() => handleExecuteService('hairDye', 'booking', pointsData.data?._id)}>
+              تفعيل صبغة الشعر
+            </Button>
+            {(pointsData.data?.packageServices || pointsData.data?.services || []).map((srv) => (
+              <Button
+                key={srv._id?._id || srv._id}
+                variant={srv.executed ? 'success' : 'primary'}
+                className="me-2 mt-2"
+                disabled={srv.executed}
+                onClick={() => handleExecuteService(srv._id?._id || srv._id, pointsData.type === 'booking' ? 'booking' : 'instant', pointsData.data?._id)}
+              >
+                {srv.executed ? <FontAwesomeIcon icon={faCheck} className="me-2" /> : null}
+                {srv.name || 'خدمة'} - {srv.price || 0} ج
+              </Button>
+            ))}
           </Card.Body>
         </Card>
       )}
 
-      <Modal show={showRedeemModal} onHide={() => setShowRedeemModal(false)}>
+      <Modal show={showQrModal} onHide={() => setShowQrModal(false)} centered>
         <Modal.Header closeButton>
-          <Modal.Title>استبدال العملات</Modal.Title>
+          <Modal.Title>امسح QR للوصول</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <div className="d-flex align-items-center gap-2 mb-3">
-            <FontAwesomeIcon icon={faGift} />
-            <span>معاك {formatNumber(coinsCount)} عملة بقيمة إجمالية {formatNumber(pointsSummary?.coins?.totalValue || 0)} جنيه</span>
-          </div>
-          <Form.Group>
-            <Form.Label>عدد العملات للاستبدال</Form.Label>
-            <Form.Control
-              type="number"
-              min={1}
-              max={coinsCount}
-              value={redeemCount}
-              onChange={(e) => setRedeemCount(Number(e.target.value))}
-            />
-          </Form.Group>
+          <div id="qr-reader" style={{ width: '100%' }} />
         </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowRedeemModal(false)}>إغلاق</Button>
-          <Button variant="success" onClick={handleRedeemCoins} disabled={redeeming}>
-            <FontAwesomeIcon icon={faGift} className="me-2" />
-            {redeeming ? 'جاري الاستبدال...' : 'تأكيد الاستبدال'}
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
-      <Modal show={showQrModal} onHide={() => setShowQrModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>مسح الباركود</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <div id="qr-reader" style={{ width: '100%', height: '300px' }} />
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowQrModal(false)}>
-            إغلاق
-          </Button>
-        </Modal.Footer>
       </Modal>
 
       <Modal show={showPointsModal} onHide={() => setShowPointsModal(false)} size="lg">
@@ -533,131 +746,37 @@ function EmployeeDashboard({ user }) {
         <Modal.Body>
           {pointsData && (
             <div>
-              {pointsData.type === 'booking' ? (
+              <p>رقم الوصل: {pointsData.data?.receiptNumber || '—'}</p>
+              <p>النوع: {pointsData.type === 'booking' ? 'حجز' : 'خدمة فورية'}</p>
+              {pointsData.type === 'booking' && (
                 <>
-                  <p>اسم العميل: {pointsData.data.clientName}</p>
-                  <p>رقم الهاتف: {pointsData.data.clientPhone}</p>
-                  <p>رقم الوصل: {pointsData.data.receiptNumber}</p>
-                  <p>تاريخ المناسبة: {new Date(pointsData.data.eventDate).toLocaleDateString()}</p>
-                  {pointsData.data.hennaDate && <p>تاريخ الحنة: {new Date(pointsData.data.hennaDate).toLocaleDateString()}</p>}
-                  {pointsData.data.returnedServices?.length > 0 && (
-                    <p>الخدمات المرتجعة: {pointsData.data.returnedServices.map(srv => srv.name).join(', ')}</p>
-                  )}
-                  {pointsData.data.extraServices?.length > 0 && (
-                    <p>الخدمات الإضافية: {pointsData.data.extraServices.map(srv => srv.name).join(', ')}</p>
-                  )}
-                  <h5>الخدمات:</h5>
-                  <Table striped bordered hover>
-                    <thead>
-                      <tr>
-                        <th>اسم الخدمة</th>
-                        <th>السعر</th>
-                        <th>الحالة</th>
-                        <th>استلام</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pointsData.data.packageServices?.map((srv, index) => {
-                        const serviceId = typeof srv._id === 'object' && srv._id._id ? srv._id._id.toString() : (srv._id ? srv._id.toString() : `service-${index}`);
-                        const rowKey = serviceId || `service-${index}`;
-                        return (
-                          <tr key={rowKey}>
-                            <td>{srv.name || 'غير معروف'}</td>
-                            <td>{srv.price ? `${srv.price} جنيه` : 'غير معروف'}</td>
-                            <td>
-                              {srv.executed ? (
-                                `نفذت بواسطة ${srv.executedBy?.username || 'غير معروف'}`
-                              ) : (
-                                'لم يتم الاستلام'
-                              )}
-                            </td>
-                            <td>
-                              {!srv.executed && (
-                                <Button
-                                  variant="success"
-                                  onClick={() => handleExecuteService(serviceId, 'booking', pointsData.data._id)}
-                                >
-                                  <FontAwesomeIcon icon={faCheck} /> استلام
-                                </Button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                      {pointsData.data.hairStraightening && (
-                        <tr key="hairStraightening">
-                          <td>فرد شعر</td>
-                          <td>{pointsData.data.hairStraighteningPrice ? `${pointsData.data.hairStraighteningPrice} جنيه` : 'غير معروف'}</td>
-                          <td>
-                            {pointsData.data.hairStraighteningExecuted ? (
-                              `نفذت بواسطة ${pointsData.data.hairStraighteningExecutedBy?.username || 'غير معروف'}`
-                            ) : (
-                              'لم يتم الاستلام'
-                            )}
-                          </td>
-                          <td>
-                            {!pointsData.data.hairStraighteningExecuted && (
-                              <Button
-                                variant="success"
-                                onClick={() => handleExecuteService('hairStraightening', 'booking', pointsData.data._id)}
-                              >
-                                <FontAwesomeIcon icon={faCheck} /> استلام
-                              </Button>
-                            )}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </Table>
+                  <p>اسم العميل: {pointsData.data?.clientName || '—'}</p>
+                  <p>خدمات الباكدج: {(pointsData.data?.packageServices || []).length}</p>
                 </>
-              ) : (
-                <>
-                  <p>رقم الوصل: {pointsData.data.receiptNumber}</p>
-                  <p>تاريخ الخدمة: {new Date(pointsData.data.createdAt).toLocaleDateString()}</p>
-                  <p>الموظف: {pointsData.data.services.find(srv => srv.executed && srv.executedBy) ? pointsData.data.services.find(srv => srv.executed && srv.executedBy).executedBy.username : 'غير محدد'}</p>
-                  <h5>الخدمات:</h5>
-                  <Table striped bordered hover>
-                    <thead>
-                      <tr>
-                        <th>اسم الخدمة</th>
-                        <th>السعر</th>
-                        <th>الحالة</th>
-                        <th>استلام</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pointsData.data.services?.map((srv, index) => (
-                        <tr key={srv._id ? srv._id.toString() : `service-${index}`}>
-                          <td>{srv.name || 'غير معروف'}</td>
-                          <td>{srv.price ? `${srv.price} جنيه` : 'غير معروف'}</td>
-                          <td>
-                            {srv.executed ? (
-                              `نفذت بواسطة ${srv.executedBy?.username || 'غير معروف'}`
-                            ) : (
-                              'لم يتم الاستلام'
-                            )}
-                          </td>
-                          <td>
-                            {!srv.executed && (
-                              <Button
-                                variant="success"
-                                onClick={() => handleExecuteService(srv._id ? srv._id.toString() : '', 'instant', pointsData.data._id)}
-                              >
-                                <FontAwesomeIcon icon={faCheck} /> استلام
-                              </Button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                </>
+              )}
+              {pointsData.type === 'instant' && (
+                <p>إجمالي: {pointsData.data?.total || 0} ج</p>
               )}
             </div>
           )}
         </Modal.Body>
+      </Modal>
+
+      <Modal show={showRedeemModal} onHide={() => setShowRedeemModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>استبدال العملات</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group>
+            <Form.Label>عدد العملات</Form.Label>
+            <Form.Control type="number" min="1" max={coinsCount} value={redeemCount} onChange={(e) => setRedeemCount(Number(e.target.value) || 0)} />
+          </Form.Group>
+        </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowPointsModal(false)}>إغلاق</Button>
+          <Button variant="secondary" onClick={() => setShowRedeemModal(false)}>إلغاء</Button>
+          <Button variant="primary" onClick={handleRedeemCoins} disabled={redeeming || coinsCount === 0}>
+            {redeeming ? 'جارٍ الاستبدال...' : 'استبدال'}
+          </Button>
         </Modal.Footer>
       </Modal>
     </Container>

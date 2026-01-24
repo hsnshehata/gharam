@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Pagination } from 'react-bootstrap';
-import axios from 'axios';
 import Select from 'react-select';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faEye, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { useRxdb } from '../db/RxdbProvider';
 
-function ExpensesAdvances() {
+const PAGE_SIZE = 9;
+
+function ExpensesAdvances({ user }) {
   const [formData, setFormData] = useState({ type: 'expense', details: '', amount: 0, userId: '' });
   const [items, setItems] = useState([]);
   const [users, setUsers] = useState([]);
@@ -20,6 +22,7 @@ function ExpensesAdvances() {
   const [search, setSearch] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false); // إضافة الـ state هنا
   const [submitLoading, setSubmitLoading] = useState(false);
+  const { collections, queueOperation } = useRxdb() || {};
 
   const userOptions = useMemo(() => (
     users.map(user => ({
@@ -118,30 +121,70 @@ function ExpensesAdvances() {
     })
   };
 
+  // تحميل البيانات من RxDB محلياً
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const usersRes = await axios.get('/api/users', {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        const itemsRes = await axios.get(`/api/expenses-advances?page=${currentPage}&search=${search}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        console.log('Users response:', usersRes.data);
-        console.log('Expenses/Advances response:', itemsRes.data);
-        setUsers(usersRes.data.map(u => ({ ...u, _id: u._id?.toString() })));
-        setItems(itemsRes.data.items.map(item => ({
-          ...item,
-          type: item.type || (item.details ? 'expense' : 'advance')
-        })));
-        setTotalPages(itemsRes.data.pages);
-      } catch (err) {
-        console.error('Fetch error:', err.response?.data || err.message);
-        setMessage('خطأ في جلب البيانات');
-      }
+    if (!collections?.users || !collections?.expenses || !collections?.advances || !collections?.deductions) return;
+
+    const usrSub = collections.users
+      .find({ selector: { _deleted: { $ne: true } } })
+      .$.subscribe((docs) => setUsers(docs.map((d) => d.toJSON())));
+
+    const syncItems = () => {
+      const expenseDocs = collections.expenses.find({ selector: { _deleted: { $ne: true } } }).exec();
+      const advanceDocs = collections.advances.find({ selector: { _deleted: { $ne: true } } }).exec();
+      const deductionDocs = collections.deductions.find({ selector: { _deleted: { $ne: true } } }).exec();
+      return Promise.all([expenseDocs, advanceDocs, deductionDocs]);
     };
-    fetchData();
-  }, [currentPage, search]);
+
+    let unsub = false;
+    const load = async () => {
+      const [expenseDocs, advanceDocs, deductionDocs] = await syncItems();
+      if (unsub) return;
+      const allItems = [
+        ...expenseDocs.map((d) => ({ ...d.toJSON(), type: 'expense' })),
+        ...advanceDocs.map((d) => ({ ...d.toJSON(), type: 'advance' })),
+        ...deductionDocs.map((d) => ({ ...d.toJSON(), type: 'deduction' }))
+      ];
+      const filtered = allItems.filter((item) => {
+        const q = search.trim();
+        if (!q) return true;
+        return (item.details || '').includes(q) || (item.userId && item.userId.username && item.userId.username.includes(q));
+      });
+      const sorted = filtered.sort((a, b) => new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0));
+      const pages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+      const current = Math.min(currentPage, pages);
+      const start = (current - 1) * PAGE_SIZE;
+      setItems(sorted.slice(start, start + PAGE_SIZE));
+      setTotalPages(pages);
+      setCurrentPage(current);
+    };
+
+    load();
+
+    // اشتراكات مباشرة لكل كولكشن للتحديث اللحظي
+    const expenseSub = collections.expenses.$.subscribe(load);
+    const advanceSub = collections.advances.$.subscribe(load);
+    const deductionSub = collections.deductions.$.subscribe(load);
+
+    return () => {
+      unsub = true;
+      usrSub?.unsubscribe();
+      expenseSub?.unsubscribe();
+      advanceSub?.unsubscribe();
+      deductionSub?.unsubscribe();
+    };
+  }, [collections, currentPage, search]);
+
+  const newId = () => (crypto.randomUUID ? crypto.randomUUID() : `exp-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
+  const upsertLocal = async (collectionName, doc, op = 'update') => {
+    const col = collections?.[collectionName];
+    if (!col) throw new Error('قاعدة البيانات غير جاهزة');
+    const withTs = { ...doc, updatedAt: new Date().toISOString() };
+    await col.upsert(withTs);
+    if (queueOperation) await queueOperation(collectionName, op, withTs);
+    return withTs;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -168,44 +211,41 @@ function ExpensesAdvances() {
     if (submitLoading) return;
     setSubmitLoading(true);
     setShowCreateModal(false);
-    console.log('Submitting formData:', formData);
     try {
-      if (editItem) {
-        console.log('Updating item with ID:', editItem._id, 'Type:', editItem.type);
-        const res = await axios.put(`/api/expenses-advances/${editItem._id}`, formData, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        console.log('Update response:', res.data);
-        setItems(items.map(i => (i._id === editItem._id ? { ...res.data.item, type: res.data.type } : i)));
-        const typeLabel = res.data.type === 'expense' ? 'المصروف' : res.data.type === 'advance' ? 'السلفة' : 'الخصم الإداري';
-        setMessage(`تم تعديل ${typeLabel} بنجاح`);
-      } else {
-        const res = await axios.post('/api/expenses-advances', formData, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        console.log('Create response:', res.data);
-        setItems([res.data.item, ...items].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
-        const typeLabel = res.data.type === 'expense' ? 'المصروف' : res.data.type === 'advance' ? 'السلفة' : 'الخصم الإداري';
-        setMessage(`تم إضافة ${typeLabel} بنجاح`);
-      }
+      const baseDoc = {
+        _id: editItem?._id || newId(),
+        details: formData.details,
+        amount: Number(formData.amount) || 0,
+        userId: formData.userId || null,
+        createdBy: user?.id || user?._id || null,
+        createdAt: editItem?.createdAt || new Date().toISOString(),
+        _deleted: false
+      };
+
+      let targetCollection = 'expenses';
+      if (formData.type === 'advance') targetCollection = 'advances';
+      if (formData.type === 'deduction') targetCollection = 'deductions';
+
+      await upsertLocal(targetCollection, baseDoc, editItem ? 'update' : 'insert');
+      const typeLabel = formData.type === 'expense' ? 'المصروف' : formData.type === 'advance' ? 'السلفة' : 'الخصم الإداري';
+      setMessage(`تم ${editItem ? 'تعديل' : 'إضافة'} ${typeLabel} محلياً وسيتم رفعه عند الاتصال`);
       setFormData({ type: 'expense', details: '', amount: 0, userId: '' });
       setEditItem(null);
     } catch (err) {
-      console.error('Submit error:', err.response?.data || err.message);
-      setMessage(err.response?.data?.msg || 'خطأ في إضافة/تعديل العملية');
+      console.error('Submit error:', err);
+      setMessage('خطأ في إضافة/تعديل العملية');
     } finally {
       setSubmitLoading(false);
     }
   };
 
   const handleEdit = (item) => {
-    console.log('Editing item:', item);
     setEditItem(item);
     setFormData({
       type: item.type || (item.details ? 'expense' : 'advance'),
       details: item.details || '',
       amount: item.amount || 0,
-      userId: item.userId?._id?.toString() || ''
+      userId: item.userId?._id?.toString() || item.userId || ''
     });
     setShowCreateModal(true);
   };
@@ -217,18 +257,15 @@ function ExpensesAdvances() {
       return;
     }
     try {
-      console.log('Deleting item with ID:', deleteItem._id, 'Type:', deleteItem.type);
-      await axios.delete(`/api/expenses-advances/${deleteItem._id}?type=${deleteItem.type}`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      setItems(items.filter(i => i._id !== deleteItem._id));
+      const targetCollection = deleteItem.type === 'expense' ? 'expenses' : deleteItem.type === 'advance' ? 'advances' : 'deductions';
+      await upsertLocal(targetCollection, { ...deleteItem, _deleted: true }, 'delete');
       const typeLabel = deleteItem.type === 'expense' ? 'المصروف' : deleteItem.type === 'advance' ? 'السلفة' : 'الخصم الإداري';
-      setMessage(`تم حذف ${typeLabel} بنجاح`);
+      setMessage(`تم حذف ${typeLabel} محلياً وسيتم رفعه عند الاتصال`);
       setShowDeleteModal(false);
       setDeleteItem(null);
     } catch (err) {
-      console.error('Delete error:', err.response?.data || err.message);
-      setMessage(err.response?.data?.msg || 'خطأ في الحذف');
+      console.error('Delete error:', err);
+      setMessage('خطأ في الحذف');
       setShowDeleteModal(false);
     }
   };
@@ -239,23 +276,8 @@ function ExpensesAdvances() {
     setShowDetailsModal(true);
   };
 
-  const handleSearch = async () => {
-    try {
-      console.log('Searching with query:', search);
-      const res = await axios.get(`/api/expenses-advances?search=${search}`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      console.log('Search response:', res.data);
-      setItems(res.data.items.map(item => ({
-        ...item,
-        type: item.type || (item.details ? 'expense' : 'advance')
-      })));
-      setCurrentPage(1);
-      setTotalPages(res.data.pages);
-    } catch (err) {
-      console.error('Search error:', err.response?.data || err.message);
-      setMessage('خطأ في البحث');
-    }
+  const handleSearch = () => {
+    setCurrentPage(1);
   };
 
   return (

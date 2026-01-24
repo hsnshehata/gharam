@@ -1,9 +1,30 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Container, Row, Col, Card, Form, Button, Alert, Table, Badge } from 'react-bootstrap';
-import axios from 'axios';
 import { useToast } from '../components/ToastProvider';
+import { useRxdb } from '../db/RxdbProvider';
+
+const LEVEL_THRESHOLDS = [0, 3000, 8000, 18000, 38000, 73000, 118000, 178000, 268000, 418000];
+const MAX_LEVEL = 10;
+
+const newId = (prefix = 'loc') => (crypto.randomUUID ? crypto.randomUUID() : `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+const normalizeId = (entity) => (entity?._id || entity?.id || '').toString();
+
+const getLevel = (totalPoints = 0) => {
+  for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i -= 1) {
+    if (totalPoints >= LEVEL_THRESHOLDS[i]) {
+      return Math.min(i + 1, MAX_LEVEL);
+    }
+  }
+  return 1;
+};
+
+const recomputeConvertible = (user) => {
+  const coinsCount = (user.efficiencyCoins?.length || 0) + (user.coinsRedeemed?.length || 0);
+  user.convertiblePoints = Math.max(0, (user.totalPoints || 0) - (coinsCount * 1000));
+};
 
 function PointsAdmin() {
+  const { collections, queueOperation } = useRxdb() || {};
   const { showToast } = useToast();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -15,21 +36,60 @@ function PointsAdmin() {
   const [deductReason, setDeductReason] = useState('');
   const [message, setMessage] = useState('');
 
-  const loadUsers = async () => {
-    try {
-      const res = await axios.get('/api/users', { headers: { 'x-auth-token': localStorage.getItem('token') } });
-      setUsers(res.data);
-    } catch (err) {
-      setMessage(err.response?.data?.msg || 'خطأ في جلب الموظفين');
-    }
+  useEffect(() => {
+    if (!collections) return undefined;
+    const sub = collections.users
+      ?.find({ selector: { _deleted: { $ne: true } } })
+      .$.subscribe((docs) => {
+        setUsers(docs.map((d) => (d.toJSON ? d.toJSON() : d)));
+      });
+    return () => sub && sub.unsubscribe && sub.unsubscribe();
+  }, [collections]);
+
+  const usersMap = useMemo(() => {
+    const map = new Map();
+    users.forEach((u) => {
+      const id = normalizeId(u);
+      if (id) map.set(id, u);
+    });
+    return map;
+  }, [users]);
+
+  const selectedUser = useMemo(() => usersMap.get(selectedUserId) || null, [selectedUserId, usersMap]);
+
+  const ensureArrays = (userDraft) => {
+    if (!Array.isArray(userDraft.points)) userDraft.points = [];
+    if (!Array.isArray(userDraft.efficiencyCoins)) userDraft.efficiencyCoins = [];
+    if (!Array.isArray(userDraft.coinsRedeemed)) userDraft.coinsRedeemed = [];
   };
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
+  const upsertUser = useCallback(async (userDraft) => {
+    const col = collections?.users;
+    if (!col) throw new Error('قاعدة البيانات غير جاهزة');
+    const payload = { ...userDraft, updatedAt: new Date().toISOString() };
+    await col.upsert(payload);
+    if (queueOperation) await queueOperation('users', 'update', payload);
+    return payload;
+  }, [collections, queueOperation]);
 
-  const selectedUser = useMemo(() => users.find((u) => u._id === selectedUserId), [selectedUserId, users]);
+  const mutateUser = useCallback(async (userId, mutator) => {
+    const base = usersMap.get(userId);
+    if (!base) throw new Error('الموظف غير موجود محلياً');
+    const draft = {
+      ...base,
+      points: Array.isArray(base.points) ? [...base.points] : [],
+      efficiencyCoins: Array.isArray(base.efficiencyCoins) ? [...base.efficiencyCoins] : [],
+      coinsRedeemed: Array.isArray(base.coinsRedeemed) ? [...base.coinsRedeemed] : []
+    };
+    ensureArrays(draft);
+    const updated = mutator(draft) || draft;
+    recomputeConvertible(updated);
+    updated.level = getLevel(updated.totalPoints || 0);
+    return upsertUser(updated);
+  }, [upsertUser, usersMap]);
+
   const pendingGifts = useMemo(() => (selectedUser?.points || []).filter((p) => p.type === 'gift' && p.status === 'pending'), [selectedUser]);
+
   const appliedPointsByMonth = useMemo(() => {
     const map = {};
     (selectedUser?.points || []).forEach((p) => {
@@ -41,6 +101,7 @@ function PointsAdmin() {
     });
     return map;
   }, [selectedUser]);
+
   const monthStats = useMemo(() => {
     const now = new Date();
     const keyNow = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -56,6 +117,7 @@ function PointsAdmin() {
       best: bestMonth
     };
   }, [appliedPointsByMonth]);
+
   const recentMovements = useMemo(() => {
     const arr = (selectedUser?.points || []).slice().sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
     return arr.slice(0, 10);
@@ -63,6 +125,7 @@ function PointsAdmin() {
 
   const handleGift = async (e) => {
     e.preventDefault();
+    setMessage('');
     if (!sendToAll && !selectedUserId) {
       setMessage('اختار موظف أو فعّل إرسال للجميع');
       return;
@@ -73,21 +136,31 @@ function PointsAdmin() {
     }
     try {
       setLoading(true);
-      const payload = { amount: Number(giftAmount), note: giftNote };
-      let res;
-      if (sendToAll) {
-        res = await axios.post('/api/users/gift/bulk', payload, { headers: { 'x-auth-token': localStorage.getItem('token') } });
-      } else {
-        res = await axios.post('/api/users/gift', { ...payload, userId: selectedUserId }, { headers: { 'x-auth-token': localStorage.getItem('token') } });
-      }
-      showToast(res.data.msg || 'تم إرسال الهدية', 'success');
+      const amountValue = Number(giftAmount);
+      const giftPayload = (note = giftNote || 'هدية نقاط') => ({
+        _id: newId('gift'),
+        amount: amountValue,
+        date: new Date().toISOString(),
+        type: 'gift',
+        note,
+        giftedByName: 'الإدارة',
+        status: 'pending'
+      });
+
+      const targetIds = sendToAll ? users.map((u) => normalizeId(u)).filter(Boolean) : [selectedUserId];
+      await Promise.all(targetIds.map((uid) => mutateUser(uid, (draft) => {
+        draft.points.push(giftPayload(sendToAll ? 'هدية نقاط جماعية' : giftNote));
+        return draft;
+      })));
+
+      showToast('تم إرسال الهدية (محفوظ أوفلاين)', 'success');
       setGiftAmount('');
       setGiftNote('');
       if (!sendToAll) setSelectedUserId('');
       setSendToAll(false);
-      await loadUsers();
     } catch (err) {
-      const msg = err.response?.data?.msg || 'تعذر إرسال الهدية';
+      console.error('Gift error:', err);
+      const msg = err.message || 'تعذر إرسال الهدية محلياً';
       setMessage(msg);
       showToast(msg, 'danger');
     } finally {
@@ -97,19 +170,35 @@ function PointsAdmin() {
 
   const handleDeduct = async (e) => {
     e.preventDefault();
+    setMessage('');
     if (!selectedUserId || !deductAmount) {
       setMessage('اختار موظف وقيمة الخصم');
       return;
     }
     try {
       setLoading(true);
-      const res = await axios.post('/api/users/deduct', { userId: selectedUserId, amount: Number(deductAmount), reason: deductReason }, { headers: { 'x-auth-token': localStorage.getItem('token') } });
-      showToast(res.data.msg || 'تم الخصم', 'success');
+      const amountValue = Number(deductAmount);
+      await mutateUser(selectedUserId, (draft) => {
+        const currentPoints = Math.max(0, Number(draft.totalPoints || 0));
+        const deduction = Math.min(amountValue, currentPoints);
+        draft.points.push({
+          _id: newId('ded'),
+          amount: -deduction,
+          date: new Date().toISOString(),
+          type: 'deduction',
+          note: deductReason || 'خصم نقاط إداري',
+          giftedByName: 'الإدارة',
+          status: 'applied'
+        });
+        draft.totalPoints = Math.max(0, currentPoints - deduction);
+        return draft;
+      });
+      showToast('تم الخصم وتسجيله (أوفلاين)', 'success');
       setDeductAmount('');
       setDeductReason('');
-      await loadUsers();
     } catch (err) {
-      const msg = err.response?.data?.msg || 'تعذر تنفيذ الخصم';
+      console.error('Deduct error:', err);
+      const msg = err.message || 'تعذر تنفيذ الخصم';
       setMessage(msg);
       showToast(msg, 'danger');
     } finally {
@@ -119,7 +208,7 @@ function PointsAdmin() {
 
   return (
     <Container className="mt-5">
-      <h2 className="mb-4">إدارة الهدايا والخصم</h2>
+      <h2 className="mb-4">إدارة الهدايا والخصم (أوفلاين)</h2>
       {message && <Alert variant="danger">{message}</Alert>}
 
       <Row className="mb-4">
@@ -179,7 +268,7 @@ function PointsAdmin() {
                   <Form.Label>السبب / الرسالة</Form.Label>
                   <Form.Control type="text" value={giftNote} onChange={(e) => setGiftNote(e.target.value)} placeholder="مثال: مكافأة إنجاز" />
                 </Form.Group>
-                <Button type="submit" disabled={loading || !selectedUserId}>إرسال الهدية</Button>
+                <Button type="submit" disabled={loading || (!sendToAll && !selectedUserId)}>إرسال الهدية</Button>
               </Form>
             </Card.Body>
           </Card>
@@ -225,7 +314,7 @@ function PointsAdmin() {
                     </thead>
                     <tbody>
                       {pendingGifts.map((g) => (
-                        <tr key={g._id}>
+                        <tr key={g._id || newId('gift-row')}>
                           <td>+{g.amount}</td>
                           <td>{g.note || 'هدية نقاط'}</td>
                           <td>{g.giftedByName || 'الإدارة'}</td>
@@ -256,7 +345,7 @@ function PointsAdmin() {
                     </thead>
                     <tbody>
                       {recentMovements.map((m) => (
-                        <tr key={m._id}>
+                        <tr key={m._id || newId('move')}>
                           <td className={m.amount >= 0 ? 'text-success' : 'text-danger'}>{m.amount}</td>
                           <td>
                             <Badge bg={m.type === 'gift' ? 'info' : m.type === 'deduction' ? 'danger' : 'secondary'}>
