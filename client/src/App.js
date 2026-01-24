@@ -20,6 +20,7 @@ import PointsAdmin from './pages/PointsAdmin';
 import Navbar from './components/Navbar';
 import { ToastProvider } from './components/ToastProvider';
 import { RxdbProvider } from './db/RxdbProvider';
+import SyncStatusFloating from './components/SyncStatusFloating';
 import './App.css';
 
 const API_BASE = (process.env.REACT_APP_API_BASE || '').replace(/\/$/, '');
@@ -157,6 +158,7 @@ function AppContent() {
           />
           <Route path="/" element={<Navigate to={getHomePath(user)} replace />} />
             </Routes>
+            {user && <SyncStatusFloating />}
           </>
         )}
       </div>

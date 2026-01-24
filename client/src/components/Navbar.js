@@ -2,12 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Navbar as BootstrapNavbar, Nav } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 
-import { useRxdb } from '../db/RxdbProvider';
-
 function Navbar({ user, setUser, setToken }) {
   const [dark, setDark] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const { status } = useRxdb() || {};
 
   useEffect(() => {
     try {
@@ -98,16 +95,6 @@ function Navbar({ user, setUser, setToken }) {
           >
             {dark ? '☀️ فاتح' : '🌙 داكن'}
           </button>
-
-          {status && (
-            <div className="ms-3 small text-muted" style={{ minWidth: '170px' }}>
-              {status.syncing ? '🟡 جاري المزامنة' : status.online ? '🟢 متصل' : '🔴 غير متصل'}
-              {status.lastSync && <div style={{ fontSize: '0.75rem' }}>آخر مزامنة: {new Date(status.lastSync).toLocaleTimeString()}</div>}
-              {typeof status.pending === 'number' && status.pending > 0 && (
-                <div style={{ fontSize: '0.75rem' }}>في الانتظار: {status.pending}</div>
-              )}
-            </div>
-          )}
 
           <Nav.Link onClick={() => {
             closeMenu();

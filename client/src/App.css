@@ -239,6 +239,60 @@ body.theme-dark .table-hover > tbody > tr:hover { background-color: rgba(255,255
 }
 .refresh-btn:hover { background: var(--nav-link-hover); color: var(--text); }
 
+/* Floating sync status widget */
+.sync-status-fab {
+  position: fixed;
+  bottom: 18px;
+  right: 18px;
+  z-index: 1200;
+  background: var(--nav-bg);
+  border: 1px solid var(--nav-border);
+  box-shadow: var(--nav-shadow);
+  border-radius: 14px;
+  padding: 12px 14px;
+  min-width: 240px;
+  max-width: 280px;
+  color: var(--text);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.sync-status-fab .sync-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.sync-status-fab .sync-row.muted {
+  font-weight: 600;
+  color: var(--nav-muted);
+}
+
+.sync-status-fab .sync-meta { flex: 1; min-width: 0; }
+.sync-status-fab .sync-title { font-size: 0.95rem; }
+.sync-status-fab .sync-badge { font-size: 0.9rem; }
+
+.sync-status-fab .sync-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(0,0,0,0.05);
+}
+.sync-dot.is-online { background: #2ecc71; }
+.sync-dot.is-syncing { background: #f1c40f; }
+.sync-dot.is-offline { background: #e74c3c; }
+
+.sync-status-fab .sync-icon { color: var(--nav-muted); font-size: 0.95rem; }
+
+@media (max-width: 768px) {
+  .sync-status-fab { right: 12px; bottom: 12px; min-width: 210px; padding: 10px 12px; }
+  .sync-status-fab .sync-row { flex-wrap: wrap; gap: 8px; }
+  .sync-status-fab .sync-meta { width: 100%; }
+}
+
 /* Toasts: fixed top center, clear stacking */
 .toast-portal {
   position: fixed;
