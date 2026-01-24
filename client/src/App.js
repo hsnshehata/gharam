@@ -37,6 +37,17 @@ const isStandaloneApp = () => {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 };
 
+const readCachedUser = () => {
+  try {
+    const raw = localStorage.getItem('cachedUser');
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error('Failed to read cached user', err);
+    return null;
+  }
+};
+
 function AppContent() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -51,6 +62,17 @@ function AppContent() {
         setAuthLoading(false);
         return;
       }
+      const cachedUser = readCachedUser();
+
+      // في وضع أوفلاين اعتمد على المستخدم المخزن
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        if (cachedUser) {
+          setUser(cachedUser);
+          setToken(existingToken);
+        }
+        setAuthLoading(false);
+        return;
+      }
       try {
         const res = await fetch(`${API_BASE}/api/auth/me`, {
           headers: { 'x-auth-token': existingToken }
@@ -58,6 +80,7 @@ function AppContent() {
         if (!res.ok) {
           // token invalid or expired
           localStorage.removeItem('token');
+          localStorage.removeItem('cachedUser');
           setToken(null);
           setAuthLoading(false);
           return;
@@ -65,10 +88,17 @@ function AppContent() {
         const data = await res.json();
         setUser(data.user);
         setToken(existingToken);
+        localStorage.setItem('cachedUser', JSON.stringify(data.user));
       } catch (err) {
         console.error('Failed to load user:', err);
-        localStorage.removeItem('token');
-        setToken(null);
+        // لو المشكلة من الشبكة، استخدم الكاش
+        if (cachedUser) {
+          setUser(cachedUser);
+          setToken(existingToken);
+        } else {
+          localStorage.removeItem('token');
+          setToken(null);
+        }
       } finally {
         setAuthLoading(false);
       }
