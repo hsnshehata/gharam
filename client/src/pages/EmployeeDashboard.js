@@ -109,6 +109,15 @@ function EmployeeDashboard({ user }) {
     return map;
   }, [users]);
 
+  const getUsername = useCallback((value) => {
+    const id = normalizeId(value);
+    if (!id) return 'غير معروف';
+    const found = usersMap.get(id);
+    if (found?.username) return found.username;
+    if (typeof value === 'object' && value.username) return value.username;
+    return 'غير معروف';
+  }, [usersMap]);
+
   const currentUserId = useMemo(() => normalizeId(user), [user]);
   const currentUser = useMemo(() => usersMap.get(currentUserId) || null, [usersMap, currentUserId]);
 
@@ -871,7 +880,7 @@ function EmployeeDashboard({ user }) {
                             <td>{srv.price ? `${srv.price} جنيه` : 'غير معروف'}</td>
                             <td>
                               {srv.executed ? (
-                                `نفذت بواسطة ${srv.executedBy?.username || 'غير معروف'}`
+                                `نفذت بواسطة ${getUsername(srv.executedBy)}`
                               ) : (
                                 'لم يتم الاستلام'
                               )}
@@ -894,11 +903,11 @@ function EmployeeDashboard({ user }) {
                           <td>فرد شعر</td>
                           <td>{pointsData.data.hairStraighteningPrice ? `${pointsData.data.hairStraighteningPrice} جنيه` : 'غير معروف'}</td>
                           <td>
-                            {pointsData.data.hairStraighteningExecuted ? (
-                              `نفذت بواسطة ${pointsData.data.hairStraighteningExecutedBy?.username || 'غير معروف'}`
-                            ) : (
-                              'لم يتم الاستلام'
-                            )}
+                              {pointsData.data.hairStraighteningExecuted ? (
+                                `نفذت بواسطة ${getUsername(pointsData.data.hairStraighteningExecutedBy)}`
+                              ) : (
+                                'لم يتم الاستلام'
+                              )}
                           </td>
                           <td>
                             {!pointsData.data.hairStraighteningExecuted && (
@@ -919,7 +928,7 @@ function EmployeeDashboard({ user }) {
                 <>
                   <p>رقم الوصل: {pointsData.data.receiptNumber}</p>
                   <p>تاريخ الخدمة: {new Date(pointsData.data.createdAt).toLocaleDateString()}</p>
-                  <p>الموظف: {pointsData.data.services.find((srv) => srv.executed && srv.executedBy) ? pointsData.data.services.find((srv) => srv.executed && srv.executedBy).executedBy.username : 'غير محدد'}</p>
+                  <p>الموظف: {pointsData.data.services.find((srv) => srv.executed && srv.executedBy) ? getUsername(pointsData.data.services.find((srv) => srv.executed && srv.executedBy).executedBy) : 'غير محدد'}</p>
                   <h5>الخدمات:</h5>
                   <Table striped bordered hover>
                     <thead>
@@ -937,7 +946,7 @@ function EmployeeDashboard({ user }) {
                           <td>{srv.price ? `${srv.price} جنيه` : 'غير معروف'}</td>
                           <td>
                             {srv.executed ? (
-                              `نفذت بواسطة ${srv.executedBy?.username || 'غير معروف'}`
+                              `نفذت بواسطة ${getUsername(srv.executedBy)}`
                             ) : (
                               'لم يتم الاستلام'
                             )}

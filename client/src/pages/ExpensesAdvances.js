@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Pagination } from 'react-bootstrap';
 import Select from 'react-select';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -122,6 +122,27 @@ function ExpensesAdvances({ user }) {
   };
 
   // تحميل البيانات من RxDB محلياً
+  const usersMap = useMemo(() => {
+    const map = new Map();
+    users.forEach((u) => {
+      if (u?._id) map.set(u._id.toString(), u);
+    });
+    return map;
+  }, [users]);
+
+  const resolveUser = useCallback((value) => {
+    if (!value) return null;
+    const id = (value?._id || value || '').toString();
+    if (!id) return typeof value === 'object' ? value : null;
+    return usersMap.get(id) || (typeof value === 'object' ? value : null);
+  }, [usersMap]);
+
+  const getUsername = useCallback((value) => {
+    const resolved = resolveUser(value);
+    return resolved?.username || 'غير معروف';
+  }, [resolveUser]);
+
+  // تحميل البيانات من RxDB محلياً
   useEffect(() => {
     if (!collections?.users || !collections?.expenses || !collections?.advances || !collections?.deductions) return;
 
@@ -144,11 +165,15 @@ function ExpensesAdvances({ user }) {
         ...expenseDocs.map((d) => ({ ...d.toJSON(), type: 'expense' })),
         ...advanceDocs.map((d) => ({ ...d.toJSON(), type: 'advance' })),
         ...deductionDocs.map((d) => ({ ...d.toJSON(), type: 'deduction' }))
-      ];
+      ].map((item) => ({
+        ...item,
+        userId: resolveUser(item.userId) || item.userId,
+        createdBy: resolveUser(item.createdBy) || item.createdBy
+      }));
       const filtered = allItems.filter((item) => {
         const q = search.trim();
         if (!q) return true;
-        return (item.details || '').includes(q) || (item.userId && item.userId.username && item.userId.username.includes(q));
+        return (item.details || '').includes(q) || (getUsername(item.userId).includes(q));
       });
       const sorted = filtered.sort((a, b) => new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0));
       const pages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
@@ -173,7 +198,7 @@ function ExpensesAdvances({ user }) {
       advanceSub?.unsubscribe();
       deductionSub?.unsubscribe();
     };
-  }, [collections, currentPage, search]);
+  }, [collections, currentPage, search, resolveUser, getUsername]);
 
   const newId = () => (crypto.randomUUID ? crypto.randomUUID() : `exp-${Date.now()}-${Math.random().toString(16).slice(2)}`);
 
@@ -446,12 +471,12 @@ function ExpensesAdvances({ user }) {
                 <Card.Text>
                   {item.type === 'expense'
                     ? `التفاصيل: ${item.details || 'غير محدد'}`
-                    : `الموظف: ${item.userId?.username || 'غير محدد'}`}
+                    : `الموظف: ${getUsername(item.userId)}`}
                   <br />
                   {item.type === 'deduction' && `سبب الخصم: ${item.details || 'غير محدد'}`}<br />
                   المبلغ: {item.amount || 0} جنيه<br />
                   التاريخ: {new Date(item.createdAt).toLocaleDateString()}<br />
-                  أضيف بواسطة: {item.createdBy?.username || item.userId?.username || 'غير معروف'}
+                  أضيف بواسطة: {getUsername(item.createdBy) || getUsername(item.userId)}
                 </Card.Text>
                 <Button variant="primary" className="me-2" onClick={() => handleEdit(item)}>
                   <FontAwesomeIcon icon={faEdit} />
@@ -499,19 +524,19 @@ function ExpensesAdvances({ user }) {
                 <p>التفاصيل: {currentDetails.details || 'غير محدد'}</p>
               ) : currentDetails.type === 'advance' ? (
                 <>
-                  <p>الموظف: {currentDetails.userId?.username || 'غير محدد'}</p>
-                  <p>المتبقي من الراتب: {currentDetails.userId?.remainingSalary || 0} جنيه</p>
+                  <p>الموظف: {getUsername(currentDetails.userId)}</p>
+                  <p>المتبقي من الراتب: {resolveUser(currentDetails.userId)?.remainingSalary || 0} جنيه</p>
                 </>
               ) : (
                 <>
-                  <p>الموظف: {currentDetails.userId?.username || 'غير محدد'}</p>
+                  <p>الموظف: {getUsername(currentDetails.userId)}</p>
                   <p>سبب الخصم: {currentDetails.details || 'غير محدد'}</p>
-                  <p>المتبقي من الراتب: {currentDetails.userId?.remainingSalary || 0} جنيه</p>
+                  <p>المتبقي من الراتب: {resolveUser(currentDetails.userId)?.remainingSalary || 0} جنيه</p>
                 </>
               )}
               <p>المبلغ: {currentDetails.amount || 0} جنيه</p>
               <p>التاريخ: {new Date(currentDetails.createdAt).toLocaleDateString()}</p>
-              <p>أضيف بواسطة: {currentDetails.createdBy?.username || currentDetails.userId?.username || 'غير معروف'}</p>
+              <p>أضيف بواسطة: {getUsername(currentDetails.createdBy) || getUsername(currentDetails.userId)}</p>
             </div>
           )}
         </Modal.Body>

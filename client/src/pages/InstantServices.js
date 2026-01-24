@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Container, Row, Col, Card, Button, Form, Modal, Pagination, Table } from 'react-bootstrap';
 import Select from 'react-select';
 import ReceiptPrint, { printReceiptElement } from './ReceiptPrint';
@@ -200,6 +200,23 @@ function InstantServices({ user }) {
     calculateTotal();
   }, [formData.services, services]);
 
+  const usersMap = useMemo(() => {
+    const map = new Map();
+    users.forEach((u) => {
+      if (u?._id) map.set(u._id.toString(), u);
+    });
+    return map;
+  }, [users]);
+
+  const getUsername = useCallback((value) => {
+    if (!value) return 'غير معروف';
+    const id = (value?._id || value || '').toString();
+    const found = id ? usersMap.get(id) : null;
+    if (found?.username) return found.username;
+    if (typeof value === 'object' && value.username) return value.username;
+    return 'غير معروف';
+  }, [usersMap]);
+
   const newId = () => (crypto.randomUUID ? crypto.randomUUID() : `inst-${Date.now()}-${Math.random().toString(16).slice(2)}`);
 
   const upsertLocal = async (doc, op = 'update') => {
@@ -238,7 +255,7 @@ function InstantServices({ user }) {
           total: totalPrice
         };
         const saved = await upsertLocal(updated, 'update');
-        setCurrentReceipt(saved);
+        setCurrentReceipt({ ...saved, employeeName: getUsername(saved.employeeId) });
         setMessage('تم تعديل الخدمة الفورية محلياً وسيتم رفعها عند الاتصال');
       } else {
         const newDoc = {
@@ -251,7 +268,7 @@ function InstantServices({ user }) {
           barcode: ''
         };
         const saved = await upsertLocal(newDoc, 'insert');
-        setCurrentReceipt(saved);
+        setCurrentReceipt({ ...saved, employeeName: getUsername(saved.employeeId) });
         setMessage('تم إضافة الخدمة الفورية محلياً وسيتم رفعها عند الاتصال');
       }
       setShowReceiptModal(true);
@@ -293,7 +310,7 @@ function InstantServices({ user }) {
 
   const handlePrint = (service) => {
     console.log('Printing service:', service);
-    setCurrentReceipt(service);
+    setCurrentReceipt({ ...service, employeeName: getUsername(service.employeeId) });
     setShowReceiptModal(true);
   };
 
@@ -412,7 +429,7 @@ function InstantServices({ user }) {
       <Row>
         {instantServices.map(service => {
           const executedService = service.services.find(srv => srv.executed && srv.executedBy);
-          const displayName = executedService ? executedService.executedBy.username : 'غير محدد';
+          const displayName = executedService ? getUsername(executedService.executedBy) : 'غير محدد';
           return (
             <Col md={4} key={service._id} className="mb-3">
               <Card>
@@ -488,7 +505,7 @@ function InstantServices({ user }) {
             <div>
               <p>رقم الوصل: {currentDetails.receiptNumber}</p>
               <p>تاريخ الخدمة: {new Date(currentDetails.createdAt).toLocaleDateString()}</p>
-              <p>الموظف: {currentDetails.services.find(srv => srv.executed && srv.executedBy) ? currentDetails.services.find(srv => srv.executed && srv.executedBy).executedBy.username : 'غير محدد'}</p>
+              <p>الموظف: {currentDetails.services.find(srv => srv.executed && srv.executedBy) ? getUsername(currentDetails.services.find(srv => srv.executed && srv.executedBy).executedBy) : 'غير محدد'}</p>
               <h5>الخدمات:</h5>
               <Table striped bordered hover>
                 <thead>
@@ -505,7 +522,7 @@ function InstantServices({ user }) {
                       <td>{srv.price ? `${srv.price} جنيه` : 'غير معروف'}</td>
                       <td>
                         {srv.executed ? (
-                          `نفذت بواسطة ${srv.executedBy?.username || 'غير معروف'}`
+                          `نفذت بواسطة ${getUsername(srv.executedBy)}`
                         ) : (
                           'لم يتم التنفيذ'
                         )}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Container, Row, Col, Card, Button, Form, Modal, Pagination, Table } from 'react-bootstrap';
 import Select from 'react-select';
 import ReceiptPrint, { printReceiptElement } from './ReceiptPrint';
@@ -19,6 +19,7 @@ function Bookings({ user }) {
   const [bookings, setBookings] = useState([]);
   const [packages, setPackages] = useState([]);
   const [services, setServices] = useState([]);
+  const [users, setUsers] = useState([]);
   const [selectedPackageServices, setSelectedPackageServices] = useState([]);
   const [editItem, setEditItem] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -192,6 +193,32 @@ function Bookings({ user }) {
       srvSub?.unsubscribe();
     };
   }, [collections]);
+
+  // تحميل المستخدمين لعرض الأسماء بدل الـ ID
+  useEffect(() => {
+    if (!collections?.users) return;
+    const sub = collections.users
+      .find({ selector: { _deleted: { $ne: true } } })
+      .$.subscribe((docs) => setUsers(docs.map((d) => d.toJSON())));
+    return () => sub?.unsubscribe();
+  }, [collections]);
+
+  const usersMap = useMemo(() => {
+    const map = new Map();
+    users.forEach((u) => {
+      if (u?._id) map.set(u._id.toString(), u);
+    });
+    return map;
+  }, [users]);
+
+  const getUsername = useCallback((value) => {
+    if (!value) return 'غير معروف';
+    const id = (value?._id || value || '').toString();
+    const found = id ? usersMap.get(id) : null;
+    if (found?.username) return found.username;
+    if (typeof value === 'object' && value.username) return value.username;
+    return 'غير معروف';
+  }, [usersMap]);
 
   // تحميل الحجوزات من RxDB مع فلترة محلية وباجينج
   useEffect(() => {
@@ -690,7 +717,7 @@ function Bookings({ user }) {
                         <tr key={index}>
                           <td>{inst.amount} جنيه</td>
                           <td>{new Date(inst.date).toLocaleDateString()}</td>
-                          <td>{inst.employeeId?.username || 'غير معروف'}</td>
+                          <td>{getUsername(inst.employeeId)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -809,7 +836,7 @@ function Bookings({ user }) {
                         <tr key={index}>
                           <td>{inst.amount} جنيه</td>
                           <td>{new Date(inst.date).toLocaleDateString()}</td>
-                          <td>{inst.employeeId?.username || 'غير معروف'}</td>
+                          <td>{getUsername(inst.employeeId)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -838,7 +865,7 @@ function Bookings({ user }) {
                               ? Object.entries(update.changes).map(([key, value]) => `${key}: ${value}`).join(', ')
                               : 'غير معروف'}
                           </td>
-                          <td>{update.employeeId?.username || 'غير معروف'}</td>
+                          <td>{getUsername(update.employeeId)}</td>
                         </tr>
                       ))}
                     </tbody>

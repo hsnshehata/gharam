@@ -134,7 +134,7 @@ const ReceiptPrint = ({ data, type }) => {
         <>
           <p>رقم الوصل: {data.receiptNumber || 'غير متوفر'}</p>
           <p>تاريخ الخدمة: {data.createdAt ? new Date(data.createdAt).toLocaleDateString() : 'غير متوفر'}</p>
-          <p>الموظف: {data.employeeId ? data.employeeId.username : 'غير محدد'}</p>
+          <p>الموظف: {data.employeeId?.username || data.employeeName || (data.employeeId ? data.employeeId.toString() : 'غير محدد')}</p>
           <h6>الخدمات:</h6>
           <Table bordered size="sm">
             <thead>

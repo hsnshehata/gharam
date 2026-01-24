@@ -60,6 +60,17 @@ function EmployeeReports({ user }) {
     return map;
   }, [users]);
 
+  const resolveUser = useCallback((value) => {
+    const id = normalizeId(value);
+    if (!id) return null;
+    return usersMap.get(id) || (typeof value === 'object' ? value : null);
+  }, [usersMap]);
+
+  const getUsername = useCallback((value) => {
+    const userObj = resolveUser(value);
+    return userObj?.username || 'غير معروف';
+  }, [resolveUser]);
+
   const userOptions = useMemo(() => (
     users.map((u) => ({ value: normalizeId(u), label: u.username }))
   ), [users]);
@@ -131,8 +142,12 @@ function EmployeeReports({ user }) {
         };
       });
 
-      const advancesFiltered = advances.filter((a) => normalizeId(a.userId) === selectedUser && inRange(a.createdAt, start, end));
-      const deductionsFiltered = deductions.filter((d) => normalizeId(d.userId) === selectedUser && inRange(d.createdAt, start, end));
+      const advancesFiltered = advances
+        .filter((a) => normalizeId(a.userId) === selectedUser && inRange(a.createdAt, start, end))
+        .map((a) => ({ ...a, createdBy: resolveUser(a.createdBy) || a.createdBy }));
+      const deductionsFiltered = deductions
+        .filter((d) => normalizeId(d.userId) === selectedUser && inRange(d.createdAt, start, end))
+        .map((d) => ({ ...d, createdBy: resolveUser(d.createdBy) || d.createdBy }));
 
       const pointsTotal = workPoints.reduce((sum, p) => sum + (p.amount || 0), 0);
       const advancesTotal = advancesFiltered.reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
@@ -152,7 +167,7 @@ function EmployeeReports({ user }) {
     } finally {
       setLoading(false);
     }
-  }, [selectedUser, fromDate, toDate, usersMap, bookings, services, instantServices, advances, deductions]);
+  }, [selectedUser, fromDate, toDate, usersMap, bookings, services, instantServices, advances, deductions, resolveUser]);
 
   return (
     <Container className="mt-5">
@@ -261,7 +276,7 @@ function EmployeeReports({ user }) {
                     <tr key={a._id || newId('adv')}>
                       <td>{a.createdAt ? new Date(a.createdAt).toLocaleDateString() : '—'}</td>
                       <td>{a.amount}</td>
-                      <td>{a.createdBy?.username || 'غير معروف'}</td>
+                      <td>{getUsername(a.createdBy)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -289,7 +304,7 @@ function EmployeeReports({ user }) {
                       <td>{d.createdAt ? new Date(d.createdAt).toLocaleDateString() : '—'}</td>
                       <td>{d.amount}</td>
                       <td>{d.reason || d.note || '—'}</td>
-                      <td>{d.createdBy?.username || 'غير معروف'}</td>
+                      <td>{getUsername(d.createdBy)}</td>
                     </tr>
                   ))}
                 </tbody>
