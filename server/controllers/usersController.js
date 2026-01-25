@@ -458,6 +458,33 @@ exports.getPointsSummary = async (req, res) => {
         const teamSize = await User.countDocuments(roleFilter);
         const rank = teamSize > 0 ? higherCount + 1 : null;
 
+        // breakdown آخر ٧ أيام من سجلات النقاط (عمل فقط)
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const weeklyBreakdown = Array.from({ length: 7 }).map((_, idx) => {
+          const day = new Date(now);
+          day.setDate(day.getDate() - (6 - idx));
+          day.setHours(0, 0, 0, 0);
+          const dayStart = new Date(day);
+          const dayEnd = new Date(day);
+          dayEnd.setHours(23, 59, 59, 999);
+          const label = `${day.getDate()}/${day.getMonth() + 1}`;
+
+          const totals = (user.points || [])
+            .filter((p) => p && p.type === 'work' && p.date && new Date(p.date) >= dayStart && new Date(p.date) <= dayEnd)
+            .reduce((acc, p) => {
+              const amount = Number(p.amount) || 0;
+              const isInstant = Boolean(p.instantServiceId);
+              const isBooking = !isInstant; // أي سجل شغل بدون فوري يعتبر حجوزات/باكدج
+              acc.total += amount;
+              if (isBooking) acc.booking += amount;
+              if (isInstant) acc.instant += amount;
+              return acc;
+            }, { total: 0, booking: 0, instant: 0 });
+
+          return { label, ...totals };
+        });
+
         return {
           totalPoints,
           level,
@@ -471,6 +498,7 @@ exports.getPointsSummary = async (req, res) => {
           },
           rank,
           teamSize,
+          weeklyBreakdown,
           progress: {
             current: progressCurrent,
             target: progressNeeded,
