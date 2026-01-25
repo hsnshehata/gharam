@@ -42,6 +42,7 @@ function EmployeeDashboard({ user }) {
       headers: { 'x-auth-token': localStorage.getItem('token') }
     });
     setPointsSummary(pointsRes.data);
+    return pointsRes.data;
   }, []);
 
   const fetchPendingGifts = useCallback(async () => {
@@ -90,9 +91,10 @@ function EmployeeDashboard({ user }) {
         return { label, ...totals };
       });
 
-      await Promise.all([fetchPointsSummary(), fetchPendingGifts(), fetchTodayGifts()]);
+      const summary = await fetchPointsSummary();
+      await Promise.all([fetchPendingGifts(), fetchTodayGifts()]);
       setExecutedServices(todayServices);
-      setWeeklySeries(weeklyAggregated);
+      setWeeklySeries(summary?.weeklyBreakdown || weeklyAggregated);
     } catch (err) {
       console.error('Fetch error:', err.response?.data || err.message);
       showToast('خطأ في جلب البيانات', 'danger');
