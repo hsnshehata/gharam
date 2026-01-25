@@ -1,7 +1,16 @@
 const InstantService = require('../models/InstantService');
 const Service = require('../models/Service');
 const User = require('../models/User');
+const { cacheAside, deleteByPrefix } = require('../services/cache');
 const { addPointsAndConvertInternal, removePointsAndCoinsInternal } = require('./usersController');
+
+const invalidateInstantServiceCaches = async () => {
+  await Promise.all([
+    deleteByPrefix('instantServices:'),
+    deleteByPrefix('dashboard:'),
+    deleteByPrefix('reports:')
+  ]);
+};
 
 exports.addInstantService = async (req, res) => {
   const { employeeId, services } = req.body;
@@ -41,6 +50,8 @@ exports.addInstantService = async (req, res) => {
     });
 
     await instantService.save();
+
+    await invalidateInstantServiceCaches();
 
     // إضافة النقاط والعملة لو فيه employeeId (لكل خدمة منفذة)
     if (employeeId) {
@@ -112,6 +123,8 @@ exports.updateInstantService = async (req, res) => {
       return res.status(404).json({ msg: 'الخدمة الفورية غير موجودة' });
     }
 
+    await invalidateInstantServiceCaches();
+
     // إضافة النقاط والعملة لو فيه employeeId (لكل خدمة منفذة)
     if (employeeId) {
       for (const srv of formattedServices) {
@@ -141,6 +154,7 @@ exports.deleteInstantService = async (req, res) => {
     if (!instantService) {
       return res.status(404).json({ msg: 'الخدمة الفورية غير موجودة' });
     }
+    await invalidateInstantServiceCaches();
     return res.json({ msg: 'تم حذف الخدمة الفورية بنجاح' });
   } catch (err) {
     console.error('Error in deleteInstantService:', err);
@@ -152,40 +166,50 @@ exports.getInstantServices = async (req, res) => {
   const { page = 1, limit = 50, search, date, receiptNumber } = req.query;
 
   try {
-    let query = {};
+    const key = `instantServices:list:${JSON.stringify({ page, limit, search, date, receiptNumber })}`;
+    const payload = await cacheAside({
+      key,
+      ttlSeconds: 60,
+      staleSeconds: 120,
+      fetchFn: async () => {
+        let query = {};
 
-    if (receiptNumber) {
-      query.receiptNumber = receiptNumber.toString().trim();
-    } else if (search) {
-      const users = await User.find({
-        username: { $regex: search, $options: 'i' }
-      }).select('_id');
-      const userIds = users.map(user => user._id);
-      query = {
-        $or: [
-          { receiptNumber: { $regex: search, $options: 'i' } },
-          { employeeId: { $in: userIds } }
-        ]
-      };
-    }
-    if (date) {
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-      query.createdAt = { $gte: startOfDay, $lte: endOfDay };
-    }
+        if (receiptNumber) {
+          query.receiptNumber = receiptNumber.toString().trim();
+        } else if (search) {
+          const users = await User.find({
+            username: { $regex: search, $options: 'i' }
+          }).select('_id');
+          const userIds = users.map(user => user._id);
+          query = {
+            $or: [
+              { receiptNumber: { $regex: search, $options: 'i' } },
+              { employeeId: { $in: userIds } }
+            ]
+          };
+        }
+        if (date) {
+          const startOfDay = new Date(date);
+          startOfDay.setHours(0, 0, 0, 0);
+          const endOfDay = new Date(date);
+          endOfDay.setHours(23, 59, 59, 999);
+          query.createdAt = { $gte: startOfDay, $lte: endOfDay };
+        }
 
-    const instantServices = await InstantService.find(query)
-      .populate('employeeId', 'username')
-      .populate('services.executedBy', 'username')
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(parseInt(limit));
+        const instantServices = await InstantService.find(query)
+          .populate('employeeId', 'username')
+          .populate('services.executedBy', 'username')
+          .sort({ createdAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(parseInt(limit));
 
-    const total = await InstantService.countDocuments(query);
+        const total = await InstantService.countDocuments(query);
+        return { instantServices, total };
+      }
+    });
 
-    return res.json({ instantServices, total, pages: Math.ceil(total / limit) });
+    const pages = Math.ceil(payload.total / limit);
+    return res.json({ instantServices: payload.instantServices, total: payload.total, pages });
   } catch (err) {
     console.error('Error in getInstantServices:', err);
     return res.status(500).json({ msg: 'خطأ في السيرفر' });
@@ -269,6 +293,8 @@ exports.executeService = async (req, res) => {
       .populate('employeeId', 'username')
       .populate('services.executedBy', 'username');
 
+    await invalidateInstantServiceCaches();
+
     return res.json({ msg: 'تم تنفيذ الخدمة بنجاح', instantService: populatedService, points });
   } catch (err) {
     console.error('Error in executeService:', err);
@@ -310,6 +336,8 @@ exports.resetService = async (req, res) => {
     const populatedService = await InstantService.findById(id)
       .populate('employeeId', 'username')
       .populate('services.executedBy', 'username');
+
+    await invalidateInstantServiceCaches();
 
     return res.json({ msg: 'تم سحب التكليف وإلغاء النقاط', instantService: populatedService, removedPoints: points });
   } catch (err) {
