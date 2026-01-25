@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table, ProgressBar } from 'react-bootstrap';
+import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table } from 'react-bootstrap';
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheck, faQrcode, faGift, faCoins, faBolt, faRotateRight } from '@fortawesome/free-solid-svg-icons';
@@ -32,7 +32,6 @@ function EmployeeDashboard({ user }) {
   const [convertCelebration, setConvertCelebration] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
-  const [showPerformanceDetails, setShowPerformanceDetails] = useState(false);
   const [showBattleDetails, setShowBattleDetails] = useState(false);
   const [performanceFilter, setPerformanceFilter] = useState('all');
   const [aiTip, setAiTip] = useState('');
@@ -278,17 +277,12 @@ function EmployeeDashboard({ user }) {
   const remainingSalary = pointsSummary?.remainingSalary || 0;
   const progressPercent = pointsSummary?.progress?.percent ?? 0;
   const currentLevel = pointsSummary?.level ?? 1;
-  const battleScore = Math.min(100, Math.round(progressPercent * 0.7 + (todayPoints > 0 ? 10 : 0)));
-  const teamPulse = Math.min(100, Math.max(progressPercent - 10, 25));
 
   const executedServicesList = useMemo(() => executedServices, [executedServices]);
-
   const todayPoints = useMemo(() => executedServicesList.reduce((sum, s) => sum + (s.points || 0), 0), [executedServicesList]);
-  const performanceComparison = useMemo(() => ([
-    { label: 'الشهر الحالي', value: Math.min(100, pointsSummary?.progress?.percent || 0) },
-    { label: 'أفضل تقديري', value: Math.min(100, (pointsSummary?.progress?.percent || 0) + 15) },
-    { label: 'هدف الإدارة', value: 90 }
-  ]), [pointsSummary?.progress?.percent]);
+
+  const battleScore = Math.min(100, Math.round(progressPercent * 0.7 + (todayPoints > 0 ? 10 : 0)));
+  const teamPulse = Math.min(100, Math.max(progressPercent - 10, 25));
   const filteredServices = useMemo(() => {
     if (performanceFilter === 'instant') return executedServicesList.filter((s) => s.source === 'instant');
     if (performanceFilter === 'booking') return executedServicesList.filter((s) => s.source === 'booking');
