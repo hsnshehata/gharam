@@ -318,6 +318,20 @@ function EmployeeDashboard({ user }) {
   const rankNumber = pointsSummary?.rank;
   const teamSize = pointsSummary?.teamSize || 0;
   const rankLabel = rankNumber ? `#${rankNumber}${teamSize ? ` من ${teamSize}` : ''}` : '—';
+  const topServices = pointsSummary?.topServices || {};
+
+  const renderTopServices = (list) => {
+    if (!list || list.length === 0) return <div className="text-muted small">لا يوجد بيانات</div>;
+    return list.map((item, idx) => (
+      <div key={`${item.name}-${idx}`} className="d-flex justify-content-between align-items-center mb-1">
+        <div>
+          <div className="fw-bold">{item.name}</div>
+          <div className="text-muted small">{item.count} مرة</div>
+        </div>
+        <span className="badge-soft">{formatNumber(item.points)} نقطة</span>
+      </div>
+    ));
+  };
 
   const sparkPath = (arr) => {
     if (!arr.length) return '';
@@ -652,41 +666,58 @@ function EmployeeDashboard({ user }) {
         </Card.Body>
       </Card>
 
-      <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-        <h3 className="mb-0">الخدمات اللي نفذتها النهارده</h3>
-        <Button
-          variant="outline-light"
-          className="refresh-btn"
-          onClick={fetchAllData}
-          disabled={loadingData}
-        >
-          <FontAwesomeIcon icon={faRotateRight} className="me-2" />
-          {loadingData ? 'جاري التحديث...' : 'تحديث البيانات'}
-        </Button>
-      </div>
-      {executedServicesList.length === 0 && (
-        <Alert variant="info">لسه ما نفذت خدمات النهارده</Alert>
-      )}
-      <Row>
-        {executedServicesList.map((srv, idx) => (
-          <Col md={4} key={`${srv.receiptNumber}-${idx}`} className="mb-3">
-            <Card className="service-card">
-              <Card.Body>
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <span className="service-type">{srv.source === 'instant' ? 'خدمة فورية' : 'باكدج'}</span>
-                  <span className="points-pill">+{formatNumber(srv.points)} نقطة</span>
-                </div>
-                <Card.Title className="mb-2">{srv.serviceName}</Card.Title>
-                <Card.Text className="mb-1">رقم الوصل: {srv.receiptNumber}</Card.Text>
-                {srv.source !== 'instant' && (
-                  <Card.Text className="text-muted small">العروسة: {srv.clientName}</Card.Text>
-                )}
-                <Card.Text className="text-muted small">وقت التنفيذ: {formatTime(srv.executedAt)}</Card.Text>
-              </Card.Body>
-            </Card>
-          </Col>
-        ))}
-      </Row>
+      <Card className="mb-4">
+        <Card.Body>
+          <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div>
+              <h5 className="mb-1">أكثر ٣ خدمات نفذتها</h5>
+              <div className="text-muted small">إجمالي نقاط وعدد مرات التنفيذ</div>
+            </div>
+            <Button
+              variant="outline-light"
+              className="refresh-btn"
+              onClick={fetchAllData}
+              disabled={loadingData}
+            >
+              <FontAwesomeIcon icon={faRotateRight} className="me-2" />
+              {loadingData ? 'جاري التحديث...' : 'تحديث البيانات'}
+            </Button>
+          </div>
+
+          <Row>
+            <Col md={4} className="mb-3">
+              <Card className="h-100">
+                <Card.Body>
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <strong>هذا الأسبوع</strong>
+                  </div>
+                  {renderTopServices(topServices.week)}
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col md={4} className="mb-3">
+              <Card className="h-100">
+                <Card.Body>
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <strong>هذا الشهر</strong>
+                  </div>
+                  {renderTopServices(topServices.month)}
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col md={4} className="mb-3">
+              <Card className="h-100">
+                <Card.Body>
+                  <div className="d-flex justify-content-between align-items-center mb-2">
+                    <strong>كل الوقت</strong>
+                  </div>
+                  {renderTopServices(topServices.all)}
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
+        </Card.Body>
+      </Card>
 
       {todayGifts.length > 0 && (
         <Card className="mb-4">
