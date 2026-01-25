@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import useSWR from 'swr';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table } from 'react-bootstrap';
 import axios from 'axios';
-import { getPackages, getServices } from '../utils/apiCache';
 import Select from 'react-select';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faPrint, faEdit, faEye, faDollarSign, faTrash } from '@fortawesome/free-solid-svg-icons';
@@ -198,32 +198,74 @@ function Dashboard({ user }) {
     }))
   ), [users]);
 
-  // تحميل البيانات حسب التاريخ الحالي لإعادة الاستخدام بعد أي عملية ناجحة
-  const loadDashboardData = useCallback(async () => {
-    try {
-      const [summaryRes, bookingsRes, packagesData, servicesData, usersRes] = await Promise.all([
-        axios.get(`/api/dashboard/summary?date=${date}`, { headers: { 'x-auth-token': localStorage.getItem('token') } }),
-        axios.get(`/api/today-work?date=${date}`, { headers: { 'x-auth-token': localStorage.getItem('token') } }),
-        getPackages(),
-        getServices(),
-        axios.get('/api/users', { headers: { 'x-auth-token': localStorage.getItem('token') } })
-      ]);
-      setSummary(summaryRes.data);
-      setBookings(bookingsRes.data || { makeupBookings: [], hairStraighteningBookings: [], hairDyeBookings: [], photographyBookings: [] });
-      setPackages(packagesData);
-      setServices(servicesData);
-      setUsers(usersRes.data.map(u => ({ ...u, _id: u._id?.toString() })));
-      // no inline alert; do nothing
-    } catch (err) {
-      console.error('Fetch error:', err.response?.data || err.message);
+  const tokenHeader = useMemo(() => ({ headers: { 'x-auth-token': localStorage.getItem('token') } }), []);
+
+  const { data: summaryData, error: summaryError, mutate: mutateSummary } = useSWR(
+    () => `/api/dashboard/summary?date=${date}`,
+    (url) => axios.get(url, tokenHeader).then(res => res.data),
+    { dedupingInterval: 30000, revalidateOnFocus: true }
+  );
+
+  const { data: bookingsData, error: bookingsError, mutate: mutateTodayWork } = useSWR(
+    () => `/api/today-work?date=${date}`,
+    (url) => axios.get(url, tokenHeader).then(res => res.data),
+    { dedupingInterval: 30000 }
+  );
+
+  const { data: packagesData, mutate: mutatePackages } = useSWR(
+    '/api/packages/packages',
+    (url) => axios.get(url, tokenHeader).then(res => res.data),
+    { dedupingInterval: 60000 }
+  );
+
+  const { data: servicesData, mutate: mutateServices } = useSWR(
+    '/api/packages/services',
+    (url) => axios.get(url, tokenHeader).then(res => res.data),
+    { dedupingInterval: 60000 }
+  );
+
+  const { data: usersData, mutate: mutateUsers } = useSWR(
+    '/api/users',
+    (url) => axios.get(url, tokenHeader).then(res => res.data),
+    { dedupingInterval: 60000 }
+  );
+
+  useEffect(() => {
+    if (summaryData) setSummary(summaryData);
+  }, [summaryData]);
+
+  useEffect(() => {
+    if (bookingsData) {
+      setBookings(bookingsData || { makeupBookings: [], hairStraighteningBookings: [], hairDyeBookings: [], photographyBookings: [] });
+    }
+  }, [bookingsData]);
+
+  useEffect(() => {
+    if (packagesData) setPackages(packagesData);
+  }, [packagesData]);
+
+  useEffect(() => {
+    if (servicesData) setServices(servicesData);
+  }, [servicesData]);
+
+  useEffect(() => {
+    if (usersData) setUsers(usersData.map(u => ({ ...u, _id: u._id?.toString() })));
+  }, [usersData]);
+
+  useEffect(() => {
+    if (summaryError || bookingsError) {
       setMessage('خطأ في جلب البيانات');
       setBookings({ makeupBookings: [], hairStraighteningBookings: [], hairDyeBookings: [], photographyBookings: [] });
     }
-  }, [date, setMessage]);
+  }, [summaryError, bookingsError, setMessage]);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, [loadDashboardData]);
+  const revalidateAll = useCallback(() => {
+    mutateSummary();
+    mutateTodayWork();
+    mutatePackages();
+    mutateServices();
+    mutateUsers();
+  }, [mutateSummary, mutateTodayWork, mutatePackages, mutateServices, mutateUsers]);
 
   useEffect(() => {
     const calculateSelectedPackageServices = async () => {
@@ -325,7 +367,7 @@ function Dashboard({ user }) {
         setMessage('تم تعديل الحجز بنجاح');
         setCurrentReceipt({ ...res.data.booking, type: 'booking' });
         setShowReceiptModal(true);
-        loadDashboardData();
+        revalidateAll();
       } else {
         const res = await axios.post('/api/bookings', submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -333,7 +375,7 @@ function Dashboard({ user }) {
         setMessage('تم إضافة الحجز بنجاح');
         setCurrentReceipt({ ...res.data.booking, type: 'booking' });
         setShowReceiptModal(true);
-        loadDashboardData();
+        revalidateAll();
       }
       setBookingFormData({
         packageId: '', hennaPackageId: '', photographyPackageId: '', extraServices: [], returnedServices: [],
@@ -371,7 +413,7 @@ function Dashboard({ user }) {
         setMessage('تم تعديل الخدمة الفورية بنجاح');
         setCurrentReceipt({ ...res.data.instantService, type: 'instant' });
         setShowReceiptModal(true);
-        loadDashboardData();
+        revalidateAll();
       } else {
         const res = await axios.post('/api/instant-services', submitData, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -379,7 +421,7 @@ function Dashboard({ user }) {
         setMessage('تم إضافة الخدمة الفورية بنجاح');
         setCurrentReceipt({ ...res.data.instantService, type: 'instant' });
         setShowReceiptModal(true);
-        loadDashboardData();
+        revalidateAll();
       }
       setInstantServiceFormData({ employeeId: '', services: [] });
       setEditItem(null);
@@ -423,7 +465,7 @@ function Dashboard({ user }) {
       const typeLabel = res.data.type === 'expense' ? 'المصروف' : res.data.type === 'advance' ? 'السلفة' : 'الخصم الإداري';
       setMessage(`تم إضافة ${typeLabel} بنجاح`);
       setExpenseAdvanceFormData({ type: 'expense', details: '', amount: '', userId: '' });
-      loadDashboardData();
+      revalidateAll();
     } catch (err) {
       console.error('Expense/Advance submit error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في إضافة العملية');
@@ -469,7 +511,7 @@ function Dashboard({ user }) {
       setMessage('تم حذف الحجز بنجاح');
       setShowDeleteModal(false);
       setDeleteItem(null);
-      loadDashboardData();
+      revalidateAll();
     } catch (err) {
       console.error('Delete error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في الحذف');
@@ -498,7 +540,7 @@ function Dashboard({ user }) {
       });
       setMessage('تم إضافة القسط بنجاح');
       setInstallmentAmount('');
-      loadDashboardData();
+      revalidateAll();
     } catch (err) {
       console.error('Installment error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في إضافة القسط');

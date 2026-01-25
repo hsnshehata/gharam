@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import useSWR from 'swr';
 import { Container, Row, Col, Card, Button, Form, Modal, Pagination, Table } from 'react-bootstrap';
 import axios from 'axios';
-import { getPackages, getServices } from '../utils/apiCache';
 import Select from 'react-select';
 import ReceiptPrint, { printReceiptElement } from './ReceiptPrint';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -152,6 +152,59 @@ function Bookings() {
     })
   };
 
+  const tokenHeader = useRef({ headers: { 'x-auth-token': localStorage.getItem('token') } });
+
+  const { data: packagesData, mutate: mutatePackages } = useSWR(
+    '/api/packages/packages',
+    (url) => axios.get(url, tokenHeader.current).then(res => res.data),
+    { dedupingInterval: 60000 }
+  );
+
+  const { data: servicesData, mutate: mutateServices } = useSWR(
+    '/api/packages/services',
+    (url) => axios.get(url, tokenHeader.current).then(res => res.data),
+    { dedupingInterval: 60000 }
+  );
+
+  const trimmedQuery = searchNamePhone.trim();
+  const isReceiptSearch = /^\d+$/.test(trimmedQuery) && trimmedQuery.length > 0;
+  const queryParam = trimmedQuery
+    ? isReceiptSearch
+      ? `receiptNumber=${encodeURIComponent(trimmedQuery)}`
+      : `search=${encodeURIComponent(trimmedQuery)}`
+    : '';
+  const bookingsKey = `/api/bookings?page=${currentPage}${queryParam ? `&${queryParam}` : ''}${searchDate ? `&date=${searchDate}` : ''}`;
+  const { data: bookingsData, error: bookingsError, mutate: mutateBookings } = useSWR(
+    bookingsKey,
+    (url) => axios.get(url, tokenHeader.current).then(res => res.data),
+    { dedupingInterval: 60000, revalidateOnFocus: true }
+  );
+
+  useEffect(() => {
+    if (packagesData) setPackages(packagesData);
+  }, [packagesData]);
+
+  useEffect(() => {
+    if (servicesData) setServices(servicesData);
+  }, [servicesData]);
+
+  useEffect(() => {
+    if (bookingsData) {
+      setBookings(bookingsData.bookings || []);
+      setTotalPages(bookingsData.pages || 1);
+    }
+  }, [bookingsData]);
+
+  useEffect(() => {
+    if (bookingsError) setMessage('خطأ في جلب البيانات');
+  }, [bookingsError, setMessage]);
+
+  const revalidateAll = useCallback(() => {
+    mutateBookings();
+    mutatePackages();
+    mutateServices();
+  }, [mutateBookings, mutatePackages, mutateServices]);
+
   useEffect(() => {
     // compute selected package services from already-loaded `services` state
     const selectedIds = [formData.packageId, formData.hennaPackageId, formData.photographyPackageId].filter(id => id);
@@ -169,26 +222,6 @@ function Bookings() {
 
   // total/remaining calculation removed — these values are computed where needed
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // fetch packages/services from cache (or network) and bookings in parallel
-        const [pkgData, srvData, bookingsRes] = await Promise.all([
-          getPackages(),
-          getServices(),
-          axios.get(`/api/bookings?page=${currentPage}`, { headers: { 'x-auth-token': localStorage.getItem('token') } })
-        ]);
-        setPackages(pkgData);
-        setServices(srvData);
-        setBookings(bookingsRes.data.bookings);
-        setTotalPages(bookingsRes.data.pages);
-      } catch (err) {
-        setMessage('خطأ في جلب البيانات');
-      }
-    };
-    fetchData();
-  }, [currentPage, setMessage]);
-
   // create/edit handlers removed from this page per requirements
 
   // edit handler removed — editing via modal removed from this page
@@ -202,6 +235,7 @@ function Bookings() {
       setMessage('تم حذف الحجز بنجاح');
       setShowDeleteModal(false);
       setDeleteItem(null);
+      revalidateAll();
     } catch (err) {
       setMessage('خطأ في الحذف');
       setShowDeleteModal(false);
@@ -263,6 +297,7 @@ function Bookings() {
       setBookings(bookings.map(b => (b._id === editItem._id ? res.data.booking : b)));
       setMessage('تم تعديل الحجز بنجاح');
       setEditItem(null);
+      revalidateAll();
     } catch (err) {
       setMessage('خطأ في تعديل الحجز');
     } finally {
@@ -281,6 +316,7 @@ function Bookings() {
       setBookings(bookings.map(b => (b._id === bookingId ? res.data.booking : b)));
       setMessage('تم إضافة القسط بنجاح');
       setInstallmentAmount(0);
+      revalidateAll();
     } catch (err) {
       setMessage('خطأ في إضافة القسط');
     } finally {
@@ -300,27 +336,8 @@ function Bookings() {
   };
 
   const handleSearch = async () => {
-    try {
-      const query = searchNamePhone.trim();
-      const isReceipt = /^\d+$/.test(query) && query.length > 0;
-      const params = new URLSearchParams();
-      if (query) {
-        if (isReceipt) {
-          params.append('receiptNumber', query);
-        } else {
-          params.append('search', query);
-        }
-      }
-      if (searchDate) params.append('date', searchDate);
-      const res = await axios.get(`/api/bookings?${params.toString()}`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      setBookings(res.data.bookings);
-      setCurrentPage(1);
-      setTotalPages(1);
-    } catch (err) {
-      setMessage('خطأ في البحث');
-    }
+    setCurrentPage(1);
+    revalidateAll();
   };
 
   return (

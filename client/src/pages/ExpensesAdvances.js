@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import useSWR from 'swr';
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Pagination } from 'react-bootstrap';
 import axios from 'axios';
 import Select from 'react-select';
@@ -118,30 +119,43 @@ function ExpensesAdvances() {
     })
   };
 
+  const tokenHeader = useMemo(() => ({ headers: { 'x-auth-token': localStorage.getItem('token') } }), []);
+
+  const { data: usersData, mutate: mutateUsers } = useSWR(
+    '/api/users',
+    (url) => axios.get(url, tokenHeader).then(res => res.data),
+    { dedupingInterval: 60000 }
+  );
+
+  const itemsKey = `/api/expenses-advances?page=${currentPage}&search=${encodeURIComponent(search)}`;
+  const { data: itemsData, error: itemsError, mutate: mutateItems } = useSWR(
+    itemsKey,
+    (url) => axios.get(url, tokenHeader).then(res => res.data),
+    { dedupingInterval: 60000, revalidateOnFocus: true }
+  );
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const usersRes = await axios.get('/api/users', {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        const itemsRes = await axios.get(`/api/expenses-advances?page=${currentPage}&search=${search}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        console.log('Users response:', usersRes.data);
-        console.log('Expenses/Advances response:', itemsRes.data);
-        setUsers(usersRes.data.map(u => ({ ...u, _id: u._id?.toString() })));
-        setItems(itemsRes.data.items.map(item => ({
-          ...item,
-          type: item.type || (item.details ? 'expense' : 'advance')
-        })));
-        setTotalPages(itemsRes.data.pages);
-      } catch (err) {
-        console.error('Fetch error:', err.response?.data || err.message);
-        setMessage('خطأ في جلب البيانات');
-      }
-    };
-    fetchData();
-  }, [currentPage, search]);
+    if (usersData) setUsers(usersData.map(u => ({ ...u, _id: u._id?.toString() })));
+  }, [usersData]);
+
+  useEffect(() => {
+    if (itemsData) {
+      setItems(itemsData.items.map(item => ({
+        ...item,
+        type: item.type || (item.details ? 'expense' : 'advance')
+      })));
+      setTotalPages(itemsData.pages || 1);
+    }
+  }, [itemsData]);
+
+  useEffect(() => {
+    if (itemsError) setMessage('خطأ في جلب البيانات');
+  }, [itemsError]);
+
+  const revalidateAll = useCallback(() => {
+    mutateUsers();
+    mutateItems();
+  }, [mutateUsers, mutateItems]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -188,6 +202,7 @@ function ExpensesAdvances() {
         const typeLabel = res.data.type === 'expense' ? 'المصروف' : res.data.type === 'advance' ? 'السلفة' : 'الخصم الإداري';
         setMessage(`تم إضافة ${typeLabel} بنجاح`);
       }
+      revalidateAll();
       setFormData({ type: 'expense', details: '', amount: 0, userId: '' });
       setEditItem(null);
     } catch (err) {
@@ -226,6 +241,7 @@ function ExpensesAdvances() {
       setMessage(`تم حذف ${typeLabel} بنجاح`);
       setShowDeleteModal(false);
       setDeleteItem(null);
+      revalidateAll();
     } catch (err) {
       console.error('Delete error:', err.response?.data || err.message);
       setMessage(err.response?.data?.msg || 'خطأ في الحذف');
@@ -240,22 +256,8 @@ function ExpensesAdvances() {
   };
 
   const handleSearch = async () => {
-    try {
-      console.log('Searching with query:', search);
-      const res = await axios.get(`/api/expenses-advances?search=${search}`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      console.log('Search response:', res.data);
-      setItems(res.data.items.map(item => ({
-        ...item,
-        type: item.type || (item.details ? 'expense' : 'advance')
-      })));
-      setCurrentPage(1);
-      setTotalPages(res.data.pages);
-    } catch (err) {
-      console.error('Search error:', err.response?.data || err.message);
-      setMessage('خطأ في البحث');
-    }
+    setCurrentPage(1);
+    revalidateAll();
   };
 
   return (

@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Container, Row, Col, Card, Alert, Form, Button, Table, Spinner, Badge } from 'react-bootstrap';
 import axios from 'axios';
+import useSWR from 'swr';
 
 const currency = (v) => `${Number(v || 0).toLocaleString('ar-EG')} ج`;
 
@@ -106,69 +107,58 @@ function Reports() {
   const [monthlyData, setMonthlyData] = useState(null);
   const [rangeData, setRangeData] = useState(null);
   const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState({ daily: false, monthly: false, range: false });
   const [showAllMonthlyDays, setShowAllMonthlyDays] = useState(false);
 
-  const fetchDaily = async () => {
-    setLoading((p) => ({ ...p, daily: true }));
-    setMessage('');
-    try {
-      const res = await axios.get(`/api/reports/daily?date=${date}`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      setDailyData(res.data);
-    } catch (err) {
-      setMessage('خطأ في جلب التقرير اليومي');
-    } finally {
-      setLoading((p) => ({ ...p, daily: false }));
-    }
-  };
+  const tokenHeader = useMemo(() => ({ headers: { 'x-auth-token': localStorage.getItem('token') } }), []);
 
-  const fetchMonthly = async () => {
-    setLoading((p) => ({ ...p, monthly: true }));
-    setMessage('');
-    try {
-      const res = await axios.get(`/api/reports/monthly?month=${month}`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      setMonthlyData(res.data);
-    } catch (err) {
-      setMessage('خطأ في جلب التقرير الشهري');
-    } finally {
-      setLoading((p) => ({ ...p, monthly: false }));
-    }
-  };
+  const { data: dailyRes, error: dailyError, isValidating: dailyValidating, mutate: mutateDaily } = useSWR(
+    `/api/reports/daily?date=${date}`,
+    (url) => axios.get(url, tokenHeader).then(res => res.data),
+    { dedupingInterval: 300000, revalidateOnFocus: true }
+  );
 
-  const fetchRange = async () => {
-    if (!range.from || !range.to) {
-      setMessage('حدد شهر البداية وشهر النهاية');
-      return;
-    }
+  const { data: monthlyRes, error: monthlyError, isValidating: monthlyValidating, mutate: mutateMonthly } = useSWR(
+    `/api/reports/monthly?month=${month}`,
+    (url) => axios.get(url, tokenHeader).then(res => res.data),
+    { dedupingInterval: 300000, revalidateOnFocus: true }
+  );
+
+  const rangeDates = useMemo(() => {
+    if (!range.from || !range.to) return null;
     const fromDate = `${range.from}-01`;
     const [toYear, toMonth] = range.to.split('-').map(Number);
     const endDateObj = new Date(toYear, toMonth, 0, 23, 59, 59, 999);
     const toDate = endDateObj.toISOString().split('T')[0];
+    return { fromDate, toDate };
+  }, [range]);
 
-    setLoading((p) => ({ ...p, range: true }));
-    setMessage('');
-    try {
-      const res = await axios.get(`/api/reports/range?from=${fromDate}&to=${toDate}`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      setRangeData(res.data);
-    } catch (err) {
-      setMessage('خطأ في جلب تقرير الفترة');
-    } finally {
-      setLoading((p) => ({ ...p, range: false }));
-    }
-  };
+  const { data: rangeRes, error: rangeError, isValidating: rangeValidating, mutate: mutateRange } = useSWR(
+    rangeDates ? `/api/reports/range?from=${rangeDates.fromDate}&to=${rangeDates.toDate}` : null,
+    (url) => axios.get(url, tokenHeader).then(res => res.data),
+    { dedupingInterval: 300000, revalidateOnFocus: true }
+  );
 
   useEffect(() => {
-    fetchDaily();
-    fetchMonthly();
-    fetchRange();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (dailyRes) setDailyData(dailyRes);
+  }, [dailyRes]);
+
+  useEffect(() => {
+    if (monthlyRes) setMonthlyData(monthlyRes);
+  }, [monthlyRes]);
+
+  useEffect(() => {
+    if (rangeRes) setRangeData(rangeRes);
+  }, [rangeRes]);
+
+  useEffect(() => {
+    if (dailyError || monthlyError || rangeError) {
+      setMessage('خطأ في جلب البيانات');
+    }
+  }, [dailyError, monthlyError, rangeError]);
+
+  const refreshDaily = useCallback(() => mutateDaily(), [mutateDaily]);
+  const refreshMonthly = useCallback(() => mutateMonthly(), [mutateMonthly]);
+  const refreshRange = useCallback(() => (rangeDates ? mutateRange() : null), [mutateRange, rangeDates]);
 
   const monthlyFromDaily = (daily = []) => {
     const map = new Map();
@@ -255,19 +245,19 @@ function Reports() {
                 <Col md={4} sm={6}>
                   <Form.Group>
                     <Form.Label>اختر التاريخ</Form.Label>
-                    <Form.Control type="date" value={date} onChange={(e) => setDate(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && fetchDaily()} />
+                    <Form.Control type="date" value={date} onChange={(e) => setDate(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && refreshDaily()} />
                   </Form.Group>
                 </Col>
                 <Col md={3} sm={6}>
-                  <Button variant="primary" onClick={fetchDaily} disabled={loading.daily}>
-                    {loading.daily ? 'جارٍ التحميل...' : 'عرض التقرير'}
+                  <Button variant="primary" onClick={refreshDaily} disabled={dailyValidating && !dailyRes}>
+                    {dailyValidating && !dailyRes ? 'جارٍ التحميل...' : 'عرض التقرير'}
                   </Button>
                 </Col>
               </Row>
             </Card.Body>
           </Card>
 
-          {loading.daily ? (
+          {dailyValidating && !dailyRes ? (
             <div className="text-center"><Spinner animation="border" /></div>
           ) : (
             <>
@@ -317,8 +307,8 @@ function Reports() {
                   <Form.Control type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
                 </Col>
                 <Col md={3} sm={6}>
-                  <Button variant="primary" onClick={fetchMonthly} disabled={loading.monthly}>
-                    {loading.monthly ? 'جارٍ التحميل...' : 'عرض التقرير'}
+                  <Button variant="primary" onClick={refreshMonthly} disabled={monthlyValidating && !monthlyRes}>
+                    {monthlyValidating && !monthlyRes ? 'جارٍ التحميل...' : 'عرض التقرير'}
                   </Button>
                 </Col>
                 {monthlyData?.meta?.label && (
@@ -327,7 +317,7 @@ function Reports() {
               </Row>
             </Card.Body>
           </Card>
-          {loading.monthly ? (
+          {monthlyValidating && !monthlyRes ? (
             <div className="text-center"><Spinner animation="border" /></div>
           ) : monthlyData && (
             (() => {
@@ -372,14 +362,14 @@ function Reports() {
                   <Form.Control type="month" value={range.to} onChange={(e) => setRange((p) => ({ ...p, to: e.target.value }))} />
                 </Col>
                 <Col md={3} sm={6}>
-                  <Button variant="primary" onClick={fetchRange} disabled={loading.range}>
-                    {loading.range ? 'جارٍ التحميل...' : 'عرض التقرير'}
+                  <Button variant="primary" onClick={refreshRange} disabled={(rangeValidating && !rangeRes) || !rangeDates}>
+                    {(rangeValidating && !rangeRes) ? 'جارٍ التحميل...' : 'عرض التقرير'}
                   </Button>
                 </Col>
               </Row>
             </Card.Body>
           </Card>
-          {loading.range ? (
+          {rangeValidating && !rangeRes ? (
             <div className="text-center"><Spinner animation="border" /></div>
           ) : rangeData && (
             (() => {
