@@ -1,98 +1,21 @@
-const Redis = require('ioredis');
-
-// نستخدم ريديس لو متاح، ولو مش موجود بنرجع لفول باك في الذاكرة
-const redisUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
-let redis = null;
+// إيقاف الاعتماد على Redis نهائياً والاعتماد فقط على الذاكرة المؤقتة
 let memoryStore = new Map();
-
-const buildRedisOptions = (urlString) => {
-  const baseOptions = {
-    maxRetriesPerRequest: 1,
-    enableOfflineQueue: false
-  };
-
-  try {
-    const parsed = new URL(urlString);
-    if (parsed.username) baseOptions.username = decodeURIComponent(parsed.username);
-    if (parsed.password) baseOptions.password = decodeURIComponent(parsed.password);
-
-    // فعّل TLS فقط لو البروتوكول rediss أو تم فرضه صراحة
-    const forceTls = process.env.REDIS_TLS === 'true';
-    const wantsTls = parsed.protocol === 'rediss:' || forceTls;
-    if (wantsTls) {
-      baseOptions.tls = {};
-    }
-  } catch (err) {
-    console.warn('Redis URL parse failed, continuing with defaults:', err.message);
-  }
-
-  return baseOptions;
-};
-
-try {
-  redis = new Redis(redisUrl, buildRedisOptions(redisUrl));
-  redis.on('error', (err) => {
-    console.warn('Redis error, falling back to memory:', err.message);
-    redis = null;
-  });
-} catch (err) {
-  console.warn('Redis init failed, using in-memory cache:', err.message);
-  redis = null;
-}
 
 const now = () => Date.now();
 
 async function getCache(key) {
-  if (redis) {
-    try {
-      const raw = await redis.get(key);
-      return raw ? JSON.parse(raw) : null;
-    } catch (err) {
-      console.warn('Redis get error, fallback to memory', err.message);
-    }
-  }
   return memoryStore.get(key) || null;
 }
 
 async function setCache(key, value, ttlSeconds) {
   const payload = JSON.stringify(value);
-  if (redis) {
-    try {
-      if (ttlSeconds) {
-        await redis.set(key, payload, 'EX', ttlSeconds);
-      } else {
-        await redis.set(key, payload);
-      }
-      return;
-    } catch (err) {
-      console.warn('Redis set error, storing in memory', err.message);
-    }
-  }
-  memoryStore.set(key, value);
+  memoryStore.set(key, payload ? JSON.parse(payload) : value);
   if (ttlSeconds) {
     setTimeout(() => memoryStore.delete(key), ttlSeconds * 1000).unref();
   }
 }
 
 async function deleteByPrefix(prefix) {
-  if (redis) {
-    try {
-      const stream = redis.scanStream({ match: `${prefix}*` });
-      const keys = [];
-      return await new Promise((resolve, reject) => {
-        stream.on('data', (resultKeys) => {
-          if (resultKeys.length) keys.push(...resultKeys);
-        });
-        stream.on('end', async () => {
-          if (keys.length) await redis.del(keys);
-          resolve(keys.length);
-        });
-        stream.on('error', reject);
-      });
-    } catch (err) {
-      console.warn('Redis deleteByPrefix error, falling back to memory', err.message);
-    }
-  }
   let deleted = 0;
   memoryStore.forEach((_, key) => {
     if (key.startsWith(prefix)) {
