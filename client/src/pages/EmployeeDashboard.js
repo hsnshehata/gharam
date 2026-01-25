@@ -333,33 +333,34 @@ function EmployeeDashboard({ user }) {
   return (
     <Container className="mt-5">
       {pendingGifts.length > 0 && (
-        <Card className="mb-4 gift-card">
-          <Card.Body>
-            <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
-              <div className="d-flex align-items-center gap-3">
-                <div className="gift-box">
-                  <div className="gift-lid" />
-                  <div className="gift-body" />
-                  <div className="gift-ribbon" />
-                </div>
-                <div>
-                  <Card.Title className="mb-1">عندك هدية نقاط مستنياك</Card.Title>
-                  <div className="text-muted small">افتح الصندوق علشان النقاط تضاف لرصيدك</div>
-                </div>
-              </div>
-              <div className="d-flex flex-column gap-2 flex-fill">
-                {pendingGifts.map((g) => (
-                  <div key={g._id} className="d-flex flex-wrap align-items-center gap-2 justify-content-between gift-row">
-                    <div className="text-muted small">من: {g.giftedByName || 'الإدارة'} — السبب: {g.note || 'هدية تقدير'}</div>
-                    <Button variant="success" className="gift-open-btn" onClick={() => handleOpenGift(g._id)}>
-                      افتح +{g.amount} نقطة
-                    </Button>
+        <>
+          <Card className="mb-4 gift-card">
+            <Card.Body>
+              <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                <div className="d-flex align-items-center gap-3">
+                  <div className="gift-box">
+                    <div className="gift-lid" />
+                    <div className="gift-body" />
+                    <div className="gift-ribbon" />
                   </div>
-                ))}
+                  <div>
+                    <Card.Title className="mb-1">عندك هدية نقاط مستنياك</Card.Title>
+                    <div className="text-muted small">افتح الصندوق علشان النقاط تضاف لرصيدك</div>
+                  </div>
+                </div>
+                <div className="d-flex flex-column gap-2 flex-fill">
+                  {pendingGifts.map((g) => (
+                    <div key={g._id} className="d-flex flex-wrap align-items-center gap-2 justify-content-between gift-row">
+                      <div className="text-muted small">من: {g.giftedByName || 'الإدارة'} — السبب: {g.note || 'هدية تقدير'}</div>
+                      <Button variant="success" className="gift-open-btn" onClick={() => handleOpenGift(g._id)}>
+                        افتح +{g.amount} نقطة
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          </Card.Body>
-        </Card>
+            </Card.Body>
+          </Card>
 
           <Card className="mb-4 performance-card">
             <Card.Body>
@@ -444,6 +445,7 @@ function EmployeeDashboard({ user }) {
               )}
             </Card.Body>
           </Card>
+        </>
       )}
 
       <Row className="mb-4 justify-content-center">
