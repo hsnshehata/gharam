@@ -33,17 +33,9 @@ function EmployeeDashboard({ user }) {
   const [loadingData, setLoadingData] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiTip, setAiTip] = useState('');
-  const [isDark, setIsDark] = useState(() => (window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : false));
+  const [weeklySeries, setWeeklySeries] = useState([]);
   const qrCodeScanner = useRef(null);
   const { showToast } = useToast();
-
-  useEffect(() => {
-    if (!window.matchMedia) return () => {};
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = (e) => setIsDark(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
 
   const fetchPointsSummary = useCallback(async () => {
     const pointsRes = await axios.get(`/api/users/points/summary`, {
@@ -66,21 +58,48 @@ function EmployeeDashboard({ user }) {
     setTodayGifts(res.data?.gifts || []);
   }, []);
 
+  const fetchExecutedByDate = useCallback(async (dateStr) => {
+    const res = await axios.get(`/api/users/executed-services?date=${dateStr}`, {
+      headers: { 'x-auth-token': localStorage.getItem('token') }
+    });
+    return res.data?.services || [];
+  }, []);
+
   const fetchAllData = useCallback(async () => {
     setLoadingData(true);
     try {
-      const executedRes = await axios.get(`/api/users/executed-services?date=${date}`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
+      const todayServices = await fetchExecutedByDate(date);
+
+      const days = Array.from({ length: 7 }).map((_, idx) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (6 - idx));
+        return d.toISOString().split('T')[0];
       });
+
+      const weeklyPayloads = await Promise.all(days.map((d) => fetchExecutedByDate(d).catch(() => [])));
+      const weeklyAggregated = weeklyPayloads.map((services, idx) => {
+        const dayDate = new Date(days[idx]);
+        const label = dayDate.toLocaleDateString('ar-EG', { weekday: 'short' });
+        const totals = services.reduce((acc, s) => {
+          const pts = s.points || 0;
+          acc.total += pts;
+          if (s.source === 'booking') acc.booking += pts;
+          if (s.source === 'instant') acc.instant += pts;
+          return acc;
+        }, { total: 0, booking: 0, instant: 0 });
+        return { label, ...totals };
+      });
+
       await Promise.all([fetchPointsSummary(), fetchPendingGifts(), fetchTodayGifts()]);
-      setExecutedServices(executedRes.data?.services || []);
+      setExecutedServices(todayServices);
+      setWeeklySeries(weeklyAggregated);
     } catch (err) {
       console.error('Fetch error:', err.response?.data || err.message);
       showToast('خطأ في جلب البيانات', 'danger');
     } finally {
       setLoadingData(false);
     }
-  }, [date, fetchPointsSummary, fetchPendingGifts, fetchTodayGifts, showToast]);
+  }, [date, fetchExecutedByDate, fetchPointsSummary, fetchPendingGifts, fetchTodayGifts, showToast]);
 
   const formatNumber = useCallback((num = 0) => new Intl.NumberFormat('en-US').format(Math.max(0, num)), []);
 
@@ -287,47 +306,11 @@ function EmployeeDashboard({ user }) {
   const executedServicesList = useMemo(() => executedServices, [executedServices]);
   const todayPoints = useMemo(() => executedServicesList.reduce((sum, s) => sum + (s.points || 0), 0), [executedServicesList]);
 
-  const last7DaysSeries = useMemo(() => {
-    const result = [];
-    const today = new Date();
-    for (let i = 6; i >= 0; i -= 1) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      d.setHours(0, 0, 0, 0);
-      const next = new Date(d);
-      next.setDate(d.getDate() + 1);
-
-      const dayPoints = executedServicesList
-        .filter((s) => {
-          const dt = s.executedAt ? new Date(s.executedAt) : null;
-          return dt && dt >= d && dt < next;
-        })
-        .reduce((sum, s) => sum + (s.points || 0), 0);
-
-      const bookingPoints = executedServicesList
-        .filter((s) => s.source === 'booking')
-        .filter((s) => {
-          const dt = s.executedAt ? new Date(s.executedAt) : null;
-          return dt && dt >= d && dt < next;
-        })
-        .reduce((sum, s) => sum + (s.points || 0), 0);
-
-      const instantPoints = executedServicesList
-        .filter((s) => s.source === 'instant')
-        .filter((s) => {
-          const dt = s.executedAt ? new Date(s.executedAt) : null;
-          return dt && dt >= d && dt < next;
-        })
-        .reduce((sum, s) => sum + (s.points || 0), 0);
-
-      result.push({ label: d.toLocaleDateString('en-GB', { weekday: 'short' }), total: dayPoints, booking: bookingPoints, instant: instantPoints });
-    }
-    return result;
-  }, [executedServicesList]);
+  const last7DaysSeries = useMemo(() => weeklySeries, [weeklySeries]);
 
   const weeklyCount = useMemo(() => last7DaysSeries.reduce((sum, d) => sum + d.total, 0), [last7DaysSeries]);
-  const monthlyCount = weeklyCount; // بيانات شهرية غير متاحة حالياً
-  const allTimeCount = weeklyCount; // بيانات تاريخية غير متاحة حالياً
+  const monthlyCount = weeklyCount;
+  const allTimeCount = weeklyCount;
   const bookingTotal = useMemo(() => last7DaysSeries.reduce((sum, d) => sum + d.booking, 0), [last7DaysSeries]);
   const instantTotal = useMemo(() => last7DaysSeries.reduce((sum, d) => sum + d.instant, 0), [last7DaysSeries]);
   const rankLabel = pointsSummary?.rank || 'غير متوفر';
@@ -389,51 +372,33 @@ function EmployeeDashboard({ user }) {
   return (
     <Container className="mt-5">
       <style>{`
-        :root {
-          --bg: ${isDark ? '#0f1b2d' : '#f4f6fb'};
-          --panel: ${isDark ? '#16263d' : '#ffffff'};
-          --text: ${isDark ? '#eef5ff' : '#0f1b2d'};
-          --muted: ${isDark ? '#bcd4ff' : '#4a5875'};
-          --border: ${isDark ? '#233651' : '#d7ddeb'};
-          --accent: ${isDark ? '#ffdd7a' : '#f2a900'};
-          --accent2: ${isDark ? '#7cffe7' : '#4c8dff'};
-          --chip: ${isDark ? 'rgba(255,255,255,0.06)' : '#f3f6fb'};
-          --chip-border: ${isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f5'};
-          --grid-line: ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'};
-          --line1: ${isDark ? '#7cffe7' : '#1d7ed6'};
-          --line2: ${isDark ? '#4fa3ff' : '#f28b30'};
-          --shadow: ${isDark ? '0 14px 38px rgba(0,0,0,0.25)' : '0 12px 28px rgba(0,0,0,0.15)'};
-        }
-        .battle-card { background: linear-gradient(135deg, var(--bg), var(--panel)); color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow); position: relative; overflow: hidden; }
-        .battle-card::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 12% 20%, rgba(255,255,255,0.08), transparent 35%), radial-gradient(circle at 80% 10%, rgba(255,215,128,0.12), transparent 32%), radial-gradient(circle at 50% 80%, rgba(64,170,255,0.08), transparent 38%); pointer-events: none; }
-        .battle-glow { position: absolute; inset: 0; opacity: 0.25; background: radial-gradient(circle at 30% 50%, rgba(62,162,255,0.24), transparent 40%); filter: blur(40px); }
-        .battle-grid { position: absolute; inset: 0; background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px); background-size: 36px 36px; opacity: 0.5; }
+        .battle-card { background: linear-gradient(120deg, var(--surface), var(--bg)); color: var(--text); border: 1px solid var(--border); box-shadow: 0 10px 24px var(--shadow); position: relative; overflow: hidden; border-radius: 12px; }
+        .battle-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px); background-size: 38px 38px; opacity: 0.45; pointer-events: none; }
         .battle-header { position: relative; z-index: 1; }
-        .battle-title { font-size: 20px; font-weight: 800; letter-spacing: 0.6px; color: var(--text); }
+        .battle-title { font-size: 20px; font-weight: 800; letter-spacing: 0.4px; }
         .battle-sub { color: var(--muted); font-size: 13px; }
-        .battle-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 12px; margin-top: 14px; position: relative; z-index: 1; }
-        .battle-chip { background: var(--chip); border: 1px solid var(--chip-border); border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .battle-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 10px; margin-top: 14px; position: relative; z-index: 1; }
+        .battle-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 8px 18px var(--shadow); }
         .battle-chip .label { color: var(--muted); font-size: 12px; }
         .battle-chip .value { font-weight: 800; font-size: 18px; color: var(--accent); }
-        .battle-bar { background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; height: 12px; }
-        .battle-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent2), var(--line2)); }
+        .battle-bar { background: rgba(0,0,0,0.06); border-radius: 10px; overflow: hidden; height: 12px; }
+        .battle-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), #0f2736); }
         .battle-section { position: relative; z-index: 1; margin-top: 14px; }
         .battle-section h6 { color: var(--muted); font-weight: 700; font-size: 14px; margin-bottom: 8px; }
         .mini-vs { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 12px; }
-        .mini-card { background: var(--chip); border: 1px solid var(--chip-border); border-radius: 12px; padding: 12px; }
-        .mini-card .label { color: var(--muted); font-size: 12px; }
+        .chart-card, .mini-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; box-shadow: 0 6px 16px var(--shadow); }
+        .mini-card .label, .chart-title { color: var(--muted); font-size: 12px; }
         .mini-card .value { color: var(--text); font-weight: 800; font-size: 16px; }
-        .mini-card .tag { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; margin-top: 4px; background: rgba(255,255,255,0.09); color: var(--accent); }
+        .mini-card .tag { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; margin-top: 4px; background: rgba(0,0,0,0.06); color: var(--accent); }
         .battle-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
         .battle-btn { border-radius: 12px; }
-        .chart-card { background: var(--chip); border: 1px solid var(--chip-border); border-radius: 12px; padding: 12px; }
-        .chart-title { color: var(--muted); font-weight: 700; font-size: 13px; margin-bottom: 6px; }
+        .chart-title { font-weight: 700; font-size: 13px; margin-bottom: 6px; }
         .spark-svg { width: 100%; height: 90px; }
-        .spark-line-total { stroke: var(--line1); fill: none; stroke-width: 2.5; }
-        .spark-line-booking { stroke: var(--line1); fill: none; stroke-width: 2; }
-        .spark-line-instant { stroke: var(--line2); fill: none; stroke-width: 2; }
-        .badge-soft { background: rgba(0,0,0,0.06); color: var(--text); border: 1px solid var(--chip-border); padding: 4px 8px; border-radius: 10px; font-size: 12px; }
-        .battle-ai { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 10px; border: 1px dashed var(--chip-border); color: var(--text); }
+        .spark-line-total { stroke: var(--accent); fill: none; stroke-width: 2.5; }
+        .spark-line-booking { stroke: var(--accent); fill: none; stroke-width: 2; opacity: 0.8; }
+        .spark-line-instant { stroke: #f28b30; fill: none; stroke-width: 2; opacity: 0.9; }
+        .badge-soft { background: rgba(0,0,0,0.05); color: var(--text); border: 1px solid var(--border); padding: 4px 8px; border-radius: 10px; font-size: 12px; }
+        .battle-ai { background: var(--surface); border-radius: 12px; padding: 10px; border: 1px dashed var(--border); color: var(--text); }
         .battle-ai strong { color: var(--accent); }
         @media (max-width: 768px) { .mini-vs { grid-template-columns: 1fr; } }
       `}</style>
@@ -585,9 +550,6 @@ function EmployeeDashboard({ user }) {
               <div className="battle-sub">عرض سريع لأداء اليوم مع مقارنة الأيام اللي فاتت</div>
             </div>
             <div className="battle-actions">
-              <Button variant={isDark ? 'light' : 'dark'} size="sm" className="battle-btn" onClick={() => setIsDark((p) => !p)}>
-                {isDark ? 'وضع فاتح' : 'وضع داكن'}
-              </Button>
               <Button variant="success" size="sm" className="battle-btn" onClick={generateAiTip} disabled={aiLoading}>
                 {aiLoading ? 'جارٍ التحليل...' : 'تحليل أداء بالذكاء الاصطناعي'}
               </Button>
