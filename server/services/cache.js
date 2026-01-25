@@ -16,8 +16,10 @@ const buildRedisOptions = (urlString) => {
     if (parsed.username) baseOptions.username = decodeURIComponent(parsed.username);
     if (parsed.password) baseOptions.password = decodeURIComponent(parsed.password);
 
-    // Redis السحابي عادة يحتاج TLS، نتأكد لو السيرفر مش لوكال
-    if (!['127.0.0.1', 'localhost'].includes(parsed.hostname)) {
+    // فعّل TLS فقط لو البروتوكول rediss أو تم فرضه صراحة
+    const forceTls = process.env.REDIS_TLS === 'true';
+    const wantsTls = parsed.protocol === 'rediss:' || forceTls;
+    if (wantsTls) {
       baseOptions.tls = {};
     }
   } catch (err) {
