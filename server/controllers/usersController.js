@@ -458,15 +458,35 @@ exports.getPointsSummary = async (req, res) => {
         const teamSize = await User.countDocuments(roleFilter);
         const rank = teamSize > 0 ? higherCount + 1 : null;
 
+        const startOfDay = (d) => {
+          const copy = new Date(d);
+          copy.setHours(0, 0, 0, 0);
+          return copy;
+        };
+
+        const aggregateTopServices = (startDate = null, endDate = null) => {
+          const bucket = new Map();
+          (user.points || []).forEach((p) => {
+            if (!p || p.type !== 'work' || !p.date) return;
+            const dt = new Date(p.date);
+            if ((startDate && dt < startDate) || (endDate && dt > endDate)) return;
+            const name = p.serviceName || 'خدمة غير معروفة';
+            const amount = Number(p.amount) || 0;
+            const current = bucket.get(name) || { name, count: 0, points: 0 };
+            current.count += 1;
+            current.points += amount;
+            bucket.set(name, current);
+          });
+          return Array.from(bucket.values()).sort((a, b) => b.count - a.count || b.points - a.points).slice(0, 3);
+        };
+
         // breakdown آخر ٧ أيام من سجلات النقاط (عمل فقط)
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
+        const now = startOfDay(new Date());
         const weeklyBreakdown = Array.from({ length: 7 }).map((_, idx) => {
           const day = new Date(now);
           day.setDate(day.getDate() - (6 - idx));
-          day.setHours(0, 0, 0, 0);
-          const dayStart = new Date(day);
-          const dayEnd = new Date(day);
+          const dayStart = startOfDay(day);
+          const dayEnd = new Date(dayStart);
           dayEnd.setHours(23, 59, 59, 999);
           const label = `${day.getDate()}/${day.getMonth() + 1}`;
 
@@ -485,6 +505,15 @@ exports.getPointsSummary = async (req, res) => {
           return { label, ...totals };
         });
 
+        const weekStart = new Date(now);
+        weekStart.setDate(weekStart.getDate() - 6);
+        const weekTop = aggregateTopServices(weekStart, new Date(now.getTime() + 86399999));
+
+        const monthStart = startOfDay(new Date(now.getFullYear(), now.getMonth(), 1));
+        const monthTop = aggregateTopServices(monthStart, new Date(now.getTime() + 86399999));
+
+        const allTimeTop = aggregateTopServices(null, null);
+
         return {
           totalPoints,
           level,
@@ -499,6 +528,11 @@ exports.getPointsSummary = async (req, res) => {
           rank,
           teamSize,
           weeklyBreakdown,
+          topServices: {
+            week: weekTop,
+            month: monthTop,
+            all: allTimeTop
+          },
           progress: {
             current: progressCurrent,
             target: progressNeeded,
