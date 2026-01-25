@@ -275,6 +275,8 @@ function EmployeeDashboard({ user }) {
   const convertiblePoints = pointsSummary?.convertiblePoints || 0;
   const canConvert = convertiblePoints >= 1000;
   const remainingSalary = pointsSummary?.remainingSalary || 0;
+  const progressPercent = pointsSummary?.progress?.percent ?? 0;
+  const currentLevel = pointsSummary?.level ?? 1;
 
   const executedServicesList = useMemo(() => executedServices, [executedServices]);
 
@@ -333,120 +335,118 @@ function EmployeeDashboard({ user }) {
   return (
     <Container className="mt-5">
       {pendingGifts.length > 0 && (
-        <>
-          <Card className="mb-4 gift-card">
-            <Card.Body>
-              <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
-                <div className="d-flex align-items-center gap-3">
-                  <div className="gift-box">
-                    <div className="gift-lid" />
-                    <div className="gift-body" />
-                    <div className="gift-ribbon" />
-                  </div>
-                  <div>
-                    <Card.Title className="mb-1">عندك هدية نقاط مستنياك</Card.Title>
-                    <div className="text-muted small">افتح الصندوق علشان النقاط تضاف لرصيدك</div>
-                  </div>
+        <Card className="mb-4 gift-card">
+          <Card.Body>
+            <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+              <div className="d-flex align-items-center gap-3">
+                <div className="gift-box">
+                  <div className="gift-lid" />
+                  <div className="gift-body" />
+                  <div className="gift-ribbon" />
                 </div>
-                <div className="d-flex flex-column gap-2 flex-fill">
-                  {pendingGifts.map((g) => (
-                    <div key={g._id} className="d-flex flex-wrap align-items-center gap-2 justify-content-between gift-row">
-                      <div className="text-muted small">من: {g.giftedByName || 'الإدارة'} — السبب: {g.note || 'هدية تقدير'}</div>
-                      <Button variant="success" className="gift-open-btn" onClick={() => handleOpenGift(g._id)}>
-                        افتح +{g.amount} نقطة
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Card.Body>
-          </Card>
-
-          <Card className="mb-4 performance-card">
-            <Card.Body>
-              <div className="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
                 <div>
-                  <Card.Title className="mb-1">نظرة سريعة على الأداء</Card.Title>
-                  <div className="text-muted small">مقارنات خفيفة بين إنجازاتك الشهرية وأفضل فتراتك</div>
-                </div>
-                <div className="d-flex gap-2">
-                  <Button variant="outline-light" size="sm" onClick={() => setShowPerformanceDetails((p) => !p)}>
-                    {showPerformanceDetails ? 'إخفاء التفاصيل' : 'تفاصيل أكثر'}
-                  </Button>
-                  <Button variant="outline-success" size="sm" onClick={generateAiTip} disabled={aiLoading}>
-                    {aiLoading ? 'جارٍ التحليل...' : 'نصائح بالذكاء الاصطناعي'}
-                  </Button>
+                  <Card.Title className="mb-1">عندك هدية نقاط مستنياك</Card.Title>
+                  <div className="text-muted small">افتح الصندوق علشان النقاط تضاف لرصيدك</div>
                 </div>
               </div>
-
-              <Row className="g-3">
-                <Col md={4} sm={6}>
-                  <div className="stat-tile">
-                    <div className="label">نقاط اليوم</div>
-                    <div className="value">{formatNumber(todayPoints)}</div>
-                    <div className="muted small">من {executedServicesList.length} مهام منفذة</div>
+              <div className="d-flex flex-column gap-2 flex-fill">
+                {pendingGifts.map((g) => (
+                  <div key={g._id} className="d-flex flex-wrap align-items-center gap-2 justify-content-between gift-row">
+                    <div className="text-muted small">من: {g.giftedByName || 'الإدارة'} — السبب: {g.note || 'هدية تقدير'}</div>
+                    <Button variant="success" className="gift-open-btn" onClick={() => handleOpenGift(g._id)}>
+                      افتح +{g.amount} نقطة
+                    </Button>
                   </div>
-                </Col>
-                <Col md={4} sm={6}>
-                  <div className="stat-tile">
-                    <div className="label">تقدم المستوى</div>
-                    <ProgressBar now={pointsSummary?.progress?.percent || 0} label={`${pointsSummary?.progress?.percent || 0}%`} visuallyHidden={false} />
-                    <div className="muted small">المستوى الحالي: L{pointsSummary?.level || 1}</div>
-                  </div>
-                </Col>
-                <Col md={4} sm={12}>
-                  <div className="stat-tile">
-                    <div className="label">مقارنات سريعة</div>
-                    {performanceComparison.map((item) => (
-                      <div key={item.label} className="mini-bar">
-                        <span className="mini-label">{item.label}</span>
-                        <div className="mini-track"><span style={{ width: `${item.value}%` }} /></div>
-                        <span className="mini-value">{item.value}%</span>
-                      </div>
-                    ))}
-                  </div>
-                </Col>
-              </Row>
-
-              {aiTip && (
-                <Alert variant="secondary" className="mt-3 mb-0">
-                  <div className="fw-bold mb-1">مساعد الأداء (AI)</div>
-                  <div className="small" style={{ whiteSpace: 'pre-line' }}>{aiTip}</div>
-                </Alert>
-              )}
-
-              {showPerformanceDetails && (
-                <div className="performance-detail mt-3">
-                  <div className="d-flex flex-wrap gap-2 mb-2">
-                    <Button size="sm" variant={performanceFilter === 'all' ? 'primary' : 'outline-primary'} onClick={() => setPerformanceFilter('all')}>الكل</Button>
-                    <Button size="sm" variant={performanceFilter === 'booking' ? 'primary' : 'outline-primary'} onClick={() => setPerformanceFilter('booking')}>حجوزات</Button>
-                    <Button size="sm" variant={performanceFilter === 'instant' ? 'primary' : 'outline-primary'} onClick={() => setPerformanceFilter('instant')}>خدمات فورية</Button>
-                  </div>
-                  {filteredServices.length === 0 ? (
-                    <div className="text-muted small">لا توجد بيانات للفلتر الحالي.</div>
-                  ) : (
-                    <Row className="g-2">
-                      {filteredServices.slice(0, 6).map((srv, idx) => (
-                        <Col md={4} sm={6} key={`${srv.receiptNumber}-${idx}-perf`}>
-                          <div className="detail-tile">
-                            <div className="d-flex justify-content-between mb-1">
-                              <span className="badge bg-dark">{srv.source === 'instant' ? 'فوري' : 'حجز'}</span>
-                              <span className="badge bg-success">+{formatNumber(srv.points)} نقطة</span>
-                            </div>
-                            <div className="fw-bold">{srv.serviceName}</div>
-                            <div className="text-muted small">وصل: {srv.receiptNumber}</div>
-                            <div className="text-muted small">وقت: {formatTime(srv.executedAt)}</div>
-                          </div>
-                        </Col>
-                      ))}
-                    </Row>
-                  )}
-                </div>
-              )}
-            </Card.Body>
-          </Card>
-        </>
+                ))}
+              </div>
+            </div>
+          </Card.Body>
+        </Card>
       )}
+
+      <Card className="mb-4 performance-card">
+        <Card.Body>
+          <div className="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+            <div>
+              <Card.Title className="mb-1">نظرة سريعة على الأداء</Card.Title>
+              <div className="text-muted small">مقارنات خفيفة بين إنجازاتك الشهرية وأفضل فتراتك</div>
+            </div>
+            <div className="d-flex gap-2">
+              <Button variant="outline-light" size="sm" onClick={() => setShowPerformanceDetails((p) => !p)}>
+                {showPerformanceDetails ? 'إخفاء التفاصيل' : 'تفاصيل أكثر'}
+              </Button>
+              <Button variant="outline-success" size="sm" onClick={generateAiTip} disabled={aiLoading}>
+                {aiLoading ? 'جارٍ التحليل...' : 'نصائح بالذكاء الاصطناعي'}
+              </Button>
+            </div>
+          </div>
+
+          <Row className="g-3">
+            <Col md={4} sm={6}>
+              <div className="stat-tile">
+                <div className="label">نقاط اليوم</div>
+                <div className="value">{formatNumber(todayPoints)}</div>
+                <div className="muted small">من {executedServicesList.length} مهام منفذة</div>
+              </div>
+            </Col>
+            <Col md={4} sm={6}>
+              <div className="stat-tile">
+                <div className="label">تقدم المستوى</div>
+                <ProgressBar now={progressPercent} label={`${progressPercent}%`} visuallyHidden={false} />
+                <div className="muted small">المستوى الحالي: L{currentLevel}</div>
+              </div>
+            </Col>
+            <Col md={4} sm={12}>
+              <div className="stat-tile">
+                <div className="label">مقارنات سريعة</div>
+                {performanceComparison.map((item) => (
+                  <div key={item.label} className="mini-bar">
+                    <span className="mini-label">{item.label}</span>
+                    <div className="mini-track"><span style={{ width: `${item.value}%` }} /></div>
+                    <span className="mini-value">{item.value}%</span>
+                  </div>
+                ))}
+              </div>
+            </Col>
+          </Row>
+
+          {aiTip && (
+            <Alert variant="secondary" className="mt-3 mb-0">
+              <div className="fw-bold mb-1">مساعد الأداء (AI)</div>
+              <div className="small" style={{ whiteSpace: 'pre-line' }}>{aiTip}</div>
+            </Alert>
+          )}
+
+          {showPerformanceDetails && (
+            <div className="performance-detail mt-3">
+              <div className="d-flex flex-wrap gap-2 mb-2">
+                <Button size="sm" variant={performanceFilter === 'all' ? 'primary' : 'outline-primary'} onClick={() => setPerformanceFilter('all')}>الكل</Button>
+                <Button size="sm" variant={performanceFilter === 'booking' ? 'primary' : 'outline-primary'} onClick={() => setPerformanceFilter('booking')}>حجوزات</Button>
+                <Button size="sm" variant={performanceFilter === 'instant' ? 'primary' : 'outline-primary'} onClick={() => setPerformanceFilter('instant')}>خدمات فورية</Button>
+              </div>
+              {filteredServices.length === 0 ? (
+                <div className="text-muted small">لا توجد بيانات للفلتر الحالي.</div>
+              ) : (
+                <Row className="g-2">
+                  {filteredServices.slice(0, 6).map((srv, idx) => (
+                    <Col md={4} sm={6} key={`${srv.receiptNumber}-${idx}-perf`}>
+                      <div className="detail-tile">
+                        <div className="d-flex justify-content-between mb-1">
+                          <span className="badge bg-dark">{srv.source === 'instant' ? 'فوري' : 'حجز'}</span>
+                          <span className="badge bg-success">+{formatNumber(srv.points)} نقطة</span>
+                        </div>
+                        <div className="fw-bold">{srv.serviceName}</div>
+                        <div className="text-muted small">وصل: {srv.receiptNumber}</div>
+                        <div className="text-muted small">وقت: {formatTime(srv.executedAt)}</div>
+                      </div>
+                    </Col>
+                  ))}
+                </Row>
+              )}
+            </div>
+          )}
+        </Card.Body>
+      </Card>
 
       <Row className="mb-4 justify-content-center">
         <Col md={8} lg={6}>
