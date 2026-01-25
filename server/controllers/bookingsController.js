@@ -2,7 +2,16 @@ const Booking = require('../models/Booking');
 const Service = require('../models/Service');
 const Package = require('../models/Package');
 const User = require('../models/User');
+const { cacheAside, deleteByPrefix } = require('../services/cache');
 const { addPointsAndConvertInternal, removePointsAndCoinsInternal } = require('./usersController');
+
+const invalidateBookingRelated = async () => {
+  await Promise.all([
+    deleteByPrefix('bookings:'),
+    deleteByPrefix('dashboard:'),
+    deleteByPrefix('reports:')
+  ]);
+};
 
 exports.addBooking = async (req, res) => {
   const {
@@ -105,6 +114,7 @@ exports.addBooking = async (req, res) => {
     await booking.save();
     const populatedBooking = await Booking.findById(booking._id)
       .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy hairStraighteningExecutedBy hairDyeExecutedBy packageServices.executedBy');
+    await invalidateBookingRelated();
     res.json({ msg: 'Booking added successfully', booking: populatedBooking });
   } catch (err) {
     console.error(err);
@@ -224,6 +234,7 @@ exports.updateBooking = async (req, res) => {
       { new: true }
     ).populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy hairStraighteningExecutedBy hairDyeExecutedBy packageServices.executedBy');
     if (!booking) return res.status(404).json({ msg: 'Booking not found' });
+    await invalidateBookingRelated();
     res.json({ msg: 'Booking updated successfully', booking });
   } catch (err) {
     console.error(err);
@@ -235,6 +246,7 @@ exports.deleteBooking = async (req, res) => {
   try {
     const booking = await Booking.findByIdAndDelete(req.params.id);
     if (!booking) return res.status(404).json({ msg: 'Booking not found' });
+    await invalidateBookingRelated();
     res.json({ msg: 'Booking deleted successfully' });
   } catch (err) {
     console.error(err);
@@ -261,6 +273,7 @@ exports.addInstallment = async (req, res) => {
     await booking.save();
     const populatedBooking = await Booking.findById(booking._id)
       .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy');
+    await invalidateBookingRelated();
     res.json({ msg: 'Installment added successfully', booking: populatedBooking });
   } catch (err) {
     console.error(err);
@@ -271,33 +284,43 @@ exports.addInstallment = async (req, res) => {
 exports.getBookings = async (req, res) => {
   const { page = 1, limit = 50, search, date, receiptNumber } = req.query;
   try {
-    let query = {};
-    if (search) {
-      query = {
-        $or: [
-          { clientName: { $regex: search, $options: 'i' } },
-          { clientPhone: { $regex: search, $options: 'i' } }
-        ]
-      };
-    }
-    if (date) {
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-      query.eventDate = { $gte: startOfDay, $lte: endOfDay };
-    }
-    if (receiptNumber) {
-      query.receiptNumber = receiptNumber;
-    }
+    const key = `bookings:list:${JSON.stringify({ page, limit, search, date, receiptNumber })}`;
+    const payload = await cacheAside({
+      key,
+      ttlSeconds: 60,
+      staleSeconds: 120,
+      fetchFn: async () => {
+        let query = {};
+        if (search) {
+          query = {
+            $or: [
+              { clientName: { $regex: search, $options: 'i' } },
+              { clientPhone: { $regex: search, $options: 'i' } }
+            ]
+          };
+        }
+        if (date) {
+          const startOfDay = new Date(date);
+          startOfDay.setHours(0, 0, 0, 0);
+          const endOfDay = new Date(date);
+          endOfDay.setHours(23, 59, 59, 999);
+          query.eventDate = { $gte: startOfDay, $lte: endOfDay };
+        }
+        if (receiptNumber) {
+          query.receiptNumber = receiptNumber;
+        }
 
-    const bookings = await Booking.find(query)
-      .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy hairStraighteningExecutedBy hairDyeExecutedBy packageServices.executedBy')
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(parseInt(limit));
-    const total = await Booking.countDocuments(query);
-    res.json({ bookings, total, pages: Math.ceil(total / limit) });
+        const bookings = await Booking.find(query)
+          .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy hairStraighteningExecutedBy hairDyeExecutedBy packageServices.executedBy')
+          .sort({ createdAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(parseInt(limit));
+        const total = await Booking.countDocuments(query);
+        return { bookings, total, pages: Math.ceil(total / limit) };
+      }
+    });
+
+    res.json(payload);
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Server error' });
@@ -378,6 +401,7 @@ exports.executeService = async (req, res) => {
     await booking.save();
     const populatedBooking = await Booking.findById(booking._id)
       .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy packageServices.executedBy hairStraighteningExecutedBy hairDyeExecutedBy');
+    await invalidateBookingRelated();
     res.json({ msg: 'Service executed successfully', booking: populatedBooking, points });
   } catch (err) {
     console.error(err);
@@ -440,6 +464,7 @@ exports.resetService = async (req, res) => {
     const populatedBooking = await Booking.findById(booking._id)
       .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy packageServices.executedBy hairStraighteningExecutedBy hairDyeExecutedBy');
 
+    await invalidateBookingRelated();
     res.json({ msg: 'Service reset successfully', booking: populatedBooking, removedPoints: points });
   } catch (err) {
     console.error(err);

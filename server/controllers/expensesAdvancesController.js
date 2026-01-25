@@ -3,6 +3,15 @@ const Advance = require('../models/Advance');
 const Deduction = require('../models/Deduction');
 const User = require('../models/User');
 const mongoose = require('mongoose');
+const { cacheAside, deleteByPrefix } = require('../services/cache');
+
+const invalidateExpenseCaches = async () => {
+  await Promise.all([
+    deleteByPrefix('expenses:'),
+    deleteByPrefix('dashboard:'),
+    deleteByPrefix('reports:')
+  ]);
+};
 
 exports.addExpenseAdvance = async (req, res) => {
   const { type, details, amount, userId } = req.body;
@@ -20,6 +29,7 @@ exports.addExpenseAdvance = async (req, res) => {
       const expense = new Expense({ details, amount, userId: creatorId, createdBy: creatorId });
       await expense.save();
       const populatedExpense = await Expense.findById(expense._id).populate('userId createdBy', 'username');
+      await invalidateExpenseCaches();
       return res.json({ msg: 'تم إضافة المصروف بنجاح', item: populatedExpense, type: 'expense' });
     } else if (type === 'advance') {
       if (!userId || !amount || amount <= 0) {
@@ -39,6 +49,7 @@ exports.addExpenseAdvance = async (req, res) => {
       await User.updateOne({ _id: userId }, { $set: { remainingSalary: user.remainingSalary - amount } });
 
       const populatedAdvance = await Advance.findById(advance._id).populate('userId createdBy', 'username remainingSalary');
+      await invalidateExpenseCaches();
       return res.json({ msg: 'تم إضافة السلفة بنجاح', item: populatedAdvance, type: 'advance' });
     } else if (type === 'deduction') {
       if (!userId || !amount || amount <= 0 || !details) {
@@ -58,6 +69,7 @@ exports.addExpenseAdvance = async (req, res) => {
       await User.updateOne({ _id: userId }, { $set: { remainingSalary: user.remainingSalary - amount } });
 
       const populatedDeduction = await Deduction.findById(deduction._id).populate('userId createdBy', 'username remainingSalary');
+      await invalidateExpenseCaches();
       return res.json({ msg: 'تم إضافة الخصم الإداري بنجاح', item: populatedDeduction, type: 'deduction' });
     }
   } catch (err) {
@@ -88,6 +100,7 @@ exports.updateExpenseAdvance = async (req, res) => {
         { new: true }
       ).populate('userId createdBy', 'username');
       if (!expense) return res.status(404).json({ msg: 'المصروف غير موجود' });
+      await invalidateExpenseCaches();
       return res.json({ msg: 'تم تعديل المصروف بنجاح', item: expense, type: 'expense' });
     } else if (type === 'advance') {
       if (!userId || !amount || amount <= 0) {
@@ -120,7 +133,7 @@ exports.updateExpenseAdvance = async (req, res) => {
 
       // تحديث remainingSalary فقط
       await User.updateOne({ _id: userId }, { $set: { remainingSalary: user.remainingSalary - amount } });
-
+      await invalidateExpenseCaches();
       return res.json({ msg: 'تم تعديل السلفة بنجاح', item: advance, type: 'advance' });
     } else if (type === 'deduction') {
       if (!userId || !amount || amount <= 0 || !details) {
@@ -150,7 +163,7 @@ exports.updateExpenseAdvance = async (req, res) => {
       ).populate('userId createdBy', 'username remainingSalary');
 
       await User.updateOne({ _id: userId }, { $set: { remainingSalary: user.remainingSalary - amount } });
-
+      await invalidateExpenseCaches();
       return res.json({ msg: 'تم تعديل الخصم الإداري بنجاح', item: deduction, type: 'deduction' });
     }
   } catch (err) {
@@ -173,6 +186,7 @@ exports.deleteExpenseAdvance = async (req, res) => {
     if (type === 'expense') {
       const expense = await Expense.findByIdAndDelete(req.params.id);
       if (!expense) return res.status(404).json({ msg: 'المصروف غير موجود' });
+      await invalidateExpenseCaches();
       return res.json({ msg: 'تم حذف المصروف بنجاح', type: 'expense' });
     } else if (type === 'advance') {
       const advance = await Advance.findById(req.params.id);
@@ -187,6 +201,7 @@ exports.deleteExpenseAdvance = async (req, res) => {
       }
 
       await Advance.findByIdAndDelete(req.params.id);
+      await invalidateExpenseCaches();
       return res.json({ msg: 'تم حذف السلفة بنجاح', type: 'advance' });
     } else if (type === 'deduction') {
       const deduction = await Deduction.findById(req.params.id);
@@ -198,6 +213,7 @@ exports.deleteExpenseAdvance = async (req, res) => {
       }
 
       await Deduction.findByIdAndDelete(req.params.id);
+      await invalidateExpenseCaches();
       return res.json({ msg: 'تم حذف الخصم الإداري بنجاح', type: 'deduction' });
     }
   } catch (err) {
@@ -210,66 +226,76 @@ exports.getExpensesAdvances = async (req, res) => {
   const { page = 1, limit = 50, search } = req.query;
 
   try {
-    let expensesQuery = {};
-    let advancesQuery = {};
-    let deductionsQuery = {};
+    const key = `expenses:list:${JSON.stringify({ page, limit, search })}`;
+    const payload = await cacheAside({
+      key,
+      ttlSeconds: 60,
+      staleSeconds: 120,
+      fetchFn: async () => {
+        let expensesQuery = {};
+        let advancesQuery = {};
+        let deductionsQuery = {};
 
-    if (search) {
-      const users = await User.find({ username: { $regex: search, $options: 'i' } }).select('_id');
-      const userIds = users.map(user => user._id);
-      expensesQuery = {
-        $or: [
-          { details: { $regex: search, $options: 'i' } },
-          { userId: { $in: userIds } },
-          { createdBy: { $in: userIds } }
-        ]
-      };
-      advancesQuery = {
-        $or: [
-          { userId: { $in: userIds } },
-          { createdBy: { $in: userIds } }
-        ]
-      };
-      deductionsQuery = {
-        $or: [
-          { userId: { $in: userIds } },
-          { createdBy: { $in: userIds } },
-          { reason: { $regex: search, $options: 'i' } }
-        ]
-      };
-    }
+        if (search) {
+          const users = await User.find({ username: { $regex: search, $options: 'i' } }).select('_id');
+          const userIds = users.map(user => user._id);
+          expensesQuery = {
+            $or: [
+              { details: { $regex: search, $options: 'i' } },
+              { userId: { $in: userIds } },
+              { createdBy: { $in: userIds } }
+            ]
+          };
+          advancesQuery = {
+            $or: [
+              { userId: { $in: userIds } },
+              { createdBy: { $in: userIds } }
+            ]
+          };
+          deductionsQuery = {
+            $or: [
+              { userId: { $in: userIds } },
+              { createdBy: { $in: userIds } },
+              { reason: { $regex: search, $options: 'i' } }
+            ]
+          };
+        }
 
-    const expenses = await Expense.find(expensesQuery)
-      .populate('userId createdBy', 'username')
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(parseInt(limit));
+        const expenses = await Expense.find(expensesQuery)
+          .populate('userId createdBy', 'username')
+          .sort({ createdAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(parseInt(limit));
 
-    const advances = await Advance.find(advancesQuery)
-      .populate('userId createdBy', 'username remainingSalary')
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(parseInt(limit));
+        const advances = await Advance.find(advancesQuery)
+          .populate('userId createdBy', 'username remainingSalary')
+          .sort({ createdAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(parseInt(limit));
 
-    const deductions = await Deduction.find(deductionsQuery)
-      .populate('userId createdBy', 'username remainingSalary')
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(parseInt(limit));
+        const deductions = await Deduction.find(deductionsQuery)
+          .populate('userId createdBy', 'username remainingSalary')
+          .sort({ createdAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(parseInt(limit));
 
-    const totalExpenses = await Expense.countDocuments(expensesQuery);
-    const totalAdvances = await Advance.countDocuments(advancesQuery);
-    const totalDeductions = await Deduction.countDocuments(deductionsQuery);
-    const total = totalExpenses + totalAdvances + totalDeductions;
+        const totalExpenses = await Expense.countDocuments(expensesQuery);
+        const totalAdvances = await Advance.countDocuments(advancesQuery);
+        const totalDeductions = await Deduction.countDocuments(deductionsQuery);
+        const total = totalExpenses + totalAdvances + totalDeductions;
 
-    const items = [
-      ...expenses.map(item => ({ ...item._doc, type: 'expense' })),
-      ...advances.map(item => ({ ...item._doc, type: 'advance' })),
-      ...deductions.map(item => ({ ...item._doc, type: 'deduction', details: item.reason }))
-    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(0, parseInt(limit));
+        const items = [
+          ...expenses.map(item => ({ ...item._doc, type: 'expense' })),
+          ...advances.map(item => ({ ...item._doc, type: 'advance' })),
+          ...deductions.map(item => ({ ...item._doc, type: 'deduction', details: item.reason }))
+        ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          .slice(0, parseInt(limit));
 
-    return res.json({ items, total, pages: Math.ceil(total / limit) });
+        return { items, total, pages: Math.ceil(total / limit) };
+      }
+    });
+
+    return res.json(payload);
   } catch (err) {
     console.error('Error in getExpensesAdvances:', err);
     return res.status(500).json({ msg: 'خطأ في السيرفر' });

@@ -5,6 +5,7 @@ const Advance = require('../models/Advance');
 const Deduction = require('../models/Deduction');
 const Service = require('../models/Service');
 const User = require('../models/User');
+const { cacheAside } = require('../services/cache');
 
 const msInDay = 1000 * 60 * 60 * 24;
 const toNumber = (v) => Number(v) || 0;
@@ -251,7 +252,14 @@ exports.getDailyReport = async (req, res) => {
     const endDate = new Date(startDate);
     endDate.setHours(23, 59, 59, 999);
 
-    const payload = await aggregateReport({ startDate, endDate, includeOperations: true });
+    const cacheKey = `reports:daily:${startDate.toISOString().slice(0, 10)}`;
+    const payload = await cacheAside({
+      key: cacheKey,
+      ttlSeconds: 300,
+      staleSeconds: 600,
+      fetchFn: () => aggregateReport({ startDate, endDate, includeOperations: true })
+    });
+
     res.json(payload);
   } catch (err) {
     console.error('Error in getDailyReport:', err);
@@ -269,10 +277,20 @@ exports.getMonthlyReport = async (req, res) => {
     startDate.setHours(0, 0, 0, 0);
     const endDate = new Date(target.getFullYear(), target.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    const payload = await aggregateReport({ startDate, endDate, includeOperations: false, includeDailyBreakdown: true });
-    payload.meta = {
-      label: startDate.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' })
-    };
+    const cacheKey = `reports:monthly:${startDate.toISOString().slice(0, 7)}`;
+    const payload = await cacheAside({
+      key: cacheKey,
+      ttlSeconds: 300,
+      staleSeconds: 600,
+      fetchFn: async () => {
+        const data = await aggregateReport({ startDate, endDate, includeOperations: false, includeDailyBreakdown: true });
+        data.meta = {
+          label: startDate.toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' })
+        };
+        return data;
+      }
+    });
+
     res.json(payload);
   } catch (err) {
     console.error('Error in getMonthlyReport:', err);
@@ -292,11 +310,18 @@ exports.getRangeReport = async (req, res) => {
     startDate.setHours(0, 0, 0, 0);
     endDate.setHours(23, 59, 59, 999);
 
-    const payload = await aggregateReport({ startDate, endDate, includeOperations: false, includeDailyBreakdown: true });
-    payload.meta = {
-      from,
-      to
-    };
+    const cacheKey = `reports:range:${from || ''}:${to || ''}`;
+    const payload = await cacheAside({
+      key: cacheKey,
+      ttlSeconds: 300,
+      staleSeconds: 600,
+      fetchFn: async () => {
+        const data = await aggregateReport({ startDate, endDate, includeOperations: false, includeDailyBreakdown: true });
+        data.meta = { from, to };
+        return data;
+      }
+    });
+
     res.json(payload);
   } catch (err) {
     console.error('Error in getRangeReport:', err);
