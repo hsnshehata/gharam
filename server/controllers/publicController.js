@@ -1,4 +1,5 @@
 const Booking = require('../models/Booking');
+const InstantService = require('../models/InstantService');
 const GOOGLE_FIELDS = 'rating,user_ratings_total,reviews';
 
 const FALLBACK_RESPONSE = {
@@ -95,5 +96,30 @@ exports.getGoogleReviews = async (_req, res) => {
   } catch (err) {
     console.error('Google reviews error:', err.message);
     res.status(200).json(FALLBACK_RESPONSE);
+  }
+};
+
+// بحث سريع عن الوصل (حجز أو خدمة فورية) بدون إرجاع 404 لو片ته جهة واحدة فقط
+exports.findByReceipt = async (req, res) => {
+  const receiptNumber = (req.params.receiptNumber || '').toString().trim();
+  if (!receiptNumber) return res.status(400).json({ msg: 'رقم الوصل غير صالح' });
+
+  try {
+    const [booking, instantService] = await Promise.all([
+      Booking.findOne({ receiptNumber })
+        .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy hairStraighteningExecutedBy hairDyeExecutedBy packageServices.executedBy'),
+      InstantService.findOne({ receiptNumber })
+        .populate('employeeId', 'username')
+        .populate('services.executedBy', 'username')
+    ]);
+
+    if (!booking && !instantService) {
+      return res.status(404).json({ msg: 'لم يتم العثور على حجز أو خدمة فورية بهذا الرقم' });
+    }
+
+    return res.json({ booking, instantService });
+  } catch (err) {
+    console.error('Error in findByReceipt:', err);
+    return res.status(500).json({ msg: 'خطأ في السيرفر' });
   }
 };
