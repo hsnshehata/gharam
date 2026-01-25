@@ -7,12 +7,12 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { useToast } from '../components/ToastProvider';
 
 const COIN_COLORS = {
-  1: '#c0c7d1', // فضي
+  1: '#8e44ad', // أرجواني
   2: '#d4af37', // ذهبي
   3: '#e74c3c', // أحمر
   4: '#27ae60', // أخضر
   5: '#2980b9', // أزرق
-  6: '#8e44ad', // أرجواني
+  6: '#c0c7d1', // فضي
   default: '#2c3e50'
 };
 
@@ -103,26 +103,18 @@ function EmployeeDashboard({ user }) {
     }
     try {
       console.log('Searching for receipt:', normalized);
-      const [bookingRes, instantRes] = await Promise.allSettled([
-        axios.get(`/api/bookings/receipt/${normalized}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        }),
-        axios.get(`/api/instant-services/receipt/${normalized}`, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        })
-      ]);
+      const res = await axios.get(`/api/public/receipt/${normalized}`, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
 
-      const booking = bookingRes.status === 'fulfilled' ? bookingRes.value.data.booking : null;
-      const instantService = instantRes.status === 'fulfilled' ? instantRes.value.data.instantService : null;
-
-      if (booking) {
-        setPointsData({ type: 'booking', data: booking });
+      if (res.data.booking) {
+        setPointsData({ type: 'booking', data: res.data.booking });
         setShowPointsModal(true);
         return;
       }
 
-      if (instantService) {
-        setPointsData({ type: 'instant', data: instantService });
+      if (res.data.instantService) {
+        setPointsData({ type: 'instant', data: res.data.instantService });
         setShowPointsModal(true);
         return;
       }
