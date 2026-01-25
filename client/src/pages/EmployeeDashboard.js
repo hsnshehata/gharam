@@ -79,7 +79,7 @@ function EmployeeDashboard({ user }) {
       const weeklyPayloads = await Promise.all(days.map((d) => fetchExecutedByDate(d).catch(() => [])));
       const weeklyAggregated = weeklyPayloads.map((services, idx) => {
         const dayDate = new Date(days[idx]);
-        const label = dayDate.toLocaleDateString('ar-EG', { weekday: 'short' });
+        const label = `${dayDate.getDate()}/${dayDate.getMonth() + 1}`;
         const totals = services.reduce((acc, s) => {
           const pts = s.points || 0;
           acc.total += pts;
@@ -313,7 +313,9 @@ function EmployeeDashboard({ user }) {
   const allTimeCount = weeklyCount;
   const bookingTotal = useMemo(() => last7DaysSeries.reduce((sum, d) => sum + d.booking, 0), [last7DaysSeries]);
   const instantTotal = useMemo(() => last7DaysSeries.reduce((sum, d) => sum + d.instant, 0), [last7DaysSeries]);
-  const rankLabel = pointsSummary?.rank || 'غير متوفر';
+  const rankNumber = pointsSummary?.rank;
+  const teamSize = pointsSummary?.teamSize || 0;
+  const rankLabel = rankNumber ? `#${rankNumber}${teamSize ? ` من ${teamSize}` : ''}` : '—';
 
   const sparkPath = (arr) => {
     if (!arr.length) return '';
@@ -400,6 +402,8 @@ function EmployeeDashboard({ user }) {
         .badge-soft { background: rgba(0,0,0,0.05); color: var(--text); border: 1px solid var(--border); padding: 4px 8px; border-radius: 10px; font-size: 12px; }
         .battle-ai { background: var(--surface); border-radius: 12px; padding: 10px; border: 1px dashed var(--border); color: var(--text); }
         .battle-ai strong { color: var(--accent); }
+        .spark-labels { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; margin-top: 4px; direction: ltr; gap: 4px; }
+        .spark-labels span { flex: 1; text-align: center; white-space: nowrap; }
         @media (max-width: 768px) { .mini-vs { grid-template-columns: 1fr; } }
       `}</style>
       {pendingGifts.length > 0 && (
@@ -576,7 +580,7 @@ function EmployeeDashboard({ user }) {
                 <div className="label">مركزك</div>
                 <div className="value">{rankLabel}</div>
               </div>
-              <span className="text-muted" style={{ fontSize: 12 }}>ترتيب تقديري بين زملائك</span>
+              <span className="text-muted" style={{ fontSize: 12 }}>ترتيبك بإجمالي النقاط بين الفريق</span>
             </div>
             <div className="battle-chip">
               <div>
@@ -604,6 +608,11 @@ function EmployeeDashboard({ user }) {
                 <svg className="spark-svg" viewBox="0 0 220 90" preserveAspectRatio="none">
                   <path className="spark-line-total" d={sparkPath(last7DaysSeries.map((d) => d.total))} />
                 </svg>
+                <div className="spark-labels">
+                  {last7DaysSeries.map((d, idx) => (
+                    <span key={`total-label-${idx}`}>{d.label}</span>
+                  ))}
+                </div>
                 <div className="d-flex justify-content-between text-muted small mt-1">
                   <span>الإجمالي: {formatNumber(weeklyCount)}</span>
                   <span>آخر يوم: {formatNumber(last7DaysSeries[last7DaysSeries.length - 1]?.total || 0)}</span>
@@ -615,6 +624,11 @@ function EmployeeDashboard({ user }) {
                   <path className="spark-line-booking" d={sparkPath(last7DaysSeries.map((d) => d.booking))} />
                   <path className="spark-line-instant" d={sparkPath(last7DaysSeries.map((d) => d.instant))} />
                 </svg>
+                <div className="spark-labels">
+                  {last7DaysSeries.map((d, idx) => (
+                    <span key={`mix-label-${idx}`}>{d.label}</span>
+                  ))}
+                </div>
                 <div className="d-flex justify-content-between small mt-1" style={{ color: 'var(--muted)' }}>
                   <span className="badge-soft">حجوزات: {formatNumber(bookingTotal)}</span>
                   <span className="badge-soft">فوري: {formatNumber(instantTotal)}</span>
