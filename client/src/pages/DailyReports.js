@@ -174,8 +174,10 @@ function Reports() {
     const dailyRevenueData = options.dailyRevenueData || data.analytics?.dailyRevenue || [];
     const dailyTitle = options.dailyTitle || 'الدخل اليومي خلال الشهر';
     const dailyBadgeLabel = options.dailyBadgeLabel || data.analytics?.stats?.daysCount;
+    const dailyBadgeText = options.dailyBadgeText || 'أيام';
     const dailyNote = options.dailyNote || 'الأرقام تمثل إجمالي الدخل (حجوزات + خدمات فورية) لكل يوم.';
     const dailyControls = options.dailyControls;
+    const labelFormatter = options.labelFormatter || ((d) => (d.label ? d.label : d.date.slice(8, 10)));
 
     return (
     <>
@@ -199,12 +201,12 @@ function Reports() {
               <div className="section-head">
                 <h5 className="mb-1">{dailyTitle}</h5>
                 <div className="d-flex align-items-center gap-2 flex-wrap">
-                  <Badge bg="light" text="dark">أيام: {dailyBadgeLabel}</Badge>
+                  <Badge bg="light" text="dark">{dailyBadgeText}: {dailyBadgeLabel}</Badge>
                   {dailyControls}
                 </div>
               </div>
               <BarLines
-                data={dailyRevenueData.map((d) => ({ label: d.date.slice(8, 10), value: d.total }))}
+                data={dailyRevenueData.map((d) => ({ label: labelFormatter(d), value: d.total }))}
                 accent="#1fb6a6"
               />
               <div className="muted mt-2">{dailyNote}</div>
@@ -373,13 +375,17 @@ function Reports() {
             <div className="text-center"><Spinner animation="border" /></div>
           ) : rangeData && (
             (() => {
-              const monthlyTotals = monthlyFromDaily(rangeData.analytics?.dailyRevenue || []);
+              const monthlyTotals = monthlyFromDaily(rangeData.analytics?.dailyRevenue || [])
+                .sort((a, b) => b.total - a.total)
+                .slice(0, 5);
               return analyticsBlock(rangeData, {
-                dailyRevenueData: monthlyTotals.map((m) => ({ date: `${m.month}-01`, total: m.total })),
-                dailyTitle: 'الدخل الشهري خلال الفترة المختارة',
+                dailyRevenueData: monthlyTotals.map((m) => ({ date: `${m.month}-01`, total: m.total, label: m.month })),
+                dailyTitle: 'أعلى الشهور دخلاً في الفترة المختارة',
                 dailyBadgeLabel: monthlyTotals.length,
-                dailyNote: 'إجمالي الدخل (حجوزات + خدمات فورية) لكل شهر في الفترة.',
-                dailyControls: null
+                dailyBadgeText: 'شهور',
+                dailyNote: 'ترتيب أعلى 5 شهور دخلاً (حجوزات + خدمات فورية) خلال الفترة.',
+                dailyControls: null,
+                labelFormatter: (d) => d.label || (d.date ? d.date.slice(0, 7) : '')
               });
             })()
           )}

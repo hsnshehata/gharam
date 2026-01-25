@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import useSWR from 'swr';
 import { Container, Row, Col, Card, Button, Form, Modal, Pagination, Table } from 'react-bootstrap';
 import axios from 'axios';
-import { getServices } from '../utils/apiCache';
 import Select from 'react-select';
 import ReceiptPrint, { printReceiptElement } from './ReceiptPrint';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -10,9 +10,6 @@ import { useToast } from '../components/ToastProvider';
 
 function InstantServices({ user }) {
   const [formData, setFormData] = useState({ employeeId: '', services: [] });
-  const [instantServices, setInstantServices] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [services, setServices] = useState([]);
   const [total, setTotal] = useState(0);
   const { showToast } = useToast();
   const setMessage = useCallback((msg) => {
@@ -29,10 +26,45 @@ function InstantServices({ user }) {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [currentDetails, setCurrentDetails] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchNameReceipt, setSearchNameReceipt] = useState('');
   const [submitLoading, setSubmitLoading] = useState(false);
+
+  const tokenHeader = useMemo(() => ({ headers: { 'x-auth-token': localStorage.getItem('token') } }), []);
+
+  const { data: servicesData, error: servicesError } = useSWR(
+    '/api/packages/services',
+    (url) => axios.get(url, tokenHeader).then(res => res.data),
+    { dedupingInterval: 300000 }
+  );
+
+  const { data: usersData, error: usersError } = useSWR(
+    '/api/users',
+    (url) => axios.get(url, tokenHeader).then(res => res.data),
+    { dedupingInterval: 300000 }
+  );
+
+  const listKey = useMemo(
+    () => `/api/instant-services?page=${currentPage}&search=${encodeURIComponent(searchNameReceipt)}`,
+    [currentPage, searchNameReceipt]
+  );
+
+  const { data: instantData, error: instantError, isValidating: instantValidating, mutate: mutateInstant } = useSWR(
+    listKey,
+    (url) => axios.get(url, tokenHeader).then(res => res.data),
+    { revalidateOnFocus: true }
+  );
+
+  const services = servicesData || [];
+  const users = usersData || [];
+  const instantServices = instantData?.instantServices || [];
+  const totalPages = instantData?.pages || 1;
+
+  useEffect(() => {
+    if (servicesError || usersError || instantError) {
+      setMessage('خطأ في جلب البيانات');
+    }
+  }, [servicesError, usersError, instantError, setMessage]);
 
   // Custom styles للـ react-select — neutralized to use CSS variables (black/white theme)
   const customStyles = {
@@ -148,29 +180,6 @@ function InstantServices({ user }) {
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [servicesData, usersRes, instantRes] = await Promise.all([
-          getServices(),
-          axios.get('/api/users', { headers: { 'x-auth-token': localStorage.getItem('token') } }),
-          axios.get(`/api/instant-services?page=${currentPage}&search=${searchNameReceipt}`, { headers: { 'x-auth-token': localStorage.getItem('token') } })
-        ]);
-        console.log('Services response:', servicesData);
-        console.log('Users response:', usersRes.data);
-        console.log('Instant services response:', instantRes.data);
-        setServices(servicesData);
-        setUsers(usersRes.data);
-        setInstantServices(instantRes.data.instantServices);
-        setTotalPages(instantRes.data.pages);
-      } catch (err) {
-        console.error('Fetch error:', err.response?.data || err.message);
-        setMessage('خطأ في جلب البيانات');
-      }
-    };
-    fetchData();
-  }, [currentPage, searchNameReceipt, setMessage]);
-
-  useEffect(() => {
     const calculateTotal = () => {
       let tempTotal = 0;
       formData.services.forEach(id => {
@@ -197,18 +206,15 @@ function InstantServices({ user }) {
     setShowCreateModal(false);
     try {
       if (editItem) {
-        const res = await axios.put(`/api/instant-services/${editItem._id}`, submitData, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        setInstantServices(instantServices.map(s => (s._id === editItem._id ? res.data.instantService : s)));
+        const res = await axios.put(`/api/instant-services/${editItem._id}`, submitData, tokenHeader);
+        await mutateInstant();
         setMessage('تم تعديل الخدمة الفورية بنجاح');
         setCurrentReceipt(res.data.instantService);
         setShowReceiptModal(true);
       } else {
-        const res = await axios.post('/api/instant-services', submitData, {
-          headers: { 'x-auth-token': localStorage.getItem('token') }
-        });
-        setInstantServices([res.data.instantService, ...instantServices]);
+        const res = await axios.post('/api/instant-services', submitData, tokenHeader);
+        setCurrentPage(1);
+        await mutateInstant();
         setMessage('تم إضافة الخدمة الفورية بنجاح');
         setCurrentReceipt(res.data.instantService);
         setShowReceiptModal(true);
@@ -224,7 +230,6 @@ function InstantServices({ user }) {
   };
 
   const handleEdit = (service) => {
-    console.log('Editing service:', service);
     setEditItem(service);
     setFormData({
       employeeId: service.employeeId?._id || '',
@@ -238,10 +243,8 @@ function InstantServices({ user }) {
 
   const handleDelete = async () => {
     try {
-      await axios.delete(`/api/instant-services/${deleteItem._id}`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      setInstantServices(instantServices.filter(s => s._id !== deleteItem._id));
+      await axios.delete(`/api/instant-services/${deleteItem._id}`, tokenHeader);
+      await mutateInstant();
       setMessage('تم حذف الخدمة الفورية بنجاح');
       setShowDeleteModal(false);
       setDeleteItem(null);
@@ -253,7 +256,6 @@ function InstantServices({ user }) {
   };
 
   const handlePrint = (service) => {
-    console.log('Printing service:', service);
     setCurrentReceipt(service);
     setShowReceiptModal(true);
   };
@@ -272,24 +274,13 @@ function InstantServices({ user }) {
   };
 
   const handleShowDetails = (service) => {
-    console.log('Showing details for service:', service);
     setCurrentDetails(service);
     setShowDetailsModal(true);
   };
 
   const handleSearch = async () => {
-    try {
-      const res = await axios.get(`/api/instant-services?search=${searchNameReceipt}`, {
-        headers: { 'x-auth-token': localStorage.getItem('token') }
-      });
-      console.log('Search response:', res.data);
-      setInstantServices(res.data.instantServices);
-      setCurrentPage(1);
-      setTotalPages(res.data.pages);
-    } catch (err) {
-      console.error('Search error:', err.response?.data || err.message);
-      setMessage(err.response?.data?.msg || 'خطأ في البحث');
-    }
+    setCurrentPage(1);
+    await mutateInstant();
   };
 
   return (
