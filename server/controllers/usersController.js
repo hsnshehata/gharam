@@ -4,10 +4,16 @@ const InstantService = require('../models/InstantService');
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const { resetAllSalaries } = require('../services/salaryResetService');
+const { cacheAside, deleteByPrefix } = require('../services/cache');
 
 const LEVEL_THRESHOLDS = [0, 3000, 8000, 18000, 38000, 73000, 118000, 178000, 268000, 418000];
 const COIN_VALUES = [0, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600];
 const MAX_LEVEL = 10;
+
+const clearUserCache = async (userId) => {
+  if (!userId) return;
+  await deleteByPrefix(`user:${userId}:`);
+};
 
 const isInRange = (dateValue, start, end) => {
   if (!dateValue) return false;
@@ -73,6 +79,7 @@ const addPointsAndConvert = async (userId, amount, meta = {}) => {
   user.level = getLevel(user.totalPoints);
 
   await user.save();
+  await clearUserCache(userId);
   return user;
 };
 
@@ -96,6 +103,7 @@ const removePointsAndCoins = async (userId, matchFn) => {
   user.points = user.points.filter(p => p._id?.toString() !== pointIdStr);
 
   await user.save();
+  await clearUserCache(userId);
   return user;
 };
 
@@ -210,6 +218,7 @@ exports.giftPoints = async (req, res) => {
 
     user.points.push(giftPoint);
     await user.save();
+    await clearUserCache(user.id);
 
     res.json({ msg: 'تم إرسال الهدية، ستظهر للموظف حتى يفتحها', gift: giftPoint });
   } catch (err) {
@@ -250,6 +259,7 @@ exports.giftPointsBulk = async (req, res) => {
       const giftPoint = giftPointTemplate();
       user.points.push(giftPoint);
       await user.save();
+      await clearUserCache(user.id);
       sent += 1;
     }));
 
@@ -262,12 +272,20 @@ exports.giftPointsBulk = async (req, res) => {
 
 exports.listPendingGifts = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('points username');
-    if (!user) return res.status(404).json({ msg: 'User not found' });
-    ensureArrays(user);
-
-    const pendingGifts = (user.points || []).filter((p) => p.type === 'gift' && p.status === 'pending');
-    res.json({ gifts: pendingGifts });
+    const userId = req.user.id;
+    const key = `user:${userId}:gifts:pending`;
+    const payload = await cacheAside({
+      key,
+      ttlSeconds: 60,
+      staleSeconds: 120,
+      fetchFn: async () => {
+        const user = await User.findById(userId).select('points username');
+        if (!user) throw new Error('User not found');
+        ensureArrays(user);
+        return { gifts: (user.points || []).filter((p) => p.type === 'gift' && p.status === 'pending') };
+      }
+    });
+    res.json(payload);
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Server error' });
@@ -276,30 +294,41 @@ exports.listPendingGifts = async (req, res) => {
 
 exports.listTodayGifts = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('points username');
-    if (!user) return res.status(404).json({ msg: 'User not found' });
-    ensureArrays(user);
+    const userId = req.user.id;
+    const key = `user:${userId}:gifts:today`;
+    const payload = await cacheAside({
+      key,
+      ttlSeconds: 60,
+      staleSeconds: 120,
+      fetchFn: async () => {
+        const user = await User.findById(userId).select('points username');
+        if (!user) throw new Error('User not found');
+        ensureArrays(user);
 
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const end = new Date(start);
-    end.setDate(end.getDate() + 1);
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const end = new Date(start);
+        end.setDate(end.getDate() + 1);
 
-    const gifts = (user.points || []).filter((p) => {
-      if (p.type !== 'gift' || p.status !== 'applied') return false;
-      const dt = p.openedAt || p.date;
-      if (!dt) return false;
-      const d = new Date(dt);
-      return d >= start && d < end;
-    }).map((p) => ({
-      _id: p._id,
-      amount: p.amount,
-      note: p.note,
-      giftedByName: p.giftedByName || 'الإدارة',
-      openedAt: p.openedAt || p.date
-    }));
+        const gifts = (user.points || []).filter((p) => {
+          if (p.type !== 'gift' || p.status !== 'applied') return false;
+          const dt = p.openedAt || p.date;
+          if (!dt) return false;
+          const d = new Date(dt);
+          return d >= start && d < end;
+        }).map((p) => ({
+          _id: p._id,
+          amount: p.amount,
+          note: p.note,
+          giftedByName: p.giftedByName || 'الإدارة',
+          openedAt: p.openedAt || p.date
+        }));
 
-    res.json({ gifts });
+        return { gifts };
+      }
+    });
+
+    res.json(payload);
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Server error' });
@@ -326,6 +355,7 @@ exports.openGift = async (req, res) => {
     user.level = getLevel(user.totalPoints);
 
     await user.save();
+    await clearUserCache(user.id);
 
     res.json({ msg: 'تم فتح الهدية وإضافة النقاط', gift: target, totalPoints: user.totalPoints, convertiblePoints: user.convertiblePoints, level: user.level });
   } catch (err) {
@@ -372,6 +402,7 @@ exports.deductPoints = async (req, res) => {
     recomputeConvertible(user);
 
     await user.save();
+      await clearUserCache(user.id);
 
     res.json({ msg: 'تم الخصم وتسجيله', deduction: deductionPoint, totalPoints: user.totalPoints, convertiblePoints: user.convertiblePoints, level: user.level });
   } catch (err) {
@@ -394,47 +425,56 @@ exports.addPoints = async (req, res) => {
 exports.getPointsSummary = async (req, res) => {
   try {
     const userId = req.user.id;
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ msg: 'User not found' });
-    ensureArrays(user);
+    const key = `user:${userId}:summary`;
+    const payload = await cacheAside({
+      key,
+      ttlSeconds: 60,
+      staleSeconds: 120,
+      fetchFn: async () => {
+        const user = await User.findById(userId);
+        if (!user) throw new Error('User not found');
+        ensureArrays(user);
 
-    // تأكد من اتساق الرصيد القابل للتحويل مع إجمالي النقاط والعملات
-    recomputeConvertible(user);
-    await user.save();
+        recomputeConvertible(user);
+        await user.save();
 
-    const totalPoints = user.totalPoints || 0;
-    const level = user.level || getLevel(totalPoints);
-    const currentLevelStart = LEVEL_THRESHOLDS[level - 1] || 0;
-    const nextLevelTarget = level >= MAX_LEVEL ? LEVEL_THRESHOLDS[MAX_LEVEL - 1] : LEVEL_THRESHOLDS[level];
-    const progressCurrent = Math.max(0, totalPoints - currentLevelStart);
-    const progressNeeded = level >= MAX_LEVEL ? 0 : Math.max(1, nextLevelTarget - currentLevelStart);
-    const progressPercent = level >= MAX_LEVEL ? 100 : Math.min(100, Math.round((progressCurrent / progressNeeded) * 100));
+        const totalPoints = user.totalPoints || 0;
+        const level = user.level || getLevel(totalPoints);
+        const currentLevelStart = LEVEL_THRESHOLDS[level - 1] || 0;
+        const nextLevelTarget = level >= MAX_LEVEL ? LEVEL_THRESHOLDS[MAX_LEVEL - 1] : LEVEL_THRESHOLDS[level];
+        const progressCurrent = Math.max(0, totalPoints - currentLevelStart);
+        const progressNeeded = level >= MAX_LEVEL ? 0 : Math.max(1, nextLevelTarget - currentLevelStart);
+        const progressPercent = level >= MAX_LEVEL ? 100 : Math.min(100, Math.round((progressCurrent / progressNeeded) * 100));
 
-    const coins = user.efficiencyCoins || [];
-    const coinsByLevel = coins.reduce((acc, c) => {
-      acc[c.level] = (acc[c.level] || 0) + 1;
-      return acc;
-    }, {});
-    const coinsTotalValue = coins.reduce((sum, c) => sum + (c.value || 0), 0);
+        const coins = user.efficiencyCoins || [];
+        const coinsByLevel = coins.reduce((acc, c) => {
+          acc[c.level] = (acc[c.level] || 0) + 1;
+          return acc;
+        }, {});
+        const coinsTotalValue = coins.reduce((sum, c) => sum + (c.value || 0), 0);
 
-    res.json({
-      totalPoints,
-      level,
-      currentCoinValue: getCoinValue(level),
-      convertiblePoints: user.convertiblePoints || 0,
-      remainingSalary: user.remainingSalary || 0,
-      coins: {
-        totalCount: coins.length,
-        totalValue: coinsTotalValue,
-        byLevel: coinsByLevel
-      },
-      progress: {
-        current: progressCurrent,
-        target: progressNeeded,
-        nextLevelTarget,
-        percent: progressPercent
+        return {
+          totalPoints,
+          level,
+          currentCoinValue: getCoinValue(level),
+          convertiblePoints: user.convertiblePoints || 0,
+          remainingSalary: user.remainingSalary || 0,
+          coins: {
+            totalCount: coins.length,
+            totalValue: coinsTotalValue,
+            byLevel: coinsByLevel
+          },
+          progress: {
+            current: progressCurrent,
+            target: progressNeeded,
+            nextLevelTarget,
+            percent: progressPercent
+          }
+        };
       }
     });
+
+    res.json(payload);
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Server error' });
@@ -469,6 +509,7 @@ exports.convertPointsToCoins = async (req, res) => {
     user.level = getLevel(user.totalPoints || 0);
 
     await user.save();
+    await clearUserCache(user.id);
 
     res.json({
       msg: 'تم تحويل النقاط إلى عملات',
@@ -536,6 +577,7 @@ exports.redeemCoins = async (req, res) => {
   }
 };
 
+    await clearUserCache(user.id);
 // جلب كل الخدمات اللي نفذها الموظف في تاريخ محدد (حسب وقت التنفيذ الفعلي)
 exports.getExecutedServices = async (req, res) => {
   const { date } = req.query;
@@ -547,7 +589,13 @@ exports.getExecutedServices = async (req, res) => {
   end.setHours(23, 59, 59, 999);
 
   try {
-    const bookings = await Booking.find({
+    const key = `user:${employeeId}:executed:${start.toISOString().slice(0, 10)}`;
+    const payload = await cacheAside({
+      key,
+      ttlSeconds: 60,
+      staleSeconds: 120,
+      fetchFn: async () => {
+        const bookings = await Booking.find({
       $or: [
         {
           packageServices: {
@@ -569,13 +617,13 @@ exports.getExecutedServices = async (req, res) => {
           hairDyeExecutedAt: { $gte: start, $lte: end }
         }
       ]
-    })
-      .select('receiptNumber clientName packageServices hairStraightening hairStraighteningPrice hairStraighteningExecuted hairStraighteningExecutedBy hairStraighteningExecutedAt hairDye hairDyePrice hairDyeExecuted hairDyeExecutedBy hairDyeExecutedAt createdAt')
-      .populate('packageServices.executedBy', 'username')
-      .populate('hairStraighteningExecutedBy hairDyeExecutedBy', 'username')
-      .lean();
+        })
+          .select('receiptNumber clientName packageServices hairStraightening hairStraighteningPrice hairStraighteningExecuted hairStraighteningExecutedBy hairStraighteningExecutedAt hairDye hairDyePrice hairDyeExecuted hairDyeExecutedBy hairDyeExecutedAt createdAt')
+          .populate('packageServices.executedBy', 'username')
+          .populate('hairStraighteningExecutedBy hairDyeExecutedBy', 'username')
+          .lean();
 
-    const instantServices = await InstantService.find({
+        const instantServices = await InstantService.find({
       services: {
         $elemMatch: {
           executed: true,
@@ -583,78 +631,82 @@ exports.getExecutedServices = async (req, res) => {
           executedAt: { $gte: start, $lte: end }
         }
       }
-    })
-      .select('receiptNumber services createdAt')
-      .populate('services.executedBy', 'username')
-      .lean();
+        })
+          .select('receiptNumber services createdAt')
+          .populate('services.executedBy', 'username')
+          .lean();
 
-    const executedList = [];
+        const executedList = [];
 
-    const pushItem = (payload) => executedList.push(payload);
+        const pushItem = (payload) => executedList.push(payload);
 
-    bookings.forEach((b) => {
-      (b.packageServices || []).forEach((srv) => {
-        if (srv.executed && srv.executedBy && isInRange(srv.executedAt, start, end)) {
-          pushItem({
-            source: 'booking',
-            receiptNumber: b.receiptNumber || '-',
-            serviceName: srv.name || 'خدمة باكدج',
-            clientName: b.clientName || '—',
-            points: Math.round((srv.price || 0) * 0.15),
-            executedAt: srv.executedAt || b.createdAt,
-            executedBy: srv.executedBy?.username || null
+        bookings.forEach((b) => {
+          (b.packageServices || []).forEach((srv) => {
+            if (srv.executed && srv.executedBy && isInRange(srv.executedAt, start, end)) {
+              pushItem({
+                source: 'booking',
+                receiptNumber: b.receiptNumber || '-',
+                serviceName: srv.name || 'خدمة باكدج',
+                clientName: b.clientName || '—',
+                points: Math.round((srv.price || 0) * 0.15),
+                executedAt: srv.executedAt || b.createdAt,
+                executedBy: srv.executedBy?.username || null
+              });
+            }
           });
-        }
-      });
 
-      if (b.hairStraighteningExecuted && b.hairStraighteningExecutedBy && isInRange(b.hairStraighteningExecutedAt, start, end)) {
-        pushItem({
-          source: 'booking',
-          receiptNumber: b.receiptNumber || '-',
-          serviceName: 'فرد الشعر',
-          clientName: b.clientName || '—',
-          points: Math.round((b.hairStraighteningPrice || 0) * 0.15),
-          executedAt: b.hairStraighteningExecutedAt || b.createdAt,
-          executedBy: b.hairStraighteningExecutedBy?.username || null
+          if (b.hairStraighteningExecuted && b.hairStraighteningExecutedBy && isInRange(b.hairStraighteningExecutedAt, start, end)) {
+            pushItem({
+              source: 'booking',
+              receiptNumber: b.receiptNumber || '-',
+              serviceName: 'فرد الشعر',
+              clientName: b.clientName || '—',
+              points: Math.round((b.hairStraighteningPrice || 0) * 0.15),
+              executedAt: b.hairStraighteningExecutedAt || b.createdAt,
+              executedBy: b.hairStraighteningExecutedBy?.username || null
+            });
+          }
+
+          if (b.hairDyeExecuted && b.hairDyeExecutedBy && isInRange(b.hairDyeExecutedAt, start, end)) {
+            pushItem({
+              source: 'booking',
+              receiptNumber: b.receiptNumber || '-',
+              serviceName: 'صبغة الشعر',
+              clientName: b.clientName || '—',
+              points: Math.round((b.hairDyePrice || 0) * 0.15),
+              executedAt: b.hairDyeExecutedAt || b.createdAt,
+              executedBy: b.hairDyeExecutedBy?.username || null
+            });
+          }
         });
-      }
 
-      if (b.hairDyeExecuted && b.hairDyeExecutedBy && isInRange(b.hairDyeExecutedAt, start, end)) {
-        pushItem({
-          source: 'booking',
-          receiptNumber: b.receiptNumber || '-',
-          serviceName: 'صبغة الشعر',
-          clientName: b.clientName || '—',
-          points: Math.round((b.hairDyePrice || 0) * 0.15),
-          executedAt: b.hairDyeExecutedAt || b.createdAt,
-          executedBy: b.hairDyeExecutedBy?.username || null
-        });
-      }
-    });
-
-    instantServices.forEach((inst) => {
-      (inst.services || []).forEach((srv) => {
-        if (srv.executed && srv.executedBy && isInRange(srv.executedAt, start, end)) {
-          pushItem({
-            source: 'instant',
-            receiptNumber: inst.receiptNumber || '-',
-            serviceName: srv.name || 'خدمة فورية',
-            clientName: '—',
-            points: Math.round((srv.price || 0) * 0.15),
-            executedAt: srv.executedAt || inst.createdAt,
-            executedBy: srv.executedBy?.username || null
+        instantServices.forEach((inst) => {
+          (inst.services || []).forEach((srv) => {
+            if (srv.executed && srv.executedBy && isInRange(srv.executedAt, start, end)) {
+              pushItem({
+                source: 'instant',
+                receiptNumber: inst.receiptNumber || '-',
+                serviceName: srv.name || 'خدمة فورية',
+                clientName: '—',
+                points: Math.round((srv.price || 0) * 0.15),
+                executedAt: srv.executedAt || inst.createdAt,
+                executedBy: srv.executedBy?.username || null
+              });
+            }
           });
-        }
-      });
+        });
+
+        executedList.sort((a, b) => {
+          const aTime = a.executedAt ? new Date(a.executedAt).getTime() : 0;
+          const bTime = b.executedAt ? new Date(b.executedAt).getTime() : 0;
+          return bTime - aTime;
+        });
+
+        return { services: executedList };
+      }
     });
 
-    executedList.sort((a, b) => {
-      const aTime = a.executedAt ? new Date(a.executedAt).getTime() : 0;
-      const bTime = b.executedAt ? new Date(b.executedAt).getTime() : 0;
-      return bTime - aTime;
-    });
-
-    return res.json({ services: executedList });
+    return res.json(payload);
   } catch (err) {
     console.error('Error in getExecutedServices:', err);
     return res.status(500).json({ msg: 'خطأ في السيرفر' });
