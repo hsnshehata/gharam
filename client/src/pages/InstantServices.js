@@ -49,13 +49,13 @@ function InstantServices({ user }) {
     [currentPage, searchNameReceipt]
   );
 
-  const { data: instantData, error: instantError, isValidating: instantValidating, mutate: mutateInstant } = useSWR(
+  const { data: instantData, error: instantError, mutate: mutateInstant } = useSWR(
     listKey,
     (url) => axios.get(url, tokenHeader).then(res => res.data),
     { revalidateOnFocus: true }
   );
 
-  const services = servicesData || [];
+  const services = useMemo(() => servicesData || [], [servicesData]);
   const users = usersData || [];
   const instantServices = instantData?.instantServices || [];
   const totalPages = instantData?.pages || 1;
