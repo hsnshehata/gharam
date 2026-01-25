@@ -564,6 +564,8 @@ exports.redeemCoins = async (req, res) => {
 
     await user.save();
 
+    await clearUserCache(user.id);
+
     res.json({
       msg: 'تم استبدال العملات وإضافتها للراتب الحالي',
       redeemedCoins: coinsToRedeem.length,
@@ -576,8 +578,6 @@ exports.redeemCoins = async (req, res) => {
     res.status(500).json({ msg: 'Server error' });
   }
 };
-
-    await clearUserCache(user.id);
 // جلب كل الخدمات اللي نفذها الموظف في تاريخ محدد (حسب وقت التنفيذ الفعلي)
 exports.getExecutedServices = async (req, res) => {
   const { date } = req.query;
