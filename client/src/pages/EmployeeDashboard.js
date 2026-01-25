@@ -13,13 +13,12 @@ const COIN_COLORS = {
   4: '#27ae60', // أخضر
   5: '#2980b9', // أزرق
   6: '#c0c7d1', // فضي
-  default: '#2c3e50'
+  default: '#95a5a6'
 };
-
 function EmployeeDashboard({ user }) {
+  const [executedServices, setExecutedServices] = useState([]);
   const [date] = useState(new Date().toISOString().split('T')[0]);
   const [receiptNumber, setReceiptNumber] = useState('');
-  const [executedServices, setExecutedServices] = useState([]);
   const [showPointsModal, setShowPointsModal] = useState(false);
   const [pointsData, setPointsData] = useState(null);
   const [showQrModal, setShowQrModal] = useState(false);
@@ -32,12 +31,19 @@ function EmployeeDashboard({ user }) {
   const [convertCelebration, setConvertCelebration] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
-  const [showBattleDetails, setShowBattleDetails] = useState(false);
-  const [performanceFilter, setPerformanceFilter] = useState('all');
-  const [aiTip, setAiTip] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiTip, setAiTip] = useState('');
+  const [isDark, setIsDark] = useState(() => (window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : false));
   const qrCodeScanner = useRef(null);
   const { showToast } = useToast();
+
+  useEffect(() => {
+    if (!window.matchMedia) return () => {};
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e) => setIsDark(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const fetchPointsSummary = useCallback(async () => {
     const pointsRes = await axios.get(`/api/users/points/summary`, {
@@ -281,14 +287,65 @@ function EmployeeDashboard({ user }) {
   const executedServicesList = useMemo(() => executedServices, [executedServices]);
   const todayPoints = useMemo(() => executedServicesList.reduce((sum, s) => sum + (s.points || 0), 0), [executedServicesList]);
 
-  const battleScore = Math.min(100, Math.round(progressPercent * 0.7 + (todayPoints > 0 ? 10 : 0)));
-  const teamPulse = Math.min(100, Math.max(progressPercent - 10, 25));
-  const filteredServices = useMemo(() => {
-    if (performanceFilter === 'instant') return executedServicesList.filter((s) => s.source === 'instant');
-    if (performanceFilter === 'booking') return executedServicesList.filter((s) => s.source === 'booking');
-    return executedServicesList;
-  }, [performanceFilter, executedServicesList]);
+  const last7DaysSeries = useMemo(() => {
+    const result = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i -= 1) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      d.setHours(0, 0, 0, 0);
+      const next = new Date(d);
+      next.setDate(d.getDate() + 1);
 
+      const dayPoints = executedServicesList
+        .filter((s) => {
+          const dt = s.executedAt ? new Date(s.executedAt) : null;
+          return dt && dt >= d && dt < next;
+        })
+        .reduce((sum, s) => sum + (s.points || 0), 0);
+
+      const bookingPoints = executedServicesList
+        .filter((s) => s.source === 'booking')
+        .filter((s) => {
+          const dt = s.executedAt ? new Date(s.executedAt) : null;
+          return dt && dt >= d && dt < next;
+        })
+        .reduce((sum, s) => sum + (s.points || 0), 0);
+
+      const instantPoints = executedServicesList
+        .filter((s) => s.source === 'instant')
+        .filter((s) => {
+          const dt = s.executedAt ? new Date(s.executedAt) : null;
+          return dt && dt >= d && dt < next;
+        })
+        .reduce((sum, s) => sum + (s.points || 0), 0);
+
+      result.push({ label: d.toLocaleDateString('en-GB', { weekday: 'short' }), total: dayPoints, booking: bookingPoints, instant: instantPoints });
+    }
+    return result;
+  }, [executedServicesList]);
+
+  const weeklyCount = useMemo(() => last7DaysSeries.reduce((sum, d) => sum + d.total, 0), [last7DaysSeries]);
+  const monthlyCount = weeklyCount; // بيانات شهرية غير متاحة حالياً
+  const allTimeCount = weeklyCount; // بيانات تاريخية غير متاحة حالياً
+  const bookingTotal = useMemo(() => last7DaysSeries.reduce((sum, d) => sum + d.booking, 0), [last7DaysSeries]);
+  const instantTotal = useMemo(() => last7DaysSeries.reduce((sum, d) => sum + d.instant, 0), [last7DaysSeries]);
+  const rankLabel = pointsSummary?.rank || 'غير متوفر';
+
+  const sparkPath = (arr) => {
+    if (!arr.length) return '';
+    const w = 220;
+    const h = 90;
+    const max = Math.max(...arr, 1);
+    const min = Math.min(...arr, 0);
+    const span = max - min || 1;
+    const step = arr.length === 1 ? w : w / (arr.length - 1);
+    return arr.map((v, i) => {
+      const x = i * step;
+      const y = h - ((v - min) / span) * h;
+      return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+    }).join(' ');
+  };
   const generateAiTip = useCallback(async () => {
     if (!process.env.REACT_APP_OPENAI_API_KEY) {
       showToast('ضبط REACT_APP_OPENAI_API_KEY قبل طلب النصائح', 'warning');
@@ -302,7 +359,7 @@ function EmployeeDashboard({ user }) {
           { role: 'system', content: 'انت مدرب ألعاب استراتيجية يشجع الموظفين بنصايح قصيرة وعملية. اجعل النص بالعربية الفصحى المبسطة.' },
           {
             role: 'user',
-            content: `الموظف مستوى L${pointsSummary?.level || 1}، نقاط كلية ${pointsSummary?.totalPoints || 0}، تقدم للمستوى ${pointsSummary?.progress?.percent || 0}%, عمل اليوم ${todayPoints} نقطة من ${executedServicesList.length} مهام، الفلتر ${performanceFilter}. اعطني 3 نصايح وتشجيع سريع وبالترقيم.`
+            content: `حلل الأداء: المستوى L${pointsSummary?.level || 1}، إجمالي النقاط ${pointsSummary?.totalPoints || 0}، التقدم ${pointsSummary?.progress?.percent || 0}%. نقاط اليوم ${todayPoints} من ${executedServicesList.length} خدمة. اعطني تحليل مختصر يبرز نقاط القوة، أولويات تحسين قريبة، والفارق مع أقرب زملاء في نفس نوع الخدمات (حجوزات/فوري)، ثم 3 توصيات عملية بالترقيم.`
           }
         ],
         temperature: 0.6,
@@ -327,41 +384,57 @@ function EmployeeDashboard({ user }) {
     } finally {
       setAiLoading(false);
     }
-  }, [pointsSummary?.level, pointsSummary?.totalPoints, pointsSummary?.progress?.percent, todayPoints, executedServicesList.length, performanceFilter, showToast]);
+  }, [pointsSummary?.level, pointsSummary?.totalPoints, pointsSummary?.progress?.percent, todayPoints, executedServicesList.length, showToast]);
 
   return (
     <Container className="mt-5">
       <style>{`
-        .battle-card { background: linear-gradient(135deg, #0f1b2d, #16263d); color: #eef5ff; border: 1px solid #233651; box-shadow: 0 14px 38px rgba(0,0,0,0.25); position: relative; overflow: hidden; }
+        :root {
+          --bg: ${isDark ? '#0f1b2d' : '#f4f6fb'};
+          --panel: ${isDark ? '#16263d' : '#ffffff'};
+          --text: ${isDark ? '#eef5ff' : '#0f1b2d'};
+          --muted: ${isDark ? '#bcd4ff' : '#4a5875'};
+          --border: ${isDark ? '#233651' : '#d7ddeb'};
+          --accent: ${isDark ? '#ffdd7a' : '#f2a900'};
+          --accent2: ${isDark ? '#7cffe7' : '#4c8dff'};
+          --chip: ${isDark ? 'rgba(255,255,255,0.06)' : '#f3f6fb'};
+          --chip-border: ${isDark ? 'rgba(255,255,255,0.1)' : '#e2e8f5'};
+          --grid-line: ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)'};
+          --line1: ${isDark ? '#7cffe7' : '#1d7ed6'};
+          --line2: ${isDark ? '#4fa3ff' : '#f28b30'};
+          --shadow: ${isDark ? '0 14px 38px rgba(0,0,0,0.25)' : '0 12px 28px rgba(0,0,0,0.15)'};
+        }
+        .battle-card { background: linear-gradient(135deg, var(--bg), var(--panel)); color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow); position: relative; overflow: hidden; }
         .battle-card::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 12% 20%, rgba(255,255,255,0.08), transparent 35%), radial-gradient(circle at 80% 10%, rgba(255,215,128,0.12), transparent 32%), radial-gradient(circle at 50% 80%, rgba(64,170,255,0.08), transparent 38%); pointer-events: none; }
-        .battle-glow { position: absolute; inset: 0; opacity: 0.35; background: radial-gradient(circle at 30% 50%, rgba(62,162,255,0.24), transparent 40%); filter: blur(40px); }
-        .battle-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px); background-size: 36px 36px; opacity: 0.4; }
+        .battle-glow { position: absolute; inset: 0; opacity: 0.25; background: radial-gradient(circle at 30% 50%, rgba(62,162,255,0.24), transparent 40%); filter: blur(40px); }
+        .battle-grid { position: absolute; inset: 0; background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px); background-size: 36px 36px; opacity: 0.5; }
         .battle-header { position: relative; z-index: 1; }
-        .battle-title { font-size: 20px; font-weight: 800; letter-spacing: 0.6px; }
-        .battle-sub { color: #bcd4ff; font-size: 13px; }
+        .battle-title { font-size: 20px; font-weight: 800; letter-spacing: 0.6px; color: var(--text); }
+        .battle-sub { color: var(--muted); font-size: 13px; }
         .battle-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 12px; margin-top: 14px; position: relative; z-index: 1; }
-        .battle-chip { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; align-items: center; }
-        .battle-chip .label { color: #bcd4ff; font-size: 12px; }
-        .battle-chip .value { font-weight: 800; font-size: 18px; color: #ffdd7a; }
+        .battle-chip { background: var(--chip); border: 1px solid var(--chip-border); border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .battle-chip .label { color: var(--muted); font-size: 12px; }
+        .battle-chip .value { font-weight: 800; font-size: 18px; color: var(--accent); }
         .battle-bar { background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; height: 12px; }
-        .battle-bar span { display: block; height: 100%; background: linear-gradient(90deg, #7cffe7, #4fa3ff); }
+        .battle-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent2), var(--line2)); }
         .battle-section { position: relative; z-index: 1; margin-top: 14px; }
-        .battle-section h6 { color: #bcd4ff; font-weight: 700; font-size: 14px; margin-bottom: 8px; }
-        .mini-vs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-        .mini-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 10px; }
-        .mini-card .label { color: #bcd4ff; font-size: 12px; }
-        .mini-card .value { color: #fff; font-weight: 800; font-size: 16px; }
-        .mini-card .tag { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; margin-top: 4px; background: rgba(255,255,255,0.09); color: #ffdd7a; }
+        .battle-section h6 { color: var(--muted); font-weight: 700; font-size: 14px; margin-bottom: 8px; }
+        .mini-vs { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 12px; }
+        .mini-card { background: var(--chip); border: 1px solid var(--chip-border); border-radius: 12px; padding: 12px; }
+        .mini-card .label { color: var(--muted); font-size: 12px; }
+        .mini-card .value { color: var(--text); font-weight: 800; font-size: 16px; }
+        .mini-card .tag { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; margin-top: 4px; background: rgba(255,255,255,0.09); color: var(--accent); }
         .battle-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
         .battle-btn { border-radius: 12px; }
-        .battle-detail { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; margin-top: 10px; }
-        .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 10px; }
-        .detail-tile-neo { background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px; }
-        .detail-tile-neo .meta { color: #bcd4ff; font-size: 12px; }
-        .detail-tile-neo .title { color: #fff; font-weight: 700; }
-        .detail-tile-neo .pill { display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 11px; background: rgba(255,255,255,0.08); color: #7cffe7; }
-        .battle-ai { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 10px; border: 1px dashed rgba(255,255,255,0.18); color: #e6efff; }
-        .battle-ai strong { color: #ffdd7a; }
+        .chart-card { background: var(--chip); border: 1px solid var(--chip-border); border-radius: 12px; padding: 12px; }
+        .chart-title { color: var(--muted); font-weight: 700; font-size: 13px; margin-bottom: 6px; }
+        .spark-svg { width: 100%; height: 90px; }
+        .spark-line-total { stroke: var(--line1); fill: none; stroke-width: 2.5; }
+        .spark-line-booking { stroke: var(--line1); fill: none; stroke-width: 2; }
+        .spark-line-instant { stroke: var(--line2); fill: none; stroke-width: 2; }
+        .badge-soft { background: rgba(0,0,0,0.06); color: var(--text); border: 1px solid var(--chip-border); padding: 4px 8px; border-radius: 10px; font-size: 12px; }
+        .battle-ai { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 10px; border: 1px dashed var(--chip-border); color: var(--text); }
+        .battle-ai strong { color: var(--accent); }
         @media (max-width: 768px) { .mini-vs { grid-template-columns: 1fr; } }
       `}</style>
       {pendingGifts.length > 0 && (
@@ -508,15 +581,15 @@ function EmployeeDashboard({ user }) {
         <Card.Body className="battle-header">
           <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div>
-              <div className="battle-title">لوحة المعركة اليومية</div>
-              <div className="battle-sub">ستايل ألعاب استراتيجية — جاهز تحقق إنجازاتك</div>
+              <div className="battle-title">إحصائيات ذكية</div>
+              <div className="battle-sub">عرض سريع لأداء اليوم مع مقارنة الأيام اللي فاتت</div>
             </div>
             <div className="battle-actions">
-              <Button variant="outline-light" size="sm" className="battle-btn" onClick={() => setShowBattleDetails((p) => !p)}>
-                {showBattleDetails ? 'إخفاء التفاصيل' : 'عرض المزيد'}
+              <Button variant={isDark ? 'light' : 'dark'} size="sm" className="battle-btn" onClick={() => setIsDark((p) => !p)}>
+                {isDark ? 'وضع فاتح' : 'وضع داكن'}
               </Button>
               <Button variant="success" size="sm" className="battle-btn" onClick={generateAiTip} disabled={aiLoading}>
-                {aiLoading ? 'جارٍ التحليل...' : 'نصائح الذكاء الاصطناعي'}
+                {aiLoading ? 'جارٍ التحليل...' : 'تحليل أداء بالذكاء الاصطناعي'}
               </Button>
             </div>
           </div>
@@ -538,10 +611,10 @@ function EmployeeDashboard({ user }) {
             </div>
             <div className="battle-chip">
               <div>
-                <div className="label">قوة المعركة</div>
-                <div className="value">{battleScore}%</div>
+                <div className="label">مركزك</div>
+                <div className="value">{rankLabel}</div>
               </div>
-              <span className="text-muted" style={{ fontSize: 12 }}>مختصرة من تقدمك الحالي</span>
+              <span className="text-muted" style={{ fontSize: 12 }}>ترتيب تقديري بين زملائك</span>
             </div>
             <div className="battle-chip">
               <div>
@@ -553,65 +626,53 @@ function EmployeeDashboard({ user }) {
           </div>
 
           <div className="battle-section">
-            <h6>الشريط الرئيسي</h6>
+            <h6>التقدم نحو المستوى التالي</h6>
             <div className="battle-bar"><span style={{ width: `${progressPercent}%` }} /></div>
-            <div className="d-flex justify-content-between mt-1" style={{ color: '#bcd4ff', fontSize: 12 }}>
+            <div className="d-flex justify-content-between mt-1" style={{ color: 'var(--muted)', fontSize: 12 }}>
               <span>تقدم المستوى</span>
               <span>{progressPercent}%</span>
             </div>
           </div>
 
           <div className="battle-section">
-            <h6>مقارنات سريعة</h6>
+            <h6>إحصائيات سريعة</h6>
             <div className="mini-vs">
-              <div className="mini-card">
-                <div className="label">أداؤك</div>
-                <div className="value">{progressPercent}%</div>
-                <div className="tag">مستقر</div>
+              <div className="chart-card">
+                <div className="chart-title">نقاط آخر ٧ أيام</div>
+                <svg className="spark-svg" viewBox="0 0 220 90" preserveAspectRatio="none">
+                  <path className="spark-line-total" d={sparkPath(last7DaysSeries.map((d) => d.total))} />
+                </svg>
+                <div className="d-flex justify-content-between text-muted small mt-1">
+                  <span>الإجمالي: {formatNumber(weeklyCount)}</span>
+                  <span>آخر يوم: {formatNumber(last7DaysSeries[last7DaysSeries.length - 1]?.total || 0)}</span>
+                </div>
+              </div>
+              <div className="chart-card">
+                <div className="chart-title">حجوزات مقابل فوري</div>
+                <svg className="spark-svg" viewBox="0 0 220 90" preserveAspectRatio="none">
+                  <path className="spark-line-booking" d={sparkPath(last7DaysSeries.map((d) => d.booking))} />
+                  <path className="spark-line-instant" d={sparkPath(last7DaysSeries.map((d) => d.instant))} />
+                </svg>
+                <div className="d-flex justify-content-between small mt-1" style={{ color: 'var(--muted)' }}>
+                  <span className="badge-soft">حجوزات: {formatNumber(bookingTotal)}</span>
+                  <span className="badge-soft">فوري: {formatNumber(instantTotal)}</span>
+                </div>
               </div>
               <div className="mini-card">
-                <div className="label">هدف الإدارة</div>
-                <div className="value">90%</div>
-                <div className="tag">خط النهاية</div>
-              </div>
-              <div className="mini-card">
-                <div className="label">نبض الفريق (تقديري)</div>
-                <div className="value">{teamPulse}%</div>
-                <div className="tag">حافظ على الفارق</div>
+                <div className="label">الخدمات المنفذة</div>
+                <div className="value">{formatNumber(executedServicesList.length)}</div>
+                <div className="d-flex flex-wrap gap-2 mt-2">
+                  <span className="badge-soft">آخر ٧ أيام: {formatNumber(weeklyCount)}</span>
+                  <span className="badge-soft">هذا الشهر: {formatNumber(monthlyCount)}</span>
+                  <span className="badge-soft">إجمالي متاح: {formatNumber(allTimeCount)}</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {showBattleDetails && (
-            <div className="battle-detail">
-              <div className="d-flex flex-wrap gap-2 mb-2">
-                <Button size="sm" variant={performanceFilter === 'all' ? 'primary' : 'outline-primary'} onClick={() => setPerformanceFilter('all')}>الكل</Button>
-                <Button size="sm" variant={performanceFilter === 'booking' ? 'primary' : 'outline-primary'} onClick={() => setPerformanceFilter('booking')}>حجوزات</Button>
-                <Button size="sm" variant={performanceFilter === 'instant' ? 'primary' : 'outline-primary'} onClick={() => setPerformanceFilter('instant')}>خدمات فورية</Button>
-              </div>
-
-              <div className="detail-grid">
-                {filteredServices.slice(0, 6).map((srv, idx) => (
-                  <div key={`${srv.receiptNumber}-${idx}-battle`} className="detail-tile-neo">
-                    <div className="d-flex justify-content-between align-items-center mb-1">
-                      <span className="pill">{srv.source === 'instant' ? 'فوري' : 'حجز'}</span>
-                      <span className="pill" style={{ color: '#ffdd7a' }}>+{formatNumber(srv.points)} ن</span>
-                    </div>
-                    <div className="title">{srv.serviceName}</div>
-                    <div className="meta">وصل: {srv.receiptNumber}</div>
-                    <div className="meta">وقت: {formatTime(srv.executedAt)}</div>
-                  </div>
-                ))}
-                {filteredServices.length === 0 && (
-                  <div className="text-muted">لسه مفيش بيانات للفلتر الحالي.</div>
-                )}
-              </div>
-            </div>
-          )}
-
           {aiTip && (
             <div className="battle-ai mt-3">
-              <strong>مساعد الأداء (AI):</strong>
+              <strong>تحليل سريع (AI):</strong>
               <div style={{ whiteSpace: 'pre-line', marginTop: 6 }}>{aiTip}</div>
             </div>
           )}
