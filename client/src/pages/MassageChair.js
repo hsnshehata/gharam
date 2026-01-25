@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 
-const MAP_LINK = 'https://maps.app.goo.gl/AHX3MDPhyLEuvWUN8';
 const WHATSAPP_LINK = 'https://wa.me/gharam';
 const LANDLINE = '0472570908';
 const SUPPORT_LINK = 'https://zainbot.com/chat/ghazal';
