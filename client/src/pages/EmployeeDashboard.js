@@ -555,11 +555,6 @@ function EmployeeDashboard({ user }) {
               <div className="battle-title">إحصائيات ذكية</div>
               <div className="battle-sub">عرض سريع لأداء اليوم مع مقارنة الأيام اللي فاتت</div>
             </div>
-            <div className="battle-actions">
-              <Button variant="success" size="sm" className="battle-btn" onClick={generateAiTip} disabled={aiLoading}>
-                {aiLoading ? 'جارٍ التحليل...' : 'تحليل أداء بالذكاء الاصطناعي'}
-              </Button>
-            </div>
           </div>
 
           <div className="battle-meta">
