@@ -5,11 +5,30 @@ const redisUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
 let redis = null;
 let memoryStore = new Map();
 
-try {
-  redis = new Redis(redisUrl, {
+const buildRedisOptions = (urlString) => {
+  const baseOptions = {
     maxRetriesPerRequest: 1,
     enableOfflineQueue: false
-  });
+  };
+
+  try {
+    const parsed = new URL(urlString);
+    if (parsed.username) baseOptions.username = decodeURIComponent(parsed.username);
+    if (parsed.password) baseOptions.password = decodeURIComponent(parsed.password);
+
+    // Redis السحابي عادة يحتاج TLS، نتأكد لو السيرفر مش لوكال
+    if (!['127.0.0.1', 'localhost'].includes(parsed.hostname)) {
+      baseOptions.tls = {};
+    }
+  } catch (err) {
+    console.warn('Redis URL parse failed, continuing with defaults:', err.message);
+  }
+
+  return baseOptions;
+};
+
+try {
+  redis = new Redis(redisUrl, buildRedisOptions(redisUrl));
   redis.on('error', (err) => {
     console.warn('Redis error, falling back to memory:', err.message);
     redis = null;
