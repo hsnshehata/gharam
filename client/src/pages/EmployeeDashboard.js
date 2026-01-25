@@ -33,6 +33,7 @@ function EmployeeDashboard({ user }) {
   const [redeeming, setRedeeming] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const [showPerformanceDetails, setShowPerformanceDetails] = useState(false);
+  const [showBattleDetails, setShowBattleDetails] = useState(false);
   const [performanceFilter, setPerformanceFilter] = useState('all');
   const [aiTip, setAiTip] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
@@ -277,6 +278,8 @@ function EmployeeDashboard({ user }) {
   const remainingSalary = pointsSummary?.remainingSalary || 0;
   const progressPercent = pointsSummary?.progress?.percent ?? 0;
   const currentLevel = pointsSummary?.level ?? 1;
+  const battleScore = Math.min(100, Math.round(progressPercent * 0.7 + (todayPoints > 0 ? 10 : 0)));
+  const teamPulse = Math.min(100, Math.max(progressPercent - 10, 25));
 
   const executedServicesList = useMemo(() => executedServices, [executedServices]);
 
@@ -334,6 +337,39 @@ function EmployeeDashboard({ user }) {
 
   return (
     <Container className="mt-5">
+      <style>{`
+        .battle-card { background: linear-gradient(135deg, #0f1b2d, #16263d); color: #eef5ff; border: 1px solid #233651; box-shadow: 0 14px 38px rgba(0,0,0,0.25); position: relative; overflow: hidden; }
+        .battle-card::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 12% 20%, rgba(255,255,255,0.08), transparent 35%), radial-gradient(circle at 80% 10%, rgba(255,215,128,0.12), transparent 32%), radial-gradient(circle at 50% 80%, rgba(64,170,255,0.08), transparent 38%); pointer-events: none; }
+        .battle-glow { position: absolute; inset: 0; opacity: 0.35; background: radial-gradient(circle at 30% 50%, rgba(62,162,255,0.24), transparent 40%); filter: blur(40px); }
+        .battle-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px); background-size: 36px 36px; opacity: 0.4; }
+        .battle-header { position: relative; z-index: 1; }
+        .battle-title { font-size: 20px; font-weight: 800; letter-spacing: 0.6px; }
+        .battle-sub { color: #bcd4ff; font-size: 13px; }
+        .battle-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 12px; margin-top: 14px; position: relative; z-index: 1; }
+        .battle-chip { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .battle-chip .label { color: #bcd4ff; font-size: 12px; }
+        .battle-chip .value { font-weight: 800; font-size: 18px; color: #ffdd7a; }
+        .battle-bar { background: rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; height: 12px; }
+        .battle-bar span { display: block; height: 100%; background: linear-gradient(90deg, #7cffe7, #4fa3ff); }
+        .battle-section { position: relative; z-index: 1; margin-top: 14px; }
+        .battle-section h6 { color: #bcd4ff; font-weight: 700; font-size: 14px; margin-bottom: 8px; }
+        .mini-vs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .mini-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 10px; }
+        .mini-card .label { color: #bcd4ff; font-size: 12px; }
+        .mini-card .value { color: #fff; font-weight: 800; font-size: 16px; }
+        .mini-card .tag { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; margin-top: 4px; background: rgba(255,255,255,0.09); color: #ffdd7a; }
+        .battle-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+        .battle-btn { border-radius: 12px; }
+        .battle-detail { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; margin-top: 10px; }
+        .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 10px; }
+        .detail-tile-neo { background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px; }
+        .detail-tile-neo .meta { color: #bcd4ff; font-size: 12px; }
+        .detail-tile-neo .title { color: #fff; font-weight: 700; }
+        .detail-tile-neo .pill { display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 11px; background: rgba(255,255,255,0.08); color: #7cffe7; }
+        .battle-ai { background: rgba(255,255,255,0.05); border-radius: 12px; padding: 10px; border: 1px dashed rgba(255,255,255,0.18); color: #e6efff; }
+        .battle-ai strong { color: #ffdd7a; }
+        @media (max-width: 768px) { .mini-vs { grid-template-columns: 1fr; } }
+      `}</style>
       {pendingGifts.length > 0 && (
         <Card className="mb-4 gift-card">
           <Card.Body>
@@ -364,89 +400,6 @@ function EmployeeDashboard({ user }) {
         </Card>
       )}
 
-      <Card className="mb-4 performance-card">
-        <Card.Body>
-          <div className="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-            <div>
-              <Card.Title className="mb-1">نظرة سريعة على الأداء</Card.Title>
-              <div className="text-muted small">مقارنات خفيفة بين إنجازاتك الشهرية وأفضل فتراتك</div>
-            </div>
-            <div className="d-flex gap-2">
-              <Button variant="outline-light" size="sm" onClick={() => setShowPerformanceDetails((p) => !p)}>
-                {showPerformanceDetails ? 'إخفاء التفاصيل' : 'تفاصيل أكثر'}
-              </Button>
-              <Button variant="outline-success" size="sm" onClick={generateAiTip} disabled={aiLoading}>
-                {aiLoading ? 'جارٍ التحليل...' : 'نصائح بالذكاء الاصطناعي'}
-              </Button>
-            </div>
-          </div>
-
-          <Row className="g-3">
-            <Col md={4} sm={6}>
-              <div className="stat-tile">
-                <div className="label">نقاط اليوم</div>
-                <div className="value">{formatNumber(todayPoints)}</div>
-                <div className="muted small">من {executedServicesList.length} مهام منفذة</div>
-              </div>
-            </Col>
-            <Col md={4} sm={6}>
-              <div className="stat-tile">
-                <div className="label">تقدم المستوى</div>
-                <ProgressBar now={progressPercent} label={`${progressPercent}%`} visuallyHidden={false} />
-                <div className="muted small">المستوى الحالي: L{currentLevel}</div>
-              </div>
-            </Col>
-            <Col md={4} sm={12}>
-              <div className="stat-tile">
-                <div className="label">مقارنات سريعة</div>
-                {performanceComparison.map((item) => (
-                  <div key={item.label} className="mini-bar">
-                    <span className="mini-label">{item.label}</span>
-                    <div className="mini-track"><span style={{ width: `${item.value}%` }} /></div>
-                    <span className="mini-value">{item.value}%</span>
-                  </div>
-                ))}
-              </div>
-            </Col>
-          </Row>
-
-          {aiTip && (
-            <Alert variant="secondary" className="mt-3 mb-0">
-              <div className="fw-bold mb-1">مساعد الأداء (AI)</div>
-              <div className="small" style={{ whiteSpace: 'pre-line' }}>{aiTip}</div>
-            </Alert>
-          )}
-
-          {showPerformanceDetails && (
-            <div className="performance-detail mt-3">
-              <div className="d-flex flex-wrap gap-2 mb-2">
-                <Button size="sm" variant={performanceFilter === 'all' ? 'primary' : 'outline-primary'} onClick={() => setPerformanceFilter('all')}>الكل</Button>
-                <Button size="sm" variant={performanceFilter === 'booking' ? 'primary' : 'outline-primary'} onClick={() => setPerformanceFilter('booking')}>حجوزات</Button>
-                <Button size="sm" variant={performanceFilter === 'instant' ? 'primary' : 'outline-primary'} onClick={() => setPerformanceFilter('instant')}>خدمات فورية</Button>
-              </div>
-              {filteredServices.length === 0 ? (
-                <div className="text-muted small">لا توجد بيانات للفلتر الحالي.</div>
-              ) : (
-                <Row className="g-2">
-                  {filteredServices.slice(0, 6).map((srv, idx) => (
-                    <Col md={4} sm={6} key={`${srv.receiptNumber}-${idx}-perf`}>
-                      <div className="detail-tile">
-                        <div className="d-flex justify-content-between mb-1">
-                          <span className="badge bg-dark">{srv.source === 'instant' ? 'فوري' : 'حجز'}</span>
-                          <span className="badge bg-success">+{formatNumber(srv.points)} نقطة</span>
-                        </div>
-                        <div className="fw-bold">{srv.serviceName}</div>
-                        <div className="text-muted small">وصل: {srv.receiptNumber}</div>
-                        <div className="text-muted small">وقت: {formatTime(srv.executedAt)}</div>
-                      </div>
-                    </Col>
-                  ))}
-                </Row>
-              )}
-            </div>
-          )}
-        </Card.Body>
-      </Card>
 
       <Row className="mb-4 justify-content-center">
         <Col md={8} lg={6}>
@@ -551,6 +504,122 @@ function EmployeeDashboard({ user }) {
             </>
           ) : (
             <div>جارٍ التحميل...</div>
+          )}
+        </Card.Body>
+      </Card>
+
+      <Card className="mb-4 battle-card">
+        <div className="battle-glow" aria-hidden />
+        <div className="battle-grid" aria-hidden />
+        <Card.Body className="battle-header">
+          <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div>
+              <div className="battle-title">لوحة المعركة اليومية</div>
+              <div className="battle-sub">ستايل ألعاب استراتيجية — جاهز تحقق إنجازاتك</div>
+            </div>
+            <div className="battle-actions">
+              <Button variant="outline-light" size="sm" className="battle-btn" onClick={() => setShowBattleDetails((p) => !p)}>
+                {showBattleDetails ? 'إخفاء التفاصيل' : 'عرض المزيد'}
+              </Button>
+              <Button variant="success" size="sm" className="battle-btn" onClick={generateAiTip} disabled={aiLoading}>
+                {aiLoading ? 'جارٍ التحليل...' : 'نصائح الذكاء الاصطناعي'}
+              </Button>
+            </div>
+          </div>
+
+          <div className="battle-meta">
+            <div className="battle-chip">
+              <div>
+                <div className="label">مستواك الحالي</div>
+                <div className="value">L{currentLevel}</div>
+              </div>
+              <span className="pill text-dark" style={{ background: '#ffdd7a', padding: '4px 10px', borderRadius: 20 }}>Progress</span>
+            </div>
+            <div className="battle-chip">
+              <div>
+                <div className="label">نقاط اليوم</div>
+                <div className="value">{formatNumber(todayPoints)}</div>
+              </div>
+              <span className="text-muted" style={{ fontSize: 12 }}>مهام: {executedServicesList.length}</span>
+            </div>
+            <div className="battle-chip">
+              <div>
+                <div className="label">قوة المعركة</div>
+                <div className="value">{battleScore}%</div>
+              </div>
+              <span className="text-muted" style={{ fontSize: 12 }}>مختصرة من تقدمك الحالي</span>
+            </div>
+            <div className="battle-chip">
+              <div>
+                <div className="label">العملات معاك</div>
+                <div className="value">{formatNumber(coinsCount)}</div>
+              </div>
+              <span className="text-muted" style={{ fontSize: 12 }}>قيمة: {formatNumber(pointsSummary?.coins?.totalValue || 0)} ج</span>
+            </div>
+          </div>
+
+          <div className="battle-section">
+            <h6>الشريط الرئيسي</h6>
+            <div className="battle-bar"><span style={{ width: `${progressPercent}%` }} /></div>
+            <div className="d-flex justify-content-between mt-1" style={{ color: '#bcd4ff', fontSize: 12 }}>
+              <span>تقدم المستوى</span>
+              <span>{progressPercent}%</span>
+            </div>
+          </div>
+
+          <div className="battle-section">
+            <h6>مقارنات سريعة</h6>
+            <div className="mini-vs">
+              <div className="mini-card">
+                <div className="label">أداؤك</div>
+                <div className="value">{progressPercent}%</div>
+                <div className="tag">مستقر</div>
+              </div>
+              <div className="mini-card">
+                <div className="label">هدف الإدارة</div>
+                <div className="value">90%</div>
+                <div className="tag">خط النهاية</div>
+              </div>
+              <div className="mini-card">
+                <div className="label">نبض الفريق (تقديري)</div>
+                <div className="value">{teamPulse}%</div>
+                <div className="tag">حافظ على الفارق</div>
+              </div>
+            </div>
+          </div>
+
+          {showBattleDetails && (
+            <div className="battle-detail">
+              <div className="d-flex flex-wrap gap-2 mb-2">
+                <Button size="sm" variant={performanceFilter === 'all' ? 'primary' : 'outline-primary'} onClick={() => setPerformanceFilter('all')}>الكل</Button>
+                <Button size="sm" variant={performanceFilter === 'booking' ? 'primary' : 'outline-primary'} onClick={() => setPerformanceFilter('booking')}>حجوزات</Button>
+                <Button size="sm" variant={performanceFilter === 'instant' ? 'primary' : 'outline-primary'} onClick={() => setPerformanceFilter('instant')}>خدمات فورية</Button>
+              </div>
+
+              <div className="detail-grid">
+                {filteredServices.slice(0, 6).map((srv, idx) => (
+                  <div key={`${srv.receiptNumber}-${idx}-battle`} className="detail-tile-neo">
+                    <div className="d-flex justify-content-between align-items-center mb-1">
+                      <span className="pill">{srv.source === 'instant' ? 'فوري' : 'حجز'}</span>
+                      <span className="pill" style={{ color: '#ffdd7a' }}>+{formatNumber(srv.points)} ن</span>
+                    </div>
+                    <div className="title">{srv.serviceName}</div>
+                    <div className="meta">وصل: {srv.receiptNumber}</div>
+                    <div className="meta">وقت: {formatTime(srv.executedAt)}</div>
+                  </div>
+                ))}
+                {filteredServices.length === 0 && (
+                  <div className="text-muted">لسه مفيش بيانات للفلتر الحالي.</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {aiTip && (
+            <div className="battle-ai mt-3">
+              <strong>مساعد الأداء (AI):</strong>
+              <div style={{ whiteSpace: 'pre-line', marginTop: 6 }}>{aiTip}</div>
+            </div>
           )}
         </Card.Body>
       </Card>
