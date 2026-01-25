@@ -453,6 +453,11 @@ exports.getPointsSummary = async (req, res) => {
         }, {});
         const coinsTotalValue = coins.reduce((sum, c) => sum + (c.value || 0), 0);
 
+        const roleFilter = { role: { $in: ['admin', 'supervisor', 'hallSupervisor', 'employee'] } };
+        const higherCount = await User.countDocuments({ ...roleFilter, totalPoints: { $gt: totalPoints } });
+        const teamSize = await User.countDocuments(roleFilter);
+        const rank = teamSize > 0 ? higherCount + 1 : null;
+
         return {
           totalPoints,
           level,
@@ -464,6 +469,8 @@ exports.getPointsSummary = async (req, res) => {
             totalValue: coinsTotalValue,
             byLevel: coinsByLevel
           },
+          rank,
+          teamSize,
           progress: {
             current: progressCurrent,
             target: progressNeeded,
