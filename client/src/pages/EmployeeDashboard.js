@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table } from 'react-bootstrap';
+import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table, Spinner, ProgressBar } from 'react-bootstrap';
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheck, faQrcode, faGift, faCoins, faBolt, faRotateRight } from '@fortawesome/free-solid-svg-icons';
@@ -32,6 +32,10 @@ function EmployeeDashboard({ user }) {
   const [convertCelebration, setConvertCelebration] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
+  const [showPerformanceDetails, setShowPerformanceDetails] = useState(false);
+  const [performanceFilter, setPerformanceFilter] = useState('all');
+  const [aiTip, setAiTip] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
   const qrCodeScanner = useRef(null);
   const { showToast } = useToast();
 
@@ -274,6 +278,58 @@ function EmployeeDashboard({ user }) {
 
   const executedServicesList = useMemo(() => executedServices, [executedServices]);
 
+  const todayPoints = useMemo(() => executedServicesList.reduce((sum, s) => sum + (s.points || 0), 0), [executedServicesList]);
+  const performanceComparison = useMemo(() => ([
+    { label: 'الشهر الحالي', value: Math.min(100, pointsSummary?.progress?.percent || 0) },
+    { label: 'أفضل تقديري', value: Math.min(100, (pointsSummary?.progress?.percent || 0) + 15) },
+    { label: 'هدف الإدارة', value: 90 }
+  ]), [pointsSummary?.progress?.percent]);
+  const filteredServices = useMemo(() => {
+    if (performanceFilter === 'instant') return executedServicesList.filter((s) => s.source === 'instant');
+    if (performanceFilter === 'booking') return executedServicesList.filter((s) => s.source === 'booking');
+    return executedServicesList;
+  }, [performanceFilter, executedServicesList]);
+
+  const generateAiTip = useCallback(async () => {
+    if (!process.env.REACT_APP_OPENAI_API_KEY) {
+      showToast('ضبط REACT_APP_OPENAI_API_KEY قبل طلب النصائح', 'warning');
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const payload = {
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'انت مدرب ألعاب استراتيجية يشجع الموظفين بنصايح قصيرة وعملية. اجعل النص بالعربية الفصحى المبسطة.' },
+          {
+            role: 'user',
+            content: `الموظف مستوى L${pointsSummary?.level || 1}، نقاط كلية ${pointsSummary?.totalPoints || 0}، تقدم للمستوى ${pointsSummary?.progress?.percent || 0}%, عمل اليوم ${todayPoints} نقطة من ${executedServicesList.length} مهام، الفلتر ${performanceFilter}. اعطني 3 نصايح وتشجيع سريع وبالترقيم.`
+          }
+        ],
+        temperature: 0.6,
+        max_tokens: 180
+      };
+
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const content = data?.choices?.[0]?.message?.content || 'لم يصل رد من الذكاء الاصطناعي.';
+      setAiTip(content);
+    } catch (err) {
+      console.error('AI tip error:', err.message || err);
+      setAiTip('تعذر جلب النصائح الآن، حاول لاحقاً.');
+    } finally {
+      setAiLoading(false);
+    }
+  }, [pointsSummary?.level, pointsSummary?.totalPoints, pointsSummary?.progress?.percent, todayPoints, executedServicesList.length, performanceFilter, showToast]);
+
   return (
     <Container className="mt-5">
       {pendingGifts.length > 0 && (
@@ -304,6 +360,90 @@ function EmployeeDashboard({ user }) {
             </div>
           </Card.Body>
         </Card>
+
+          <Card className="mb-4 performance-card">
+            <Card.Body>
+              <div className="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                <div>
+                  <Card.Title className="mb-1">نظرة سريعة على الأداء</Card.Title>
+                  <div className="text-muted small">مقارنات خفيفة بين إنجازاتك الشهرية وأفضل فتراتك</div>
+                </div>
+                <div className="d-flex gap-2">
+                  <Button variant="outline-light" size="sm" onClick={() => setShowPerformanceDetails((p) => !p)}>
+                    {showPerformanceDetails ? 'إخفاء التفاصيل' : 'تفاصيل أكثر'}
+                  </Button>
+                  <Button variant="outline-success" size="sm" onClick={generateAiTip} disabled={aiLoading}>
+                    {aiLoading ? 'جارٍ التحليل...' : 'نصائح بالذكاء الاصطناعي'}
+                  </Button>
+                </div>
+              </div>
+
+              <Row className="g-3">
+                <Col md={4} sm={6}>
+                  <div className="stat-tile">
+                    <div className="label">نقاط اليوم</div>
+                    <div className="value">{formatNumber(todayPoints)}</div>
+                    <div className="muted small">من {executedServicesList.length} مهام منفذة</div>
+                  </div>
+                </Col>
+                <Col md={4} sm={6}>
+                  <div className="stat-tile">
+                    <div className="label">تقدم المستوى</div>
+                    <ProgressBar now={pointsSummary?.progress?.percent || 0} label={`${pointsSummary?.progress?.percent || 0}%`} visuallyHidden={false} />
+                    <div className="muted small">المستوى الحالي: L{pointsSummary?.level || 1}</div>
+                  </div>
+                </Col>
+                <Col md={4} sm={12}>
+                  <div className="stat-tile">
+                    <div className="label">مقارنات سريعة</div>
+                    {performanceComparison.map((item) => (
+                      <div key={item.label} className="mini-bar">
+                        <span className="mini-label">{item.label}</span>
+                        <div className="mini-track"><span style={{ width: `${item.value}%` }} /></div>
+                        <span className="mini-value">{item.value}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </Col>
+              </Row>
+
+              {aiTip && (
+                <Alert variant="secondary" className="mt-3 mb-0">
+                  <div className="fw-bold mb-1">مساعد الأداء (AI)</div>
+                  <div className="small" style={{ whiteSpace: 'pre-line' }}>{aiTip}</div>
+                </Alert>
+              )}
+
+              {showPerformanceDetails && (
+                <div className="performance-detail mt-3">
+                  <div className="d-flex flex-wrap gap-2 mb-2">
+                    <Button size="sm" variant={performanceFilter === 'all' ? 'primary' : 'outline-primary'} onClick={() => setPerformanceFilter('all')}>الكل</Button>
+                    <Button size="sm" variant={performanceFilter === 'booking' ? 'primary' : 'outline-primary'} onClick={() => setPerformanceFilter('booking')}>حجوزات</Button>
+                    <Button size="sm" variant={performanceFilter === 'instant' ? 'primary' : 'outline-primary'} onClick={() => setPerformanceFilter('instant')}>خدمات فورية</Button>
+                  </div>
+                  {filteredServices.length === 0 ? (
+                    <div className="text-muted small">لا توجد بيانات للفلتر الحالي.</div>
+                  ) : (
+                    <Row className="g-2">
+                      {filteredServices.slice(0, 6).map((srv, idx) => (
+                        <Col md={4} sm={6} key={`${srv.receiptNumber}-${idx}-perf`}>
+                          <div className="detail-tile">
+                            <div className="d-flex justify-content-between mb-1">
+                              <span className="badge bg-dark">{srv.source === 'instant' ? 'فوري' : 'حجز'}</span>
+                              <span className="badge bg-success">+{formatNumber(srv.points)} نقطة</span>
+                            </div>
+                            <div className="fw-bold">{srv.serviceName}</div>
+                            <div className="text-muted small">وصل: {srv.receiptNumber}</div>
+                            <div className="text-muted small">وقت: {formatTime(srv.executedAt)}</div>
+                          </div>
+                        </Col>
+                      ))}
+                    </Row>
+                  )}
+                </div>
+              )}
+            </Card.Body>
+          </Card>
       )}
 
       <Row className="mb-4 justify-content-center">
