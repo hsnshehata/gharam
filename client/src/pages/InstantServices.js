@@ -283,6 +283,46 @@ function InstantServices({ user }) {
     await mutateInstant();
   };
 
+  const renderPagination = () => {
+    const maxButtons = 7;
+    const pages = [];
+    const pushPage = (page) => pages.push({ type: 'page', page });
+
+    if (totalPages <= maxButtons) {
+      for (let i = 1; i <= totalPages; i++) pushPage(i);
+    } else {
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+
+      pushPage(1);
+      if (start > 2) pages.push({ type: 'ellipsis', key: 'start' });
+
+      for (let i = start; i <= end; i++) pushPage(i);
+
+      if (end < totalPages - 1) pages.push({ type: 'ellipsis', key: 'end' });
+      pushPage(totalPages);
+    }
+
+    return (
+      <Pagination className="justify-content-center mt-4 flex-wrap">
+        <Pagination.Prev disabled={currentPage === 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} />
+        {pages.map((item, idx) => {
+          if (item.type === 'ellipsis') return <Pagination.Ellipsis key={`ellipsis-${item.key}-${idx}`} disabled />;
+          return (
+            <Pagination.Item
+              key={item.page}
+              active={item.page === currentPage}
+              onClick={() => setCurrentPage(item.page)}
+            >
+              {item.page}
+            </Pagination.Item>
+          );
+        })}
+        <Pagination.Next disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} />
+      </Pagination>
+    );
+  };
+
   return (
     <Container className="mt-5">
       <h2>إدارة الخدمات الفورية</h2>
@@ -406,17 +446,7 @@ function InstantServices({ user }) {
         })}
       </Row>
 
-      <Pagination className="justify-content-center mt-4">
-        {Array.from({ length: totalPages }, (_, i) => (
-          <Pagination.Item
-            key={i + 1}
-            active={i + 1 === currentPage}
-            onClick={() => setCurrentPage(i + 1)}
-          >
-            {i + 1}
-          </Pagination.Item>
-        ))}
-      </Pagination>
+      {renderPagination()}
 
       <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
         <Modal.Header closeButton>
