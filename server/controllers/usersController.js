@@ -652,6 +652,12 @@ exports.getExecutedServices = async (req, res) => {
   const { date } = req.query;
   const employeeId = req.user.id;
 
+  const isSameEmployee = (val) => {
+    if (!val) return false;
+    const idStr = typeof val === 'object' && val._id ? val._id.toString() : val.toString();
+    return idStr === employeeId.toString();
+  };
+
   const start = date ? new Date(date) : new Date();
   start.setHours(0, 0, 0, 0);
   const end = new Date(start);
@@ -711,7 +717,7 @@ exports.getExecutedServices = async (req, res) => {
 
         bookings.forEach((b) => {
           (b.packageServices || []).forEach((srv) => {
-            if (srv.executed && srv.executedBy && isInRange(srv.executedAt, start, end)) {
+            if (srv.executed && srv.executedBy && isSameEmployee(srv.executedBy) && isInRange(srv.executedAt, start, end)) {
               pushItem({
                 source: 'booking',
                 receiptNumber: b.receiptNumber || '-',
@@ -724,7 +730,7 @@ exports.getExecutedServices = async (req, res) => {
             }
           });
 
-          if (b.hairStraighteningExecuted && b.hairStraighteningExecutedBy && isInRange(b.hairStraighteningExecutedAt, start, end)) {
+          if (b.hairStraighteningExecuted && b.hairStraighteningExecutedBy && isSameEmployee(b.hairStraighteningExecutedBy) && isInRange(b.hairStraighteningExecutedAt, start, end)) {
             pushItem({
               source: 'booking',
               receiptNumber: b.receiptNumber || '-',
@@ -736,7 +742,7 @@ exports.getExecutedServices = async (req, res) => {
             });
           }
 
-          if (b.hairDyeExecuted && b.hairDyeExecutedBy && isInRange(b.hairDyeExecutedAt, start, end)) {
+          if (b.hairDyeExecuted && b.hairDyeExecutedBy && isSameEmployee(b.hairDyeExecutedBy) && isInRange(b.hairDyeExecutedAt, start, end)) {
             pushItem({
               source: 'booking',
               receiptNumber: b.receiptNumber || '-',
@@ -751,7 +757,7 @@ exports.getExecutedServices = async (req, res) => {
 
         instantServices.forEach((inst) => {
           (inst.services || []).forEach((srv) => {
-            if (srv.executed && srv.executedBy && isInRange(srv.executedAt, start, end)) {
+            if (srv.executed && srv.executedBy && isSameEmployee(srv.executedBy) && isInRange(srv.executedAt, start, end)) {
               pushItem({
                 source: 'instant',
                 receiptNumber: inst.receiptNumber || '-',
