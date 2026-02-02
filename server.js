@@ -3,15 +3,32 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
 const { startSalaryResetScheduler } = require('./server/services/salaryResetService');
 
 dotenv.config();
+
+// Fail fast when required env vars are absent
+const requiredEnv = ['MONGO_URI', 'JWT_SECRET'];
+const missingEnv = requiredEnv.filter((name) => !process.env[name]);
+if (missingEnv.length) {
+  console.error(`Missing required environment variables: ${missingEnv.join(', ')}`);
+  process.exit(1);
+}
 
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+const rateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { msg: 'Too many requests, please try again later.' }
+});
+app.use('/api', rateLimiter);
 app.use((req, res, next) => {
   console.log(`Received request: ${req.method} ${req.path}`);
   next();
@@ -52,9 +69,16 @@ if (process.env.NODE_ENV === 'production') {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(`Error occurred: ${err.message}`);
-  console.error(`Stack trace: ${err.stack}`);
-  res.status(500).json({ msg: 'Server error' });
+  const status = err.status || err.statusCode || 500;
+  const errorId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const safeMessage = status >= 500 ? 'Server error' : err.message;
+  console.error(`[${errorId}] ${req.method} ${req.originalUrl} -> ${status}: ${err.message}`);
+  if (err.stack) console.error(err.stack);
+  const payload = { msg: safeMessage, errorId };
+  if (process.env.NODE_ENV !== 'production') {
+    payload.error = err.message;
+  }
+  res.status(status).json(payload);
 });
 
 const PORT = process.env.PORT || 5000;
