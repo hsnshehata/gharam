@@ -20,8 +20,7 @@ import PointsAdmin from './pages/PointsAdmin';
 import Navbar from './components/Navbar';
 import { ToastProvider } from './components/ToastProvider';
 import './App.css';
-
-const API_BASE = (process.env.REACT_APP_API_BASE || '').replace(/\/$/, '');
+import { API_BASE } from './utils/apiBase';
 
 const getHomePath = (u) => {
   if (!u) return '/landing';

@@ -1,7 +1,6 @@
 import axios from 'axios';
+import { API_BASE } from '../utils/apiBase';
 import { initCollections } from './collections';
-
-const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000';
 const SYNC_INTERVAL = Number(process.env.REACT_APP_SYNC_INTERVAL || 30000);
 const LAST_PULL_KEY = 'beautycenterdb:lastPull:';
 

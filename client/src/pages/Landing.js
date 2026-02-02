@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { googleReviews } from '../data/googleReviews';
+import { API_BASE } from '../utils/apiBase';
 
 const WHATSAPP_LINK = 'https://wa.me/gharam';
 const MAP_LINK = 'https://maps.app.goo.gl/cpF8J7rw6ScxZwiv5';
@@ -11,7 +12,6 @@ const FACEBOOK_LINK = 'https://www.facebook.com/gharam.ml';
 const THREADS_LINK = 'https://www.threads.net/@gharamsoltan';
 const SUPPORT_LINK = 'https://zainbot.com/chat/ghazal';
 const LANDLINE = '0472570908';
-const API_BASE = (process.env.REACT_APP_API_BASE || 'http://localhost:5000').replace(/\/$/, '');
 const CANONICAL_URL = 'https://gharamsoltan.com/';
 const BUSINESS_NAME = 'غرام سلطان بيوتي سنتر وستوديو';
 const BUSINESS_DESCRIPTION = 'ميكب ارتيست وتصوير احترافي وحجز باكدجات زفاف، صبغة وفرد شعر، ومساج ضد الجاذبية في كفر الشيخ. حجزي أونلاين وتابعي التوافر الفوري.';

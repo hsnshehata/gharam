@@ -31,8 +31,6 @@ function EmployeeDashboard({ user }) {
   const [convertCelebration, setConvertCelebration] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiTip, setAiTip] = useState('');
   const [weeklySeries, setWeeklySeries] = useState([]);
   const qrCodeScanner = useRef(null);
   const { showToast } = useToast();
@@ -311,8 +309,6 @@ function EmployeeDashboard({ user }) {
   const last7DaysSeries = useMemo(() => weeklySeries, [weeklySeries]);
 
   const weeklyCount = useMemo(() => last7DaysSeries.reduce((sum, d) => sum + d.total, 0), [last7DaysSeries]);
-  const monthlyCount = weeklyCount;
-  const allTimeCount = weeklyCount;
   const bookingTotal = useMemo(() => last7DaysSeries.reduce((sum, d) => sum + d.booking, 0), [last7DaysSeries]);
   const instantTotal = useMemo(() => last7DaysSeries.reduce((sum, d) => sum + d.instant, 0), [last7DaysSeries]);
   const rankNumber = pointsSummary?.rank;
@@ -347,46 +343,6 @@ function EmployeeDashboard({ user }) {
       return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
     }).join(' ');
   };
-  const generateAiTip = useCallback(async () => {
-    if (!process.env.REACT_APP_OPENAI_API_KEY) {
-      showToast('ضبط REACT_APP_OPENAI_API_KEY قبل طلب النصائح', 'warning');
-      return;
-    }
-    setAiLoading(true);
-    try {
-      const payload = {
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: 'انت مدرب ألعاب استراتيجية يشجع الموظفين بنصايح قصيرة وعملية. اجعل النص بالعربية الفصحى المبسطة.' },
-          {
-            role: 'user',
-            content: `حلل الأداء: المستوى L${pointsSummary?.level || 1}، إجمالي النقاط ${pointsSummary?.totalPoints || 0}، التقدم ${pointsSummary?.progress?.percent || 0}%. نقاط اليوم ${todayPoints} من ${executedServicesList.length} خدمة. اعطني تحليل مختصر يبرز نقاط القوة، أولويات تحسين قريبة، والفارق مع أقرب زملاء في نفس نوع الخدمات (حجوزات/فوري)، ثم 3 توصيات عملية بالترقيم.`
-          }
-        ],
-        temperature: 0.6,
-        max_tokens: 180
-      };
-
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`
-        },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const content = data?.choices?.[0]?.message?.content || 'لم يصل رد من الذكاء الاصطناعي.';
-      setAiTip(content);
-    } catch (err) {
-      console.error('AI tip error:', err.message || err);
-      setAiTip('تعذر جلب النصائح الآن، حاول لاحقاً.');
-    } finally {
-      setAiLoading(false);
-    }
-  }, [pointsSummary?.level, pointsSummary?.totalPoints, pointsSummary?.progress?.percent, todayPoints, executedServicesList.length, showToast]);
-
   return (
     <Container className="mt-5">
       <style>{`
@@ -666,12 +622,6 @@ function EmployeeDashboard({ user }) {
             </div>
           </div>
 
-          {aiTip && (
-            <div className="battle-ai mt-3">
-              <strong>تحليل سريع (AI):</strong>
-              <div style={{ whiteSpace: 'pre-line', marginTop: 6 }}>{aiTip}</div>
-            </div>
-          )}
         </Card.Body>
       </Card>
 
