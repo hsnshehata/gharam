@@ -314,6 +314,9 @@ function EmployeeDashboard({ user }) {
   const rankNumber = pointsSummary?.rank;
   const teamSize = pointsSummary?.teamSize || 0;
   const rankLabel = rankNumber ? `#${rankNumber}${teamSize ? ` من ${teamSize}` : ''}` : '—';
+  const monthlyRankNumber = pointsSummary?.monthlyRank;
+  const monthlyTeamSize = pointsSummary?.monthlyTeamSize || 0;
+  const monthlyRankLabel = monthlyRankNumber ? `#${monthlyRankNumber}${monthlyTeamSize ? ` من ${monthlyTeamSize}` : ''}` : '—';
   const topServices = pointsSummary?.topServices || {};
 
   const renderTopServices = (list) => {
@@ -544,10 +547,17 @@ function EmployeeDashboard({ user }) {
             </div>
             <div className="battle-chip">
               <div>
-                <div className="label">مركزك</div>
+                <div className="label">مركزك طوال الفترة</div>
                 <div className="value">{rankLabel}</div>
               </div>
               <span className="text-muted" style={{ fontSize: 12 }}>ترتيبك بإجمالي النقاط بين الفريق</span>
+            </div>
+            <div className="battle-chip">
+              <div>
+                <div className="label">مركزك هذا الشهر</div>
+                <div className="value">{monthlyRankLabel}</div>
+              </div>
+              <span className="text-muted" style={{ fontSize: 12 }}>ترتيبك بإجمالي نقاط هذا الشهر بين الفريق</span>
             </div>
             <div className="battle-chip">
               <div>
