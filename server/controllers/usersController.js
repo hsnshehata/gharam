@@ -510,7 +510,61 @@ exports.getPointsSummary = async (req, res) => {
         const weekTop = aggregateTopServices(weekStart, new Date(now.getTime() + 86399999));
 
         const monthStart = startOfDay(new Date(now.getFullYear(), now.getMonth(), 1));
+        const monthEnd = new Date(monthStart);
+        monthEnd.setMonth(monthEnd.getMonth() + 1);
+        monthEnd.setMilliseconds(-1);
+
         const monthTop = aggregateTopServices(monthStart, new Date(now.getTime() + 86399999));
+
+        const monthlyPoints = (user.points || []).reduce((sum, p) => {
+          if (!p || p.type !== 'work' || !p.date) return sum;
+          const dt = new Date(p.date);
+          return (dt >= monthStart && dt <= monthEnd) ? sum + (Number(p.amount) || 0) : sum;
+        }, 0);
+
+        const monthlyRankAgg = await User.aggregate([
+          { $match: roleFilter },
+          {
+            $project: {
+              monthlyPoints: {
+                $sum: {
+                  $map: {
+                    input: {
+                      $filter: {
+                        input: '$points',
+                        as: 'p',
+                        cond: {
+                          $and: [
+                            { $eq: ['$$p.type', 'work'] },
+                            { $gte: ['$$p.date', monthStart] },
+                            { $lte: ['$$p.date', monthEnd] }
+                          ]
+                        }
+                      }
+                    },
+                    as: 'p',
+                    in: { $ifNull: ['$$p.amount', 0] }
+                  }
+                }
+              }
+            }
+          },
+          {
+            $facet: {
+              higher: [
+                { $match: { monthlyPoints: { $gt: monthlyPoints } } },
+                { $count: 'count' }
+              ],
+              total: [
+                { $count: 'count' }
+              ]
+            }
+          }
+        ]);
+
+        const monthlyHigher = monthlyRankAgg?.[0]?.higher?.[0]?.count || 0;
+        const monthlyTeamSize = monthlyRankAgg?.[0]?.total?.[0]?.count || 0;
+        const monthlyRank = monthlyTeamSize > 0 ? monthlyHigher + 1 : null;
 
         const allTimeTop = aggregateTopServices(null, null);
 
@@ -527,6 +581,9 @@ exports.getPointsSummary = async (req, res) => {
           },
           rank,
           teamSize,
+          monthlyRank,
+          monthlyTeamSize,
+          monthlyPoints,
           weeklyBreakdown,
           topServices: {
             week: weekTop,
