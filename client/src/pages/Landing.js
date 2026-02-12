@@ -247,6 +247,7 @@ function Landing() {
 	const formattedRating = typeof reviewsData.rating === 'number' ? reviewsData.rating.toFixed(1) : '5.0';
 	const formattedTotalReviews = reviewsData.totalReviews ? reviewsData.totalReviews.toLocaleString('en-US') : '1100+';
 	const isGoogleReviews = reviewsData.source === 'google';
+	const activeFbPost = facebookFeed[currentFbItemIdx] || facebookFeed[0];
 
 	// SEO: عنوان، وصف، كانونيكال، OG/Twitter، و JSON-LD LocalBusiness
 	useEffect(() => {
@@ -880,6 +881,7 @@ function Landing() {
 		.fb-carousel { position: relative; width: 100%; }
 		.fb-carousel-item { opacity: 0; visibility: hidden; transition: opacity 0.5s ease, visibility 0.5s ease; position: absolute; width: 100%; }
 		.fb-carousel-item.active { opacity: 1; visibility: visible; position: relative; }
+		.fb-section { animation: fadeIn 0.6s ease both; }
 		.fb-post-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 0; overflow: hidden; box-shadow: 0 12px 28px var(--shadow); }
 		.fb-post-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
 		.fb-post-header img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
@@ -1231,108 +1233,112 @@ function Landing() {
 				</section>
 
 				{facebookFeed.length > 0 && (
-					<section className="card reveal" id="facebook-feed">
+					<section className="card fb-section" id="facebook-feed">
 						<h2 style={{ marginTop: 0, marginBottom: 6 }}>آخر منشوراتنا</h2>
 						<p style={{ color: 'var(--muted)', margin: '0 0 16px' }}>تابعي آخر أخبار وعروضنا المميزة على الفيسبوك. كل 5 ثواني بوست جديد يظهر، اضغطي عشان تشوفي التعليقات بالكامل!</p>
 						<div className="fb-carousel">
-							<div className="fb-carousel-track">
-								{facebookFeed.map((post, idx) => {
-									const isActive = idx === currentFbItemIdx;
-									return (
-										<div key={post._id} className={`fb-carousel-item ${isActive ? 'active' : ''}`}>
-											<div className="fb-post-card">
-												{/* Header */}
-												<div className="fb-post-header">
-													<img 
-														src="https://platform-lookaside.fbsbx.com/platform/profilepic/?asid=411581755600976&height=50&width=50" 
-														alt="غرام سلطان"
-														loading="lazy"
-													/>
-													<div className="fb-post-meta">
-														<h4>غرام سلطان بيوتي سنتر</h4>
-														<small>{new Date(post.createdTime).toLocaleDateString('ar-EG')}</small>
-													</div>
-												</div>
-
-												{/* Image/Video */}
-												{post.fullPicture && (
-													<img src={post.fullPicture} alt="البوست" className="fb-post-image" loading="lazy" />
-												)}
-
-												{/* Message */}
-												{post.message && (
-													<div className="fb-post-message">
-														{post.message.substring(0, 200)}...
-													</div>
-												)}
-
-												{/* Stats */}
-												<div className="fb-post-stats">
-													<div className="fb-stat-item">❤️ {post.likeCount.toLocaleString()}</div>
-													<div className="fb-stat-item">💬 {post.commentCount.toLocaleString()}</div>
-													<a 
-														href={post.permalink} 
-														target="_blank" 
-														rel="noreferrer"
-														style={{ color: 'var(--accent)', textDecoration: 'none', cursor: 'pointer' }}
-													>
-														♗ افتحي على Facebook
-													</a>
-												</div>
-
-												{/* Comments */}
-												{post.comments && post.comments.length > 0 && (
-													<div className="fb-comments-section">
-														{!fbExpandedComments && (
-															<button
-																className="fb-view-all-comments"
-																onClick={() => setFbExpandedComments(true)}
-															>
-																شوفي التعليقات ({post.commentCount})
-															</button>
-														)}
-														{fbExpandedComments && (
-															<div>
-																{post.comments.map((comment, cidx) => (
-																	<div key={cidx} className="fb-comment">
-																		<div className="fb-comment-avatar" style={{ backgroundImage: comment.picture ? `url(${comment.picture})` : 'none' }} />
-																		<div className="fb-comment-body">
-																			<div className="fb-comment-author">{comment.name}</div>
-																			<div className="fb-comment-text">{comment.message}</div>
-																		</div>
-																	</div>
-																))}
-																<button
-																	className="fb-view-all-comments"
-																	onClick={() => setFbExpandedComments(false)}
-																>
-																	← أغلقي التعليقات
-																</button>
-															</div>
-														)}
-													</div>
-												)}
-
-												{/* Actions */}
-												<div className="fb-post-actions">
-													<button 
-														className="fb-action-btn"
-														onClick={() => window.open(FACEBOOK_LINK, '_blank')}
-													>
-														👍 Follow على Facebook
-													</button>
-													<button 
-														className="fb-action-btn"
-														onClick={() => window.open(post.permalink, '_blank')}
-													>
-														↗️ اتفرجي كاملاً
-													</button>
-												</div>
-											</div>
+							{activeFbPost ? (
+								<div className="fb-post-card">
+									{/* Header */}
+									<div className="fb-post-header">
+										<img 
+											src="https://platform-lookaside.fbsbx.com/platform/profilepic/?asid=411581755600976&height=50&width=50" 
+											alt="غرام سلطان"
+											loading="lazy"
+											referrerPolicy="no-referrer"
+										/>
+										<div className="fb-post-meta">
+											<h4>غرام سلطان بيوتي سنتر</h4>
+											<small>{new Date(activeFbPost.createdTime).toLocaleDateString('ar-EG')}</small>
 										</div>
-									);
-								})}
-							</div>
+									</div>
+
+									{/* Image/Video */}
+									{activeFbPost.fullPicture && (
+										<img src={activeFbPost.fullPicture} alt="البوست" className="fb-post-image" loading="lazy" referrerPolicy="no-referrer" />
+									)}
+
+									{/* Message */}
+									{(activeFbPost.message || activeFbPost.story) && (
+										<div className="fb-post-message">
+											{(activeFbPost.message || activeFbPost.story).length > 200
+												? `${(activeFbPost.message || activeFbPost.story).substring(0, 200)}...`
+												: (activeFbPost.message || activeFbPost.story)}
+										</div>
+									)}
+
+									{/* Stats */}
+									<div className="fb-post-stats">
+										<div className="fb-stat-item">❤️ {Number(activeFbPost.likeCount || 0).toLocaleString()}</div>
+										<div className="fb-stat-item">💬 {Number(activeFbPost.commentCount || 0).toLocaleString()}</div>
+										<a 
+											href={activeFbPost.permalink} 
+											target="_blank" 
+											rel="noreferrer"
+											style={{ color: 'var(--accent)', textDecoration: 'none', cursor: 'pointer' }}
+										>
+											♗ افتحي على Facebook
+										</a>
+									</div>
+
+									{/* Comments */}
+									{activeFbPost.comments && activeFbPost.comments.length > 0 && (
+										<div className="fb-comments-section">
+											{!fbExpandedComments && (
+												<button
+													className="fb-view-all-comments"
+													onClick={() => {
+														setFbExpandedComments(true);
+														setFbAutoRotatePaused(true);
+													}}
+												>
+													شوفي التعليقات ({activeFbPost.commentCount})
+												</button>
+											)}
+											{fbExpandedComments && (
+												<div>
+													{activeFbPost.comments.map((comment, cidx) => (
+														<div key={cidx} className="fb-comment">
+															<div className="fb-comment-avatar" style={{ backgroundImage: comment.picture ? `url(${comment.picture})` : 'none' }} />
+															<div className="fb-comment-body">
+																<div className="fb-comment-author">{comment.name}</div>
+																<div className="fb-comment-text">{comment.message}</div>
+															</div>
+														</div>
+													))}
+													<button
+														className="fb-view-all-comments"
+														onClick={() => {
+															setFbExpandedComments(false);
+															setFbAutoRotatePaused(false);
+														}}
+													>
+														← أغلقي التعليقات
+													</button>
+												</div>
+											)}
+										</div>
+									)}
+
+									{/* Actions */}
+									<div className="fb-post-actions">
+										<button 
+											className="fb-action-btn"
+											onClick={() => window.open(FACEBOOK_LINK, '_blank')}
+										>
+											👍 Follow على Facebook
+										</button>
+										<button 
+											className="fb-action-btn"
+											onClick={() => window.open(activeFbPost.permalink, '_blank')}
+										>
+											↗️ اتفرجي كاملاً
+										</button>
+									</div>
+								</div>
+							) : (
+								<div style={{ color: 'var(--muted)', textAlign: 'center', padding: '16px 8px' }}>جار تحميل البوستات...</div>
+							)}
 						</div>
 						{facebookFeed.length > 1 && (
 							<div className="fb-nav-dots">
