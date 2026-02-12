@@ -146,6 +146,19 @@ const featuredPackages = [
 	}
 ];
 
+const faqItems = [
+    { question: 'ايه الخدمات المتاحة في غرام سلطان بيوتي سنتر؟', answer: 'نقدم ميك اب احترافي للعرايس والمناسبات، تصوير استوديو ولوكيشن، فرد شعر بالبروتين والكافيار، تنظيف بشرة سوفت وهارد، كرسي مساج ذكي، حمام مغربي، باديكير ومنيكير، وخدمات شعر ووش وحواجب.' },
+    { question: 'ازاي احجز باكدج ميك اب زفاف؟', answer: 'ابعتي على الواتساب 01092527126 أو موقع www.gharamsoltan.com لتأكيد التوافر، حددي التاريخ والباكدج، وادفعي عربون 500 جنيه على الأقل عبر فودافون كاش.' },
+    { question: 'ايه أسعار باكدجات الميك اب؟', answer: 'شوفي قائمة الأسعار الكاملة هنا: https://ghazl.onrender.com/prices.html ثم قوليلي لو عايزة تفاصيل الباكدج اللي يناسبك.' },
+    { question: 'فين عنوان السنتر وازاي أوصل؟', answer: 'شارع الجيش أمام بوابة دمشق، دسوق كفر الشيخ. قدامنا مطعم بوابة دمشق، يمين مخبز كلاسيك، شمال سوبر ماركت الجوهري. خريطة: https://maps.app.goo.gl/cpF8J7rw6ScxZwiv5' },
+    { question: 'هل السنتر حريمي بس؟', answer: 'أيوة، مركز حريمي فقط، ستاف كله بنات خاصة للمحجبات، الرجالة بس لتصوير الكابلز.' },
+    { question: 'ايه أسعار كرسي المساج الذكي؟', answer: 'سبيد ريليف 10 دقائق 100 ج، ديب ريست 20 دقيقة 200 ج، ماكس ريلاكس 30 دقيقة 250 ج. تفاصيل: https://gharam.onrender.com/massage-chair/' },
+    { question: 'ازاي فرد الشعر وأسعاره؟', answer: 'فرد علاجي بس (بروتين، كافيار، أرجان، فيلر) يبدأ من 1500 ج حسب الطول والكثافة، بعد معاينة في السنتر.' },
+    { question: 'هل في ليزر أو بيكيني؟', answer: 'لا، مفيش ليزر ولا بيكيني ولا أندر آرم، بس تنظيف بشرة ووش وحواجب.' },
+    { question: 'ايه مواعيد السنتر؟', answer: 'كل يوم من 10 صباحاً لـ10 مساءً، ممكن تتغير في الأعياد.' },
+    { question: 'ازاي أشوف أسعار التصوير؟', answer: 'شوفي قائمة الأسعار هنا: https://ghazl.onrender.com/prices.html، ألبومات تبدأ من 1600 ج في الاستوديو و2500 لوكيشن، ثم قوليلي لو عايزة عرض مخصص.'}
+];
+
 const availabilityCopy = {
 	busy: { title: 'اليوم كامل', message: 'اليوم مشغول ولا يمكن حجزه حالياً.' },
 	nearly: { title: 'يكاد يكتمل', message: 'اليوم على وشك الاكتمال، أسرعي في التواصل لتأكيد الميعاد.' },
@@ -409,6 +422,19 @@ function Landing() {
 				}
 			}
 		};
+
+		const faqSchema = {
+			'@context': 'https://schema.org',
+			'@type': 'FAQPage',
+			mainEntity: faqItems.map((item) => ({
+				'@type': 'Question',
+				name: item.question,
+				acceptedAnswer: {
+					'@type': 'Answer',
+					text: item.answer
+				}
+			}))
+		};
 		let jsonLd = document.getElementById('seo-json-ld');
 		if (!jsonLd) {
 			jsonLd = document.createElement('script');
@@ -416,7 +442,7 @@ function Landing() {
 			jsonLd.id = 'seo-json-ld';
 			document.head.appendChild(jsonLd);
 		}
-		jsonLd.textContent = JSON.stringify([localBusiness, breadcrumb, article]);
+		jsonLd.textContent = JSON.stringify([localBusiness, breadcrumb, article, faqSchema]);
 	}, [reviewsData]);
 
 	useEffect(() => {
@@ -671,6 +697,9 @@ function Landing() {
 		.review-card h5 { margin: 0; font-size: 15px; color: var(--text); }
 		.review-card small { color: var(--muted); }
 		.review-card p { margin: 8px 0 0; color: var(--muted); line-height: 1.5; }
+		.faq-list { display: grid; gap: 10px; margin-top: 10px; }
+		.faq-item { border-top: 1px solid var(--border); padding-top: 10px; }
+		.faq-item:first-child { border-top: none; padding-top: 0; }
 		.google-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(66,133,244,0.12); color: #1a73e8; padding: 4px 10px; border-radius: 999px; font-weight: 700; border: 1px solid rgba(66,133,244,0.2); font-size: 12px; }
 		.fallback-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(198,161,91,0.14); color: var(--text); padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(198,161,91,0.3); font-size: 12px; }
 		.footer { margin: 28px 0 56px; text-align: center; color: var(--muted); font-size: 14px; }
@@ -934,6 +963,19 @@ function Landing() {
 					</div>
 				</section>
 
+				<section className="card reveal" id="faq">
+					<h2 style={{ marginTop: 0, marginBottom: 6 }}>أسئلة شائعة</h2>
+					<p style={{ color: 'var(--muted)', margin: '0 0 10px' }}>إجابات سريعة على أكتر الأسئلة اللي بنسمعها.</p>
+					<div className="faq-list">
+						{faqItems.map((item) => (
+							<div className="faq-item" key={item.question}>
+								<h4 style={{ margin: 0 }}>{item.question}</h4>
+								<p style={{ margin: '6px 0 0' }}>{item.answer}</p>
+							</div>
+						))}
+					</div>
+				</section>
+
 				<section className="trust-section reveal">
 					<div className="trust-heading">ثقة واعتمادات نعتز بيها</div>
 					<div className="trust-logos">
@@ -962,6 +1004,8 @@ function Landing() {
 							allowFullScreen
 							loading="lazy"
 							referrerPolicy="no-referrer-when-downgrade"
+							allow="geolocation; microphone; camera"
+							style={{ border: 'none' }}
 						/>
 					</div>
 					<div className="cta-row" style={{ marginTop: 12 }}>
