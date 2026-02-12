@@ -14,17 +14,24 @@ const syncFacebookPosts = async (req, res) => {
 			});
 		}
 
-		// جلب آخر 20 بوست من Facebook مع التفاصيل
-		const url = `https://graph.facebook.com/v19.0/${pageId}/posts`;
 		const params = {
 			fields: 'id,message,story,picture,full_picture,type,created_time,permalink_url,likes.summary(true),comments.limit(3).summary(true){id,name,message,created_time,from{picture,name}}',
 			access_token: accessToken,
-			limit: 20,
-			sort: 'reverse_chronological'
+			limit: 20
 		};
 
-		const response = await axios.get(url, { params });
-		const facebookPosts = response.data.data || [];
+		let facebookPosts = [];
+		try {
+			// جلب آخر 20 بوست من Facebook مع التفاصيل
+			const url = `https://graph.facebook.com/v19.0/${pageId}/posts`;
+			const response = await axios.get(url, { params });
+			facebookPosts = response.data.data || [];
+		} catch (innerError) {
+			// fallback على feed لو posts فشلت
+			const fallbackUrl = `https://graph.facebook.com/v19.0/${pageId}/feed`;
+			const fallbackResponse = await axios.get(fallbackUrl, { params });
+			facebookPosts = fallbackResponse.data.data || [];
+		}
 
 		if (facebookPosts.length === 0) {
 			return res.status(200).json({
@@ -79,11 +86,16 @@ const syncFacebookPosts = async (req, res) => {
 			count: savedCount
 		});
 	} catch (error) {
-		console.error('خطأ في جلب بوستات Facebook:', error);
+		const fbError = error.response?.data?.error;
+		const fbMessage = fbError?.message || error.message;
+		const fbCode = fbError?.code;
+		const fbType = fbError?.type;
+		console.error('خطأ في جلب بوستات Facebook:', fbMessage);
 		return res.status(500).json({
 			success: false,
 			message: 'خطأ في جلب البوستات',
-			error: error.message
+			error: fbMessage,
+			facebookError: fbError ? { code: fbCode, type: fbType } : undefined
 		});
 	}
 };
