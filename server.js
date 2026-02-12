@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
+const cron = require('node-cron');
 const { startSalaryResetScheduler } = require('./server/services/salaryResetService');
 
 dotenv.config();
@@ -54,7 +55,28 @@ app.use('/api/reports', require('./server/routes/reports'));
 app.use('/api/dashboard', require('./server/routes/dashboard'));
 app.use('/api/today-work', require('./server/routes/todayWork'));
 app.use('/api/public', require('./server/routes/public'));
+app.use('/api/public/facebook', require('./server/routes/facebook'));
 console.log('Routes registered successfully');
+
+// Facebook Cron Job: تحديث البوستات كل 6 ساعات
+const { syncFacebookPosts } = require('./server/controllers/facebookController');
+cron.schedule('0 */6 * * *', async () => {
+	console.log('[CRON] جاري تحديث بوستات Facebook...');
+	try {
+		const fakeReq = {};
+		const fakeRes = {
+			status: (code) => ({
+				json: (data) => {
+					console.log(`[CRON] Facebook Sync Result: ${data.message}`);
+				}
+			})
+		};
+		await syncFacebookPosts(fakeReq, fakeRes);
+	} catch (error) {
+		console.error('[CRON] خطأ في تحديث Facebook:', error);
+	}
+});
+console.log('[CRON] Facebook sync scheduled (every 6 hours)');
 
 // Serve React app
 if (process.env.NODE_ENV === 'production') {
