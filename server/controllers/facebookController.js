@@ -15,7 +15,7 @@ const syncFacebookPosts = async (req, res) => {
 		}
 
 		const params = {
-			fields: 'id,message,story,created_time,permalink_url,full_picture,attachments{media_type,media,url},reactions.summary(true),comments.limit(3).summary(true){message,created_time,from{id,name,picture}}',
+			fields: 'id,message,story,created_time,permalink_url,full_picture,type,attachments{media_type,media,url,type},reactions.summary(true),comments.limit(3).summary(true){message,created_time,from{id,name,picture}}',
 			access_token: accessToken,
 			limit: 20
 		};
@@ -38,10 +38,24 @@ const syncFacebookPosts = async (req, res) => {
 		for (const post of facebookPosts) {
 			const attachment = post.attachments?.data?.[0];
 			const mediaType = attachment?.media_type || 'photo';
-			const mediaUrl = attachment?.media?.image?.src || post.full_picture || '';
+			const attachmentType = attachment?.type;
+			
+			// استخراج رابط الصورة/الفيديو
+			let mediaUrl = '';
+			let isVideo = false;
+			
+			// الأولوية: الصور الأصلية والفيديوهات
+			if (mediaType === 'video' || attachmentType === 'video' || post.type === 'video') {
+				isVideo = true;
+				mediaUrl = post.full_picture || attachment?.media?.image?.src || '';
+			} else if (mediaType === 'photo' || attachmentType === 'photo') {
+				mediaUrl = attachment?.media?.image?.src || post.full_picture || '';
+			} else if (post.full_picture) {
+				mediaUrl = post.full_picture;
+			}
 
 			// تصفية البوستات بدون صور (بس صور وفيديوهات)
-			if (!mediaUrl || (mediaType !== 'photo' && mediaType !== 'video')) continue;
+			if (!mediaUrl) continue;
 
 			const comments = post.comments?.data?.map((c) => ({
 				id: c.id,
@@ -57,9 +71,9 @@ const syncFacebookPosts = async (req, res) => {
 				story: post.story,
 				picture: mediaUrl,
 				fullPicture: mediaUrl,
-				video: mediaType === 'video' ? { source: mediaUrl } : null,
+				video: isVideo ? { source: mediaUrl, permalink: post.permalink_url } : null,
 				permalink: post.permalink_url,
-				type: mediaType === 'video' ? 'video' : 'photo',
+				type: isVideo ? 'video' : 'photo',
 				createdTime: post.created_time,
 				likeCount: post.reactions?.summary?.total_count || 0,
 				comments: comments,
