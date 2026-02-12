@@ -15,7 +15,7 @@ const syncFacebookPosts = async (req, res) => {
 		}
 
 		const params = {
-			fields: 'id,message,story,created_time,permalink_url,full_picture,type',
+			fields: 'id,message,story,created_time,permalink_url,full_picture,status_type',
 			access_token: accessToken,
 			limit: 20
 		};
@@ -40,8 +40,8 @@ const syncFacebookPosts = async (req, res) => {
 		const mediaUrl = post.full_picture || '';
 		if (!mediaUrl) continue;
 
-		// تحديد نوع البوست (صورة أو فيديو)
-		const isVideo = post.type === 'video';
+		// تحديد نوع البوست - status_type يمكن أن يكون video أو photo أو shared_story إلخ
+		const isVideo = post.status_type && (post.status_type.includes('video') || post.status_type === 'video');
 
 		const comments = [];
 
