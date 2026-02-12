@@ -225,6 +225,11 @@ function Landing() {
 	const [currentFaqIdx, setCurrentFaqIdx] = useState(0);
 	const [expandedFaqAnswer, setExpandedFaqAnswer] = useState(false);
 	const [autoRotatePaused, setAutoRotatePaused] = useState(false);
+	const [facebookFeed, setFacebookFeed] = useState([]);
+	const [currentFbItemIdx, setCurrentFbItemIdx] = useState(0);
+	const [fbAutoRotatePaused, setFbAutoRotatePaused] = useState(false);
+	const [fbExpandedComments, setFbExpandedComments] = useState(false);
+	const [fbLoading, setFbLoading] = useState(false);
 	const DESIRED_REVIEW_COUNT = 12;
 	const fallbackReviews = useMemo(() => shuffle(googleReviews).slice(0, DESIRED_REVIEW_COUNT), []);
 	const [reviewsData, setReviewsData] = useState({
@@ -564,6 +569,42 @@ function Landing() {
 		};
 	}, [fallbackReviews]);
 
+	// Facebook Feed: جلب البوستات والـ auto-rotate
+	useEffect(() => {
+		let isMounted = true;
+		setFbLoading(true);
+		
+		const fetchFacebookFeed = async () => {
+			try {
+				const res = await axios.get(`${API_BASE}/api/public/facebook/feed`);
+				if (isMounted && res.data?.data) {
+					setFacebookFeed(res.data.data);
+				}
+			} catch (err) {
+				console.error('خطأ في جلب Facebook feed:', err);
+			} finally {
+				if (isMounted) setFbLoading(false);
+			}
+		};
+
+		fetchFacebookFeed();
+		return () => {
+			isMounted = false;
+		};
+	}, []);
+
+	// Facebook auto-rotate: show one post at a time, change every 5 seconds
+	useEffect(() => {
+		if (fbAutoRotatePaused || facebookFeed.length === 0) return;
+		
+		const interval = setInterval(() => {
+			setCurrentFbItemIdx((prev) => (prev + 1) % facebookFeed.length);
+			setFbExpandedComments(false);
+		}, 5000);
+		
+		return () => clearInterval(interval);
+	}, [fbAutoRotatePaused, facebookFeed.length]);
+
 	const css = `
 		:root {
 			--bg: ${palette.bg};
@@ -840,6 +881,38 @@ function Landing() {
 			to { opacity: 1; transform: translateY(0); }
 		}
 		@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+		.fb-carousel { position: relative; width: 100%; }
+		.fb-carousel-item { opacity: 0; visibility: hidden; transition: opacity 0.5s ease, visibility 0.5s ease; position: absolute; width: 100%; }
+		.fb-carousel-item.active { opacity: 1; visibility: visible; position: relative; }
+		.fb-post-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 0; overflow: hidden; box-shadow: 0 12px 28px var(--shadow); }
+		.fb-post-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+		.fb-post-header img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+		.fb-post-meta { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+		.fb-post-meta h4 { margin: 0; font-size: 14px; font-weight: 700; color: var(--text); }
+		.fb-post-meta small { color: var(--muted); font-size: 12px; }
+		.fb-post-image { width: 100%; max-height: 400px; object-fit: cover; background: var(--overlay); }
+		.fb-post-video { width: 100%; max-height: 400px; background: var(--overlay); display: flex; align-items: center; justify-content: center; position: relative; }
+		.fb-video-play { width: 60px; height: 60px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; transition: transform 0.2s ease; }
+		.fb-video-play:hover { transform: scale(1.1); }
+		.fb-post-message { padding: 16px; color: var(--text); font-size: 14px; line-height: 1.6; }
+		.fb-post-stats { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+		.fb-stat-item { display: flex; align-items: center; gap: 6px; }
+		.fb-comments-section { padding: 12px 16px; }
+		.fb-comment { display: flex; gap: 10px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+		.fb-comment:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+		.fb-comment-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--overlay); flex-shrink: 0; }
+		.fb-comment-body { flex: 1; }
+		.fb-comment-author { font-weight: 700; font-size: 13px; color: var(--text); }
+		.fb-comment-text { color: var(--text); font-size: 13px; line-height: 1.5; margin: 4px 0 0; }
+		.fb-view-all-comments { width: 100%; padding: 10px; text-align: center; color: var(--accent); cursor: pointer; font-weight: 700; font-size: 13px; background: var(--overlay); border: 1px solid var(--border); border-radius: 8px; transition: all 0.2s ease; margin-top: 8px; }
+		.fb-view-all-comments:hover { background: var(--card); border-color: var(--accent); }
+		.fb-post-actions { display: flex; gap: 8px; padding: 12px 16px; }
+		.fb-action-btn { flex: 1; padding: 10px; background: var(--overlay); border: 1px solid var(--border); border-radius: 8px; color: var(--text); cursor: pointer; font-weight: 700; font-size: 13px; transition: all 0.2s ease; }
+		.fb-action-btn:hover { background: linear-gradient(135deg, rgba(196,152,65,0.1), rgba(31,182,166,0.08)); border-color: var(--gold); }
+		.fb-nav-dots { display: flex; justify-content: center; gap: 8px; margin-top: 14px; }
+		.fb-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); cursor: pointer; transition: all 0.3s ease; }
+		.fb-dot.active { background: var(--gold); width: 24px; border-radius: 999px; box-shadow: 0 4px 12px rgba(196,152,65,0.3); }
+		.fb-dot:hover { background: var(--gold); }
 		.google-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(66,133,244,0.12); color: #1a73e8; padding: 4px 10px; border-radius: 999px; font-weight: 700; border: 1px solid rgba(66,133,244,0.2); font-size: 12px; }
 		.fallback-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(198,161,91,0.14); color: var(--text); padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(198,161,91,0.3); font-size: 12px; }
 		.footer { margin: 28px 0 56px; text-align: center; color: var(--muted); font-size: 14px; }
@@ -1160,6 +1233,129 @@ function Landing() {
 						))}
 					</div>
 				</section>
+
+				{facebookFeed.length > 0 && (
+					<section className="card reveal" id="facebook-feed">
+						<h2 style={{ marginTop: 0, marginBottom: 6 }}>آخر منشوراتنا</h2>
+						<p style={{ color: 'var(--muted)', margin: '0 0 16px' }}>تابعي آخر أخبار وعروضنا المميزة على الفيسبوك. كل 5 ثواني بوست جديد يظهر، اضغطي عشان تشوفي التعليقات بالكامل!</p>
+						<div className="fb-carousel">
+							<div className="fb-carousel-track">
+								{facebookFeed.map((post, idx) => {
+									const isActive = idx === currentFbItemIdx;
+									return (
+										<div key={post._id} className={`fb-carousel-item ${isActive ? 'active' : ''}`}>
+											<div className="fb-post-card">
+												{/* Header */}
+												<div className="fb-post-header">
+													<img 
+														src="https://platform-lookaside.fbsbx.com/platform/profilepic/?asid=411581755600976&height=50&width=50" 
+														alt="غرام سلطان"
+														loading="lazy"
+													/>
+													<div className="fb-post-meta">
+														<h4>غرام سلطان بيوتي سنتر</h4>
+														<small>{new Date(post.createdTime).toLocaleDateString('ar-EG')}</small>
+													</div>
+												</div>
+
+												{/* Image/Video */}
+												{post.fullPicture && (
+													<img src={post.fullPicture} alt="البوست" className="fb-post-image" loading="lazy" />
+												)}
+
+												{/* Message */}
+												{post.message && (
+													<div className="fb-post-message">
+														{post.message.substring(0, 200)}...
+													</div>
+												)}
+
+												{/* Stats */}
+												<div className="fb-post-stats">
+													<div className="fb-stat-item">❤️ {post.likeCount.toLocaleString()}</div>
+													<div className="fb-stat-item">💬 {post.commentCount.toLocaleString()}</div>
+													<a 
+														href={post.permalink} 
+														target="_blank" 
+														rel="noreferrer"
+														style={{ color: 'var(--accent)', textDecoration: 'none', cursor: 'pointer' }}
+													>
+														♗ افتحي على Facebook
+													</a>
+												</div>
+
+												{/* Comments */}
+												{post.comments && post.comments.length > 0 && (
+													<div className="fb-comments-section">
+														{!fbExpandedComments && (
+															<button
+																className="fb-view-all-comments"
+																onClick={() => setFbExpandedComments(true)}
+															>
+																شوفي التعليقات ({post.commentCount})
+															</button>
+														)}
+														{fbExpandedComments && (
+															<div>
+																{post.comments.map((comment, cidx) => (
+																	<div key={cidx} className="fb-comment">
+																		<div className="fb-comment-avatar" style={{ backgroundImage: comment.picture ? `url(${comment.picture})` : 'none' }} />
+																		<div className="fb-comment-body">
+																			<div className="fb-comment-author">{comment.name}</div>
+																			<div className="fb-comment-text">{comment.message}</div>
+																		</div>
+																	</div>
+																))}
+																<button
+																	className="fb-view-all-comments"
+																	onClick={() => setFbExpandedComments(false)}
+																>
+																	← أغلقي التعليقات
+																</button>
+															</div>
+														)}
+													</div>
+												)}
+
+												{/* Actions */}
+												<div className="fb-post-actions">
+													<button 
+														className="fb-action-btn"
+														onClick={() => window.open(FACEBOOK_LINK, '_blank')}
+													>
+														👍 Follow على Facebook
+													</button>
+													<button 
+														className="fb-action-btn"
+														onClick={() => window.open(post.permalink, '_blank')}
+													>
+														↗️ اتفرجي كاملاً
+													</button>
+												</div>
+											</div>
+										</div>
+									);
+								})}
+							</div>
+						</div>
+						{facebookFeed.length > 1 && (
+							<div className="fb-nav-dots">
+								{facebookFeed.map((_, idx) => (
+									<div
+										key={idx}
+										className={`fb-dot ${idx === currentFbItemIdx ? 'active' : ''}`}
+										onClick={() => {
+											setCurrentFbItemIdx(idx);
+											setFbExpandedComments(false);
+											setFbAutoRotatePaused(false);
+										}}
+										title={`بوست ${idx + 1}`}
+									/>
+								))}
+							</div>
+						)}
+					</section>
+				)}
 
 				<section className="trust-section reveal">
 					<div className="trust-heading">ثقة واعتمادات نعتز بيها</div>
