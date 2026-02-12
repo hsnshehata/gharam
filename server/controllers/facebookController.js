@@ -15,7 +15,7 @@ const syncFacebookPosts = async (req, res) => {
 		}
 
 		const params = {
-			fields: 'id,message,story,created_time,permalink_url,full_picture,type,reactions.summary(true),comments.summary(true)',
+			fields: 'id,message,story,created_time,permalink_url,full_picture,type,reactions.summary(true)',
 			access_token: accessToken,
 			limit: 20
 		};
@@ -57,7 +57,7 @@ const syncFacebookPosts = async (req, res) => {
 			createdTime: post.created_time,
 			likeCount: post.reactions?.summary?.total_count || 0,
 			comments: comments,
-			commentCount: post.comments?.summary?.total_count || 0,
+			commentCount: 0,
 			updatedAt: new Date()
 		};
 
