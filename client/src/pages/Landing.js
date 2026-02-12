@@ -229,7 +229,6 @@ function Landing() {
 	const [currentFbItemIdx, setCurrentFbItemIdx] = useState(0);
 	const [fbAutoRotatePaused, setFbAutoRotatePaused] = useState(false);
 	const [fbExpandedComments, setFbExpandedComments] = useState(false);
-	const [fbLoading, setFbLoading] = useState(false);
 	const DESIRED_REVIEW_COUNT = 12;
 	const fallbackReviews = useMemo(() => shuffle(googleReviews).slice(0, DESIRED_REVIEW_COUNT), []);
 	const [reviewsData, setReviewsData] = useState({
@@ -572,7 +571,6 @@ function Landing() {
 	// Facebook Feed: جلب البوستات والـ auto-rotate
 	useEffect(() => {
 		let isMounted = true;
-		setFbLoading(true);
 		
 		const fetchFacebookFeed = async () => {
 			try {
@@ -582,8 +580,6 @@ function Landing() {
 				}
 			} catch (err) {
 				console.error('خطأ في جلب Facebook feed:', err);
-			} finally {
-				if (isMounted) setFbLoading(false);
 			}
 		};
 
