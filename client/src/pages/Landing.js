@@ -1105,7 +1105,7 @@ function Landing() {
 
 				<section className="card reveal" id="faq">
 					<h2 style={{ marginTop: 0, marginBottom: 6 }}>أسئلة شائعة</h2>
-					<p style={{ color: 'var(--muted)', margin: '0 0 16px' }}>اسألة بتدور وتعود... كل 4 ثواني سؤال جديد يظهر. اضغطي على أي سؤال عشان تشوفي الإجابة وتوقفي الدوران!</p>
+					<p style={{ color: 'var(--muted)', margin: '0 0 16px' }}>اضغطي على أي سؤال عشان تشوفي الإجابة !</p>
 					<div className="faq-carousel">
 						<div className="faq-carousel-track">
 							{faqItems.map((item, idx) => (
