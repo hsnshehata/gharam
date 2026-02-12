@@ -1255,7 +1255,46 @@ function Landing() {
 
 									{/* Image/Video */}
 									{activeFbPost.fullPicture && (
-										<img src={activeFbPost.fullPicture} alt="البوست" className="fb-post-image" loading="lazy" referrerPolicy="no-referrer" />
+										<div style={{ position: 'relative', overflow: 'hidden', borderRadius: '8px' }}>
+											<img 
+												src={activeFbPost.fullPicture} 
+												alt="البوست" 
+												className="fb-post-image" 
+												loading="lazy" 
+												referrerPolicy="no-referrer"
+												style={{ display: 'block' }}
+											/>
+											{activeFbPost.type === 'video' && (
+												<div 
+													style={{
+														position: 'absolute',
+														top: '50%',
+														left: '50%',
+														transform: 'translate(-50%, -50%)',
+														width: '60px',
+														height: '60px',
+														backgroundColor: 'rgba(0, 0, 0, 0.6)',
+														borderRadius: '50%',
+														display: 'flex',
+														alignItems: 'center',
+														justifyContent: 'center',
+														cursor: 'pointer',
+														transition: 'all 0.3s ease'
+													}}
+													onMouseEnter={(e) => {
+														e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+														e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1.1)';
+													}}
+													onMouseLeave={(e) => {
+														e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+														e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1)';
+													}}
+													onClick={() => window.open(activeFbPost.permalink, '_blank')}
+												>
+													<span style={{ color: 'white', fontSize: '30px' }}>▶</span>
+												</div>
+											)}
+										</div>
 									)}
 
 									{/* Message */}
