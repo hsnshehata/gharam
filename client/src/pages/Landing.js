@@ -222,8 +222,9 @@ function Landing() {
 		return localStorage.getItem('theme') || 'light';
 	});
 	const [spinSpeed, setSpinSpeed] = useState(1);
-	const [expandedFaqIdx, setExpandedFaqIdx] = useState(null);
-	const [visibleFaqIndices, setVisibleFaqIndices] = useState(new Set());
+	const [currentFaqIdx, setCurrentFaqIdx] = useState(0);
+	const [expandedFaqAnswer, setExpandedFaqAnswer] = useState(false);
+	const [autoRotatePaused, setAutoRotatePaused] = useState(false);
 	const DESIRED_REVIEW_COUNT = 12;
 	const fallbackReviews = useMemo(() => shuffle(googleReviews).slice(0, DESIRED_REVIEW_COUNT), []);
 	const [reviewsData, setReviewsData] = useState({
@@ -451,15 +452,17 @@ function Landing() {
 		localStorage.setItem('theme', theme);
 	}, [theme]);
 
-	// FAQ stagger animation: show each question after 4 seconds delay
+	// FAQ auto-rotate: show one question at a time, change every 4 seconds
 	useEffect(() => {
-		const timers = faqItems.map((_, idx) => {
-			return setTimeout(() => {
-				setVisibleFaqIndices((prev) => new Set([...prev, idx]));
-			}, idx * 4000);
-		});
-		return () => timers.forEach(clearTimeout);
-	}, []);
+		if (autoRotatePaused) return;
+		
+		const interval = setInterval(() => {
+			setCurrentFaqIdx((prev) => (prev + 1) % faqItems.length);
+			setExpandedFaqAnswer(false);
+		}, 4000);
+		
+		return () => clearInterval(interval);
+	}, [autoRotatePaused, faqItems.length]);
 
 	useEffect(() => {
 		const link = document.createElement('link');
@@ -712,25 +715,45 @@ function Landing() {
 		.faq-list { display: grid; gap: 10px; margin-top: 10px; }
 		.faq-item { border-top: 1px solid var(--border); padding-top: 10px; }
 		.faq-item:first-child { border-top: none; padding-top: 0; }
-		.faq-container { display: grid; gap: 12px; margin-top: 16px; }
+		.faq-carousel { 
+			position: relative;
+			width: 100%;
+			min-height: auto;
+			max-width: 100%;
+		}
+		.faq-carousel-track {
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+		}
+		.faq-carousel-item {
+			opacity: 0;
+			visibility: hidden;
+			transition: opacity 0.5s ease, visibility 0.5s ease;
+			position: absolute;
+			width: 100%;
+		}
+		.faq-carousel-item.active {
+			opacity: 1;
+			visibility: visible;
+			position: relative;
+		}
 		.faq-question-btn { 
 			display: flex; 
 			align-items: center; 
 			justify-content: space-between; 
 			width: 100%;
 			background: var(--card);
-			border: 1px solid var(--border);
+			border: 2px solid var(--border);
 			border-radius: 12px;
 			padding: 16px;
 			cursor: pointer;
-			transition: all 0.3s ease;
+			transition: all 0.25s ease;
 			text-align: right;
 			color: var(--text);
 			font-weight: 600;
 			font-size: 15px;
 			gap: 12px;
-			opacity: 0;
-			animation: slideUp 0.5s ease forwards;
 		}
 		.faq-question-btn:hover { 
 			background: var(--overlay);
@@ -757,13 +780,13 @@ function Landing() {
 			transition: max-height 0.4s ease;
 			background: var(--overlay);
 			border: 1px solid var(--border);
-			border-radius: 12px;
+			border-radius: 0 0 12px 12px;
 			margin-top: 0;
 		}
 		.faq-answer.show { 
 			max-height: 600px;
 			padding: 16px;
-			margin-top: 8px;
+			margin-top: 0px;
 			border-top: 2px solid var(--gold);
 		}
 		.faq-answer p { 
@@ -788,6 +811,29 @@ function Landing() {
 			background: var(--card);
 			color: var(--text);
 			border-color: var(--gold);
+		}
+		.faq-nav-dots {
+			display: flex;
+			justify-content: center;
+			gap: 8px;
+			margin-top: 14px;
+		}
+		.faq-dot {
+			width: 8px;
+			height: 8px;
+			border-radius: 50%;
+			background: var(--border);
+			cursor: pointer;
+			transition: all 0.3s ease;
+		}
+		.faq-dot.active {
+			background: var(--gold);
+			width: 24px;
+			border-radius: 999px;
+			box-shadow: 0 4px 12px rgba(196,152,65,0.3);
+		}
+		.faq-dot:hover {
+			background: var(--gold);
 		}
 		@keyframes slideUp {
 			from { opacity: 0; transform: translateY(12px); }
@@ -1059,42 +1105,59 @@ function Landing() {
 
 				<section className="card reveal" id="faq">
 					<h2 style={{ marginTop: 0, marginBottom: 6 }}>أسئلة شائعة</h2>
-					<p style={{ color: 'var(--muted)', margin: '0 0 16px' }}>الأسئلة اللي بتسمعها كل يوم من الحريم + الإجابات الشافية. اضغطي على أي سؤال عشان تشوفي الإجابة!</p>
-					<div className="faq-container">
-						{faqItems.map((item, idx) => {
-							const isVisible = visibleFaqIndices.has(idx);
-							const isExpanded = expandedFaqIdx === idx;
-							return (
-								<div key={idx} style={{ opacity: isVisible ? 1 : 0, transition: 'opacity 0.3s ease' }}>
+					<p style={{ color: 'var(--muted)', margin: '0 0 16px' }}>اسألة بتدور وتعود... كل 4 ثواني سؤال جديد يظهر. اضغطي على أي سؤال عشان تشوفي الإجابة وتوقفي الدوران!</p>
+					<div className="faq-carousel">
+						<div className="faq-carousel-track">
+							{faqItems.map((item, idx) => (
+								<div 
+									key={idx}
+									className={`faq-carousel-item ${idx === currentFaqIdx ? 'active' : ''}`}
+								>
 									<button
-										className={`faq-question-btn ${isExpanded ? 'expanded' : ''}`}
-										onClick={() => setExpandedFaqIdx(isExpanded ? null : idx)}
-										style={{ 
-											animationDelay: `${idx * 0.4}s`,
-											opacity: isVisible ? 1 : 0
+										className={`faq-question-btn ${expandedFaqAnswer ? 'expanded' : ''}`}
+										onClick={() => {
+											setExpandedFaqAnswer(!expandedFaqAnswer);
+											setAutoRotatePaused(!expandedFaqAnswer);
 										}}
 									>
 										<div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
 											<span className="icon">
-												{isExpanded ? '✖️' : '✨'}
+												{expandedFaqAnswer ? '✖️' : '✨'}
 											</span>
 											<span style={{ flex: 1 }}>{item.question}</span>
 										</div>
 									</button>
-									<div className={`faq-answer ${isExpanded ? 'show' : ''}`}>
+									<div className={`faq-answer ${expandedFaqAnswer ? 'show' : ''}`}>
 										<p>{item.answer}</p>
-										{isExpanded && (
+										{expandedFaqAnswer && (
 											<button 
 												className="faq-close-btn"
-												onClick={() => setExpandedFaqIdx(null)}
+												onClick={() => {
+													setExpandedFaqAnswer(false);
+													setAutoRotatePaused(false);
+												}}
 											>
-												← أغلقي الإجابة
+												← الدوران التاني
 											</button>
 										)}
 									</div>
 								</div>
-							);
-						})}
+							))}
+						</div>
+					</div>
+					<div className="faq-nav-dots">
+						{faqItems.map((_, idx) => (
+							<div
+								key={idx}
+								className={`faq-dot ${idx === currentFaqIdx ? 'active' : ''}`}
+								onClick={() => {
+									setCurrentFaqIdx(idx);
+									setExpandedFaqAnswer(false);
+									setAutoRotatePaused(false);
+								}}
+								title={`سؤال ${idx + 1}`}
+							/>
+						))}
 					</div>
 				</section>
 
