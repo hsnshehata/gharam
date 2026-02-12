@@ -18,6 +18,8 @@ if (missingEnv.length) {
 }
 
 const app = express();
+// Render sits behind a proxy; trust it for correct IP handling
+app.set('trust proxy', 1);
 
 // Middleware
 app.use(cors());
