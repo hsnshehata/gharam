@@ -43,13 +43,7 @@ const syncFacebookPosts = async (req, res) => {
 		// تحديد نوع البوست (صورة أو فيديو)
 		const isVideo = post.type === 'video';
 
-		const comments = post.comments?.data?.map((c) => ({
-			id: c.id,
-			name: c.from?.name || 'Guest',
-			message: c.message,
-			createdTime: c.created_time,
-			picture: c.from?.picture?.data?.url
-		})) || [];
+		const comments = [];
 
 		const postData = {
 			facebookId: post.id,
