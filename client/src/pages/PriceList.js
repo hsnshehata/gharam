@@ -7,6 +7,14 @@ const INSTAGRAM_LINK = 'https://www.instagram.com/gharamsoltan';
 const TIKTOK_LINK = 'https://www.tiktok.com/@gharamsoltan';
 const FACEBOOK_LINK = 'https://www.facebook.com/gharam.ml';
 const THREADS_LINK = 'https://www.threads.net/@gharamsoltan';
+const BUSINESS_NAME = 'غرام سلطان بيوتي سنتر وستوديو';
+const CANONICAL_URL = 'https://gharamsoltan.com/prices';
+const PAGE_TITLE = 'قائمة أسعار خدمات وباكدجات غرام سلطان';
+const PAGE_DESCRIPTION = 'أسعار باكدجات الميك أب والتصوير والخدمات الفردية في غرام سلطان بيوتي سنتر بكفر الشيخ.';
+const OG_IMAGE = 'https://gharamsoltan.com/og-cover.jpg';
+const OG_IMAGE_WIDTH = '1200';
+const OG_IMAGE_HEIGHT = '630';
+const TWITTER_SITE = '@gharamsoltan';
 
 const socialLinks = [
 	{ href: INSTAGRAM_LINK, label: 'Instagram', color: '#e1306c', svg: (
@@ -198,6 +206,112 @@ function PriceList() {
 		document.body.setAttribute('data-theme', theme);
 		localStorage.setItem('theme', theme);
 	}, [theme]);
+
+	useEffect(() => {
+		const setMeta = (name, content, attr = 'name') => {
+			if (!content) return;
+			let el = document.head.querySelector(`meta[${attr}="${name}"]`);
+			if (!el) {
+				el = document.createElement('meta');
+				el.setAttribute(attr, name);
+				document.head.appendChild(el);
+			}
+			el.setAttribute('content', content);
+		};
+
+		document.title = `${PAGE_TITLE} | ${BUSINESS_NAME}`;
+		setMeta('description', PAGE_DESCRIPTION);
+		setMeta('og:title', `${PAGE_TITLE} | ${BUSINESS_NAME}`, 'property');
+		setMeta('og:description', PAGE_DESCRIPTION, 'property');
+		setMeta('og:type', 'website', 'property');
+		setMeta('og:url', CANONICAL_URL, 'property');
+		setMeta('og:image', OG_IMAGE, 'property');
+		setMeta('og:image:width', OG_IMAGE_WIDTH, 'property');
+		setMeta('og:image:height', OG_IMAGE_HEIGHT, 'property');
+		setMeta('og:image:alt', `${BUSINESS_NAME} | قائمة الأسعار`, 'property');
+		setMeta('twitter:card', 'summary_large_image');
+		setMeta('twitter:site', TWITTER_SITE);
+		setMeta('twitter:title', `${PAGE_TITLE} | ${BUSINESS_NAME}`);
+		setMeta('twitter:description', PAGE_DESCRIPTION);
+		setMeta('twitter:image', OG_IMAGE);
+		setMeta('twitter:image:alt', `${BUSINESS_NAME} | قائمة الأسعار`);
+
+		let canonical = document.querySelector('link[rel="canonical"]');
+		if (!canonical) {
+			canonical = document.createElement('link');
+			canonical.setAttribute('rel', 'canonical');
+			document.head.appendChild(canonical);
+		}
+		canonical.setAttribute('href', CANONICAL_URL);
+
+		const makeOffer = (name, price, items, serviceType) => ({
+			'@type': 'Offer',
+			priceCurrency: 'EGP',
+			price,
+			availability: 'https://schema.org/InStock',
+			itemOffered: {
+				'@type': 'Service',
+				name,
+				description: Array.isArray(items) ? items.join(' - ') : undefined,
+				serviceType
+			}
+		});
+
+		const packageOffers = [
+			...makeupPackages.map((pkg) => makeOffer(pkg.title, pkg.price, pkg.items, 'MakeupPackage')),
+			...photoPackages.map((pkg) => makeOffer(pkg.title, pkg.price, pkg.items, 'PhotoPackage'))
+		];
+
+		const serviceOffers = services.map((svc) => makeOffer(svc.name, svc.price, null, 'BeautyService'));
+		const offers = [...packageOffers, ...serviceOffers];
+
+		const itemList = {
+			'@context': 'https://schema.org',
+			'@type': 'ItemList',
+			name: 'قائمة أسعار غرام سلطان',
+			itemListElement: offers.map((offer, index) => ({
+				'@type': 'ListItem',
+				position: index + 1,
+				item: offer
+			}))
+		};
+
+		const breadcrumb = {
+			'@context': 'https://schema.org',
+			'@type': 'BreadcrumbList',
+			itemListElement: [
+				{
+					'@type': 'ListItem',
+					position: 1,
+					name: 'الرئيسية',
+					item: 'https://gharamsoltan.com/'
+				},
+				{
+					'@type': 'ListItem',
+					position: 2,
+					name: 'الأسعار',
+					item: CANONICAL_URL
+				}
+			]
+		};
+
+		const pageSchema = {
+			'@context': 'https://schema.org',
+			'@type': 'WebPage',
+			name: PAGE_TITLE,
+			description: PAGE_DESCRIPTION,
+			url: CANONICAL_URL
+		};
+
+		let jsonLd = document.getElementById('seo-json-ld-prices');
+		if (!jsonLd) {
+			jsonLd = document.createElement('script');
+			jsonLd.type = 'application/ld+json';
+			jsonLd.id = 'seo-json-ld-prices';
+			document.head.appendChild(jsonLd);
+		}
+		jsonLd.textContent = JSON.stringify([pageSchema, breadcrumb, itemList]);
+	}, []);
 
 	useEffect(() => {
 		const link = document.createElement('link');
