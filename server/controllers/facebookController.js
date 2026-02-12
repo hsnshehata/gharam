@@ -15,13 +15,13 @@ const syncFacebookPosts = async (req, res) => {
 		}
 
 		const params = {
-			fields: 'id,message,story,created_time,permalink_url,full_picture,status_type',
+			fields: 'id,message,story,created_time,permalink_url,full_picture,status_type,attachments{media_type,media,url},reactions.limit(0).summary(true),comments.limit(0).summary(true)',
 			access_token: accessToken,
 			limit: 20
 		};
 
 		// جلب آخر 20 بوست من Facebook مع التفاصيل (feed)
-	const url = `https://graph.facebook.com/v24.0/${pageId}/feed`;
+		const url = `https://graph.facebook.com/v24.0/${pageId}/feed`;
 		const response = await axios.get(url, { params });
 		const facebookPosts = response.data.data || [];
 
@@ -36,14 +36,18 @@ const syncFacebookPosts = async (req, res) => {
 		// معالجة وحفظ البوستات
 		let savedCount = 0;
 		for (const post of facebookPosts) {
-		// استخراج الصورة والفيديو
-		const mediaUrl = post.full_picture || '';
-		if (!mediaUrl) continue;
+			const attachment = post.attachments?.data?.[0];
+			const mediaType = attachment?.media_type;
+			const attachmentImage = attachment?.media?.image?.src || '';
 
-		// تحديد نوع البوست - status_type يمكن أن يكون video أو photo أو shared_story إلخ
-		const isVideo = post.status_type && (post.status_type.includes('video') || post.status_type === 'video');
+			// استخراج الصورة والفيديو
+			const mediaUrl = attachmentImage || post.full_picture || '';
+			if (!mediaUrl) continue;
 
-		const comments = [];
+			// تحديد نوع البوست - status_type يمكن أن يكون video أو photo أو shared_story إلخ
+			const isVideo = (post.status_type && post.status_type.includes('video')) || mediaType === 'video';
+
+			const comments = [];
 
 		const postData = {
 			facebookId: post.id,
@@ -55,9 +59,9 @@ const syncFacebookPosts = async (req, res) => {
 			permalink: post.permalink_url,
 			type: isVideo ? 'video' : 'photo',
 			createdTime: post.created_time,
-			likeCount: 0,
+			likeCount: post.reactions?.summary?.total_count || 0,
 			comments: comments,
-			commentCount: 0,
+			commentCount: post.comments?.summary?.total_count || 0,
 			updatedAt: new Date()
 		};
 
