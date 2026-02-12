@@ -21,7 +21,7 @@ const syncFacebookPosts = async (req, res) => {
 		};
 
 		// جلب آخر 20 بوست من Facebook مع التفاصيل (feed)
-	const url = `https://graph.facebook.com/v1.0/${pageId}/feed`;
+	const url = `https://graph.facebook.com/v24.0/${pageId}/feed`;
 		const response = await axios.get(url, { params });
 		const facebookPosts = response.data.data || [];
 
