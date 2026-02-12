@@ -7,6 +7,14 @@ const INSTAGRAM_LINK = 'https://www.instagram.com/gharamsoltan';
 const TIKTOK_LINK = 'https://www.tiktok.com/@gharamsoltan';
 const FACEBOOK_LINK = 'https://www.facebook.com/gharam.ml';
 const THREADS_LINK = 'https://www.threads.net/@gharamsoltan';
+const BUSINESS_NAME = 'غرام سلطان بيوتي سنتر وستوديو';
+const CANONICAL_URL = 'https://gharamsoltan.com/massage-chair';
+const PAGE_TITLE = 'كرسي المساج الذكي ضد الجاذبية';
+const PAGE_DESCRIPTION = 'تعرفي على كرسي المساج الذكي ضد الجاذبية وفوائده وجلساته في غرام سلطان بيوتي سنتر.';
+const OG_IMAGE = 'https://gharamsoltan.com/og-cover.jpg';
+const OG_IMAGE_WIDTH = '1200';
+const OG_IMAGE_HEIGHT = '630';
+const TWITTER_SITE = '@gharamsoltan';
 
 const INSTAGRAM_SVG = (
 	<path
@@ -111,6 +119,116 @@ function MassageChair() {
 	useEffect(() => {
 		localStorage.setItem('theme', theme);
 	}, [theme]);
+
+	useEffect(() => {
+		const setMeta = (name, content, attr = 'name') => {
+			if (!content) return;
+			let el = document.head.querySelector(`meta[${attr}="${name}"]`);
+			if (!el) {
+				el = document.createElement('meta');
+				el.setAttribute(attr, name);
+				document.head.appendChild(el);
+			}
+			el.setAttribute('content', content);
+		};
+
+		document.title = `${PAGE_TITLE} | ${BUSINESS_NAME}`;
+		setMeta('description', PAGE_DESCRIPTION);
+		setMeta('og:title', `${PAGE_TITLE} | ${BUSINESS_NAME}`, 'property');
+		setMeta('og:description', PAGE_DESCRIPTION, 'property');
+		setMeta('og:type', 'product', 'property');
+		setMeta('og:url', CANONICAL_URL, 'property');
+		setMeta('og:image', OG_IMAGE, 'property');
+		setMeta('og:image:width', OG_IMAGE_WIDTH, 'property');
+		setMeta('og:image:height', OG_IMAGE_HEIGHT, 'property');
+		setMeta('og:image:alt', `${BUSINESS_NAME} | كرسي المساج`, 'property');
+		setMeta('twitter:card', 'summary_large_image');
+		setMeta('twitter:site', TWITTER_SITE);
+		setMeta('twitter:title', `${PAGE_TITLE} | ${BUSINESS_NAME}`);
+		setMeta('twitter:description', PAGE_DESCRIPTION);
+		setMeta('twitter:image', OG_IMAGE);
+		setMeta('twitter:image:alt', `${BUSINESS_NAME} | كرسي المساج`);
+
+		let canonical = document.querySelector('link[rel="canonical"]');
+		if (!canonical) {
+			canonical = document.createElement('link');
+			canonical.setAttribute('rel', 'canonical');
+			document.head.appendChild(canonical);
+		}
+		canonical.setAttribute('href', CANONICAL_URL);
+
+		const productSchema = {
+			'@context': 'https://schema.org',
+			'@type': 'Product',
+			name: PAGE_TITLE,
+			description: PAGE_DESCRIPTION,
+			image: sections.map((sec) => sec.image).filter(Boolean),
+			brand: {
+				'@type': 'Organization',
+				name: BUSINESS_NAME
+			},
+			offers: {
+				'@type': 'Offer',
+				priceCurrency: 'EGP',
+				priceSpecification: {
+					'@type': 'PriceSpecification',
+					minPrice: 100,
+					maxPrice: 250,
+					priceCurrency: 'EGP'
+				},
+				availability: 'https://schema.org/InStock'
+			}
+		};
+
+		const howToSchema = {
+			'@context': 'https://schema.org',
+			'@type': 'HowTo',
+			name: 'طريقة استخدام كرسي المساج الذكي ضد الجاذبية',
+			description: 'خطوات بسيطة للاستفادة من جلسة المساج الذكي.',
+			step: [
+				{ '@type': 'HowToStep', name: 'اختاري مدة الجلسة', text: 'حددي مدة الجلسة المناسبة ليكي حسب احتياجك.' },
+				{ '@type': 'HowToStep', name: 'اتخذي وضعية الاسترخاء', text: 'اقعدي أو استلقي على الكرسي في وضع مريح.' },
+				{ '@type': 'HowToStep', name: 'اختاري برنامج المساج', text: 'اختاري البرنامج المناسب للتدليك والحرارة.' },
+				{ '@type': 'HowToStep', name: 'استمتعي بالجلسة', text: 'سيبي الكرسي يشتغل تلقائيا لحد نهاية الجلسة.' }
+			]
+		};
+
+		const breadcrumb = {
+			'@context': 'https://schema.org',
+			'@type': 'BreadcrumbList',
+			itemListElement: [
+				{
+					'@type': 'ListItem',
+					position: 1,
+					name: 'الرئيسية',
+					item: 'https://gharamsoltan.com/'
+				},
+				{
+					'@type': 'ListItem',
+					position: 2,
+					name: 'كرسي المساج',
+					item: CANONICAL_URL
+				}
+			]
+		};
+
+		const pageSchema = {
+			'@context': 'https://schema.org',
+			'@type': 'WebPage',
+			name: PAGE_TITLE,
+			description: PAGE_DESCRIPTION,
+			url: CANONICAL_URL
+		};
+
+		let jsonLd = document.getElementById('seo-json-ld-massage');
+		if (!jsonLd) {
+			jsonLd = document.createElement('script');
+			jsonLd.type = 'application/ld+json';
+			jsonLd.id = 'seo-json-ld-massage';
+			document.head.appendChild(jsonLd);
+		}
+		jsonLd.textContent = JSON.stringify([pageSchema, breadcrumb, productSchema, howToSchema]);
+	}, []);
 
 	useEffect(() => {
 		const link = document.createElement('link');
