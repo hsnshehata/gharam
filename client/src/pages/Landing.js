@@ -222,6 +222,8 @@ function Landing() {
 		return localStorage.getItem('theme') || 'light';
 	});
 	const [spinSpeed, setSpinSpeed] = useState(1);
+	const [expandedFaqIdx, setExpandedFaqIdx] = useState(null);
+	const [visibleFaqIndices, setVisibleFaqIndices] = useState(new Set());
 	const DESIRED_REVIEW_COUNT = 12;
 	const fallbackReviews = useMemo(() => shuffle(googleReviews).slice(0, DESIRED_REVIEW_COUNT), []);
 	const [reviewsData, setReviewsData] = useState({
@@ -448,6 +450,16 @@ function Landing() {
 	useEffect(() => {
 		localStorage.setItem('theme', theme);
 	}, [theme]);
+
+	// FAQ stagger animation: show each question after 4 seconds delay
+	useEffect(() => {
+		const timers = faqItems.map((_, idx) => {
+			return setTimeout(() => {
+				setVisibleFaqIndices((prev) => new Set([...prev, idx]));
+			}, idx * 4000);
+		});
+		return () => timers.forEach(clearTimeout);
+	}, []);
 
 	useEffect(() => {
 		const link = document.createElement('link');
@@ -700,6 +712,88 @@ function Landing() {
 		.faq-list { display: grid; gap: 10px; margin-top: 10px; }
 		.faq-item { border-top: 1px solid var(--border); padding-top: 10px; }
 		.faq-item:first-child { border-top: none; padding-top: 0; }
+		.faq-container { display: grid; gap: 12px; margin-top: 16px; }
+		.faq-question-btn { 
+			display: flex; 
+			align-items: center; 
+			justify-content: space-between; 
+			width: 100%;
+			background: var(--card);
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			padding: 16px;
+			cursor: pointer;
+			transition: all 0.3s ease;
+			text-align: right;
+			color: var(--text);
+			font-weight: 600;
+			font-size: 15px;
+			gap: 12px;
+			opacity: 0;
+			animation: slideUp 0.5s ease forwards;
+		}
+		.faq-question-btn:hover { 
+			background: var(--overlay);
+			border-color: var(--gold);
+			box-shadow: 0 8px 18px var(--shadow);
+			transform: translateY(-2px);
+		}
+		.faq-question-btn.expanded {
+			background: linear-gradient(135deg, rgba(196,152,65,0.12), rgba(31,182,166,0.08));
+			border-color: var(--gold);
+			box-shadow: 0 12px 24px var(--shadow);
+		}
+		.faq-question-btn .icon { 
+			flex-shrink: 0; 
+			font-size: 18px;
+			transition: transform 0.3s ease;
+		}
+		.faq-question-btn.expanded .icon {
+			transform: rotate(180deg);
+		}
+		.faq-answer { 
+			max-height: 0;
+			overflow: hidden;
+			transition: max-height 0.4s ease;
+			background: var(--overlay);
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			margin-top: 0;
+		}
+		.faq-answer.show { 
+			max-height: 600px;
+			padding: 16px;
+			margin-top: 8px;
+			border-top: 2px solid var(--gold);
+		}
+		.faq-answer p { 
+			margin: 0;
+			color: var(--text);
+			line-height: 1.7;
+			font-size: 14px;
+		}
+		.faq-close-btn {
+			background: transparent;
+			border: 1px solid var(--border);
+			border-radius: 8px;
+			padding: 8px 14px;
+			cursor: pointer;
+			color: var(--muted);
+			font-size: 13px;
+			margin-top: 12px;
+			transition: all 0.2s ease;
+			font-weight: 600;
+		}
+		.faq-close-btn:hover {
+			background: var(--card);
+			color: var(--text);
+			border-color: var(--gold);
+		}
+		@keyframes slideUp {
+			from { opacity: 0; transform: translateY(12px); }
+			to { opacity: 1; transform: translateY(0); }
+		}
+		@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 		.google-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(66,133,244,0.12); color: #1a73e8; padding: 4px 10px; border-radius: 999px; font-weight: 700; border: 1px solid rgba(66,133,244,0.2); font-size: 12px; }
 		.fallback-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(198,161,91,0.14); color: var(--text); padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(198,161,91,0.3); font-size: 12px; }
 		.footer { margin: 28px 0 56px; text-align: center; color: var(--muted); font-size: 14px; }
@@ -965,14 +1059,42 @@ function Landing() {
 
 				<section className="card reveal" id="faq">
 					<h2 style={{ marginTop: 0, marginBottom: 6 }}>أسئلة شائعة</h2>
-					<p style={{ color: 'var(--muted)', margin: '0 0 10px' }}>إجابات سريعة على أكتر الأسئلة اللي بنسمعها.</p>
-					<div className="faq-list">
-						{faqItems.map((item) => (
-							<div className="faq-item" key={item.question}>
-								<h4 style={{ margin: 0 }}>{item.question}</h4>
-								<p style={{ margin: '6px 0 0' }}>{item.answer}</p>
-							</div>
-						))}
+					<p style={{ color: 'var(--muted)', margin: '0 0 16px' }}>الأسئلة اللي بتسمعها كل يوم من الحريم + الإجابات الشافية. اضغطي على أي سؤال عشان تشوفي الإجابة!</p>
+					<div className="faq-container">
+						{faqItems.map((item, idx) => {
+							const isVisible = visibleFaqIndices.has(idx);
+							const isExpanded = expandedFaqIdx === idx;
+							return (
+								<div key={idx} style={{ opacity: isVisible ? 1 : 0, transition: 'opacity 0.3s ease' }}>
+									<button
+										className={`faq-question-btn ${isExpanded ? 'expanded' : ''}`}
+										onClick={() => setExpandedFaqIdx(isExpanded ? null : idx)}
+										style={{ 
+											animationDelay: `${idx * 0.4}s`,
+											opacity: isVisible ? 1 : 0
+										}}
+									>
+										<div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+											<span className="icon">
+												{isExpanded ? '✖️' : '✨'}
+											</span>
+											<span style={{ flex: 1 }}>{item.question}</span>
+										</div>
+									</button>
+									<div className={`faq-answer ${isExpanded ? 'show' : ''}`}>
+										<p>{item.answer}</p>
+										{isExpanded && (
+											<button 
+												className="faq-close-btn"
+												onClick={() => setExpandedFaqIdx(null)}
+											>
+												← أغلقي الإجابة
+											</button>
+										)}
+									</div>
+								</div>
+							);
+						})}
 					</div>
 				</section>
 
