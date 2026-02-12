@@ -15,23 +15,15 @@ const syncFacebookPosts = async (req, res) => {
 		}
 
 		const params = {
-			fields: 'id,message,story,picture,full_picture,type,created_time,permalink_url,likes.summary(true),comments.limit(3).summary(true){id,name,message,created_time,from{picture,name}}',
+			fields: 'id,message,story,created_time,permalink_url,full_picture,attachments{media_type,media,url},reactions.summary(true),comments.limit(3).summary(true){message,created_time,from{id,name,picture}}',
 			access_token: accessToken,
 			limit: 20
 		};
 
-		let facebookPosts = [];
-		try {
-			// جلب آخر 20 بوست من Facebook مع التفاصيل
-			const url = `https://graph.facebook.com/v19.0/${pageId}/posts`;
-			const response = await axios.get(url, { params });
-			facebookPosts = response.data.data || [];
-		} catch (innerError) {
-			// fallback على feed لو posts فشلت
-			const fallbackUrl = `https://graph.facebook.com/v19.0/${pageId}/feed`;
-			const fallbackResponse = await axios.get(fallbackUrl, { params });
-			facebookPosts = fallbackResponse.data.data || [];
-		}
+		// جلب آخر 20 بوست من Facebook مع التفاصيل (feed)
+		const url = `https://graph.facebook.com/v19.0/${pageId}/feed`;
+		const response = await axios.get(url, { params });
+		const facebookPosts = response.data.data || [];
 
 		if (facebookPosts.length === 0) {
 			return res.status(200).json({
@@ -44,8 +36,12 @@ const syncFacebookPosts = async (req, res) => {
 		// معالجة وحفظ البوستات
 		let savedCount = 0;
 		for (const post of facebookPosts) {
+			const attachment = post.attachments?.data?.[0];
+			const mediaType = attachment?.media_type || 'photo';
+			const mediaUrl = attachment?.media?.image?.src || post.full_picture || '';
+
 			// تصفية البوستات بدون صور (بس صور وفيديوهات)
-			if (!post.picture && post.type !== 'video') continue;
+			if (!mediaUrl || (mediaType !== 'photo' && mediaType !== 'video')) continue;
 
 			const comments = post.comments?.data?.map((c) => ({
 				id: c.id,
@@ -59,13 +55,13 @@ const syncFacebookPosts = async (req, res) => {
 				facebookId: post.id,
 				message: post.message || post.story || '',
 				story: post.story,
-				picture: post.picture,
-				fullPicture: post.full_picture,
-				video: post.type === 'video' ? { source: post.picture } : null,
+				picture: mediaUrl,
+				fullPicture: mediaUrl,
+				video: mediaType === 'video' ? { source: mediaUrl } : null,
 				permalink: post.permalink_url,
-				type: post.type || 'photo',
+				type: mediaType === 'video' ? 'video' : 'photo',
 				createdTime: post.created_time,
-				likeCount: post.likes?.summary?.total_count || 0,
+				likeCount: post.reactions?.summary?.total_count || 0,
 				comments: comments,
 				commentCount: post.comments?.summary?.total_count || 0,
 				updatedAt: new Date()
