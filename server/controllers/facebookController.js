@@ -15,13 +15,13 @@ const syncFacebookPosts = async (req, res) => {
 		}
 
 		const params = {
-			fields: 'id,message,story,created_time,permalink_url,full_picture,type,reactions.summary(true)',
+			fields: 'id,message,story,created_time,permalink_url,full_picture,type',
 			access_token: accessToken,
 			limit: 20
 		};
 
 		// جلب آخر 20 بوست من Facebook مع التفاصيل (feed)
-		const url = `https://graph.facebook.com/v19.0/${pageId}/feed`;
+	const url = `https://graph.facebook.com/v1.0/${pageId}/feed`;
 		const response = await axios.get(url, { params });
 		const facebookPosts = response.data.data || [];
 
@@ -55,7 +55,7 @@ const syncFacebookPosts = async (req, res) => {
 			permalink: post.permalink_url,
 			type: isVideo ? 'video' : 'photo',
 			createdTime: post.created_time,
-			likeCount: post.reactions?.summary?.total_count || 0,
+			likeCount: 0,
 			comments: comments,
 			commentCount: 0,
 			updatedAt: new Date()
