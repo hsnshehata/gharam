@@ -15,6 +15,18 @@ const LANDLINE = '0472570908';
 const CANONICAL_URL = 'https://gharamsoltan.com/';
 const BUSINESS_NAME = 'غرام سلطان بيوتي سنتر وستوديو';
 const BUSINESS_DESCRIPTION = 'ميكب ارتيست وتصوير احترافي وحجز باكدجات زفاف، صبغة وفرد شعر، ومساج ضد الجاذبية في كفر الشيخ. حجزي أونلاين وتابعي التوافر الفوري.';
+const BUSINESS_EMAIL = 'info@gharamsoltan.com';
+const BUSINESS_STREET = 'شارع الجيش، مدينة دسوق';
+const BUSINESS_CITY = 'كفر الشيخ';
+const BUSINESS_REGION = 'كفر الشيخ';
+const BUSINESS_COUNTRY = 'EG';
+const BUSINESS_GEO = { lat: 31.1213493, lng: 30.6491897 };
+const OG_IMAGE = 'https://gharamsoltan.com/og-cover.jpg';
+const OG_IMAGE_WIDTH = '1200';
+const OG_IMAGE_HEIGHT = '630';
+const TWITTER_SITE = '@gharamsoltan';
+const PRICES_URL = 'https://gharamsoltan.com/prices';
+const MASSAGE_CHAIR_URL = 'https://gharamsoltan.com/massage-chair';
 
 const INSTAGRAM_SVG = (
 	<path
@@ -235,11 +247,16 @@ function Landing() {
 		setMeta('og:description', BUSINESS_DESCRIPTION, 'property');
 		setMeta('og:type', 'website', 'property');
 		setMeta('og:url', CANONICAL_URL, 'property');
-		setMeta('og:image', 'https://gharamsoltan.com/og-cover.jpg', 'property');
+		setMeta('og:image', OG_IMAGE, 'property');
+		setMeta('og:image:width', OG_IMAGE_WIDTH, 'property');
+		setMeta('og:image:height', OG_IMAGE_HEIGHT, 'property');
+		setMeta('og:image:alt', `${BUSINESS_NAME} | ميكب وتصوير`, 'property');
 		setMeta('twitter:card', 'summary_large_image');
+		setMeta('twitter:site', TWITTER_SITE);
 		setMeta('twitter:title', `${BUSINESS_NAME} | ميكب وتصوير`);
 		setMeta('twitter:description', BUSINESS_DESCRIPTION);
-		setMeta('twitter:image', 'https://gharamsoltan.com/og-cover.jpg');
+		setMeta('twitter:image', OG_IMAGE);
+		setMeta('twitter:image:alt', `${BUSINESS_NAME} | ميكب وتصوير`);
 
 		let canonical = document.querySelector('link[rel="canonical"]');
 		if (!canonical) {
@@ -249,21 +266,94 @@ function Landing() {
 		}
 		canonical.setAttribute('href', CANONICAL_URL);
 
-		const schema = {
+		const safeReviews = Array.isArray(reviewsData.reviews) ? reviewsData.reviews : [];
+		const reviewItems = safeReviews.slice(0, 8).map((rev, idx) => ({
+			'@type': 'Review',
+			author: { '@type': 'Person', name: rev.author || `عميلة ${idx + 1}` },
+			reviewRating: {
+				'@type': 'Rating',
+				ratingValue: Math.min(5, Math.max(1, Math.round(rev.rating || reviewsData.rating || 5)))
+			},
+			reviewBody: rev.text || 'تجربة ممتازة.',
+			datePublished: rev.timeISO || (rev.time ? new Date(rev.time * 1000).toISOString() : undefined)
+		}));
+
+		const offers = [
+			{
+				'@type': 'Offer',
+				priceCurrency: 'EGP',
+				price: 5500,
+				url: PRICES_URL,
+				availability: 'https://schema.org/InStock',
+				itemOffered: {
+					'@type': 'Service',
+					name: 'باكدج زفاف سبيشيال بلس',
+					description: 'ميكب زفاف شامل مع حمام مغربي وعطري وبديكير ومنيكير.',
+					serviceType: 'MakeupPackage'
+				}
+			},
+			{
+				'@type': 'Offer',
+				priceSpecification: {
+					'@type': 'PriceSpecification',
+					minPrice: 1600,
+					maxPrice: 2700,
+					priceCurrency: 'EGP'
+				},
+				url: PRICES_URL,
+				availability: 'https://schema.org/InStock',
+				itemOffered: {
+					'@type': 'Service',
+					name: 'باكدج تصوير ألبوم 20×30',
+					description: 'تصوير استوديو أو لوكيشن مع ألبوم وفوتوبلوك.',
+					serviceType: 'PhotoPackage'
+				}
+			},
+			{
+				'@type': 'Offer',
+				priceCurrency: 'EGP',
+				price: 3000,
+				url: PRICES_URL,
+				availability: 'https://schema.org/InStock',
+				itemOffered: {
+					'@type': 'Service',
+					name: 'باكدج حنة أورجينال',
+					description: 'ميكب + تسريحة/لفة + رموش + عدسات + فيك نيلز.',
+					serviceType: 'HennaPackage'
+				}
+			}
+		];
+
+		const localBusiness = {
 			'@context': 'https://schema.org',
 			'@type': 'BeautySalon',
 			name: BUSINESS_NAME,
 			description: BUSINESS_DESCRIPTION,
-			image: 'https://gharamsoltan.com/og-cover.jpg',
+			image: OG_IMAGE,
+			email: BUSINESS_EMAIL,
 			telephone: `+20${LANDLINE}`,
 			address: {
 				'@type': 'PostalAddress',
-				addressLocality: 'كفر الشيخ',
-				addressCountry: 'EG'
+				streetAddress: BUSINESS_STREET,
+				addressLocality: BUSINESS_CITY,
+				addressRegion: BUSINESS_REGION,
+				addressCountry: BUSINESS_COUNTRY
+			},
+			geo: {
+				'@type': 'GeoCoordinates',
+				latitude: BUSINESS_GEO.lat,
+				longitude: BUSINESS_GEO.lng
 			},
 			url: CANONICAL_URL,
 			priceRange: '$$',
 			sameAs: [INSTAGRAM_LINK, FACEBOOK_LINK, TIKTOK_LINK, THREADS_LINK, MAP_LINK, WHATSAPP_LINK],
+			makesOffer: offers,
+			aggregateRating: {
+				'@type': 'AggregateRating',
+				ratingValue: typeof reviewsData.rating === 'number' ? reviewsData.rating : 5,
+				reviewCount: Number.isFinite(reviewsData.totalReviews) ? reviewsData.totalReviews : 1100
+			},
+			review: reviewItems,
 			openingHoursSpecification: [
 				{
 					'@type': 'OpeningHoursSpecification',
@@ -273,6 +363,52 @@ function Landing() {
 				}
 			]
 		};
+
+		const breadcrumb = {
+			'@context': 'https://schema.org',
+			'@type': 'BreadcrumbList',
+			itemListElement: [
+				{
+					'@type': 'ListItem',
+					position: 1,
+					name: 'الرئيسية',
+					item: CANONICAL_URL
+				},
+				{
+					'@type': 'ListItem',
+					position: 2,
+					name: 'الأسعار',
+					item: PRICES_URL
+				},
+				{
+					'@type': 'ListItem',
+					position: 3,
+					name: 'كرسي المساج',
+					item: MASSAGE_CHAIR_URL
+				}
+			]
+		};
+
+		const article = {
+			'@context': 'https://schema.org',
+			'@type': 'Article',
+			headline: `${BUSINESS_NAME} | باكدجات ميكب وتصوير`,
+			description: BUSINESS_DESCRIPTION,
+			image: OG_IMAGE,
+			mainEntityOfPage: CANONICAL_URL,
+			author: {
+				'@type': 'Organization',
+				name: BUSINESS_NAME
+			},
+			publisher: {
+				'@type': 'Organization',
+				name: BUSINESS_NAME,
+				logo: {
+					'@type': 'ImageObject',
+					url: 'https://gharamsoltan.com/logo.png'
+				}
+			}
+		};
 		let jsonLd = document.getElementById('seo-json-ld');
 		if (!jsonLd) {
 			jsonLd = document.createElement('script');
@@ -280,8 +416,8 @@ function Landing() {
 			jsonLd.id = 'seo-json-ld';
 			document.head.appendChild(jsonLd);
 		}
-		jsonLd.textContent = JSON.stringify(schema);
-	}, []);
+		jsonLd.textContent = JSON.stringify([localBusiness, breadcrumb, article]);
+	}, [reviewsData]);
 
 	useEffect(() => {
 		localStorage.setItem('theme', theme);
