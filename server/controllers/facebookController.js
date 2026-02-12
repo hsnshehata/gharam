@@ -15,7 +15,7 @@ const syncFacebookPosts = async (req, res) => {
 		}
 
 		const params = {
-			fields: 'id,message,story,created_time,permalink_url,full_picture,type,reactions.summary(true),comments.limit(3).summary(true){message,created_time,from{id,name,picture}}',
+			fields: 'id,message,story,created_time,permalink_url,full_picture,type,reactions.summary(true),comments.summary(true)',
 			access_token: accessToken,
 			limit: 20
 		};
@@ -51,21 +51,21 @@ const syncFacebookPosts = async (req, res) => {
 			picture: c.from?.picture?.data?.url
 		})) || [];
 
-			const postData = {
-				facebookId: post.id,
-				message: post.message || post.story || '',
-				story: post.story,
-				picture: mediaUrl,
-				fullPicture: mediaUrl,
-				video: isVideo ? { source: mediaUrl, permalink: post.permalink_url } : null,
-				permalink: post.permalink_url,
-				type: isVideo ? 'video' : 'photo',
-				createdTime: post.created_time,
-				likeCount: post.reactions?.summary?.total_count || 0,
-				comments: comments,
-				commentCount: post.comments?.summary?.total_count || 0,
-				updatedAt: new Date()
-			};
+		const postData = {
+			facebookId: post.id,
+			message: post.message || post.story || '',
+			story: post.story,
+			picture: mediaUrl,
+			fullPicture: mediaUrl,
+			video: isVideo ? { source: mediaUrl, permalink: post.permalink_url } : null,
+			permalink: post.permalink_url,
+			type: isVideo ? 'video' : 'photo',
+			createdTime: post.created_time,
+			likeCount: post.reactions?.summary?.total_count || 0,
+			comments: comments,
+			commentCount: post.comments?.summary?.total_count || 0,
+			updatedAt: new Date()
+		};
 
 			// حفظ أو تحديث البوست
 			await FacebookPost.findOneAndUpdate(
