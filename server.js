@@ -60,9 +60,9 @@ app.use('/api/public', require('./server/routes/public'));
 app.use('/api/public/facebook', require('./server/routes/facebook'));
 console.log('Routes registered successfully');
 
-// Facebook Cron Job: تحديث البوستات كل 6 ساعات
+// Facebook Cron Job: تحديث البوستات كل 30 دقيقة
 const { syncFacebookPosts } = require('./server/controllers/facebookController');
-cron.schedule('0 */6 * * *', async () => {
+cron.schedule('*/30 * * * *', async () => {
 	console.log('[CRON] جاري تحديث بوستات Facebook...');
 	try {
 		const fakeReq = {};
@@ -78,7 +78,7 @@ cron.schedule('0 */6 * * *', async () => {
 		console.error('[CRON] خطأ في تحديث Facebook:', error);
 	}
 });
-console.log('[CRON] Facebook sync scheduled (every 6 hours)');
+console.log('[CRON] Facebook sync scheduled (every 30 minutes)');
 
 // Serve React app
 if (process.env.NODE_ENV === 'production') {
