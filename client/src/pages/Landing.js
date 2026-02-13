@@ -1014,7 +1014,7 @@ function Landing() {
 
 				{facebookFeed.length > 0 && (
 					<section className="card fb-section" id="facebook-feed">
-						<h2 style={{ marginTop: 0, marginBottom: 6 }}>آخر منشوراتنا</h2>
+						<h2 style={{ marginTop: 0, marginBottom: 6 }}>آخر بوستاتنا</h2>
 						<div className="fb-carousel">
 							{fbVisiblePosts.map((post, idx) => (
 								<div
@@ -1093,13 +1093,13 @@ function Landing() {
 											className="fb-action-btn"
 											onClick={() => window.open(FACEBOOK_LINK, '_blank')}
 										>
-											👍 Follow على Facebook
+											👍 Follow
 										</button>
 										<button
 											className="fb-action-btn"
 											onClick={() => window.open(post.permalink, '_blank')}
 										>
-											↗️ اتفرجي كاملاً
+											↗️ البوست
 										</button>
 									</div>
 								</div>
