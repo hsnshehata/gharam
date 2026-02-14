@@ -1121,9 +1121,14 @@ function Landing() {
 								))}
 							</div>
 						)}
+						<div className="cta-row" style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
+							<button className="btn btn-primary" onClick={() => window.location.href = '/gallery'} aria-label="فتح المعرض">
+								<span>🎨</span>
+								<span style={{ marginInlineStart: 6 }}>روحي للمعرض</span>
+							</button>
+						</div>
 					</section>
 				)}
-
 
 				<section className="availability reveal">
 					<div className="card">

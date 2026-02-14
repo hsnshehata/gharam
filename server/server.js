@@ -23,6 +23,16 @@ mongoose.connect(process.env.MONGO_URI)
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/packages', require('./routes/packages'));
+app.use('/api/public/facebook', require('./routes/facebook'));
+app.use('/api/facebook', require('./routes/facebookAdmin'));
+app.use('/api/bookings', require('./routes/bookings'));
+app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/expenses-advances', require('./routes/expensesAdvances'));
+app.use('/api/instant-services', require('./routes/instantServices'));
+app.use('/api/reports', require('./routes/reports'));
+app.use('/api/today-work', require('./routes/todayWork'));
+app.use('/api/public', require('./routes/public'));
+app.use('/api/sync', require('./routes/sync'));
 
 // Serve React app
 if (process.env.NODE_ENV === 'production') {
