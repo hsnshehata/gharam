@@ -12,21 +12,21 @@ const FACEBOOK_LINK = 'https://www.facebook.com/gharam.ml';
 const THREADS_LINK = 'https://www.threads.net/@gharamsoltan';
 const SUPPORT_LINK = 'https://zainbot.com/chat/ghazal';
 const LANDLINE = '0472570908';
-const CANONICAL_URL = 'https://gharamsoltan.com/';
+const CANONICAL_URL = 'https://gharam.art/';
 const BUSINESS_NAME = 'غرام سلطان بيوتي سنتر وستوديو';
 const BUSINESS_DESCRIPTION = 'ميكب ارتيست وتصوير احترافي وحجز باكدجات زفاف، صبغة وفرد شعر، ومساج ضد الجاذبية في كفر الشيخ. حجزي أونلاين وتابعي التوافر الفوري.';
-const BUSINESS_EMAIL = 'info@gharamsoltan.com';
+const BUSINESS_EMAIL = 'info@gharam.art';
 const BUSINESS_STREET = 'شارع الجيش، مدينة دسوق';
 const BUSINESS_CITY = 'كفر الشيخ';
 const BUSINESS_REGION = 'كفر الشيخ';
 const BUSINESS_COUNTRY = 'EG';
 const BUSINESS_GEO = { lat: 31.1213493, lng: 30.6491897 };
-const OG_IMAGE = 'https://gharamsoltan.com/og-cover.jpg';
+const OG_IMAGE = 'https://gharam.art/og-cover.jpg';
 const OG_IMAGE_WIDTH = '1200';
 const OG_IMAGE_HEIGHT = '630';
 const TWITTER_SITE = '@gharamsoltan';
-const PRICES_URL = 'https://gharamsoltan.com/prices';
-const MASSAGE_CHAIR_URL = 'https://gharamsoltan.com/massage-chair';
+const PRICES_URL = 'https://gharam.art/prices';
+const MASSAGE_CHAIR_URL = 'https://gharam.art/massage-chair';
 
 const INSTAGRAM_SVG = (
 	<path
@@ -148,7 +148,7 @@ const featuredPackages = [
 
 const faqItems = [
     { question: 'ايه الخدمات المتاحة في غرام سلطان بيوتي سنتر؟', answer: 'نقدم ميك اب احترافي للعرايس والمناسبات، تصوير استوديو ولوكيشن، فرد شعر بالبروتين والكافيار، تنظيف بشرة سوفت وهارد، كرسي مساج ذكي، حمام مغربي، باديكير ومنيكير، وخدمات شعر ووش وحواجب.' },
-    { question: 'ازاي احجز باكدج ميك اب زفاف؟', answer: 'ابعتي على الواتساب 01092527126 أو موقع www.gharamsoltan.com لتأكيد التوافر، حددي التاريخ والباكدج، وادفعي عربون 500 جنيه على الأقل عبر فودافون كاش.' },
+    { question: 'ازاي احجز باكدج ميك اب زفاف؟', answer: 'ابعتي على الواتساب 01092527126 أو موقع www.gharam.art لتأكيد التوافر، حددي التاريخ والباكدج، وادفعي عربون 500 جنيه على الأقل عبر فودافون كاش.' },
     { question: 'ايه أسعار باكدجات الميك اب؟', answer: 'شوفي قائمة الأسعار الكاملة هنا: https://gharam.art/prices ثم قوليلي لو عايزة تفاصيل الباكدج اللي يناسبك.' },
     { question: 'فين عنوان السنتر وازاي أوصل؟', answer: 'شارع الجيش أمام بوابة دمشق، دسوق كفر الشيخ. قدامنا مطعم بوابة دمشق، يمين مخبز كلاسيك، شمال سوبر ماركت الجوهري. خريطة: https://maps.app.goo.gl/cpF8J7rw6ScxZwiv5' },
     { question: 'هل السنتر حريمي بس؟', answer: 'أيوة، مركز حريمي فقط، ستاف كله بنات خاصة للمحجبات، الرجالة بس لتصوير الكابلز.' },
@@ -435,7 +435,7 @@ function Landing() {
 				name: BUSINESS_NAME,
 				logo: {
 					'@type': 'ImageObject',
-					url: 'https://gharamsoltan.com/logo.png'
+					url: 'https://gharam.art/logo.png'
 				}
 			}
 		};
