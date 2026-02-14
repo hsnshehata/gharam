@@ -12,21 +12,21 @@ const FACEBOOK_LINK = 'https://www.facebook.com/gharam.ml';
 const THREADS_LINK = 'https://www.threads.net/@gharamsoltan';
 const SUPPORT_LINK = 'https://zainbot.com/chat/ghazal';
 const LANDLINE = '0472570908';
-const CANONICAL_URL = 'https://gharamsoltan.com/';
+const CANONICAL_URL = 'https://gharam.art/';
 const BUSINESS_NAME = 'غرام سلطان بيوتي سنتر وستوديو';
 const BUSINESS_DESCRIPTION = 'ميكب ارتيست وتصوير احترافي وحجز باكدجات زفاف، صبغة وفرد شعر، ومساج ضد الجاذبية في كفر الشيخ. حجزي أونلاين وتابعي التوافر الفوري.';
-const BUSINESS_EMAIL = 'info@gharamsoltan.com';
+const BUSINESS_EMAIL = 'info@gharam.art';
 const BUSINESS_STREET = 'شارع الجيش، مدينة دسوق';
 const BUSINESS_CITY = 'كفر الشيخ';
 const BUSINESS_REGION = 'كفر الشيخ';
 const BUSINESS_COUNTRY = 'EG';
 const BUSINESS_GEO = { lat: 31.1213493, lng: 30.6491897 };
-const OG_IMAGE = 'https://gharamsoltan.com/og-cover.jpg';
+const OG_IMAGE = 'https://gharam.art/og-cover.jpg';
 const OG_IMAGE_WIDTH = '1200';
 const OG_IMAGE_HEIGHT = '630';
 const TWITTER_SITE = '@gharamsoltan';
-const PRICES_URL = 'https://gharamsoltan.com/prices';
-const MASSAGE_CHAIR_URL = 'https://gharamsoltan.com/massage-chair';
+const PRICES_URL = 'https://gharam.art/prices';
+const MASSAGE_CHAIR_URL = 'https://gharam.art/massage-chair';
 
 const INSTAGRAM_SVG = (
 	<path
@@ -148,15 +148,15 @@ const featuredPackages = [
 
 const faqItems = [
     { question: 'ايه الخدمات المتاحة في غرام سلطان بيوتي سنتر؟', answer: 'نقدم ميك اب احترافي للعرايس والمناسبات، تصوير استوديو ولوكيشن، فرد شعر بالبروتين والكافيار، تنظيف بشرة سوفت وهارد، كرسي مساج ذكي، حمام مغربي، باديكير ومنيكير، وخدمات شعر ووش وحواجب.' },
-    { question: 'ازاي احجز باكدج ميك اب زفاف؟', answer: 'ابعتي على الواتساب 01092527126 أو موقع www.gharamsoltan.com لتأكيد التوافر، حددي التاريخ والباكدج، وادفعي عربون 500 جنيه على الأقل عبر فودافون كاش.' },
-    { question: 'ايه أسعار باكدجات الميك اب؟', answer: 'شوفي قائمة الأسعار الكاملة هنا: https://ghazl.onrender.com/prices.html ثم قوليلي لو عايزة تفاصيل الباكدج اللي يناسبك.' },
+    { question: 'ازاي احجز باكدج ميك اب زفاف؟', answer: 'ابعتي على الواتساب 01092527126 أو موقع www.gharam.art لتأكيد التوافر، حددي التاريخ والباكدج، وادفعي عربون 500 جنيه على الأقل عبر فودافون كاش.' },
+    { question: 'ايه أسعار باكدجات الميك اب؟', answer: 'شوفي قائمة الأسعار الكاملة هنا: https://gharam.art/prices ثم قوليلي لو عايزة تفاصيل الباكدج اللي يناسبك.' },
     { question: 'فين عنوان السنتر وازاي أوصل؟', answer: 'شارع الجيش أمام بوابة دمشق، دسوق كفر الشيخ. قدامنا مطعم بوابة دمشق، يمين مخبز كلاسيك، شمال سوبر ماركت الجوهري. خريطة: https://maps.app.goo.gl/cpF8J7rw6ScxZwiv5' },
     { question: 'هل السنتر حريمي بس؟', answer: 'أيوة، مركز حريمي فقط، ستاف كله بنات خاصة للمحجبات، الرجالة بس لتصوير الكابلز.' },
-    { question: 'ايه أسعار كرسي المساج الذكي؟', answer: 'سبيد ريليف 10 دقائق 100 ج، ديب ريست 20 دقيقة 200 ج، ماكس ريلاكس 30 دقيقة 250 ج. تفاصيل: https://gharam.onrender.com/massage-chair/' },
+    { question: 'ايه أسعار كرسي المساج الذكي؟', answer: 'سبيد ريليف 10 دقائق 100 ج، ديب ريست 20 دقيقة 200 ج، ماكس ريلاكس 30 دقيقة 250 ج. تفاصيل: https://gharam.art/massage-chair/' },
     { question: 'ازاي فرد الشعر وأسعاره؟', answer: 'فرد علاجي بس (بروتين، كافيار، أرجان، فيلر) يبدأ من 1500 ج حسب الطول والكثافة، بعد معاينة في السنتر.' },
     { question: 'هل في ليزر أو بيكيني؟', answer: 'لا، مفيش ليزر ولا بيكيني ولا أندر آرم، بس تنظيف بشرة ووش وحواجب.' },
     { question: 'ايه مواعيد السنتر؟', answer: 'كل يوم من 10 صباحاً لـ10 مساءً، ممكن تتغير في الأعياد.' },
-    { question: 'ازاي أشوف أسعار التصوير؟', answer: 'شوفي قائمة الأسعار هنا: https://ghazl.onrender.com/prices.html، ألبومات تبدأ من 1600 ج في الاستوديو و2500 لوكيشن، ثم قوليلي لو عايزة عرض مخصص.'}
+    { question: 'ازاي أشوف أسعار التصوير؟', answer: 'شوفي قائمة الأسعار هنا: https://gharam.art/prices.html، ألبومات تبدأ من 1600 ج في الاستوديو و2500 لوكيشن، ثم قوليلي لو عايزة عرض مخصص.'}
 ];
 
 const availabilityCopy = {
@@ -435,7 +435,7 @@ function Landing() {
 				name: BUSINESS_NAME,
 				logo: {
 					'@type': 'ImageObject',
-					url: 'https://gharamsoltan.com/logo.png'
+					url: 'https://gharam.art/logo.png'
 				}
 			}
 		};
