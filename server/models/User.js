@@ -27,7 +27,7 @@ const userSchema = new mongoose.Schema({
     amount: Number,
     date: Date,
     bookingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking', default: null },
-    serviceId: { type: mongoose.Schema.Types.ObjectId, ref: 'Service', default: null },
+    serviceId: { type: String, default: null },
     serviceName: { type: String, default: null },
     instantServiceId: { type: mongoose.Schema.Types.ObjectId, ref: 'InstantService', default: null },
     receiptNumber: { type: String, default: null },
