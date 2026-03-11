@@ -107,3 +107,96 @@ exports.getDashboardSummary = async (req, res) => {
     res.status(500).json({ msg: 'خطأ في السيرفر' });
   }
 };
+
+exports.getTodayOperations = async (req, res) => {
+  const { date } = req.query;
+  try {
+    const startDate = date ? new Date(date) : new Date();
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(startDate);
+    endDate.setHours(23, 59, 59, 999);
+
+    const [bookings, instantServices, expenses, advances, bookingsWithInstallments] = await Promise.all([
+      Booking.find({ createdAt: { $gte: startDate, $lte: endDate } }).populate('package createdBy'),
+      InstantService.find({ createdAt: { $gte: startDate, $lte: endDate } }).populate('employeeId services.executedBy'),
+      Expense.find({ createdAt: { $gte: startDate, $lte: endDate } }).populate('createdBy'),
+      Advance.find({ createdAt: { $gte: startDate, $lte: endDate } }).populate('userId createdBy'),
+      Booking.find({ 'installments.date': { $gte: startDate, $lte: endDate } }).populate('installments.employeeId package')
+    ]);
+
+    const operations = [];
+
+    // 1. New Bookings
+    bookings.forEach(b => {
+      operations.push({
+        _id: `booking-${b._id}`,
+        type: 'حجز جديد',
+        details: `${b.clientName} - ${b.package?.name || 'باكدج'}`,
+        amount: b.deposit,
+        time: b.createdAt,
+        addedBy: b.createdBy?.username || 'غير معروف'
+      });
+    });
+
+    // 2. Installments
+    bookingsWithInstallments.forEach(b => {
+      b.installments.forEach(ins => {
+        if (ins.date >= startDate && ins.date <= endDate) {
+          operations.push({
+            _id: `installment-${b._id}-${ins._id}`,
+            type: 'قسط/دفعة',
+            details: `قسط من ${b.clientName}`,
+            amount: ins.amount,
+            time: ins.date,
+            addedBy: ins.employeeId?.username || 'غير معروف'
+          });
+        }
+      });
+    });
+
+    // 3. Instant Services
+    instantServices.forEach(is => {
+      const serviceNames = is.services.map(s => s.name).join(', ');
+      operations.push({
+        _id: `instant-${is._id}`,
+        type: 'خدمة فورية',
+        details: serviceNames || 'خدمات متنوعة',
+        amount: is.total,
+        time: is.createdAt,
+        addedBy: is.employeeId?.username || 'غير معروف'
+      });
+    });
+
+    // 4. Expenses
+    expenses.forEach(e => {
+      operations.push({
+        _id: `expense-${e._id}`,
+        type: 'مصروف',
+        details: e.details,
+        amount: e.amount,
+        time: e.createdAt,
+        addedBy: e.createdBy?.username || 'غير معروف'
+      });
+    });
+
+    // 5. Advances
+    advances.forEach(a => {
+      operations.push({
+        _id: `advance-${a._id}`,
+        type: 'سلفة',
+        details: `سلفة لـ ${a.userId?.username || 'موظف'}`,
+        amount: a.amount,
+        time: a.createdAt,
+        addedBy: a.createdBy?.username || 'غير معروف'
+      });
+    });
+
+    // Sort by time descending
+    operations.sort((a, b) => new Date(b.time) - new Date(a.time));
+
+    res.json(operations);
+  } catch (err) {
+    console.error('Error in getTodayOperations:', err);
+    res.status(500).json({ msg: 'خطأ في السيرفر' });
+  }
+};
