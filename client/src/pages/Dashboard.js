@@ -226,6 +226,12 @@ function Dashboard({ user }) {
     { dedupingInterval: 60000 }
   );
 
+  const { data: operationsData, mutate: mutateOperations } = useSWR(
+    () => `/api/dashboard/operations?date=${date}`,
+    (url) => axios.get(url, tokenHeader).then(res => res.data),
+    { dedupingInterval: 10000 }
+  );
+
   const { data: usersData, mutate: mutateUsers } = useSWR(
     '/api/users',
     (url) => axios.get(url, tokenHeader).then(res => res.data),
@@ -267,7 +273,8 @@ function Dashboard({ user }) {
     mutatePackages();
     mutateServices();
     mutateUsers();
-  }, [mutateSummary, mutateTodayWork, mutatePackages, mutateServices, mutateUsers]);
+    mutateOperations();
+  }, [mutateSummary, mutateTodayWork, mutatePackages, mutateServices, mutateUsers, mutateOperations]);
 
   useEffect(() => {
     const calculateSelectedPackageServices = async () => {
@@ -839,6 +846,53 @@ function Dashboard({ user }) {
           </Col>
         ))}
       </Row>
+
+      <div className="d-flex align-items-center mb-0 mt-4">
+        <h3 className="mb-0">سجل تفاصيل العمليات</h3>
+        <small className="text-muted ms-3">إجمالي العمليات اليوم: {operationsData?.length || 0}</small>
+      </div>
+      <Card className="mb-4">
+        <Card.Body className="p-0">
+          <Table responsive hover className="mb-0">
+            <thead style={{ backgroundColor: 'var(--surface)' }}>
+              <tr>
+                <th>النوع</th>
+                <th>التفاصيل</th>
+                <th>المبلغ</th>
+                <th>الوقت</th>
+                <th>أضيف بواسطة</th>
+              </tr>
+            </thead>
+            <tbody>
+              {operationsData && operationsData.length > 0 ? (
+                operationsData.map((op) => (
+                  <tr key={op._id}>
+                    <td>
+                      <span className={`badge ${
+                        op.type === 'حجز جديد' ? 'bg-primary' : 
+                        op.type === 'قسط/دفعة' ? 'bg-info' : 
+                        op.type === 'خدمة فورية' ? 'bg-success' : 
+                        op.type === 'مصروف' ? 'bg-danger' : 'bg-warning'
+                      }`}>
+                        {op.type}
+                      </span>
+                    </td>
+                    <td>{op.details}</td>
+                    <td>{op.amount} جنيه</td>
+                    <td>{new Date(op.time).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</td>
+                    <td>{op.addedBy}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="text-center py-4">لا توجد عمليات مسجلة لهذا اليوم</td>
+                </tr>
+              )}
+            </tbody>
+          </Table>
+        </Card.Body>
+      </Card>
+
 
       <Card className="mb-4">
         <Card.Body>
