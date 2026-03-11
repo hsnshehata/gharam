@@ -83,11 +83,29 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false, 
   }, 0);
 
   const totalDeposit = totalDepositFromBookings + totalInstallments;
-  const totalInstantServices = instantServices.reduce((sum, service) => {
-    const total = toNumber(service.total);
+  const { totalPredefinedInstant, totalCustomInstant } = instantServices.reduce((totals, service) => {
+    let predefinedSum = 0;
+    let customSum = 0;
+
+    (service.services || []).forEach(srv => {
+      const price = toNumber(srv.price);
+      if (srv.isCustom) {
+        customSum += price;
+      } else {
+        predefinedSum += price;
+      }
+    });
+
+    const total = predefinedSum + customSum;
     addToDay(service.createdAt, total);
-    return sum + total;
-  }, 0);
+
+    return {
+      totalPredefinedInstant: totals.totalPredefinedInstant + predefinedSum,
+      totalCustomInstant: totals.totalCustomInstant + customSum
+    };
+  }, { totalPredefinedInstant: 0, totalCustomInstant: 0 });
+
+  const totalInstantServices = totalPredefinedInstant + totalCustomInstant;
   const totalExpenses = expenses.reduce((sum, expense) => sum + toNumber(expense.amount), 0);
   const totalAdvances = advances.reduce((sum, advance) => sum + toNumber(advance.amount), 0);
   const net = totalDeposit + totalInstantServices - totalExpenses - totalAdvances;
@@ -158,7 +176,8 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false, 
 
   const revenueStreams = [
     { label: 'حجوزات وأقساط', value: totalDeposit },
-    { label: 'شغل فوري', value: totalInstantServices }
+    { label: 'شغل فوري', value: totalPredefinedInstant },
+    { label: 'خدمات خاصة', value: totalCustomInstant }
   ];
 
   const outflows = [
@@ -220,6 +239,8 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false, 
   return {
     summary: {
       totalDeposit,
+      totalPredefinedInstant,
+      totalCustomInstant,
       totalInstantServices,
       totalExpenses,
       totalAdvances,

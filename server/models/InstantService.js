@@ -6,6 +6,7 @@ const instantServiceSchema = new mongoose.Schema({
     _id: { type: String, required: true }, // تغيير من ObjectId إلى String
     name: { type: String, required: true },
     price: { type: Number, required: true },
+    isCustom: { type: Boolean, default: false }, // خدمات إدخال حر
     executed: { type: Boolean, default: false },
     executedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     executedAt: { type: Date }

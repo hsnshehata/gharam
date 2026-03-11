@@ -13,7 +13,7 @@ const invalidateInstantServiceCaches = async () => {
 };
 
 exports.addInstantService = async (req, res) => {
-  const { employeeId, services } = req.body;
+  const { employeeId, services, customServices = [] } = req.body;
 
   try {
     const srvRecords = await Service.find({ _id: { $in: services } });
@@ -27,6 +27,7 @@ exports.addInstantService = async (req, res) => {
         _id: srv._id.toString(),
         name: srv.name,
         price: srv.price,
+        isCustom: false,
         executed: !!employeeId, // executed: true لو فيه employeeId
         executedBy: employeeId || null, // executedBy: employeeId لو موجود
         executedAt: employeeId ? new Date() : null
@@ -37,7 +38,30 @@ exports.addInstantService = async (req, res) => {
       return service;
     });
 
-    const total = srvRecords.reduce((sum, srv) => sum + srv.price, 0);
+    // Add custom services to the list
+    if (Array.isArray(customServices)) {
+      customServices.forEach((customSrv, idx) => {
+        if (!customSrv.name || !customSrv.price) return; // Skip invalid custom services
+        
+        const price = Number(customSrv.price) || 0;
+        const service = {
+          _id: `custom-${Date.now()}-${idx}`,
+          name: customSrv.name,
+          price: price,
+          isCustom: true,
+          executed: !!employeeId,
+          executedBy: employeeId || null,
+          executedAt: employeeId ? new Date() : null
+        };
+        formattedServices.push(service);
+
+        if (employeeId) {
+          totalPoints += price * 0.15;
+        }
+      });
+    }
+
+    const total = formattedServices.reduce((sum, srv) => sum + srv.price, 0);
     const receiptNumber = Math.floor(1000000 + Math.random() * 9000000).toString();
     const barcode = receiptNumber;
 
@@ -81,7 +105,7 @@ exports.addInstantService = async (req, res) => {
 };
 
 exports.updateInstantService = async (req, res) => {
-  const { employeeId, services } = req.body;
+  const { employeeId, services, customServices = [] } = req.body;
 
   try {
     const srvRecords = await Service.find({ _id: { $in: services } });
@@ -95,6 +119,7 @@ exports.updateInstantService = async (req, res) => {
         _id: srv._id.toString(),
         name: srv.name,
         price: srv.price,
+        isCustom: false,
         executed: !!employeeId, // executed: true لو فيه employeeId
         executedBy: employeeId || null, // executedBy: employeeId لو موجود
         executedAt: employeeId ? new Date() : null
@@ -105,7 +130,30 @@ exports.updateInstantService = async (req, res) => {
       return service;
     });
 
-    const total = srvRecords.reduce((sum, srv) => sum + srv.price, 0);
+    // Add custom services to the list
+    if (Array.isArray(customServices)) {
+      customServices.forEach((customSrv, idx) => {
+        if (!customSrv.name || !customSrv.price) return; // Skip invalid custom services
+        
+        const price = Number(customSrv.price) || 0;
+        const service = {
+          _id: customSrv._id || `custom-${Date.now()}-${idx}`,
+          name: customSrv.name,
+          price: price,
+          isCustom: true,
+          executed: !!employeeId,
+          executedBy: employeeId || null,
+          executedAt: employeeId ? new Date() : null
+        };
+        formattedServices.push(service);
+
+        if (employeeId) {
+          totalPoints += price * 0.15;
+        }
+      });
+    }
+
+    const total = formattedServices.reduce((sum, srv) => sum + srv.price, 0);
 
     const instantService = await InstantService.findByIdAndUpdate(
       req.params.id,
