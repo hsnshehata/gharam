@@ -9,7 +9,9 @@ import { faPrint, faEdit, faEye, faTrash, faPlus } from '@fortawesome/free-solid
 import { useToast } from '../components/ToastProvider';
 
 function InstantServices({ user }) {
-  const [formData, setFormData] = useState({ employeeId: '', services: [] });
+  const [formData, setFormData] = useState({ employeeId: '', services: [], customServices: [] });
+  const [customServiceName, setCustomServiceName] = useState('');
+  const [customServicePrice, setCustomServicePrice] = useState('');
   const [total, setTotal] = useState(0);
   const { showToast } = useToast();
   const setMessage = useCallback((msg) => {
@@ -186,21 +188,50 @@ function InstantServices({ user }) {
         const srv = services.find(s => s._id === id.value);
         if (srv) tempTotal += srv.price;
       });
+      formData.customServices.forEach(srv => {
+        tempTotal += (Number(srv.price) || 0);
+      });
       setTotal(tempTotal);
     };
     calculateTotal();
-  }, [formData.services, services]);
+  }, [formData.services, formData.customServices, services]);
+
+  const handleAddCustomService = () => {
+    if (!customServiceName.trim() || !customServicePrice) {
+      setMessage('الرجاء إدخال اسم وسعر الخدمة الخاصة', 'warning');
+      return;
+    }
+    const newCustomService = {
+      _id: `temp-${Date.now()}`,
+      name: customServiceName,
+      price: Number(customServicePrice)
+    };
+    setFormData(prev => ({
+      ...prev,
+      customServices: [...prev.customServices, newCustomService]
+    }));
+    setCustomServiceName('');
+    setCustomServicePrice('');
+  };
+
+  const handleRemoveCustomService = (idToRemove) => {
+    setFormData(prev => ({
+      ...prev,
+      customServices: prev.customServices.filter(s => s._id !== idToRemove)
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.services.length) {
-      setMessage('الرجاء اختيار خدمة واحدة على الأقل');
+    if (!formData.services.length && !formData.customServices.length) {
+      setMessage('الرجاء اختيار خدمة واحدة أو إضافة خدمة خاصة على الأقل');
       return;
     }
     if (submitLoading) return;
     const submitData = {
       employeeId: formData.employeeId || null,
-      services: formData.services.map(s => s.value)
+      services: formData.services.map(s => s.value),
+      customServices: formData.customServices.map(s => ({ name: s.name, price: s.price }))
     };
     setSubmitLoading(true);
     setShowCreateModal(false);
@@ -219,7 +250,9 @@ function InstantServices({ user }) {
         setCurrentReceipt(res.data.instantService);
         setShowReceiptModal(true);
       }
-      setFormData({ employeeId: '', services: [] });
+      setFormData({ employeeId: '', services: [], customServices: [] });
+      setCustomServiceName('');
+      setCustomServicePrice('');
       setEditItem(null);
     } catch (err) {
       console.error('Submit error:', err.response?.data || err.message);
@@ -231,13 +264,23 @@ function InstantServices({ user }) {
 
   const handleEdit = (service) => {
     setEditItem(service);
+    const predefined = service.services.filter(s => !s.isCustom).map((srv, index) => ({
+      value: srv._id ? srv._id.toString() : `service-${index}`,
+      label: srv.name || 'غير معروف'
+    }));
+    const custom = service.services.filter(s => s.isCustom).map(srv => ({
+      _id: srv._id || `temp-${Date.now()}-${Math.random()}`,
+      name: srv.name,
+      price: srv.price
+    }));
+
     setFormData({
       employeeId: service.employeeId?._id || '',
-      services: service.services.map((srv, index) => ({
-        value: srv._id ? srv._id.toString() : `service-${index}`,
-        label: srv.name || 'غير معروف'
-      }))
+      services: predefined,
+      customServices: custom
     });
+    setCustomServiceName('');
+    setCustomServicePrice('');
     setShowCreateModal(true);
   };
 
@@ -384,8 +427,60 @@ function InstantServices({ user }) {
                   classNamePrefix="booking-services"
                   styles={customStyles}
                 />
-              </Form.Group>
+            </Form.Group>
             </Col>
+            
+            <Col md={12} className="mt-3">
+              <Card className="p-3 mb-3" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}>
+                <h5>إضافة خدمات خاصة (إدخال حر)</h5>
+                <Row>
+                  <Col md={5}>
+                    <Form.Group>
+                      <Form.Label>اسم الخدمة</Form.Label>
+                      <Form.Control 
+                        type="text" 
+                        value={customServiceName}
+                        onChange={(e) => setCustomServiceName(e.target.value)}
+                        placeholder="أدخل اسم الخدمة"
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={4}>
+                    <Form.Group>
+                      <Form.Label>السعر</Form.Label>
+                      <Form.Control 
+                        type="number" 
+                        value={customServicePrice}
+                        onChange={(e) => setCustomServicePrice(e.target.value)}
+                        placeholder="السعر بالجنيه"
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={3} className="d-flex align-items-end">
+                    <Button variant="info" onClick={handleAddCustomService} className="w-100">
+                      إضافة خدمة خاصة
+                    </Button>
+                  </Col>
+                </Row>
+                
+                {formData.customServices.length > 0 && (
+                  <div className="mt-3">
+                    <h6>الخدمات الخاصة المضافة:</h6>
+                    <ul>
+                      {formData.customServices.map(srv => (
+                        <li key={srv._id} className="d-flex justify-content-between align-items-center mb-2">
+                          <span>{srv.name} - {srv.price} جنيه</span>
+                          <Button variant="danger" size="sm" onClick={() => handleRemoveCustomService(srv._id)}>
+                            <FontAwesomeIcon icon={faTrash} />
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </Card>
+            </Col>
+
             <Col md={12}>
               <Form.Group>
                 <Form.Label>الإجمالي: {total} جنيه</Form.Label>
@@ -399,7 +494,9 @@ function InstantServices({ user }) {
                 variant="secondary"
                 className="mt-3 ms-2"
                 onClick={() => {
-                  setFormData({ employeeId: '', services: [] });
+                  setFormData({ employeeId: '', services: [], customServices: [] });
+                  setCustomServiceName('');
+                  setCustomServicePrice('');
                   setEditItem(null);
                   setShowCreateModal(false);
                 }}
