@@ -431,7 +431,7 @@ function Dashboard({ user }) {
     if (instantSubmitting) return;
     const submitData = {
       employeeId: instantServiceFormData.employeeId || null,
-      services: instantServiceFormData.services.map(s => s.value),
+      services: instantServiceFormData.services.filter(s => s.value !== 'custom-trigger').map(s => s.value),
       customServices: instantServiceFormData.customServices.map(s => ({ name: s.name, price: s.price }))
     };
     setInstantSubmitting(true);
@@ -1190,7 +1190,10 @@ function Dashboard({ user }) {
                   <Form.Label>الخدمات</Form.Label>
                   <Select
                     isMulti
-                    options={services.filter(srv => srv.type === 'instant').map(srv => ({ value: srv._id, label: srv.name }))}
+                    options={[
+                      { value: 'custom-trigger', label: 'إدخال حر (خدمة خاصة)' },
+                      ...services.filter(srv => srv.type === 'instant').map(srv => ({ value: srv._id, label: srv.name }))
+                    ]}
                     value={instantServiceFormData.services}
                     onChange={(selected) => setInstantServiceFormData({ ...instantServiceFormData, services: selected })}
                     isSearchable
@@ -1202,56 +1205,58 @@ function Dashboard({ user }) {
                 </Form.Group>
               </Col>
               
-              <Col md={12} className="mt-3">
-                <Card className="p-3 mb-3" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}>
-                  <h5>إضافة خدمات خاصة (إدخال حر)</h5>
-                  <Row>
-                    <Col md={5}>
-                      <Form.Group>
-                        <Form.Label>اسم الخدمة</Form.Label>
-                        <Form.Control 
-                          type="text" 
-                          value={customServiceName}
-                          onChange={(e) => setCustomServiceName(e.target.value)}
-                          placeholder="أدخل اسم الخدمة"
-                        />
-                      </Form.Group>
-                    </Col>
-                    <Col md={4}>
-                      <Form.Group>
-                        <Form.Label>السعر</Form.Label>
-                        <Form.Control 
-                          type="number" 
-                          value={customServicePrice}
-                          onChange={(e) => setCustomServicePrice(e.target.value)}
-                          placeholder="السعر بالجنيه"
-                        />
-                      </Form.Group>
-                    </Col>
-                    <Col md={3} className="d-flex align-items-end">
-                      <Button variant="info" onClick={handleAddCustomService} className="w-100">
-                        إضافة خدمة خاصة
-                      </Button>
-                    </Col>
-                  </Row>
-                  
-                  {instantServiceFormData.customServices.length > 0 && (
-                    <div className="mt-3">
-                      <h6>الخدمات الخاصة المضافة:</h6>
-                      <ul>
-                        {instantServiceFormData.customServices.map(srv => (
-                          <li key={srv._id} className="d-flex justify-content-between align-items-center mb-2">
-                            <span>{srv.name} - {srv.price} جنيه</span>
-                            <Button variant="danger" size="sm" onClick={() => handleRemoveCustomService(srv._id)}>
-                              <FontAwesomeIcon icon={faTrash} />
-                            </Button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </Card>
-              </Col>
+              {(instantServiceFormData.services || []).some(s => s.value === 'custom-trigger') && (
+                <Col md={12} className="mt-3">
+                  <Card className="p-3 mb-3" style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)' }}>
+                    <h5>إضافة خدمات خاصة (إدخال حر)</h5>
+                    <Row>
+                      <Col md={5}>
+                        <Form.Group>
+                          <Form.Label>اسم الخدمة</Form.Label>
+                          <Form.Control 
+                            type="text" 
+                            value={customServiceName}
+                            onChange={(e) => setCustomServiceName(e.target.value)}
+                            placeholder="أدخل اسم الخدمة"
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={4}>
+                        <Form.Group>
+                          <Form.Label>السعر</Form.Label>
+                          <Form.Control 
+                            type="number" 
+                            value={customServicePrice}
+                            onChange={(e) => setCustomServicePrice(e.target.value)}
+                            placeholder="السعر بالجنيه"
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={3} className="d-flex align-items-end">
+                        <Button variant="info" onClick={handleAddCustomService} className="w-100">
+                          إضافة خدمة خاصة
+                        </Button>
+                      </Col>
+                    </Row>
+                    
+                    {instantServiceFormData.customServices.length > 0 && (
+                      <div className="mt-3">
+                        <h6>الخدمات خاصة المضافة:</h6>
+                        <ul>
+                          {instantServiceFormData.customServices.map(srv => (
+                            <li key={srv._id} className="d-flex justify-content-between align-items-center mb-2">
+                              <span>{srv.name} - {srv.price} جنيه</span>
+                              <Button variant="danger" size="sm" onClick={() => handleRemoveCustomService(srv._id)}>
+                                <FontAwesomeIcon icon={faTrash} />
+                              </Button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </Card>
+                </Col>
+              )}
 
               <Col md={12}>
                 <Form.Group>
