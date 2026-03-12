@@ -97,20 +97,21 @@ const extractAndSaveMediaItems = async (post) => {
 	let savedMediaCount = 0;
 	for (const mediaItem of mediaItems) {
 		try {
-			const existingMedia = await MediaGallery.findOne({
-				$or: [
-					{ mediaKey: mediaItem.mediaKey },
-					{ mediaUrl: mediaItem.mediaUrl }
-				]
-			});
+			const existingMedia = await MediaGallery.findOne({ mediaKey: mediaItem.mediaKey });
 			if (!existingMedia) {
 				// الـ unique index سيرفع مشاكل التكرار تلقائياً
 				await MediaGallery.create(mediaItem);
 				savedMediaCount++;
-			} else if ((!existingMedia.thumbnailUrl && mediaItem.thumbnailUrl) || (!existingMedia.permalink && mediaItem.permalink)) {
+			} else {
+				// تحديث الروابط دايماً لأن روابط فيسبوك المؤقتة بتنتهي صلاحيتها
 				await MediaGallery.updateOne(
 					{ _id: existingMedia._id },
-					{ $set: { thumbnailUrl: mediaItem.thumbnailUrl, permalink: mediaItem.permalink } }
+					{ $set: {
+						mediaUrl: mediaItem.mediaUrl,
+						thumbnailUrl: mediaItem.thumbnailUrl || existingMedia.thumbnailUrl,
+						permalink: mediaItem.permalink || existingMedia.permalink,
+						updatedAt: new Date()
+					} }
 				);
 			}
 		} catch (error) {
