@@ -49,12 +49,12 @@ function Dashboard({ user }) {
     packageId: '', hennaPackageId: '', photographyPackageId: '', extraServices: [], returnedServices: [],
     hairStraightening: 'no', hairStraighteningPrice: '', hairStraighteningDate: '',
     hairDye: 'no', hairDyePrice: '', hairDyeDate: '',
-    clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: ''
+    clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: '', paymentMethod: 'cash'
   });
-  const [instantServiceFormData, setInstantServiceFormData] = useState({ employeeId: '', services: [], customServices: [] });
+  const [instantServiceFormData, setInstantServiceFormData] = useState({ employeeId: '', services: [], customServices: [], paymentMethod: 'cash' });
   const [customServiceName, setCustomServiceName] = useState('');
   const [customServicePrice, setCustomServicePrice] = useState('');
-  const [expenseAdvanceFormData, setExpenseAdvanceFormData] = useState({ type: 'expense', details: '', amount: '', userId: '' });
+  const [expenseAdvanceFormData, setExpenseAdvanceFormData] = useState({ type: 'expense', details: '', amount: '', userId: '', paymentMethod: 'cash' });
   const [packages, setPackages] = useState([]);
   const [services, setServices] = useState([]);
   const [users, setUsers] = useState([]);
@@ -71,6 +71,16 @@ function Dashboard({ user }) {
   const [recentEntries, setRecentEntries] = useState({});
   const [showOperations, setShowOperations] = useState(true);
   const [logFilter, setLogFilter] = useState('all');
+  const [installmentPaymentMethod, setInstallmentPaymentMethod] = useState('cash');
+
+  const paymentMethodLabel = (pm) => {
+    const labels = { cash: 'كاش', vodafone: 'فودافون', visa: 'فيزا', instapay: 'انستاباي' };
+    return labels[pm] || 'كاش';
+  };
+  const paymentMethodColor = (pm) => {
+    const colors = { cash: '#28a745', vodafone: '#dc3545', visa: '#007bff', instapay: '#e67e22' };
+    return colors[pm] || '#28a745';
+  };
 
   // Custom styles للـ react-select — neutralized to use CSS variables (black/white theme)
   const customStyles = {
@@ -394,7 +404,8 @@ function Dashboard({ user }) {
       extraServices: bookingFormData.extraServices.map(s => s.value),
       returnedServices: bookingFormData.returnedServices.map(s => s.value),
       hairStraightening: bookingFormData.hairStraightening === 'yes',
-      hairDye: bookingFormData.hairDye === 'yes'
+      hairDye: bookingFormData.hairDye === 'yes',
+      paymentMethod: bookingFormData.paymentMethod || 'cash'
     };
     setBookingSubmitting(true);
     setShowBookingModal(false);
@@ -420,7 +431,7 @@ function Dashboard({ user }) {
         packageId: '', hennaPackageId: '', photographyPackageId: '', extraServices: [], returnedServices: [],
         hairStraightening: 'no', hairStraighteningPrice: '', hairStraighteningDate: '',
         hairDye: 'no', hairDyePrice: '', hairDyeDate: '',
-        clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: ''
+        clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: '', paymentMethod: 'cash'
       });
       setEditBooking(null);
     } catch (err) {
@@ -441,7 +452,8 @@ function Dashboard({ user }) {
     const submitData = {
       employeeId: instantServiceFormData.employeeId || null,
       services: instantServiceFormData.services.filter(s => s.value !== 'custom-trigger').map(s => s.value),
-      customServices: instantServiceFormData.customServices.map(s => ({ name: s.name, price: s.price }))
+      customServices: instantServiceFormData.customServices.map(s => ({ name: s.name, price: s.price })),
+      paymentMethod: instantServiceFormData.paymentMethod || 'cash'
     };
     setInstantSubmitting(true);
     setShowInstantServiceModal(false);
@@ -463,7 +475,7 @@ function Dashboard({ user }) {
         setShowReceiptModal(true);
         revalidateAll();
       }
-      setInstantServiceFormData({ employeeId: '', services: [], customServices: [] });
+      setInstantServiceFormData({ employeeId: '', services: [], customServices: [], paymentMethod: 'cash' });
       setCustomServiceName('');
       setCustomServicePrice('');
       setEditItem(null);
@@ -506,7 +518,7 @@ function Dashboard({ user }) {
       });
       const typeLabel = res.data.type === 'expense' ? 'المصروف' : res.data.type === 'advance' ? 'السلفة' : 'الخصم الإداري';
       setMessage(`تم إضافة ${typeLabel} بنجاح`);
-      setExpenseAdvanceFormData({ type: 'expense', details: '', amount: '', userId: '' });
+      setExpenseAdvanceFormData({ type: 'expense', details: '', amount: '', userId: '', paymentMethod: 'cash' });
       revalidateAll();
     } catch (err) {
       console.error('Expense/Advance submit error:', err.response?.data || err.message);
@@ -535,7 +547,8 @@ function Dashboard({ user }) {
       city: booking.city || '',
       eventDate: booking.eventDate ? new Date(booking.eventDate).toISOString().split('T')[0] : '',
       hennaDate: booking.hennaDate ? new Date(booking.hennaDate).toISOString().split('T')[0] : '',
-      deposit: booking.deposit != null ? booking.deposit.toString() : ''
+      deposit: booking.deposit != null ? booking.deposit.toString() : '',
+      paymentMethod: booking.paymentMethod || 'cash'
     });
     setShowBookingModal(true);
   };
@@ -571,7 +584,7 @@ function Dashboard({ user }) {
     setInstallmentSubmitting(true);
     setShowInstallmentModal(false);
     try {
-      const res = await axios.post(`/api/bookings/${bookingId}/installment`, { amount: amountNumber }, {
+      const res = await axios.post(`/api/bookings/${bookingId}/installment`, { amount: amountNumber, paymentMethod: installmentPaymentMethod || 'cash' }, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setBookings({
@@ -582,6 +595,7 @@ function Dashboard({ user }) {
       });
       setMessage('تم إضافة القسط بنجاح');
       setInstallmentAmount('');
+      setInstallmentPaymentMethod('cash');
       revalidateAll();
     } catch (err) {
       console.error('Installment error:', err.response?.data || err.message);
@@ -887,6 +901,7 @@ function Dashboard({ user }) {
                   <th>النوع</th>
                   <th>التفاصيل</th>
                   <th>المبلغ</th>
+                  <th>طريقة الدفع</th>
                   <th>الوقت</th>
                   <th>أضيف بواسطة</th>
                 </tr>
@@ -909,6 +924,11 @@ function Dashboard({ user }) {
                       </td>
                       <td>{op.details}</td>
                       <td>{op.amount} جنيه</td>
+                      <td>
+                        <span className="badge" style={{ backgroundColor: paymentMethodColor(op.paymentMethod), color: '#fff' }}>
+                          {paymentMethodLabel(op.paymentMethod)}
+                        </span>
+                      </td>
                       <td>{new Date(op.time).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</td>
                       <td>{op.addedBy}</td>
                     </tr>
@@ -921,7 +941,7 @@ function Dashboard({ user }) {
                 {operationsData && operationsData.length > 0 && 
                  operationsData.filter(op => logFilter === 'all' || op.type === logFilter).length === 0 && (
                   <tr>
-                    <td colSpan="5" className="text-center py-4">لا توجد نتائج لهذا النوع</td>
+                    <td colSpan="6" className="text-center py-4">لا توجد نتائج لهذا النوع</td>
                   </tr>
                 )}
               </tbody>
@@ -941,6 +961,17 @@ function Dashboard({ user }) {
             إجمالي السلف: {summary.totalAdvances} جنيه<br />
             <strong>الصافي: {summary.net} جنيه</strong>
           </Card.Text>
+          {summary.paymentBreakdown && (
+            <div className="mt-3">
+              <strong>تفاصيل طرق الدفع:</strong>
+              <div className="d-flex gap-3 flex-wrap mt-2">
+                <span style={{ color: '#28a745' }}>كاش: {summary.paymentBreakdown.cash || 0} جنيه</span>
+                <span style={{ color: '#dc3545' }}>فودافون: {summary.paymentBreakdown.vodafone || 0} جنيه</span>
+                <span style={{ color: '#007bff' }}>فيزا: {summary.paymentBreakdown.visa || 0} جنيه</span>
+                <span style={{ color: '#e67e22' }}>انستاباي: {summary.paymentBreakdown.instapay || 0} جنيه</span>
+              </div>
+            </div>
+          )}
         </Card.Body>
       </Card>
 
@@ -1199,6 +1230,21 @@ function Dashboard({ user }) {
                   />
                 </Form.Group>
               </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>طريقة الدفع</Form.Label>
+                  <Form.Control
+                    as="select"
+                    value={bookingFormData.paymentMethod}
+                    onChange={(e) => setBookingFormData({ ...bookingFormData, paymentMethod: e.target.value })}
+                  >
+                    <option value="cash">كاش</option>
+                    <option value="vodafone">فودافون كاش</option>
+                    <option value="visa">فيزا</option>
+                    <option value="instapay">انستاباي</option>
+                  </Form.Control>
+                </Form.Group>
+              </Col>
               {editBooking?.installments?.length > 0 && (
                 <Col md={12}>
                   <h6 className="mt-3">الأقساط المدفوعة (عرض فقط)</h6>
@@ -1241,7 +1287,7 @@ function Dashboard({ user }) {
                     packageId: '', hennaPackageId: '', photographyPackageId: '', extraServices: [], returnedServices: [],
                     hairStraightening: 'no', hairStraighteningPrice: '', hairStraighteningDate: '',
                     hairDye: 'no', hairDyePrice: '', hairDyeDate: '',
-                    clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: ''
+                    clientName: '', clientPhone: '', city: '', eventDate: '', hennaDate: '', deposit: '', paymentMethod: 'cash'
                   });
                   setEditBooking(null);
                   setShowBookingModal(false);
@@ -1349,6 +1395,21 @@ function Dashboard({ user }) {
                 </Col>
               )}
 
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>طريقة الدفع</Form.Label>
+                  <Form.Control
+                    as="select"
+                    value={instantServiceFormData.paymentMethod}
+                    onChange={(e) => setInstantServiceFormData({ ...instantServiceFormData, paymentMethod: e.target.value })}
+                  >
+                    <option value="cash">كاش</option>
+                    <option value="vodafone">فودافون كاش</option>
+                    <option value="visa">فيزا</option>
+                    <option value="instapay">انستاباي</option>
+                  </Form.Control>
+                </Form.Group>
+              </Col>
               <Col md={12}>
                 <Form.Group>
                   <Form.Label>الإجمالي: {instantServiceTotal} جنيه</Form.Label>
@@ -1359,7 +1420,7 @@ function Dashboard({ user }) {
                   {instantSubmitting ? 'جارٍ الحفظ...' : editItem ? 'تعديل' : 'حفظ'}
                 </Button>
                 <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
-                  setInstantServiceFormData({ employeeId: '', services: [], customServices: [] });
+                  setInstantServiceFormData({ employeeId: '', services: [], customServices: [], paymentMethod: 'cash' });
                   setCustomServiceName('');
                   setCustomServicePrice('');
                   setEditItem(null);
@@ -1391,6 +1452,21 @@ function Dashboard({ user }) {
                     <option value="expense">مصروف</option>
                     <option value="advance">سلفة</option>
                     <option value="deduction">خصم إداري</option>
+                  </Form.Control>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>طريقة الدفع</Form.Label>
+                  <Form.Control
+                    as="select"
+                    value={expenseAdvanceFormData.paymentMethod}
+                    onChange={(e) => setExpenseAdvanceFormData({ ...expenseAdvanceFormData, paymentMethod: e.target.value })}
+                  >
+                    <option value="cash">كاش</option>
+                    <option value="vodafone">فودافون كاش</option>
+                    <option value="visa">فيزا</option>
+                    <option value="instapay">انستاباي</option>
                   </Form.Control>
                 </Form.Group>
               </Col>
@@ -1508,7 +1584,7 @@ function Dashboard({ user }) {
                   {expenseSubmitting ? 'جارٍ الحفظ...' : 'حفظ'}
                 </Button>
                 <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
-                  setExpenseAdvanceFormData({ type: 'expense', details: '', amount: '', userId: '' });
+                  setExpenseAdvanceFormData({ type: 'expense', details: '', amount: '', userId: '', paymentMethod: 'cash' });
                   setShowExpenseAdvanceModal(false);
                 }}>
                   إلغاء
@@ -1543,6 +1619,19 @@ function Dashboard({ user }) {
               onChange={(e) => setInstallmentAmount(e.target.value)}
               required
             />
+          </Form.Group>
+          <Form.Group className="mt-3">
+            <Form.Label>طريقة الدفع</Form.Label>
+            <Form.Control
+              as="select"
+              value={installmentPaymentMethod}
+              onChange={(e) => setInstallmentPaymentMethod(e.target.value)}
+            >
+              <option value="cash">كاش</option>
+              <option value="vodafone">فودافون كاش</option>
+              <option value="visa">فيزا</option>
+              <option value="instapay">انستاباي</option>
+            </Form.Control>
           </Form.Group>
         </Modal.Body>
         <Modal.Footer>
