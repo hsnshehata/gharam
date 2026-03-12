@@ -69,6 +69,8 @@ function Dashboard({ user }) {
   const [expenseSubmitting, setExpenseSubmitting] = useState(false);
   const [installmentSubmitting, setInstallmentSubmitting] = useState(false);
   const [recentEntries, setRecentEntries] = useState({});
+  const [showOperations, setShowOperations] = useState(true);
+  const [logFilter, setLogFilter] = useState('all');
 
   // Custom styles للـ react-select — neutralized to use CSS variables (black/white theme)
   const customStyles = {
@@ -226,7 +228,7 @@ function Dashboard({ user }) {
     { dedupingInterval: 60000 }
   );
 
-  const { data: operationsData, mutate: mutateOperations } = useSWR(
+  const { data: operationsData, error: operationsError, mutate: mutateOperations } = useSWR(
     () => `/api/dashboard/operations?date=${date}`,
     (url) => axios.get(url, tokenHeader).then(res => res.data),
     { dedupingInterval: 10000 }
@@ -261,11 +263,11 @@ function Dashboard({ user }) {
   }, [usersData]);
 
   useEffect(() => {
-    if (summaryError || bookingsError) {
+    if (summaryError || bookingsError || operationsError) {
       setMessage('خطأ في جلب البيانات');
       setBookings({ makeupBookings: [], hairStraighteningBookings: [], hairDyeBookings: [], photographyBookings: [] });
     }
-  }, [summaryError, bookingsError, setMessage]);
+  }, [summaryError, bookingsError, operationsError, setMessage]);
 
   const revalidateAll = useCallback(() => {
     mutateSummary();
@@ -847,51 +849,86 @@ function Dashboard({ user }) {
         ))}
       </Row>
 
-      <div className="d-flex align-items-center mb-0 mt-4">
-        <h3 className="mb-0">سجل تفاصيل العمليات</h3>
-        <small className="text-muted ms-3">إجمالي العمليات اليوم: {operationsData?.length || 0}</small>
+      <div className="d-flex align-items-center justify-content-between mb-2 mt-4">
+        <div className="d-flex align-items-center">
+          <h3 className="mb-0">سجل تفاصيل العمليات</h3>
+          <small className="text-muted ms-3">إجمالي العمليات اليوم: {operationsData?.length || 0}</small>
+        </div>
+        <div className="d-flex gap-2">
+          <Form.Select 
+            size="sm" 
+            style={{ width: '150px' }} 
+            value={logFilter}
+            onChange={(e) => setLogFilter(e.target.value)}
+          >
+            <option value="all">عرض الكل</option>
+            <option value="حجز جديد">حجوزات</option>
+            <option value="قسط/دفعة">أقساط</option>
+            <option value="خدمة فورية">خدمات فورية</option>
+            <option value="مصروف">مصروفات</option>
+            <option value="سلفة">سلف</option>
+          </Form.Select>
+          <Button 
+            variant="outline-secondary" 
+            size="sm" 
+            onClick={() => setShowOperations(!showOperations)}
+          >
+            {showOperations ? 'إخفاء السجل' : 'إظهار السجل'}
+          </Button>
+        </div>
       </div>
-      <Card className="mb-4">
-        <Card.Body className="p-0">
-          <Table responsive hover className="mb-0">
-            <thead style={{ backgroundColor: 'var(--surface)' }}>
-              <tr>
-                <th>النوع</th>
-                <th>التفاصيل</th>
-                <th>المبلغ</th>
-                <th>الوقت</th>
-                <th>أضيف بواسطة</th>
-              </tr>
-            </thead>
-            <tbody>
-              {operationsData && operationsData.length > 0 ? (
-                operationsData.map((op) => (
-                  <tr key={op._id}>
-                    <td>
-                      <span className={`badge ${
-                        op.type === 'حجز جديد' ? 'bg-primary' : 
-                        op.type === 'قسط/دفعة' ? 'bg-info' : 
-                        op.type === 'خدمة فورية' ? 'bg-success' : 
-                        op.type === 'مصروف' ? 'bg-danger' : 'bg-warning'
-                      }`}>
-                        {op.type}
-                      </span>
-                    </td>
-                    <td>{op.details}</td>
-                    <td>{op.amount} جنيه</td>
-                    <td>{new Date(op.time).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</td>
-                    <td>{op.addedBy}</td>
-                  </tr>
-                ))
-              ) : (
+      
+      {showOperations && (
+        <Card className="mb-4">
+          <Card.Body className="p-0">
+            <Table responsive hover className="mb-0">
+              <thead style={{ backgroundColor: 'var(--surface)' }}>
                 <tr>
-                  <td colSpan="5" className="text-center py-4">لا توجد عمليات مسجلة لهذا اليوم</td>
+                  <th>النوع</th>
+                  <th>التفاصيل</th>
+                  <th>المبلغ</th>
+                  <th>الوقت</th>
+                  <th>أضيف بواسطة</th>
                 </tr>
-              )}
-            </tbody>
-          </Table>
-        </Card.Body>
-      </Card>
+              </thead>
+              <tbody>
+                {operationsData && operationsData.length > 0 ? (
+                  operationsData
+                    .filter(op => logFilter === 'all' || op.type === logFilter)
+                    .map((op) => (
+                    <tr key={op._id}>
+                      <td>
+                        <span className={`badge ${
+                          op.type === 'حجز جديد' ? 'bg-primary' : 
+                          op.type === 'قسط/دفعة' ? 'bg-info' : 
+                          op.type === 'خدمة فورية' ? 'bg-success' : 
+                          op.type === 'مصروف' ? 'bg-danger' : 'bg-warning'
+                        }`}>
+                          {op.type}
+                        </span>
+                      </td>
+                      <td>{op.details}</td>
+                      <td>{op.amount} جنيه</td>
+                      <td>{new Date(op.time).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</td>
+                      <td>{op.addedBy}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="text-center py-4">لا توجد عمليات مسجلة لهذا اليوم</td>
+                  </tr>
+                )}
+                {operationsData && operationsData.length > 0 && 
+                 operationsData.filter(op => logFilter === 'all' || op.type === logFilter).length === 0 && (
+                  <tr>
+                    <td colSpan="5" className="text-center py-4">لا توجد نتائج لهذا النوع</td>
+                  </tr>
+                )}
+              </tbody>
+            </Table>
+          </Card.Body>
+        </Card>
+      )}
 
 
       <Card className="mb-4">
