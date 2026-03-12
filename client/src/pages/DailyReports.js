@@ -5,6 +5,9 @@ import useSWR from 'swr';
 
 const currency = (v) => `${Number(v || 0).toLocaleString('ar-EG')} ج`;
 
+const pmColors = { cash: '#28a745', vodafone: '#dc3545', visa: '#007bff', instapay: '#e67e22' };
+const pmLabels = { cash: 'كاش', vodafone: 'فودافون', visa: 'فيزا', instapay: 'انستاباي' };
+
 const BarLines = ({ data = [], accent = '#c49841' }) => {
   if (!data.length) return <div className="muted">لا يوجد بيانات</div>;
   const max = Math.max(...data.map((d) => d.value || 0), 1);
@@ -45,7 +48,7 @@ const MiniList = ({ title, items = [], formatter }) => (
   </Card>
 );
 
-const SummaryGrid = ({ summary, stats }) => (
+const SummaryGrid = ({ summary, stats }) => (<>
   <Row className="g-3 mb-3">
     <Col md={3} sm={6} xs={12}>
       <Card className="summary-card positive">
@@ -83,7 +86,21 @@ const SummaryGrid = ({ summary, stats }) => (
       </Card>
     </Col>
   </Row>
-);
+  {summary.paymentBreakdown && (
+    <Row className="g-3 mb-3">
+      {Object.entries(pmLabels).map(([key, label]) => (
+        <Col md={3} sm={6} xs={6} key={key}>
+          <Card className="summary-card" style={{ borderTop: `3px solid ${pmColors[key]}` }}>
+            <Card.Body className="py-2 px-3">
+              <div className="label" style={{ color: pmColors[key], fontWeight: 600 }}>{label}</div>
+              <div className="value">{currency(summary.paymentBreakdown[key] || 0)}</div>
+            </Card.Body>
+          </Card>
+        </Col>
+      ))}
+    </Row>
+  )}
+</>);
 
 const typeLabels = {
   booking: 'حجز',
@@ -276,6 +293,7 @@ function Reports() {
                         <th>النوع</th>
                         <th>التفاصيل</th>
                         <th>المبلغ</th>
+                        <th>طريقة الدفع</th>
                         <th>التاريخ</th>
                         <th>أضيف بواسطة</th>
                       </tr>
@@ -286,6 +304,11 @@ function Reports() {
                           <td><Badge bg="secondary">{typeLabels[op.type] || 'غير معروف'}</Badge></td>
                           <td>{op.details}</td>
                           <td className={['expense', 'advance'].includes(op.type) ? 'text-danger' : 'text-success'}>{currency(op.amount)}</td>
+                          <td>
+                            <span className="badge" style={{ backgroundColor: pmColors[op.paymentMethod] || pmColors.cash, color: '#fff' }}>
+                              {pmLabels[op.paymentMethod] || 'كاش'}
+                            </span>
+                          </td>
                           <td>{new Date(op.createdAt).toLocaleDateString()}</td>
                           <td>{op.createdBy}</td>
                         </tr>

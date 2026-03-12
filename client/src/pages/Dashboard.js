@@ -662,6 +662,26 @@ function Dashboard({ user }) {
               <strong>{summary.net} ج</strong>
             </div>
           </div>
+          {summary.paymentBreakdown && (
+            <div className="metric-pills mt-2">
+              <div className="metric-pill" style={{ borderRight: '3px solid #28a745' }}>
+                <span>كاش</span>
+                <strong style={{ color: '#28a745' }}>{summary.paymentBreakdown.cash || 0} ج</strong>
+              </div>
+              <div className="metric-pill" style={{ borderRight: '3px solid #dc3545' }}>
+                <span>فودافون</span>
+                <strong style={{ color: '#dc3545' }}>{summary.paymentBreakdown.vodafone || 0} ج</strong>
+              </div>
+              <div className="metric-pill" style={{ borderRight: '3px solid #007bff' }}>
+                <span>فيزا</span>
+                <strong style={{ color: '#007bff' }}>{summary.paymentBreakdown.visa || 0} ج</strong>
+              </div>
+              <div className="metric-pill" style={{ borderRight: '3px solid #e67e22' }}>
+                <span>انستاباي</span>
+                <strong style={{ color: '#e67e22' }}>{summary.paymentBreakdown.instapay || 0} ج</strong>
+              </div>
+            </div>
+          )}
         </div>
         <div className="hero-actions">
           <Form.Group className="mb-3">
