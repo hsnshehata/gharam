@@ -14,7 +14,7 @@ const invalidateExpenseCaches = async () => {
 };
 
 exports.addExpenseAdvance = async (req, res) => {
-  const { type, details, amount, userId } = req.body;
+  const { type, details, amount, userId, paymentMethod } = req.body;
   const creatorId = req.user.id;
 
   try {
@@ -26,7 +26,7 @@ exports.addExpenseAdvance = async (req, res) => {
       if (!details || !amount || amount <= 0) {
         return res.status(400).json({ msg: 'تفاصيل المصروف والمبلغ مطلوبة ويجب أن يكون المبلغ أكبر من صفر' });
       }
-      const expense = new Expense({ details, amount, userId: creatorId, createdBy: creatorId });
+      const expense = new Expense({ details, amount, userId: creatorId, createdBy: creatorId, paymentMethod: paymentMethod || 'cash' });
       await expense.save();
       const populatedExpense = await Expense.findById(expense._id).populate('userId createdBy', 'username');
       await invalidateExpenseCaches();
@@ -42,7 +42,7 @@ exports.addExpenseAdvance = async (req, res) => {
       if (!user) return res.status(404).json({ msg: 'الموظف غير موجود' });
       if (user.remainingSalary < amount) return res.status(400).json({ msg: 'السلفة أكبر من المتبقي من الراتب' });
 
-      const advance = new Advance({ userId, amount, createdBy: creatorId });
+      const advance = new Advance({ userId, amount, createdBy: creatorId, paymentMethod: paymentMethod || 'cash' });
       await advance.save();
 
       // تحديث remainingSalary فقط
@@ -79,7 +79,7 @@ exports.addExpenseAdvance = async (req, res) => {
 };
 
 exports.updateExpenseAdvance = async (req, res) => {
-  const { type, details, amount, userId } = req.body;
+  const { type, details, amount, userId, paymentMethod } = req.body;
   const creatorId = req.user.id;
 
   try {
@@ -96,7 +96,7 @@ exports.updateExpenseAdvance = async (req, res) => {
       }
       const expense = await Expense.findByIdAndUpdate(
         req.params.id,
-        { details, amount, userId: creatorId, createdBy: creatorId },
+        { details, amount, userId: creatorId, createdBy: creatorId, paymentMethod: paymentMethod || 'cash' },
         { new: true }
       ).populate('userId createdBy', 'username');
       if (!expense) return res.status(404).json({ msg: 'المصروف غير موجود' });
@@ -127,7 +127,7 @@ exports.updateExpenseAdvance = async (req, res) => {
 
       const advance = await Advance.findByIdAndUpdate(
         req.params.id,
-        { userId, amount, createdBy: creatorId },
+        { userId, amount, createdBy: creatorId, paymentMethod: paymentMethod || 'cash' },
         { new: true }
       ).populate('userId createdBy', 'username remainingSalary');
 

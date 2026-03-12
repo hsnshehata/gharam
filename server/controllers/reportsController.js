@@ -110,6 +110,27 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false, 
   const totalAdvances = advances.reduce((sum, advance) => sum + toNumber(advance.amount), 0);
   const net = totalDeposit + totalInstantServices - totalExpenses - totalAdvances;
 
+  // Payment method breakdown (income only)
+  const pmBreakdown = { cash: 0, vodafone: 0, visa: 0, instapay: 0 };
+  bookings.forEach(b => {
+    const installmentsSum = b.installments.reduce((s, inst) => s + toNumber(inst.amount), 0);
+    const initialDeposit = toNumber(b.deposit) - installmentsSum;
+    const pm = b.paymentMethod || 'cash';
+    pmBreakdown[pm] = (pmBreakdown[pm] || 0) + initialDeposit;
+  });
+  bookingsWithInstallments.forEach(b => {
+    b.installments
+      .filter(inst => { const d = new Date(inst.date); return d >= startDate && d <= endDate; })
+      .forEach(inst => {
+        const pm = inst.paymentMethod || 'cash';
+        pmBreakdown[pm] = (pmBreakdown[pm] || 0) + toNumber(inst.amount);
+      });
+  });
+  instantServices.forEach(is => {
+    const pm = is.paymentMethod || 'cash';
+    pmBreakdown[pm] = (pmBreakdown[pm] || 0) + toNumber(is.total);
+  });
+
   const packageMix = { makeup: 0, photography: 0, unknown: 0 };
   const topPackagesMap = new Map();
 
@@ -195,7 +216,8 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false, 
             details: `حجز لـ ${booking.clientName} (باكدج: ${booking.package?.name || 'غير محدد'})`,
             amount: initialDeposit,
             createdAt: booking.createdAt,
-            createdBy: booking.createdBy?.username || 'غير معروف'
+            createdBy: booking.createdBy?.username || 'غير معروف',
+            paymentMethod: booking.paymentMethod || 'cash'
           };
         }),
         ...bookingsWithInstallments.flatMap((booking) =>
@@ -209,7 +231,8 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false, 
               details: `قسط لـ ${booking.clientName} (رقم الوصل: ${booking.receiptNumber})`,
               amount: toNumber(installment.amount),
               createdAt: installment.date,
-              createdBy: installment.employeeId?.username || 'غير معروف'
+              createdBy: installment.employeeId?.username || 'غير معروف',
+              paymentMethod: installment.paymentMethod || 'cash'
             }))
         ),
         ...instantServices.map((service) => ({
@@ -217,21 +240,24 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false, 
           details: `خدمة فورية (${service.services.map((s) => s.name).join(', ')})`,
           amount: toNumber(service.total),
           createdAt: service.createdAt,
-          createdBy: service.employeeId?.username || 'غير معروف'
+          createdBy: service.employeeId?.username || 'غير معروف',
+          paymentMethod: service.paymentMethod || 'cash'
         })),
         ...expenses.map((expense) => ({
           type: 'expense',
           details: expense.details,
           amount: toNumber(expense.amount),
           createdAt: expense.createdAt,
-          createdBy: expense.createdBy?.username || expense.userId?.username || 'غير معروف'
+          createdBy: expense.createdBy?.username || expense.userId?.username || 'غير معروف',
+          paymentMethod: expense.paymentMethod || 'cash'
         })),
         ...advances.map((advance) => ({
           type: 'advance',
           details: `سلفة لـ ${advance.userId?.username || 'غير معروف'}`,
           amount: toNumber(advance.amount),
           createdAt: advance.createdAt,
-          createdBy: advance.createdBy?.username || advance.userId?.username || 'غير معروف'
+          createdBy: advance.createdBy?.username || advance.userId?.username || 'غير معروف',
+          paymentMethod: advance.paymentMethod || 'cash'
         }))
       ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     : [];
@@ -244,7 +270,8 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false, 
       totalInstantServices,
       totalExpenses,
       totalAdvances,
-      net
+      net,
+      paymentBreakdown: pmBreakdown
     },
     operations,
     analytics: {

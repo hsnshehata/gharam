@@ -13,7 +13,7 @@ const invalidateInstantServiceCaches = async () => {
 };
 
 exports.addInstantService = async (req, res) => {
-  const { employeeId, services, customServices = [] } = req.body;
+  const { employeeId, services, customServices = [], paymentMethod } = req.body;
 
   try {
     const srvRecords = await Service.find({ _id: { $in: services } });
@@ -69,6 +69,7 @@ exports.addInstantService = async (req, res) => {
       employeeId: employeeId || null,
       services: formattedServices,
       total,
+      paymentMethod: paymentMethod || 'cash',
       receiptNumber,
       barcode
     });

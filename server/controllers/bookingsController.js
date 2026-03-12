@@ -19,7 +19,7 @@ exports.addBooking = async (req, res) => {
     hairStraightening, hairStraighteningPrice, hairStraighteningDate,
     hairDye, hairDyePrice, hairDyeDate,
     clientName,
-    clientPhone, city, eventDate, hennaDate, deposit
+    clientPhone, city, eventDate, hennaDate, deposit, paymentMethod
   } = req.body;
   const employeeId = req.user.id;
 
@@ -106,6 +106,7 @@ exports.addBooking = async (req, res) => {
       hairStraightening, hairStraighteningPrice, hairStraighteningDate,
       hairDye, hairDyePrice, hairDyeDate,
       clientName, clientPhone, city, eventDate, hennaDate, deposit,
+      paymentMethod: paymentMethod || 'cash',
       installments: [], total, remaining, receiptNumber, barcode,
       createdBy: employeeId,
       updates: [{ changes: { created: true }, employeeId }]
@@ -128,7 +129,7 @@ exports.updateBooking = async (req, res) => {
     hairStraightening, hairStraighteningPrice, hairStraighteningDate,
     hairDye, hairDyePrice, hairDyeDate,
     clientName,
-    clientPhone, city, eventDate, hennaDate, deposit
+    clientPhone, city, eventDate, hennaDate, deposit, paymentMethod
   } = req.body;
   const employeeId = req.user.id;
 
@@ -228,6 +229,7 @@ exports.updateBooking = async (req, res) => {
         hairStraightening, hairStraighteningPrice, hairStraighteningDate,
         hairDye, hairDyePrice, hairDyeDate,
         clientName, clientPhone, city, eventDate, hennaDate, deposit,
+        paymentMethod: paymentMethod || 'cash',
         total, remaining,
         $push: { updates: { changes, employeeId } }
       },
@@ -255,7 +257,7 @@ exports.deleteBooking = async (req, res) => {
 };
 
 exports.addInstallment = async (req, res) => {
-  const { amount } = req.body;
+  const { amount, paymentMethod } = req.body;
   const employeeId = req.user.id;
 
   const installmentAmount = Number(amount) || 0;
@@ -267,7 +269,7 @@ exports.addInstallment = async (req, res) => {
     const booking = await Booking.findById(req.params.id);
     if (!booking) return res.status(404).json({ msg: 'Booking not found' });
 
-    booking.installments.push({ amount: installmentAmount, date: new Date(), employeeId });
+    booking.installments.push({ amount: installmentAmount, date: new Date(), employeeId, paymentMethod: paymentMethod || 'cash' });
     booking.remaining = Math.max(booking.remaining - installmentAmount, 0);
 
     await booking.save();

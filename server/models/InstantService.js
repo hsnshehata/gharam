@@ -12,6 +12,7 @@ const instantServiceSchema = new mongoose.Schema({
     executedAt: { type: Date }
   }],
   total: { type: Number, required: true },
+  paymentMethod: { type: String, enum: ['cash', 'vodafone', 'visa', 'instapay'], default: 'cash' },
   receiptNumber: { type: String, unique: true },
   barcode: { type: String },
   createdAt: { type: Date, default: Date.now }

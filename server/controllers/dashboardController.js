@@ -72,6 +72,31 @@ const buildDashboardSummary = async (startDate, endDate) => {
     });
   }
 
+  // Payment method breakdown
+  const pmBreakdown = { cash: 0, vodafone: 0, visa: 0, instapay: 0 };
+  bookings.forEach(b => {
+    const pm = b.paymentMethod || 'cash';
+    pmBreakdown[pm] = (pmBreakdown[pm] || 0) + toNumber(b.deposit);
+  });
+
+  // Installments per method
+  const bookingsForInstallments = await Booking.find({
+    'installments.date': { $gte: startDate, $lte: endDate }
+  });
+  bookingsForInstallments.forEach(b => {
+    b.installments.forEach(ins => {
+      if (ins.date >= startDate && ins.date <= endDate) {
+        const pm = ins.paymentMethod || 'cash';
+        pmBreakdown[pm] = (pmBreakdown[pm] || 0) + toNumber(ins.amount);
+      }
+    });
+  });
+
+  instantServices.forEach(is => {
+    const pm = is.paymentMethod || 'cash';
+    pmBreakdown[pm] = (pmBreakdown[pm] || 0) + toNumber(is.total);
+  });
+
   return {
     bookingCount,
     totalDeposit,
@@ -81,7 +106,8 @@ const buildDashboardSummary = async (startDate, endDate) => {
     totalAdvances,
     net,
     hairStraighteningCount,
-    topCollector
+    topCollector,
+    paymentBreakdown: pmBreakdown
   };
 };
 
@@ -134,7 +160,8 @@ exports.getTodayOperations = async (req, res) => {
         details: `${b.clientName} - ${b.package?.name || 'باكدج'}`,
         amount: b.deposit,
         time: b.createdAt,
-        addedBy: b.createdBy?.username || 'غير معروف'
+        addedBy: b.createdBy?.username || 'غير معروف',
+        paymentMethod: b.paymentMethod || 'cash'
       });
     });
 
@@ -148,7 +175,8 @@ exports.getTodayOperations = async (req, res) => {
             details: `قسط من ${b.clientName}`,
             amount: ins.amount,
             time: ins.date,
-            addedBy: ins.employeeId?.username || 'غير معروف'
+            addedBy: ins.employeeId?.username || 'غير معروف',
+            paymentMethod: ins.paymentMethod || 'cash'
           });
         }
       });
@@ -163,7 +191,8 @@ exports.getTodayOperations = async (req, res) => {
         details: serviceNames || 'خدمات متنوعة',
         amount: is.total,
         time: is.createdAt,
-        addedBy: is.employeeId?.username || 'غير معروف'
+        addedBy: is.employeeId?.username || 'غير معروف',
+        paymentMethod: is.paymentMethod || 'cash'
       });
     });
 
@@ -175,7 +204,8 @@ exports.getTodayOperations = async (req, res) => {
         details: e.details,
         amount: e.amount,
         time: e.createdAt,
-        addedBy: e.createdBy?.username || 'غير معروف'
+        addedBy: e.createdBy?.username || 'غير معروف',
+        paymentMethod: e.paymentMethod || 'cash'
       });
     });
 
@@ -187,7 +217,8 @@ exports.getTodayOperations = async (req, res) => {
         details: `سلفة لـ ${a.userId?.username || 'موظف'}`,
         amount: a.amount,
         time: a.createdAt,
-        addedBy: a.createdBy?.username || 'غير معروف'
+        addedBy: a.createdBy?.username || 'غير معروف',
+        paymentMethod: a.paymentMethod || 'cash'
       });
     });
 

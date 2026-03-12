@@ -32,10 +32,12 @@ const bookingSchema = new mongoose.Schema({
   eventDate: { type: Date, required: true },
   hennaDate: { type: Date },
   deposit: { type: Number, required: true },
+  paymentMethod: { type: String, enum: ['cash', 'vodafone', 'visa', 'instapay'], default: 'cash' },
   installments: [{
     amount: Number,
     date: Date,
-    employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+    employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    paymentMethod: { type: String, enum: ['cash', 'vodafone', 'visa', 'instapay'], default: 'cash' }
   }],
   total: { type: Number, required: true },
   remaining: { type: Number, required: true },
