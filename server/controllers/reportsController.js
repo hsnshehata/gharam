@@ -131,6 +131,16 @@ const aggregateReport = async ({ startDate, endDate, includeOperations = false, 
     pmBreakdown[pm] = (pmBreakdown[pm] || 0) + toNumber(is.total);
   });
 
+  // خصم المصروفات والسلف من القناة المناسبة
+  expenses.forEach(e => {
+    const pm = e.paymentMethod || 'cash';
+    pmBreakdown[pm] = (pmBreakdown[pm] || 0) - toNumber(e.amount);
+  });
+  advances.forEach(a => {
+    const pm = a.paymentMethod || 'cash';
+    pmBreakdown[pm] = (pmBreakdown[pm] || 0) - toNumber(a.amount);
+  });
+
   const packageMix = { makeup: 0, photography: 0, unknown: 0 };
   const topPackagesMap = new Map();
 

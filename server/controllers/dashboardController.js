@@ -97,6 +97,16 @@ const buildDashboardSummary = async (startDate, endDate) => {
     pmBreakdown[pm] = (pmBreakdown[pm] || 0) + toNumber(is.total);
   });
 
+  // خصم المصروفات والسلف من القناة المناسبة
+  expenses.forEach(e => {
+    const pm = e.paymentMethod || 'cash';
+    pmBreakdown[pm] = (pmBreakdown[pm] || 0) - toNumber(e.amount);
+  });
+  advances.forEach(a => {
+    const pm = a.paymentMethod || 'cash';
+    pmBreakdown[pm] = (pmBreakdown[pm] || 0) - toNumber(a.amount);
+  });
+
   return {
     bookingCount,
     totalDeposit,
