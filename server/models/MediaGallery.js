@@ -10,7 +10,6 @@ const MediaGallerySchema = new mongoose.Schema(
 		mediaUrl: {
 			type: String,
 			required: true,
-			unique: true,
 			index: true
 		},
 		mediaKey: {
