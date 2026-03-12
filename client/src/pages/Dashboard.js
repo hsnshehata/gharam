@@ -639,52 +639,14 @@ function Dashboard({ user }) {
 
   return (
     <Container className="mt-5">
-      <div className="dashboard-hero card p-4 mb-4">
-        <div className="hero-copy">
-          <p className="eyebrow">لوحة اليوم</p>
-          <h2 className="hero-title">شغل إنهاردة</h2>
-          <p className="hero-sub">تابع الحجوزات والخدمات الفورية والمصاريف في لمحة واحدة.</p>
-          <div className="metric-pills mt-3">
-            <div className="metric-pill">
-              <span>عدد الحجوزات الجديدة</span>
-              <strong>{summary.bookingCount}</strong>
-            </div>
-            <div className="metric-pill">
-              <span>حجوزات ميك آب</span>
-              <strong>{bookings.makeupBookings?.length || 0}</strong>
-            </div>
-            <div className="metric-pill">
-              <span>حجوزات تصوير</span>
-              <strong>{bookings.photographyBookings?.length || 0}</strong>
-            </div>
-            <div className="metric-pill">
-              <span>الصافي</span>
-              <strong>{summary.net} ج</strong>
-            </div>
+      <div className="dashboard-hero">
+        <div className="hero-header">
+          <div>
+            <p className="eyebrow">لوحة اليوم</p>
+            <h2 className="hero-title">شغل إنهاردة</h2>
+            <p className="hero-sub">تابع الحجوزات والخدمات الفورية والمصاريف في لمحة واحدة.</p>
           </div>
-          {summary.paymentBreakdown && (
-            <div className="metric-pills mt-2">
-              <div className="metric-pill" style={{ borderRight: '3px solid #28a745' }}>
-                <span>كاش</span>
-                <strong style={{ color: '#28a745' }}>{summary.paymentBreakdown.cash || 0} ج</strong>
-              </div>
-              <div className="metric-pill" style={{ borderRight: '3px solid #dc3545' }}>
-                <span>فودافون</span>
-                <strong style={{ color: '#dc3545' }}>{summary.paymentBreakdown.vodafone || 0} ج</strong>
-              </div>
-              <div className="metric-pill" style={{ borderRight: '3px solid #007bff' }}>
-                <span>فيزا</span>
-                <strong style={{ color: '#007bff' }}>{summary.paymentBreakdown.visa || 0} ج</strong>
-              </div>
-              <div className="metric-pill" style={{ borderRight: '3px solid #e67e22' }}>
-                <span>انستاباي</span>
-                <strong style={{ color: '#e67e22' }}>{summary.paymentBreakdown.instapay || 0} ج</strong>
-              </div>
-            </div>
-          )}
-        </div>
-        <div className="hero-actions">
-          <Form.Group className="mb-3">
+          <Form.Group className="hero-date-picker">
             <Form.Label>اختر التاريخ</Form.Label>
             <Form.Control
               type="date"
@@ -692,6 +654,68 @@ function Dashboard({ user }) {
               onChange={(e) => setDate(e.target.value)}
             />
           </Form.Group>
+        </div>
+
+        <div className="hero-stats-grid">
+          <div className="hero-stat-card">
+            <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #028090, #00b4d8)' }}>📋</div>
+            <div className="stat-info">
+              <span className="stat-label">الحجوزات الجديدة</span>
+              <strong className="stat-value">{summary.bookingCount}</strong>
+            </div>
+          </div>
+          <div className="hero-stat-card">
+            <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #e6726e, #f4a261)' }}>💄</div>
+            <div className="stat-info">
+              <span className="stat-label">حجوزات ميك آب</span>
+              <strong className="stat-value">{bookings.makeupBookings?.length || 0}</strong>
+            </div>
+          </div>
+          <div className="hero-stat-card">
+            <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #7f5af0, #a78bfa)' }}>📸</div>
+            <div className="stat-info">
+              <span className="stat-label">حجوزات تصوير</span>
+              <strong className="stat-value">{bookings.photographyBookings?.length || 0}</strong>
+            </div>
+          </div>
+          <div className="hero-stat-card hero-stat-net">
+            <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>💰</div>
+            <div className="stat-info">
+              <span className="stat-label">الصافي</span>
+              <strong className="stat-value stat-value-lg">{summary.net} ج</strong>
+            </div>
+          </div>
+        </div>
+
+        {summary.paymentBreakdown && (
+          <div className="hero-channels">
+            <h6 className="channels-title">قنوات الدفع</h6>
+            <div className="channels-grid">
+              <div className="channel-card channel-cash">
+                <div className="channel-dot"></div>
+                <span className="channel-label">كاش</span>
+                <strong className="channel-value">{summary.paymentBreakdown.cash || 0} ج</strong>
+              </div>
+              <div className="channel-card channel-vodafone">
+                <div className="channel-dot"></div>
+                <span className="channel-label">فودافون</span>
+                <strong className="channel-value">{summary.paymentBreakdown.vodafone || 0} ج</strong>
+              </div>
+              <div className="channel-card channel-visa">
+                <div className="channel-dot"></div>
+                <span className="channel-label">فيزا</span>
+                <strong className="channel-value">{summary.paymentBreakdown.visa || 0} ج</strong>
+              </div>
+              <div className="channel-card channel-instapay">
+                <div className="channel-dot"></div>
+                <span className="channel-label">انستاباي</span>
+                <strong className="channel-value">{summary.paymentBreakdown.instapay || 0} ج</strong>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="hero-actions">
           <div className="hero-buttons">
             <Button variant="primary" onClick={() => setShowBookingModal(true)}>
               <FontAwesomeIcon icon={faPlus} /> إنشاء حجز
