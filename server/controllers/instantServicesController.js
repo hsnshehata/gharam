@@ -65,13 +65,28 @@ exports.addInstantService = async (req, res) => {
     const receiptNumber = Math.floor(1000000 + Math.random() * 9000000).toString();
     const barcode = receiptNumber;
 
+    // حساب رقم الترتيب اليومي (يبدأ من 2)
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const lastServiceToday = await InstantService.findOne({
+      createdAt: { $gte: startOfDay, $lte: endOfDay }
+    }).sort({ dailyQueueNumber: -1 });
+
+    const dailyQueueNumber = lastServiceToday && lastServiceToday.dailyQueueNumber 
+      ? lastServiceToday.dailyQueueNumber + 1 
+      : 2;
+
     const instantService = new InstantService({
       employeeId: employeeId || null,
       services: formattedServices,
       total,
       paymentMethod: paymentMethod || 'cash',
       receiptNumber,
-      barcode
+      barcode,
+      dailyQueueNumber
     });
 
     await instantService.save();
