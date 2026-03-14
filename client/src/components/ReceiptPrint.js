@@ -164,6 +164,7 @@ const ReceiptPrint = ({ data, type }) => {
       {data.barcode && (
         <div className="qr-code">
           <QRCode value={data.barcode} size={80} renderAs="svg" />
+          <p style={{ marginTop: '5px', fontSize: '14px', fontWeight: 'bold' }}>الترتيب: {data.dailyQueueNumber || '-'}</p>
         </div>
       )}
     </div>
