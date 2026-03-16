@@ -3,6 +3,7 @@ const Service = require('../models/Service');
 const User = require('../models/User');
 const { cacheAside, deleteByPrefix } = require('../services/cache');
 const { addPointsAndConvertInternal, removePointsAndCoinsInternal } = require('./usersController');
+const { logActivity } = require('../services/activityLogger');
 
 const invalidateInstantServiceCaches = async () => {
   await Promise.all([
@@ -90,6 +91,16 @@ exports.addInstantService = async (req, res) => {
     });
 
     await instantService.save();
+
+    await logActivity({
+      action: 'CREATE',
+      entityType: 'InstantService',
+      entityId: instantService._id,
+      details: `إنشاء خدمة فورية: ${formattedServices.map(s => s.name).join(', ')}`,
+      amount: total,
+      paymentMethod: paymentMethod || 'cash',
+      performedBy: req.user.id
+    });
 
     await invalidateInstantServiceCaches();
 
@@ -187,6 +198,16 @@ exports.updateInstantService = async (req, res) => {
       return res.status(404).json({ msg: 'الخدمة الفورية غير موجودة' });
     }
 
+    await logActivity({
+      action: 'UPDATE',
+      entityType: 'InstantService',
+      entityId: instantService._id,
+      details: `تعديل خدمة فورية: ${formattedServices.map(s => s.name).join(', ')}`,
+      amount: total,
+      paymentMethod: instantService.paymentMethod, // Assuming it doesn't change here or we use existing one
+      performedBy: req.user.id
+    });
+
     await invalidateInstantServiceCaches();
 
     // إضافة النقاط والعملة لو فيه employeeId (لكل خدمة منفذة)
@@ -218,6 +239,16 @@ exports.deleteInstantService = async (req, res) => {
     if (!instantService) {
       return res.status(404).json({ msg: 'الخدمة الفورية غير موجودة' });
     }
+
+    await logActivity({
+      action: 'DELETE',
+      entityType: 'InstantService',
+      entityId: instantService._id,
+      details: `حذف خدمة فورية برقم ${instantService.receiptNumber}`,
+      amount: instantService.total,
+      performedBy: req.user.id
+    });
+
     await invalidateInstantServiceCaches();
     return res.json({ msg: 'تم حذف الخدمة الفورية بنجاح' });
   } catch (err) {

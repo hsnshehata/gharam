@@ -4,6 +4,7 @@ const Deduction = require('../models/Deduction');
 const User = require('../models/User');
 const mongoose = require('mongoose');
 const { cacheAside, deleteByPrefix } = require('../services/cache');
+const { logActivity } = require('../services/activityLogger');
 
 const invalidateExpenseCaches = async () => {
   await Promise.all([
@@ -29,6 +30,17 @@ exports.addExpenseAdvance = async (req, res) => {
       const expense = new Expense({ details, amount, userId: creatorId, createdBy: creatorId, paymentMethod: paymentMethod || 'cash' });
       await expense.save();
       const populatedExpense = await Expense.findById(expense._id).populate('userId createdBy', 'username');
+      
+      await logActivity({
+        action: 'CREATE',
+        entityType: 'Expense',
+        entityId: expense._id,
+        details: `إضافة مصروف: ${details}`,
+        amount,
+        paymentMethod: paymentMethod || 'cash',
+        performedBy: creatorId
+      });
+
       await invalidateExpenseCaches();
       return res.json({ msg: 'تم إضافة المصروف بنجاح', item: populatedExpense, type: 'expense' });
     } else if (type === 'advance') {
@@ -49,6 +61,17 @@ exports.addExpenseAdvance = async (req, res) => {
       await User.updateOne({ _id: userId }, { $set: { remainingSalary: user.remainingSalary - amount } });
 
       const populatedAdvance = await Advance.findById(advance._id).populate('userId createdBy', 'username remainingSalary');
+      
+      await logActivity({
+        action: 'CREATE',
+        entityType: 'Advance',
+        entityId: advance._id,
+        details: `إضافة سلفة للموظف: ${populatedAdvance.userId?.username || ''}`,
+        amount,
+        paymentMethod: paymentMethod || 'cash',
+        performedBy: creatorId
+      });
+
       await invalidateExpenseCaches();
       return res.json({ msg: 'تم إضافة السلفة بنجاح', item: populatedAdvance, type: 'advance' });
     } else if (type === 'deduction') {
@@ -100,6 +123,17 @@ exports.updateExpenseAdvance = async (req, res) => {
         { new: true }
       ).populate('userId createdBy', 'username');
       if (!expense) return res.status(404).json({ msg: 'المصروف غير موجود' });
+      
+      await logActivity({
+        action: 'UPDATE',
+        entityType: 'Expense',
+        entityId: expense._id,
+        details: `تعديل مصروف: ${details}`,
+        amount,
+        paymentMethod: paymentMethod || 'cash',
+        performedBy: creatorId
+      });
+
       await invalidateExpenseCaches();
       return res.json({ msg: 'تم تعديل المصروف بنجاح', item: expense, type: 'expense' });
     } else if (type === 'advance') {
@@ -133,6 +167,17 @@ exports.updateExpenseAdvance = async (req, res) => {
 
       // تحديث remainingSalary فقط
       await User.updateOne({ _id: userId }, { $set: { remainingSalary: user.remainingSalary - amount } });
+      
+      await logActivity({
+        action: 'UPDATE',
+        entityType: 'Advance',
+        entityId: advance._id,
+        details: `تعديل سلفة للموظف: ${advance.userId?.username || ''}`,
+        amount,
+        paymentMethod: paymentMethod || 'cash',
+        performedBy: creatorId
+      });
+
       await invalidateExpenseCaches();
       return res.json({ msg: 'تم تعديل السلفة بنجاح', item: advance, type: 'advance' });
     } else if (type === 'deduction') {
@@ -186,6 +231,16 @@ exports.deleteExpenseAdvance = async (req, res) => {
     if (type === 'expense') {
       const expense = await Expense.findByIdAndDelete(req.params.id);
       if (!expense) return res.status(404).json({ msg: 'المصروف غير موجود' });
+      
+      await logActivity({
+        action: 'DELETE',
+        entityType: 'Expense',
+        entityId: expense._id,
+        details: `حذف مصروف: ${expense.details}`,
+        amount: expense.amount,
+        performedBy: req.user.id
+      });
+
       await invalidateExpenseCaches();
       return res.json({ msg: 'تم حذف المصروف بنجاح', type: 'expense' });
     } else if (type === 'advance') {
@@ -201,6 +256,16 @@ exports.deleteExpenseAdvance = async (req, res) => {
       }
 
       await Advance.findByIdAndDelete(req.params.id);
+      
+      await logActivity({
+        action: 'DELETE',
+        entityType: 'Advance',
+        entityId: advance._id,
+        details: `حذف سلفة الموظف: ${user?.username || ''}`,
+        amount: advance.amount,
+        performedBy: req.user.id
+      });
+
       await invalidateExpenseCaches();
       return res.json({ msg: 'تم حذف السلفة بنجاح', type: 'advance' });
     } else if (type === 'deduction') {

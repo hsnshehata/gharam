@@ -3,6 +3,7 @@ const InstantService = require('../models/InstantService');
 const Expense = require('../models/Expense');
 const Advance = require('../models/Advance');
 const User = require('../models/User');
+const ActivityLog = require('../models/ActivityLog');
 const { cacheAside } = require('../services/cache');
 
 const toNumber = (v) => Number(v) || 0;
@@ -152,84 +153,143 @@ exports.getTodayOperations = async (req, res) => {
     const endDate = new Date(startDate);
     endDate.setHours(23, 59, 59, 999);
 
-    const [bookings, instantServices, expenses, advances, bookingsWithInstallments] = await Promise.all([
+    const [bookings, instantServices, expenses, advances, bookingsWithInstallments, activityLogs] = await Promise.all([
       Booking.find({ createdAt: { $gte: startDate, $lte: endDate } }).populate('package createdBy'),
       InstantService.find({ createdAt: { $gte: startDate, $lte: endDate } }).populate('employeeId services.executedBy'),
       Expense.find({ createdAt: { $gte: startDate, $lte: endDate } }).populate('createdBy'),
       Advance.find({ createdAt: { $gte: startDate, $lte: endDate } }).populate('userId createdBy'),
-      Booking.find({ 'installments.date': { $gte: startDate, $lte: endDate } }).populate('installments.employeeId package')
+      Booking.find({ 'installments.date': { $gte: startDate, $lte: endDate } }).populate('installments.employeeId package'),
+      ActivityLog.find({ createdAt: { $gte: startDate, $lte: endDate } }).populate('performedBy', 'username')
     ]);
 
     const operations = [];
 
-    // 1. New Bookings
-    bookings.forEach(b => {
+    // Map new ActivityLog entries
+    activityLogs.forEach(log => {
+      let typeLabel = '';
+      if (log.action === 'CREATE') {
+        typeLabel = log.entityType === 'Booking' ? 'إضافة حجز' :
+                   log.entityType === 'InstantService' ? 'إضافة خدمة فورية' :
+                   log.entityType === 'Expense' ? 'إضافة مصروف' :
+                   log.entityType === 'Advance' ? 'إضافة سلفة' :
+                   log.entityType === 'Installment' ? 'إضافة قسط' : 'إضافة';
+      } else if (log.action === 'UPDATE') {
+        typeLabel = log.entityType === 'Booking' ? 'تعديل حجز' :
+                   log.entityType === 'InstantService' ? 'تعديل خدمة فورية' :
+                   log.entityType === 'Expense' ? 'تعديل مصروف' :
+                   log.entityType === 'Advance' ? 'تعديل سلفة' : 'تعديل';
+      } else if (log.action === 'DELETE') {
+        typeLabel = log.entityType === 'Booking' ? 'حذف حجز' :
+                   log.entityType === 'InstantService' ? 'حذف خدمة فورية' :
+                   log.entityType === 'Expense' ? 'حذف مصروف' :
+                   log.entityType === 'Advance' ? 'حذف سلفة' : 'حذف';
+      }
+
       operations.push({
-        _id: `booking-${b._id}`,
-        type: 'حجز جديد',
-        details: `${b.clientName} - ${b.package?.name || 'باكدج'}`,
-        amount: b.deposit,
-        time: b.createdAt,
-        addedBy: b.createdBy?.username || 'غير معروف',
-        paymentMethod: b.paymentMethod || 'cash'
+        _id: log._id.toString(),
+        type: typeLabel,
+        details: log.details,
+        amount: log.amount || 0,
+        time: log.createdAt,
+        addedBy: log.performedBy?.username || 'غير معروف',
+        paymentMethod: log.paymentMethod || '-',
+        isLog: true // Flag to identify new logs
       });
     });
 
-    // 2. Installments
+    // For backward compatibility (legacy data without ActivityLog)
+    // We only add old ones IF there are NO new logs for them recently
+    // Easiest is to just include them but marked as legacy "CREATE" if ActivityLog is empty
+    // To prevent total duplication, since we just launched this, 
+    // we can keep the old logic but ONLY for CREATE of legacy records.
+    // However, it's safer to just return the combined list and sort descending.
+    // User will see old "حجز جديد" and new "إضافة حجز" side by side for today.
+    // Starting tomorrow, old logic will just be redundant but harmless, or we can remove old logic later.
+
+    // 1. New Bookings (Legacy)
+    bookings.forEach(b => {
+      // Skip if we already logged this creation in ActivityLog (starts today)
+      const hasLog = operations.find(op => op.isLog && op.details.includes(b.clientName) && op.type === 'إضافة حجز');
+      if (!hasLog) {
+        operations.push({
+          _id: `booking-${b._id}`,
+          type: 'حجز جديد',
+          details: `${b.clientName} - ${b.package?.name || 'باكدج'}`,
+          amount: b.deposit,
+          time: b.createdAt,
+          addedBy: b.createdBy?.username || 'غير معروف',
+          paymentMethod: b.paymentMethod || 'cash'
+        });
+      }
+    });
+
+    // 2. Installments (Legacy)
     bookingsWithInstallments.forEach(b => {
       b.installments.forEach(ins => {
         if (ins.date >= startDate && ins.date <= endDate) {
-          operations.push({
-            _id: `installment-${b._id}-${ins._id}`,
-            type: 'قسط/دفعة',
-            details: `قسط من ${b.clientName}`,
-            amount: ins.amount,
-            time: ins.date,
-            addedBy: ins.employeeId?.username || 'غير معروف',
-            paymentMethod: ins.paymentMethod || 'cash'
-          });
+          const hasLog = operations.find(op => op.isLog && op.time.getTime() === ins.date.getTime());
+          if (!hasLog) {
+            operations.push({
+              _id: `installment-${b._id}-${ins._id}`,
+              type: 'قسط/دفعة',
+              details: `قسط من ${b.clientName}`,
+              amount: ins.amount,
+              time: ins.date,
+              addedBy: ins.employeeId?.username || 'غير معروف',
+              paymentMethod: ins.paymentMethod || 'cash'
+            });
+          }
         }
       });
     });
 
-    // 3. Instant Services
+    // 3. Instant Services (Legacy)
     instantServices.forEach(is => {
       const serviceNames = is.services.map(s => s.name).join(', ');
-      operations.push({
-        _id: `instant-${is._id}`,
-        type: 'خدمة فورية',
-        details: serviceNames || 'خدمات متنوعة',
-        amount: is.total,
-        time: is.createdAt,
-        addedBy: is.employeeId?.username || 'غير معروف',
-        paymentMethod: is.paymentMethod || 'cash'
-      });
+      const hasLog = operations.find(op => op.isLog && op.time.getTime() === is.createdAt.getTime());
+      if (!hasLog) {
+        operations.push({
+          _id: `instant-${is._id}`,
+          type: 'خدمة فورية',
+          details: serviceNames || 'خدمات متنوعة',
+          amount: is.total,
+          time: is.createdAt,
+          addedBy: is.employeeId?.username || 'غير معروف',
+          paymentMethod: is.paymentMethod || 'cash'
+        });
+      }
     });
 
-    // 4. Expenses
+    // 4. Expenses (Legacy)
     expenses.forEach(e => {
-      operations.push({
-        _id: `expense-${e._id}`,
-        type: 'مصروف',
-        details: e.details,
-        amount: e.amount,
-        time: e.createdAt,
-        addedBy: e.createdBy?.username || 'غير معروف',
-        paymentMethod: e.paymentMethod || 'cash'
-      });
+      const hasLog = operations.find(op => op.isLog && op.time.getTime() === e.createdAt.getTime());
+      if (!hasLog) {
+        operations.push({
+          _id: `expense-${e._id}`,
+          type: 'مصروف',
+          details: e.details,
+          amount: e.amount,
+          time: e.createdAt,
+          addedBy: e.createdBy?.username || 'غير معروف',
+          paymentMethod: e.paymentMethod || 'cash'
+        });
+      }
     });
 
-    // 5. Advances
+    // 5. Advances (Legacy)
     advances.forEach(a => {
-      operations.push({
-        _id: `advance-${a._id}`,
-        type: 'سلفة',
-        details: `سلفة لـ ${a.userId?.username || 'موظف'}`,
-        amount: a.amount,
-        time: a.createdAt,
-        addedBy: a.createdBy?.username || 'غير معروف',
-        paymentMethod: a.paymentMethod || 'cash'
-      });
+      const hasLog = operations.find(op => op.isLog && op.time.getTime() === a.createdAt.getTime());
+      if (!hasLog) {
+        operations.push({
+          _id: `advance-${a._id}`,
+          type: 'سلفة',
+          details: `سلفة لـ ${a.userId?.username || 'موظف'}`,
+          amount: a.amount,
+          time: a.createdAt,
+          addedBy: a.createdBy?.username || 'غير معروف',
+          paymentMethod: a.paymentMethod || 'cash'
+        });
+      }
     });
 
     // Sort by time descending

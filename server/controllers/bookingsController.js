@@ -4,6 +4,7 @@ const Package = require('../models/Package');
 const User = require('../models/User');
 const { cacheAside, deleteByPrefix } = require('../services/cache');
 const { addPointsAndConvertInternal, removePointsAndCoinsInternal } = require('./usersController');
+const { logActivity } = require('../services/activityLogger');
 
 const invalidateBookingRelated = async () => {
   await Promise.all([
@@ -115,6 +116,17 @@ exports.addBooking = async (req, res) => {
     await booking.save();
     const populatedBooking = await Booking.findById(booking._id)
       .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy hairStraighteningExecutedBy hairDyeExecutedBy packageServices.executedBy');
+    
+    await logActivity({
+      action: 'CREATE',
+      entityType: 'Booking',
+      entityId: booking._id,
+      details: `حجز جديد للعميل: ${clientName}`,
+      amount: deposit,
+      paymentMethod: paymentMethod || 'cash',
+      performedBy: employeeId
+    });
+
     await invalidateBookingRelated();
     res.json({ msg: 'Booking added successfully', booking: populatedBooking });
   } catch (err) {
@@ -236,6 +248,17 @@ exports.updateBooking = async (req, res) => {
       { new: true }
     ).populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy hairStraighteningExecutedBy hairDyeExecutedBy packageServices.executedBy');
     if (!booking) return res.status(404).json({ msg: 'Booking not found' });
+    
+    await logActivity({
+      action: 'UPDATE',
+      entityType: 'Booking',
+      entityId: booking._id,
+      details: `تعديل حجز العميل: ${clientName}`,
+      amount: deposit, // Track new deposit if any, or 0
+      paymentMethod: paymentMethod || 'cash',
+      performedBy: employeeId
+    });
+
     await invalidateBookingRelated();
     res.json({ msg: 'Booking updated successfully', booking });
   } catch (err) {
@@ -248,6 +271,16 @@ exports.deleteBooking = async (req, res) => {
   try {
     const booking = await Booking.findByIdAndDelete(req.params.id);
     if (!booking) return res.status(404).json({ msg: 'Booking not found' });
+    
+    await logActivity({
+      action: 'DELETE',
+      entityType: 'Booking',
+      entityId: booking._id,
+      details: `حذف حجز العميل: ${booking.clientName}`,
+      amount: booking.deposit,
+      performedBy: req.user.id
+    });
+
     await invalidateBookingRelated();
     res.json({ msg: 'Booking deleted successfully' });
   } catch (err) {
@@ -275,6 +308,17 @@ exports.addInstallment = async (req, res) => {
     await booking.save();
     const populatedBooking = await Booking.findById(booking._id)
       .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy');
+    
+    await logActivity({
+      action: 'CREATE', // Using CREATE for new installment
+      entityType: 'Installment',
+      entityId: booking._id,
+      details: `قسط/دفعة جديدة للعميل: ${booking.clientName}`,
+      amount: installmentAmount,
+      paymentMethod: paymentMethod || 'cash',
+      performedBy: employeeId
+    });
+
     await invalidateBookingRelated();
     res.json({ msg: 'Installment added successfully', booking: populatedBooking });
   } catch (err) {
