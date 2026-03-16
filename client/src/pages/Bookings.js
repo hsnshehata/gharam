@@ -494,7 +494,7 @@ function Bookings({ user }) {
                   <FontAwesomeIcon icon={faDollarSign} />
                 </Button>
                 {user?.role === 'admin' && (
-                  <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }}>
+                  <Button variant="danger" className="me-2" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }}>
                     <FontAwesomeIcon icon={faTrash} />
                   </Button>
                 )}

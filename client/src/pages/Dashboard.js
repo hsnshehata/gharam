@@ -952,9 +952,11 @@ function Dashboard({ user }) {
                 <Button variant="primary" className="me-2" onClick={() => { setDeleteItem(booking); setShowInstallmentModal(true); }}>
                   <FontAwesomeIcon icon={faDollarSign} />
                 </Button>
-                <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }}>
-                  <FontAwesomeIcon icon={faTrash} />
-                </Button>
+                {user?.role === 'admin' && (
+                  <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }}>
+                    <FontAwesomeIcon icon={faTrash} />
+                  </Button>
+                )}
               </Card.Body>
             </Card>
           </Col>
