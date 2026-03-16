@@ -11,5 +11,7 @@ router.get('/', authenticate, bookingsController.getBookings);
 router.get('/receipt/:receiptNumber', authenticate, bookingsController.getBookingByReceipt);
 router.post('/execute-service/:id/:serviceId', authenticate, bookingsController.executeService);
 router.post('/reset-service/:id/:serviceId', authenticate, bookingsController.resetService);
+router.put('/:id/installment/:installmentId', authenticate, bookingsController.updateInstallment);
+router.delete('/:id/installment/:installmentId', authenticate, bookingsController.deleteInstallment);
 
 module.exports = router;

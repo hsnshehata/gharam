@@ -26,6 +26,9 @@ exports.updatePackage = async (req, res) => {
 };
 
 exports.deletePackage = async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ msg: 'صلاحية غير كافية - الحذف للمديرين فقط' });
+  }
   try {
     const pkg = await Package.findByIdAndDelete(req.params.id);
     if (!pkg) return res.status(404).json({ msg: 'Package not found' });
@@ -71,6 +74,9 @@ exports.updateService = async (req, res) => {
 };
 
 exports.deleteService = async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ msg: 'صلاحية غير كافية - الحذف للمديرين فقط' });
+  }
   try {
     const service = await Service.findByIdAndDelete(req.params.id);
     if (!service) return res.status(404).json({ msg: 'Service not found' });

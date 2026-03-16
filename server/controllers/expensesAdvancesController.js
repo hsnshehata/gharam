@@ -220,6 +220,10 @@ exports.updateExpenseAdvance = async (req, res) => {
 exports.deleteExpenseAdvance = async (req, res) => {
   const { type } = req.query;
 
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ msg: 'غير مصرح لك بالحذف، هذه الصلاحية للمدير فقط' });
+  }
+
   try {
     if (!type || !['expense', 'advance', 'deduction'].includes(type)) {
       return res.status(400).json({ msg: 'نوع العملية غير صالح' });

@@ -268,6 +268,9 @@ exports.updateBooking = async (req, res) => {
 };
 
 exports.deleteBooking = async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ msg: 'غير مصرح لك بالحذف، هذه الصلاحية للمدير فقط' });
+  }
   try {
     const booking = await Booking.findByIdAndDelete(req.params.id);
     if (!booking) return res.status(404).json({ msg: 'Booking not found' });
@@ -321,6 +324,94 @@ exports.addInstallment = async (req, res) => {
 
     await invalidateBookingRelated();
     res.json({ msg: 'Installment added successfully', booking: populatedBooking });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports.updateInstallment = async (req, res) => {
+  const { installmentId } = req.params;
+  const { amount, paymentMethod } = req.body;
+  const employeeId = req.user.id;
+
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ msg: 'غير مصرح لك بتعديل الأقساط' });
+  }
+
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ msg: 'Booking not found' });
+
+    const installment = booking.installments.id(installmentId);
+    if (!installment) return res.status(404).json({ msg: 'Installment not found' });
+
+    installment.amount = Number(amount) || installment.amount;
+    installment.paymentMethod = paymentMethod || installment.paymentMethod;
+    installment.updatedBy = employeeId;
+    installment.updatedAt = new Date();
+
+    const installmentsPaid = booking.installments.reduce((sum, inst) => sum + (Number(inst.amount) || 0), 0);
+    booking.remaining = Math.max(booking.total - (booking.deposit + installmentsPaid), 0);
+
+    await booking.save();
+    const populatedBooking = await Booking.findById(booking._id)
+      .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy');
+
+    await logActivity({
+      action: 'UPDATE',
+      entityType: 'Installment',
+      entityId: booking._id,
+      details: `تعديل قسط للعميل: ${booking.clientName}`,
+      amount: installment.amount,
+      paymentMethod: installment.paymentMethod,
+      performedBy: employeeId
+    });
+
+    await invalidateBookingRelated();
+    res.json({ msg: 'Installment updated successfully', booking: populatedBooking });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
+exports.deleteInstallment = async (req, res) => {
+  const { installmentId } = req.params;
+  const employeeId = req.user.id;
+
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ msg: 'غير مصرح لك بحذف الأقساط' });
+  }
+
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) return res.status(404).json({ msg: 'Booking not found' });
+
+    const installment = booking.installments.id(installmentId);
+    if (!installment) return res.status(404).json({ msg: 'Installment not found' });
+
+    const amountRemoved = installment.amount;
+    booking.installments.pull(installmentId);
+
+    const installmentsPaid = booking.installments.reduce((sum, inst) => sum + (Number(inst.amount) || 0), 0);
+    booking.remaining = Math.max(booking.total - (booking.deposit + installmentsPaid), 0);
+
+    await booking.save();
+    const populatedBooking = await Booking.findById(booking._id)
+      .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy');
+
+    await logActivity({
+      action: 'DELETE',
+      entityType: 'Installment',
+      entityId: booking._id,
+      details: `حذف قسط للعميل: ${booking.clientName}`,
+      amount: amountRemoved,
+      performedBy: employeeId
+    });
+
+    await invalidateBookingRelated();
+    res.json({ msg: 'Installment deleted successfully', booking: populatedBooking });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Server error' });

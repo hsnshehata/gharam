@@ -165,6 +165,9 @@ exports.resetSalaries = async (req, res) => {
 };
 
 exports.deleteUser = async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ msg: 'صلاحية غير كافية - الحذف للمديرين فقط' });
+  }
   try {
     const user = await User.findByIdAndDelete(req.params.id);
     if (!user) return res.status(404).json({ msg: 'User not found' });
