@@ -113,15 +113,15 @@ function AppContent() {
           />
           <Route
             path="/bookings"
-            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <Bookings /> : <Navigate to="/login" />}
+            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <Bookings user={user} /> : <Navigate to="/login" />}
           />
           <Route
             path="/instant-services"
-            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <InstantServices /> : <Navigate to="/login" />}
+            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <InstantServices user={user} /> : <Navigate to="/login" />}
           />
           <Route
             path="/expenses-advances"
-            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <ExpensesAdvances /> : <Navigate to="/login" />}
+            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <ExpensesAdvances user={user} /> : <Navigate to="/login" />}
           />
           <Route
             path="/packages-services"
