@@ -187,6 +187,8 @@ exports.getTodayOperations = async (req, res) => {
 
       operations.push({
         _id: log._id.toString(),
+        entityId: log.entityId ? log.entityId.toString() : null,
+        actionType: log.action, // 'CREATE', 'UPDATE', 'DELETE'
         type: typeLabel,
         details: log.details,
         amount: log.amount || 0,
@@ -209,7 +211,7 @@ exports.getTodayOperations = async (req, res) => {
     // 1. New Bookings (Legacy)
     bookings.forEach(b => {
       // Skip if we already logged this creation in ActivityLog (starts today)
-      const hasLog = operations.find(op => op.isLog && op.details.includes(b.clientName) && op.type === 'إضافة حجز');
+      const hasLog = operations.find(op => op.isLog && op.entityId === b._id.toString() && op.actionType === 'CREATE');
       if (!hasLog) {
         operations.push({
           _id: `booking-${b._id}`,
@@ -227,7 +229,8 @@ exports.getTodayOperations = async (req, res) => {
     bookingsWithInstallments.forEach(b => {
       b.installments.forEach(ins => {
         if (ins.date >= startDate && ins.date <= endDate) {
-          const hasLog = operations.find(op => op.isLog && op.time.getTime() === ins.date.getTime());
+          // Because installments use the booking _id in legacy, we check by exact time or related entity
+          const hasLog = operations.find(op => op.isLog && op.entityId === b._id.toString() && op.actionType === 'CREATE' && op.type === 'إضافة قسط' && op.amount === ins.amount);
           if (!hasLog) {
             operations.push({
               _id: `installment-${b._id}-${ins._id}`,
@@ -246,7 +249,7 @@ exports.getTodayOperations = async (req, res) => {
     // 3. Instant Services (Legacy)
     instantServices.forEach(is => {
       const serviceNames = is.services.map(s => s.name).join(', ');
-      const hasLog = operations.find(op => op.isLog && op.time.getTime() === is.createdAt.getTime());
+      const hasLog = operations.find(op => op.isLog && op.entityId === is._id.toString() && op.actionType === 'CREATE');
       if (!hasLog) {
         operations.push({
           _id: `instant-${is._id}`,
@@ -262,7 +265,7 @@ exports.getTodayOperations = async (req, res) => {
 
     // 4. Expenses (Legacy)
     expenses.forEach(e => {
-      const hasLog = operations.find(op => op.isLog && op.time.getTime() === e.createdAt.getTime());
+      const hasLog = operations.find(op => op.isLog && op.entityId === e._id.toString() && op.actionType === 'CREATE');
       if (!hasLog) {
         operations.push({
           _id: `expense-${e._id}`,
@@ -278,7 +281,7 @@ exports.getTodayOperations = async (req, res) => {
 
     // 5. Advances (Legacy)
     advances.forEach(a => {
-      const hasLog = operations.find(op => op.isLog && op.time.getTime() === a.createdAt.getTime());
+      const hasLog = operations.find(op => op.isLog && op.entityId === a._id.toString() && op.actionType === 'CREATE');
       if (!hasLog) {
         operations.push({
           _id: `advance-${a._id}`,
