@@ -8,7 +8,7 @@ const TIKTOK_LINK = 'https://www.tiktok.com/@gharamsoltan';
 const FACEBOOK_LINK = 'https://www.facebook.com/gharam.ml';
 const THREADS_LINK = 'https://www.threads.net/@gharamsoltan';
 const BUSINESS_NAME = 'غرام سلطان بيوتي سنتر وستوديو';
-const CANONICAL_URL = 'https://gharamsoltan.com/prices';
+const CANONICAL_URL = 'https://gharam.art/prices';
 const PAGE_TITLE = 'قائمة أسعار خدمات وباكدجات غرام سلطان';
 const PAGE_DESCRIPTION = 'أسعار باكدجات الميك أب والتصوير والخدمات الفردية في غرام سلطان بيوتي سنتر بكفر الشيخ.';
 const OG_IMAGE = 'https://gharamsoltan.com/og-cover.jpg';
@@ -157,14 +157,13 @@ const services = [
 	{ name: 'وش وحواجب', price: '50 جنيه' },
 	{ name: 'ديرما بلانينج', price: '70 جنيه' },
 	{ name: 'شيفينج', price: '70 جنيه' },
-	{ name: 'تنظيف بشرة سوفت', price: '200 جنيه' },
 	{ name: 'تنظيف بشرة هارد بروفيشنال', price: '300 جنيه' },
 	{ name: 'سشوار', price: '150 جنيه' },
 	{ name: 'بيبي ليس (مكواة شعر)', price: '150 جنيه' },
 	{ name: 'تاتو حواجب', price: '30 جنيه' },
 	{ name: 'حواجب وشنب', price: '35 جنيه' },
 	{ name: 'باديكير قدم', price: '300 جنيه' },
-	{ name: 'باديكير يد', price: '200 جنيه' },
+	{ name: 'باديكير يد', price: '150 جنيه' },
 	{ name: '1 رسمة حنة', price: '35 جنيه' },
 	{ name: 'تركيب أظافر عادية', price: '100 جنيه' },
 	{ name: 'تركيب أظافر ستراس', price: '150 جنيه' },
@@ -172,10 +171,10 @@ const services = [
 	{ name: 'إكستنشن', price: '250 جنيه' },
 	{ name: 'صبغة لون شعر', price: '500-1000 جنيه' },
 	{ name: 'خصل شعر', price: '500-1000 جنيه' },
-	{ name: 'مجموعات العناية بالشعر', price: '450 - 600 - 650 جنيه' },
+	{ name: 'مجموعات العناية بالشعر', price: ' 750 جنيه' },
 	{ name: 'حواجب فقط', price: '25 جنيه' },
 	{ name: 'قص شعر', price: 'يبدأ من 50 جنيه' },
-	{ name: 'غسيل شعر', price: '20 جنيه' },
+	{ name: 'غسيل شعر', price: '30 جنيه' },
 	{ name: 'بوكيه ورد', price: '350 - 700 جنيه' },
 	{ name: '3 رسومات حنة', price: '100 جنيه' },
 	{ name: 'تنظيف وش (شمع)', price: '70 جنيه' },
@@ -184,17 +183,16 @@ const services = [
 	{ name: 'سشوار وليس للأطفال', price: '200 جنيه' },
 	{ name: 'صبغة شعر بدون أمونيا', price: 'تبدأ من 500 جنيه' },
 	{ name: 'تسريحات الأطفال', price: '350 جنيه' },
-	{ name: 'قص أطراف', price: '20 جنيه' },
-	{ name: 'ماسك', price: '30 جنيه' },
-	{ name: 'جلسة لتقصيف الشعر', price: '200 جنيه' },
-	{ name: 'جلسة لتساقط الشعر', price: '200 جنيه' },
-	{ name: 'جلسة ديتوكس لقشرة الشعر', price: '200 جنيه' },
+	{ name: 'قص أطراف', price: '30 جنيه' },
+	{ name: 'ماسك', price: '40 جنيه' },
+	{ name: 'جلسة لتقصيف الشعر', price: '300 جنيه' },
+	{ name: 'جلسة لتساقط الشعر', price: '300 جنيه' },
+	{ name: 'جلسة ديتوكس لقشرة الشعر', price: '300 جنيه' },
 	{ name: 'شمع أنف داخلي فقط', price: '20 جنيه' },
 	{ name: 'شمع أنف خارجي', price: '20 جنيه' },
 	{ name: 'التوينكل (ستراس الأسنان)', price: '150 - 200 جنيه' },
 	{ name: 'اللاشز هير باي هير (رموش شعرة بشعرة)', price: '150 - 200 جنيه' },
 	{ name: 'الحمامات (عطري + صنفرة + مغربي)', price: '700 جنيه' },
-	{ name: 'تركيب الشعر بالسنتر', price: '70 جنيه لكل جرام شعر' },
 	{ name: 'الفيلر المعالج', price: 'يبدأ من 1500 جنيه' },
 	{ name: 'كرسي المساج الذكي', price: '100 - 200 - 250 جنيه حسب الجلسة' }
 ];
