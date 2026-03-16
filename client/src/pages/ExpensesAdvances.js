@@ -6,7 +6,7 @@ import Select from 'react-select';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faEye, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons';
 
-function ExpensesAdvances() {
+function ExpensesAdvances({ user }) {
   const [formData, setFormData] = useState({ type: 'expense', details: '', amount: 0, userId: '' });
   const [items, setItems] = useState([]);
   const [users, setUsers] = useState([]);
@@ -479,9 +479,11 @@ function ExpensesAdvances() {
                 <Button variant="primary" className="me-2" onClick={() => handleShowDetails(item)}>
                   <FontAwesomeIcon icon={faEye} />
                 </Button>
-                <Button variant="danger" onClick={() => { setDeleteItem(item); setShowDeleteModal(true); }}>
-                  <FontAwesomeIcon icon={faTrash} />
-                </Button>
+                {user?.role === 'admin' && (
+                  <Button variant="danger" onClick={() => { setDeleteItem(item); setShowDeleteModal(true); }}>
+                    <FontAwesomeIcon icon={faTrash} />
+                  </Button>
+                )}
               </Card.Body>
             </Card>
           </Col>

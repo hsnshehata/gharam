@@ -72,6 +72,9 @@ function Dashboard({ user }) {
   const [showOperations, setShowOperations] = useState(true);
   const [logFilter, setLogFilter] = useState('all');
   const [installmentPaymentMethod, setInstallmentPaymentMethod] = useState('cash');
+  const [showEditInstallmentModal, setShowEditInstallmentModal] = useState(false);
+  const [editInstallmentData, setEditInstallmentData] = useState({ id: '', bookingId: '', amount: 0, paymentMethod: 'cash' });
+  const [isEditInstallmentSubmitting, setIsEditInstallmentSubmitting] = useState(false);
 
   const paymentMethodLabel = (pm) => {
     const labels = { cash: 'كاش', vodafone: 'فودافون', visa: 'فيزا', instapay: 'انستاباي' };
@@ -605,6 +608,51 @@ function Dashboard({ user }) {
     }
   };
 
+  const handleOpenEditInstallment = (bookingId, installment) => {
+    setEditInstallmentData({
+      id: installment._id,
+      bookingId: bookingId,
+      amount: installment.amount,
+      paymentMethod: installment.paymentMethod || 'cash'
+    });
+    setShowEditInstallmentModal(true);
+  };
+
+  const handleUpdateInstallment = async () => {
+    if (isEditInstallmentSubmitting) return;
+    setIsEditInstallmentSubmitting(true);
+    try {
+      await axios.put(`/api/bookings/${editInstallmentData.bookingId}/installment/${editInstallmentData.id}`, {
+        amount: editInstallmentData.amount,
+        paymentMethod: editInstallmentData.paymentMethod
+      }, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      setMessage('تم تعديل القسط بنجاح');
+      setShowEditInstallmentModal(false);
+      revalidateAll();
+    } catch (err) {
+      console.error('Update installment error:', err.response?.data || err.message);
+      setMessage(err.response?.data?.msg || 'خطأ في تعديل القسط');
+    } finally {
+      setIsEditInstallmentSubmitting(false);
+    }
+  };
+
+  const handleDeleteInstallment = async (bookingId, installmentId) => {
+    if (!window.confirm('هل أنت متأكد من حذف هذا القسط؟')) return;
+    try {
+      await axios.delete(`/api/bookings/${bookingId}/installment/${installmentId}`, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      setMessage('تم حذف القسط بنجاح');
+      revalidateAll();
+    } catch (err) {
+      console.error('Delete installment error:', err.response?.data || err.message);
+      setMessage(err.response?.data?.msg || 'خطأ في حذف القسط');
+    }
+  };
+
   const handlePrint = (booking) => {
     setCurrentReceipt({ ...booking, type: 'booking' });
     setShowReceiptModal(true);
@@ -768,9 +816,11 @@ function Dashboard({ user }) {
                 <Button variant="primary" className="me-2" onClick={() => { setDeleteItem(booking); setShowInstallmentModal(true); }}>
                   <FontAwesomeIcon icon={faDollarSign} />
                 </Button>
-                <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }}>
-                  <FontAwesomeIcon icon={faTrash} />
-                </Button>
+                {user?.role === 'admin' && (
+                  <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }}>
+                    <FontAwesomeIcon icon={faTrash} />
+                  </Button>
+                )}
               </Card.Body>
             </Card>
           </Col>
@@ -811,9 +861,11 @@ function Dashboard({ user }) {
                 <Button variant="primary" className="me-2" onClick={() => { setDeleteItem(booking); setShowInstallmentModal(true); }}>
                   <FontAwesomeIcon icon={faDollarSign} />
                 </Button>
-                <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }}>
-                  <FontAwesomeIcon icon={faTrash} />
-                </Button>
+                {user?.role === 'admin' && (
+                  <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }}>
+                    <FontAwesomeIcon icon={faTrash} />
+                  </Button>
+                )}
               </Card.Body>
             </Card>
           </Col>
@@ -855,9 +907,11 @@ function Dashboard({ user }) {
                 <Button variant="primary" className="me-2" onClick={() => { setDeleteItem(booking); setShowInstallmentModal(true); }}>
                   <FontAwesomeIcon icon={faDollarSign} />
                 </Button>
-                <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }}>
-                  <FontAwesomeIcon icon={faTrash} />
-                </Button>
+                {user?.role === 'admin' && (
+                  <Button variant="danger" onClick={() => { setDeleteItem(booking); setShowDeleteModal(true); }}>
+                    <FontAwesomeIcon icon={faTrash} />
+                  </Button>
+                )}
               </Card.Body>
             </Card>
           </Col>
@@ -1763,7 +1817,9 @@ function Dashboard({ user }) {
                       <tr>
                         <th>المبلغ</th>
                         <th>التاريخ</th>
+                        <th>طريقة الدفع</th>
                         <th>الموظف</th>
+                        {user?.role === 'admin' && <th>إجراءات</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -1771,7 +1827,18 @@ function Dashboard({ user }) {
                         <tr key={index}>
                           <td>{inst.amount} جنيه</td>
                           <td>{new Date(inst.date).toLocaleDateString()}</td>
+                          <td>{inst.paymentMethod || 'كاش'}</td>
                           <td>{inst.employeeId?.username || 'غير معروف'}</td>
+                          {user?.role === 'admin' && (
+                            <td>
+                              <Button variant="info" size="sm" className="me-2" onClick={() => handleOpenEditInstallment(currentDetails._id, inst)}>
+                                <FontAwesomeIcon icon={faEdit} />
+                              </Button>
+                              <Button variant="danger" size="sm" onClick={() => handleDeleteInstallment(currentDetails._id, inst._id)}>
+                                <FontAwesomeIcon icon={faTrash} />
+                              </Button>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -1806,6 +1873,40 @@ function Dashboard({ user }) {
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowDetailsModal(false)}>إغلاق</Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal show={showEditInstallmentModal} onHide={() => setShowEditInstallmentModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>تعديل قسط</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group>
+            <Form.Label>المبلغ</Form.Label>
+            <Form.Control
+              type="number"
+              value={editInstallmentData.amount}
+              onChange={(e) => setEditInstallmentData({ ...editInstallmentData, amount: e.target.value })}
+            />
+          </Form.Group>
+          <Form.Group className="mt-2">
+            <Form.Label>طريقة الدفع</Form.Label>
+            <Form.Select
+              value={editInstallmentData.paymentMethod}
+              onChange={(e) => setEditInstallmentData({ ...editInstallmentData, paymentMethod: e.target.value })}
+            >
+              <option value="cash">كاش</option>
+              <option value="vodafone">فودافون كاش</option>
+              <option value="visa">فيزا</option>
+              <option value="instapay">انستاباي</option>
+            </Form.Select>
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowEditInstallmentModal(false)}>إلغاء</Button>
+          <Button variant="primary" onClick={handleUpdateInstallment} disabled={isEditInstallmentSubmitting}>
+            {isEditInstallmentSubmitting ? 'جارٍ الحفظ...' : 'حفظ التعديلات'}
+          </Button>
         </Modal.Footer>
       </Modal>
     </Container>
