@@ -920,11 +920,24 @@ function Dashboard({ user }) {
             onChange={(e) => setLogFilter(e.target.value)}
           >
             <option value="all">عرض الكل</option>
-            <option value="حجز جديد">حجوزات</option>
-            <option value="قسط/دفعة">أقساط</option>
-            <option value="خدمة فورية">خدمات فورية</option>
-            <option value="مصروف">مصروفات</option>
-            <option value="سلفة">سلف</option>
+            <option value="حجز جديد">حجوزات (قديم)</option>
+            <option value="إضافة حجز">إضافة حجز</option>
+            <option value="تعديل حجز">تعديل حجز</option>
+            <option value="حذف حجز">حذف حجز</option>
+            <option value="إضافة قسط">إضافة قسط</option>
+            <option value="قسط/دفعة">أقساط (قديم)</option>
+            <option value="إضافة خدمة فورية">إضافة خدمة فورية</option>
+            <option value="تعديل خدمة فورية">تعديل خدمة فورية</option>
+            <option value="حذف خدمة فورية">حذف خدمة فورية</option>
+            <option value="خدمة فورية">خدمات فورية (قديم)</option>
+            <option value="إضافة مصروف">إضافة مصروف</option>
+            <option value="تعديل مصروف">تعديل مصروف</option>
+            <option value="حذف مصروف">حذف مصروف</option>
+            <option value="مصروف">مصروفات (قديم)</option>
+            <option value="إضافة سلفة">إضافة سلفة</option>
+            <option value="تعديل سلفة">تعديل سلفة</option>
+            <option value="حذف سلفة">حذف سلفة</option>
+            <option value="سلفة">سلف (قديم)</option>
           </Form.Select>
           <Button 
             variant="outline-secondary" 
@@ -954,15 +967,19 @@ function Dashboard({ user }) {
                 {operationsData && operationsData.length > 0 ? (
                   operationsData
                     .filter(op => logFilter === 'all' || op.type === logFilter)
-                    .map((op) => (
+                    .map((op) => {
+                      let badgeClass = 'bg-secondary';
+                      if (op.type.includes('حجز') && !op.type.includes('حذف')) badgeClass = 'bg-primary';
+                      else if (op.type.includes('قسط') || op.type.includes('دفعة')) badgeClass = 'bg-info';
+                      else if (op.type.includes('خدمة فورية') && !op.type.includes('حذف')) badgeClass = 'bg-success';
+                      else if (op.type.includes('مصروف') && !op.type.includes('حذف')) badgeClass = 'bg-danger';
+                      else if (op.type.includes('سلفة') && !op.type.includes('حذف')) badgeClass = 'bg-warning text-dark';
+                      else if (op.type.includes('حذف')) badgeClass = 'bg-dark text-white';
+
+                      return (
                     <tr key={op._id}>
                       <td>
-                        <span className={`badge ${
-                          op.type === 'حجز جديد' ? 'bg-primary' : 
-                          op.type === 'قسط/دفعة' ? 'bg-info' : 
-                          op.type === 'خدمة فورية' ? 'bg-success' : 
-                          op.type === 'مصروف' ? 'bg-danger' : 'bg-warning'
-                        }`}>
+                        <span className={`badge ${badgeClass}`}>
                           {op.type}
                         </span>
                       </td>
@@ -976,7 +993,8 @@ function Dashboard({ user }) {
                       <td>{new Date(op.time).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</td>
                       <td>{op.addedBy}</td>
                     </tr>
-                  ))
+                      );
+                    })
                 ) : (
                   <tr>
                     <td colSpan="5" className="text-center py-4">لا توجد عمليات مسجلة لهذا اليوم</td>
