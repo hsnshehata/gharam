@@ -6,6 +6,7 @@ const Deduction = require('../models/Deduction');
 const Service = require('../models/Service');
 const User = require('../models/User');
 const { cacheAside } = require('../services/cache');
+const mongoose = require('mongoose');
 
 const msInDay = 1000 * 60 * 60 * 24;
 const toNumber = (v) => Number(v) || 0;
@@ -429,9 +430,9 @@ exports.getEmployeeReport = async (req, res) => {
         instantServiceId: p.instantServiceId || null
       }));
 
-    const bookingIds = [...new Set(workPoints.map(p => p.bookingId).filter(Boolean))];
-    const serviceIds = [...new Set(workPoints.map(p => p.serviceId).filter(Boolean))];
-    const instantIds = [...new Set(workPoints.map(p => p.instantServiceId).filter(Boolean))];
+    const bookingIds = [...new Set(workPoints.map(p => p.bookingId).filter(id => id && mongoose.isValidObjectId(id)))];
+    const serviceIds = [...new Set(workPoints.map(p => p.serviceId).filter(id => id && mongoose.isValidObjectId(id)))];
+    const instantIds = [...new Set(workPoints.map(p => p.instantServiceId).filter(id => id && mongoose.isValidObjectId(id)))];
 
     const [bookingsMap, servicesMap, instantMap] = await Promise.all([
       (async () => {
