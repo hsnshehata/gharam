@@ -20,7 +20,7 @@ function HallSupervision() {
   const [loading, setLoading] = useState(false);
   const [receiptNumber, setReceiptNumber] = useState('');
   const [showQrModal, setShowQrModal] = useState(false);
-  const [searchResult, setSearchResult] = useState(null);
+  const [searchResults, setSearchResults] = useState([]);
   const qrCodeScanner = useRef(null);
   const { showToast } = useToast();
 
@@ -80,25 +80,28 @@ function HallSupervision() {
     }
     try {
       const [bookingRes, instantRes] = await Promise.all([
-        axios.get(`/api/bookings?receiptNumber=${normalized}`, {
+        axios.get(`/api/bookings?search=${encodeURIComponent(normalized)}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         }),
-        axios.get(`/api/instant-services?receiptNumber=${normalized}`, {
+        axios.get(`/api/instant-services?search=${encodeURIComponent(normalized)}`, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
         })
       ]);
 
+      let results = [];
       if (bookingRes.data.bookings?.length > 0) {
-        const booking = bookingRes.data.bookings[0];
-        setSearchResult({ type: 'booking', data: booking });
-        showToast('تم العثور على الحجز', 'success');
-      } else if (instantRes.data.instantServices?.length > 0) {
-        const instantService = instantRes.data.instantServices[0];
-        setSearchResult({ type: 'instant', data: instantService });
-        showToast('تم العثور على خدمة فورية', 'success');
+        results = results.concat(bookingRes.data.bookings.map(b => ({ type: 'booking', data: b })));
+      }
+      if (instantRes.data.instantServices?.length > 0) {
+        results = results.concat(instantRes.data.instantServices.map(s => ({ type: 'instant', data: s })));
+      }
+
+      if (results.length > 0) {
+        setSearchResults(results);
+        showToast(`تم العثور على ${results.length} مسجل`, 'success');
       } else {
-        setSearchResult(null);
-        showToast('لم يتم العثور على حجز أو خدمة فورية بهذا الرقم', 'warning');
+        setSearchResults([]);
+        showToast('لم يتم العثور على حجز أو خدمة فورية بهذا الرقم أو الاسم', 'warning');
       }
     } catch (err) {
       console.error('Receipt search error:', err.response?.data || err.message);
@@ -169,13 +172,12 @@ function HallSupervision() {
       photographyBookings: prev.photographyBookings.map(b => (normalizeId(b._id) === targetId ? updatedBooking : b))
     }));
 
-    setSearchResult(prev => {
-      if (!prev) return prev;
-      if (prev.type === 'booking' && normalizeId(prev.data._id) === targetId) {
-        return { ...prev, data: updatedBooking };
+    setSearchResults(prev => prev.map(result => {
+      if (result.type === 'booking' && normalizeId(result.data._id) === targetId) {
+        return { ...result, data: updatedBooking };
       }
-      return prev;
-    });
+      return result;
+    }));
   };
 
   const handleAssign = async (type, recordId, serviceId) => {
@@ -198,13 +200,12 @@ function HallSupervision() {
       } else {
         const updatedInstant = res.data.instantService;
         setInstantServices(prev => prev.map(s => (normalizeId(s._id) === normalizeId(recordId) ? updatedInstant : s)));
-        setSearchResult(prev => {
-          if (!prev) return prev;
-          if (prev.type === 'instant' && normalizeId(prev.data._id) === normalizeId(recordId)) {
-            return { ...prev, data: updatedInstant };
+        setSearchResults(prev => prev.map(result => {
+          if (result.type === 'instant' && normalizeId(result.data._id) === normalizeId(recordId)) {
+            return { ...result, data: updatedInstant };
           }
-          return prev;
-        });
+          return result;
+        }));
       }
       showToast('تم التكليف وتسجيل النقاط بنجاح', 'success');
     } catch (err) {
@@ -227,13 +228,12 @@ function HallSupervision() {
       } else {
         const updatedInstant = res.data.instantService;
         setInstantServices(prev => prev.map(s => (normalizeId(s._id) === normalizeId(recordId) ? updatedInstant : s)));
-        setSearchResult(prev => {
-          if (!prev) return prev;
-          if (prev.type === 'instant' && normalizeId(prev.data._id) === normalizeId(recordId)) {
-            return { ...prev, data: updatedInstant };
+        setSearchResults(prev => prev.map(result => {
+          if (result.type === 'instant' && normalizeId(result.data._id) === normalizeId(recordId)) {
+            return { ...result, data: updatedInstant };
           }
-          return prev;
-        });
+          return result;
+        }));
       }
       showToast('تم سحب التكليف وإرجاع المهمة كغير منفذة', 'info');
     } catch (err) {
@@ -420,12 +420,12 @@ function HallSupervision() {
       <Row className="mb-3 g-2 align-items-end">
         <Col md={4} sm={12}>
           <Form.Group>
-            <Form.Label>البحث برقم الوصل</Form.Label>
+            <Form.Label>البحث برقم الوصل أو الاسم</Form.Label>
             <Form.Control
               type="text"
               value={receiptNumber}
               onChange={(e) => setReceiptNumber(e.target.value)}
-              placeholder="أدخل رقم الوصل"
+              placeholder="أدخل رقم الوصل أو الاسم"
             />
           </Form.Group>
         </Col>
@@ -440,10 +440,10 @@ function HallSupervision() {
           </Button>
         </Col>
       </Row>
-      {searchResult && (
-        <Card className="mb-3">
+      {searchResults.length > 0 && searchResults.map((searchResult, mapIdx) => (
+        <Card className="mb-3" key={`res-${mapIdx}`}>
           <Card.Body>
-            <Card.Title>نتيجة البحث</Card.Title>
+            <Card.Title>نتيجة البحث {searchResults.length > 1 ? mapIdx + 1 : ''}</Card.Title>
             {searchResult.type === 'booking' ? (
               <>
                 <p>اسم العميل: {searchResult.data.clientName}</p>
@@ -546,7 +546,7 @@ function HallSupervision() {
             )}
           </Card.Body>
         </Card>
-      )}
+      ))}
 
       {loading ? (
         <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '40vh' }}>
