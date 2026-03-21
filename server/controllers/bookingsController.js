@@ -432,7 +432,8 @@ exports.getBookings = async (req, res) => {
           query = {
             $or: [
               { clientName: { $regex: search, $options: 'i' } },
-              { clientPhone: { $regex: search, $options: 'i' } }
+              { clientPhone: { $regex: search, $options: 'i' } },
+              { receiptNumber: { $regex: search, $options: 'i' } }
             ]
           };
         }
