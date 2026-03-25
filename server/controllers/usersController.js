@@ -576,6 +576,26 @@ exports.getPointsSummary = async (req, res) => {
 
         const allTimeTop = aggregateTopServices(null, null);
 
+        const monthlyCoinsEarnedCount = 
+          (user.efficiencyCoins || []).filter(c => {
+            const dt = new Date(c.earnedAt || new Date());
+            return dt >= monthStart && dt <= monthEnd;
+          }).length + 
+          (user.coinsRedeemed || []).filter(c => {
+            const dt = new Date(c.redeemedAt || new Date());
+            return dt >= monthStart && dt <= monthEnd;
+          }).length;
+
+        const lifetimeCoinsEarnedCount = 
+          (user.efficiencyCoins || []).length + 
+          (user.coinsRedeemed || []).length;
+
+        const monthlyRedeemedValue = 
+          (user.coinsRedeemed || []).filter(c => {
+            const dt = new Date(c.redeemedAt || new Date());
+            return dt >= monthStart && dt <= monthEnd;
+          }).reduce((sum, c) => sum + (Number(c.value) || 0), 0);
+
         return {
           totalPoints,
           level,
@@ -590,6 +610,9 @@ exports.getPointsSummary = async (req, res) => {
             totalValue: coinsTotalValue,
             byLevel: coinsByLevel
           },
+          monthlyCoinsEarnedCount,
+          lifetimeCoinsEarnedCount,
+          monthlyRedeemedValue,
           rank,
           teamSize,
           monthlyRank,
