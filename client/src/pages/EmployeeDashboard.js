@@ -255,6 +255,8 @@ function EmployeeDashboard({ user }) {
   const progressPercent = pointsSummary?.progress?.percent ?? 0;
   const currentLevel = pointsSummary?.level ?? 1;
 
+  const theme = typeof window !== 'undefined' ? (localStorage.getItem('theme') || 'light') : 'light';
+
   const todayPoints = useMemo(() => executedServices.reduce((sum, s) => sum + (s.points || 0), 0), [executedServices]);
 
   const CustomTooltip = ({ active, payload, label }) => {
@@ -274,20 +276,21 @@ function EmployeeDashboard({ user }) {
   };
 
   return (
-    <div className="employee-dashboard-wrapper" dir="rtl">
+    <div className={`employee-dashboard-wrapper dash-${theme}`} dir="rtl">
       <style>{`
-        :root {
-          --dash-bg: var(--bg, #0f172a);
-          --dash-surface: var(--surface, #1e293b);
-          --dash-surface-hover: var(--surface-hover, #334155);
-          --dash-border: var(--border, #334155);
-          --dash-text: var(--text, #f8fafc);
-          --dash-muted: var(--muted, #94a3b8);
-          --dash-accent: var(--accent, #3b82f6);
+        .dash-dark {
+          --dash-bg: #0f172a;
+          --dash-surface: #1e293b;
+          --dash-surface-hover: #334155;
+          --dash-border: #334155;
+          --dash-text: #f8fafc;
+          --dash-muted: #94a3b8;
+          --dash-accent: #3b82f6;
           --dash-success: #10b981;
           --dash-warning: #f59e0b;
+          --dash-danger: #ef4444;
         }
-        [data-theme='light'] .employee-dashboard-wrapper {
+        .dash-light {
           --dash-bg: #f8fafc;
           --dash-surface: #ffffff;
           --dash-surface-hover: #f1f5f9;
@@ -295,6 +298,9 @@ function EmployeeDashboard({ user }) {
           --dash-text: #0f172a;
           --dash-muted: #64748b;
           --dash-accent: #2563eb;
+          --dash-success: #10b981;
+          --dash-warning: #f59e0b;
+          --dash-danger: #ef4444;
         }
 
         .employee-dashboard-wrapper {
@@ -309,12 +315,12 @@ function EmployeeDashboard({ user }) {
           background: var(--dash-surface);
           border: 1px solid var(--dash-border);
           border-radius: 16px;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+          box-shadow: 0 10px 30px rgba(0,0,0,0.05);
           overflow: hidden;
         }
         
         .hero-banner {
-          background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1));
+          background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(16, 185, 129, 0.08));
           border-bottom: 1px solid var(--dash-border);
           padding: 40px 0;
           position: relative;
@@ -324,8 +330,8 @@ function EmployeeDashboard({ user }) {
           content: '';
           position: absolute;
           inset: 0;
-          background: radial-gradient(circle at right top, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
-                      radial-gradient(circle at left bottom, rgba(16, 185, 129, 0.15) 0%, transparent 50%);
+          background: radial-gradient(circle at right top, rgba(59, 130, 246, 0.12) 0%, transparent 50%),
+                      radial-gradient(circle at left bottom, rgba(16, 185, 129, 0.12) 0%, transparent 50%);
           pointer-events: none;
         }
 
@@ -333,12 +339,14 @@ function EmployeeDashboard({ user }) {
           display: inline-flex;
           align-items: center;
           gap: 8px;
-          padding: 8px 16px;
-          border-radius: 12px;
-          background: var(--dash-surface-hover);
+          padding: 10px 20px;
+          border-radius: 999px;
+          background: var(--dash-surface);
           border: 1px solid var(--dash-border);
           font-weight: bold;
-          font-size: 1.1rem;
+          font-size: 1.05rem;
+          color: var(--dash-text);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.06);
         }
 
         .level-circle {
@@ -406,8 +414,8 @@ function EmployeeDashboard({ user }) {
         }
 
         .salary-card {
-          background: linear-gradient(145deg, var(--dash-surface), var(--dash-surface-hover));
-          border-left: 4px solid var(--dash-success);
+          background: var(--dash-surface);
+          border-right: 4px solid var(--dash-success);
         }
         .advance-table-wrapper {
           max-height: 250px;
@@ -577,7 +585,7 @@ function EmployeeDashboard({ user }) {
               <div className="mt-2">
                 <h6 className="fw-bold mb-3">السلف والخصومات الأخيرة</h6>
                 <div className="advance-table-wrapper">
-                  <Table variant={localStorage.getItem('theme') === 'dark' ? 'dark' : 'light'} borderless hover size="sm" className="mb-0 text-center align-middle">
+                  <Table variant={theme === 'dark' ? 'dark' : 'light'} borderless hover size="sm" className="mb-0 text-center align-middle">
                     <thead style={{ position: 'sticky', top: 0, background: 'var(--dash-surface)', zIndex: 1 }}>
                       <tr className="border-bottom border-secondary border-opacity-25">
                         <th className="py-2 text-muted fw-normal">النوع</th>
@@ -762,7 +770,7 @@ function EmployeeDashboard({ user }) {
 
               <h5 className="fw-bold mb-3">الخدمات المطلوبة:</h5>
               <div className="table-responsive">
-                <Table variant={localStorage.getItem('theme') === 'dark' ? 'dark' : 'light'} borderless hover className="align-middle">
+                <Table variant={theme === 'dark' ? 'dark' : 'light'} borderless hover className="align-middle">
                   <thead className="border-bottom border-secondary border-opacity-25">
                     <tr>
                       <th className="text-muted fw-normal">الخدمة</th>
