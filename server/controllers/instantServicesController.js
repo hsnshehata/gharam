@@ -132,52 +132,109 @@ exports.addInstantService = async (req, res) => {
 };
 
 exports.updateInstantService = async (req, res) => {
-  const { employeeId, services, customServices = [] } = req.body;
+  const { employeeId, services, customServices = [], paymentMethod } = req.body;
 
   try {
+    const existingInstant = await InstantService.findById(req.params.id);
+    if (!existingInstant) return res.status(404).json({ msg: 'الخدمة الفورية غير موجودة' });
+
+    const existingMap = new Map();
+    existingInstant.services.forEach(srv => {
+      existingMap.set(srv._id.toString(), srv);
+    });
+
     const srvRecords = await Service.find({ _id: { $in: services } });
     if (srvRecords.length !== services.length) {
       return res.status(400).json({ msg: 'بعض الخدمات غير موجودة' });
     }
 
-    let totalPoints = 0;
-    const formattedServices = srvRecords.map(srv => {
-      const service = {
-        _id: srv._id.toString(),
-        name: srv.name,
-        price: srv.price,
-        isCustom: false,
-        executed: !!employeeId, // executed: true لو فيه employeeId
-        executedBy: employeeId || null, // executedBy: employeeId لو موجود
-        executedAt: employeeId ? new Date() : null
-      };
-      if (employeeId) {
-        totalPoints += srv.price * 0.15; // احتساب النقاط
-      }
-      return service;
-    });
+    let addedPoints = 0;
+    const formattedServices = [];
 
-    // Add custom services to the list
-    if (Array.isArray(customServices)) {
-      customServices.forEach((customSrv, idx) => {
-        if (!customSrv.name || !customSrv.price) return; // Skip invalid custom services
-        
-        const price = Number(customSrv.price) || 0;
-        const service = {
-          _id: customSrv._id || `custom-${Date.now()}-${idx}`,
-          name: customSrv.name,
-          price: price,
-          isCustom: true,
+    // 1. Process Normal Services
+    srvRecords.forEach(srv => {
+      const _idStr = srv._id.toString();
+      const oldSrv = existingMap.get(_idStr);
+      if (oldSrv) {
+        formattedServices.push({
+          _id: _idStr,
+          name: srv.name,
+          price: srv.price,
+          isCustom: false,
+          executed: oldSrv.executed,
+          executedBy: oldSrv.executedBy || null,
+          executedAt: oldSrv.executedAt || null
+        });
+      } else {
+        formattedServices.push({
+          _id: _idStr,
+          name: srv.name,
+          price: srv.price,
+          isCustom: false,
           executed: !!employeeId,
           executedBy: employeeId || null,
           executedAt: employeeId ? new Date() : null
-        };
-        formattedServices.push(service);
+        });
+        if (employeeId) addedPoints += srv.price * 0.15;
+      }
+    });
 
-        if (employeeId) {
-          totalPoints += price * 0.15;
+    // 2. Process Custom Services
+    if (Array.isArray(customServices)) {
+      customServices.forEach((customSrv, idx) => {
+        if (!customSrv.name || !customSrv.price) return;
+        const _idStr = customSrv._id || `custom-${Date.now()}-${idx}`;
+        const price = Number(customSrv.price) || 0;
+        const oldSrv = existingMap.get(_idStr);
+        if (oldSrv) {
+          formattedServices.push({
+            _id: _idStr,
+            name: customSrv.name,
+            price: price,
+            isCustom: true,
+            executed: oldSrv.executed,
+            executedBy: oldSrv.executedBy || null,
+            executedAt: oldSrv.executedAt || null
+          });
+        } else {
+          formattedServices.push({
+            _id: _idStr,
+            name: customSrv.name,
+            price: price,
+            isCustom: true,
+            executed: !!employeeId,
+            executedBy: employeeId || null,
+            executedAt: employeeId ? new Date() : null
+          });
+          if (employeeId) addedPoints += price * 0.15;
         }
       });
+    }
+
+    // 3. Handle Point Deductions for Removed Services that were Executed
+    const newServiceIds = new Set(formattedServices.map(s => s._id.toString()));
+    for (const oldSrv of existingInstant.services) {
+      if (!newServiceIds.has(oldSrv._id.toString()) && oldSrv.executed && oldSrv.executedBy) {
+        // deduct points
+        await removePointsAndCoinsInternal(oldSrv.executedBy, (p) => (
+          p.instantServiceId?.toString() === existingInstant._id.toString() && p.serviceId?.toString() === oldSrv._id.toString()
+        ));
+      }
+    }
+
+    // 4. Add Points for newly added and immediately executed services
+    if (employeeId) {
+      for (const srv of formattedServices) {
+        if (!existingMap.has(srv._id) && srv.executed) {
+          await addPointsAndConvertInternal(employeeId, srv.price * 0.15, {
+            bookingId: null,
+            serviceId: srv._id,
+            serviceName: srv.name,
+            instantServiceId: existingInstant._id,
+            receiptNumber: existingInstant.receiptNumber
+          });
+        }
+      }
     }
 
     const total = formattedServices.reduce((sum, srv) => sum + srv.price, 0);
@@ -185,18 +242,15 @@ exports.updateInstantService = async (req, res) => {
     const instantService = await InstantService.findByIdAndUpdate(
       req.params.id,
       {
-        employeeId: employeeId || null,
+        employeeId: employeeId !== undefined ? (employeeId || null) : existingInstant.employeeId,
         services: formattedServices,
-        total
+        total,
+        paymentMethod: paymentMethod || existingInstant.paymentMethod
       },
       { new: true }
     )
       .populate('employeeId', 'username')
       .populate('services.executedBy', 'username');
-
-    if (!instantService) {
-      return res.status(404).json({ msg: 'الخدمة الفورية غير موجودة' });
-    }
 
     await logActivity({
       action: 'UPDATE',
@@ -204,29 +258,13 @@ exports.updateInstantService = async (req, res) => {
       entityId: instantService._id,
       details: `تعديل خدمة فورية: ${formattedServices.map(s => s.name).join(', ')}`,
       amount: total,
-      paymentMethod: instantService.paymentMethod, // Assuming it doesn't change here or we use existing one
+      paymentMethod: instantService.paymentMethod,
       performedBy: req.user.id
     });
 
     await invalidateInstantServiceCaches();
 
-    // إضافة النقاط والعملة لو فيه employeeId (لكل خدمة منفذة)
-    if (employeeId) {
-      for (const srv of formattedServices) {
-        if (srv.executed) {
-          const pointsForService = srv.price * 0.15;
-          await addPointsAndConvertInternal(employeeId, pointsForService, {
-            bookingId: null,
-            serviceId: srv._id,
-            serviceName: srv.name,
-            instantServiceId: instantService._id,
-            receiptNumber: instantService.receiptNumber
-          });
-        }
-      }
-    }
-
-    return res.json({ msg: 'تم تعديل الخدمة الفورية بنجاح', instantService, points: totalPoints });
+    return res.json({ msg: 'تم تعديل الخدمة الفورية بنجاح', instantService, points: addedPoints });
   } catch (err) {
     console.error('Error in updateInstantService:', err);
     return res.status(500).json({ msg: 'خطأ في السيرفر' });
