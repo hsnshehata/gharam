@@ -6,7 +6,7 @@ function GalleryAdmin() {
 	const [media, setMedia] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [message, setMessage] = useState('');
-	const [syncLimit, setSyncLimit] = useState(85);
+	const [syncLimit, setSyncLimit] = useState(20);
 	const [syncing, setSyncing] = useState(false);
 	const [toggleId, setToggleId] = useState(null);
 
@@ -38,7 +38,7 @@ function GalleryAdmin() {
 		setMessage('');
 		try {
 			const res = await axios.post('/api/facebook/sync',
-				{ limit: Number(syncLimit) || 85 },
+				{ limit: Number(syncLimit) || 20 },
 				{ headers: { 'x-auth-token': localStorage.getItem('token') } }
 			);
 			setMessage(res.data?.message || 'تمت المزامنة');

@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table } from 'react-bootstrap';
+import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table, Badge } from 'react-bootstrap';
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheck, faQrcode, faGift, faCoins, faBolt, faRotateRight } from '@fortawesome/free-solid-svg-icons';
+import { faCheck, faQrcode, faGift, faCoins, faBolt, faRotateRight, faWallet, faMoneyBillWave, faArrowDown, faHistory } from '@fortawesome/free-solid-svg-icons';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useToast } from '../components/ToastProvider';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 
 const COIN_COLORS = {
   1: '#8e44ad', // أرجواني
@@ -15,6 +16,7 @@ const COIN_COLORS = {
   6: '#c0c7d1', // فضي
   default: '#95a5a6'
 };
+
 function EmployeeDashboard({ user }) {
   const [executedServices, setExecutedServices] = useState([]);
   const [date] = useState(new Date().toISOString().split('T')[0]);
@@ -28,7 +30,6 @@ function EmployeeDashboard({ user }) {
   const [redeemCount, setRedeemCount] = useState(1);
   const [showRedeemModal, setShowRedeemModal] = useState(false);
   const [converting, setConverting] = useState(false);
-  const [convertCelebration, setConvertCelebration] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const [weeklySeries, setWeeklySeries] = useState([]);
@@ -68,31 +69,10 @@ function EmployeeDashboard({ user }) {
     setLoadingData(true);
     try {
       const todayServices = await fetchExecutedByDate(date);
-
-      const days = Array.from({ length: 7 }).map((_, idx) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (6 - idx));
-        return d.toISOString().split('T')[0];
-      });
-
-      const weeklyPayloads = await Promise.all(days.map((d) => fetchExecutedByDate(d).catch(() => [])));
-      const weeklyAggregated = weeklyPayloads.map((services, idx) => {
-        const dayDate = new Date(days[idx]);
-        const label = `${dayDate.getDate()}/${dayDate.getMonth() + 1}`;
-        const totals = services.reduce((acc, s) => {
-          const pts = s.points || 0;
-          acc.total += pts;
-          if (s.source === 'booking') acc.booking += pts;
-          if (s.source === 'instant') acc.instant += pts;
-          return acc;
-        }, { total: 0, booking: 0, instant: 0 });
-        return { label, ...totals };
-      });
-
       const summary = await fetchPointsSummary();
       await Promise.all([fetchPendingGifts(), fetchTodayGifts()]);
       setExecutedServices(todayServices);
-      setWeeklySeries(summary?.weeklyBreakdown || weeklyAggregated);
+      setWeeklySeries(summary?.weeklyBreakdown || []);
     } catch (err) {
       console.error('Fetch error:', err.response?.data || err.message);
       showToast('خطأ في جلب البيانات', 'danger');
@@ -107,13 +87,18 @@ function EmployeeDashboard({ user }) {
     if (!dt) return '—';
     const dateObj = new Date(dt);
     if (Number.isNaN(dateObj.getTime())) return '—';
-    return dateObj.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    return dateObj.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+  }, []);
+  
+  const formatDate = useCallback((dt) => {
+    if (!dt) return '—';
+    const dateObj = new Date(dt);
+    if (Number.isNaN(dateObj.getTime())) return '—';
+    return dateObj.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' });
   }, []);
 
   const getTopCoinLevel = useCallback((byLevel = {}) => {
-    const levels = Object.keys(byLevel || {})
-      .map(Number)
-      .filter((lvl) => !Number.isNaN(lvl) && byLevel[lvl] > 0);
+    const levels = Object.keys(byLevel || {}).map(Number).filter((lvl) => !Number.isNaN(lvl) && byLevel[lvl] > 0);
     if (levels.length === 0) return 1;
     return Math.max(...levels);
   }, []);
@@ -131,7 +116,6 @@ function EmployeeDashboard({ user }) {
       return;
     }
     try {
-      console.log('Searching for receipt:', normalized);
       const res = await axios.get(`/api/public/receipt/${normalized}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
@@ -141,16 +125,13 @@ function EmployeeDashboard({ user }) {
         setShowPointsModal(true);
         return;
       }
-
       if (res.data.instantService) {
         setPointsData({ type: 'instant', data: res.data.instantService });
         setShowPointsModal(true);
         return;
       }
-
       showToast('لم يتم العثور على حجز أو خدمة فورية بهذا الرقم', 'warning');
     } catch (err) {
-      console.error('Receipt search error:', err.response?.data || err.message);
       showToast(err.response?.data?.msg || 'خطأ في البحث عن الوصل', 'danger');
     }
   }, [showToast]);
@@ -164,18 +145,12 @@ function EmployeeDashboard({ user }) {
         config,
         (decodedText) => {
           handleReceiptSearch(decodedText);
-          qrCodeScanner.current.stop().catch((err) => console.error('Stop error:', err));
+          qrCodeScanner.current.stop().catch(() => {});
           setShowQrModal(false);
         },
-        (error) => {
-          if (!error.includes('NotFoundException')) {
-            // Ignore transient decode errors to avoid noisy toasts while scanning
-            console.warn('QR scan warning:', error);
-          }
-        }
-      ).catch((err) => {
-        console.error('Start error:', err);
-        showToast('خطأ في تشغيل الكاميرا: تأكد من إذن الكاميرا', 'danger');
+        (error) => {}
+      ).catch(() => {
+        showToast('خطأ في تشغيل الكاميرا', 'danger');
         setShowQrModal(false);
       });
     }
@@ -183,21 +158,16 @@ function EmployeeDashboard({ user }) {
     return () => {
       if (qrCodeScanner.current) {
         try {
-          qrCodeScanner.current.stop().catch((err) => console.error('Stop error:', err));
+          qrCodeScanner.current.stop().catch(() => {});
           qrCodeScanner.current = null;
-        } catch (err) {
-          console.error('Cleanup error:', err);
-        }
+        } catch (err) {}
       }
     };
   }, [showQrModal, handleReceiptSearch, showToast]);
 
   const handleReceiptSubmit = async (e) => {
     e.preventDefault();
-    if (!receiptNumber) {
-      showToast('الرجاء إدخال رقم الوصل', 'warning');
-      return;
-    }
+    if (!receiptNumber) return showToast('الرجاء إدخال رقم الوصل', 'warning');
     await handleReceiptSearch(receiptNumber);
   };
 
@@ -212,11 +182,8 @@ function EmployeeDashboard({ user }) {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       showToast(`تم تحويل ${res.data.mintedCoins} عملة جديدة`, 'success');
-      setConvertCelebration(true);
-      setTimeout(() => setConvertCelebration(false), 1200);
-      await Promise.all([fetchPointsSummary(), fetchPendingGifts(), fetchTodayGifts()]);
+      await fetchAllData();
     } catch (err) {
-      console.error('Convert error:', err.response?.data || err.message);
       showToast(err.response?.data?.msg || 'تعذر تحويل النقاط الآن', 'danger');
     } finally {
       setConverting(false);
@@ -224,24 +191,17 @@ function EmployeeDashboard({ user }) {
   };
 
   const handleRedeemCoins = async () => {
-    if (!redeemCount || redeemCount <= 0) {
-      showToast('اختار عدد العملات للاستبدال', 'warning');
-      return;
-    }
-    if (redeemCount > coinsCount) {
-      showToast('عدد العملات المطلوب أكبر من المتاح', 'warning');
-      return;
-    }
+    if (!redeemCount || redeemCount <= 0) return showToast('اختار عدد العملات للاستبدال', 'warning');
+    if (redeemCount > (pointsSummary?.coins?.totalCount || 0)) return showToast('عدد العملات المطلوب أكبر من المتاح', 'warning');
     try {
       setRedeeming(true);
       const res = await axios.post('/api/users/redeem-coins', { count: redeemCount }, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
-      showToast(`تم استبدال ${res.data.redeemedCoins} عملة بقيمة ${res.data.totalValue} جنيه`, 'success');
-      await Promise.all([fetchPointsSummary(), fetchPendingGifts(), fetchTodayGifts()]);
+      showToast(`تم استبدال ${res.data.redeemedCoins} عملة بقيمة ${res.data.totalValue} جنيه إضافية للمرتب!`, 'success');
+      await fetchAllData();
       setShowRedeemModal(false);
     } catch (err) {
-      console.error('Redeem error:', err.response?.data || err.message);
       showToast(err.response?.data?.msg || 'تعذر استبدال العملات', 'danger');
     } finally {
       setRedeeming(false);
@@ -250,35 +210,20 @@ function EmployeeDashboard({ user }) {
 
   const handleExecuteService = async (serviceId, type, recordId) => {
     const employeeId = user?._id || user?.id;
-    if (!employeeId) {
-      showToast('حساب الموظف غير محدد، سجل دخول تاني وحاول', 'danger');
-      return;
-    }
+    if (!employeeId) return showToast('حساب الموظف غير محدد', 'danger');
     try {
-      console.log('Executing service:', { serviceId, type, recordId, employeeId });
       const endpoint = type === 'booking' 
         ? `/api/bookings/execute-service/${recordId}/${serviceId}`
         : `/api/instant-services/execute-service/${recordId}/${serviceId}`;
       const res = await axios.post(endpoint, { employeeId }, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
-      console.log('Execute service response:', res.data);
-      showToast(`تم تنفيذ الخدمة بنجاح وإضافة ${res.data.points} نقطة`, 'success');
-
-      setPointsData(prev => ({
-        ...prev,
-        data: type === 'booking' ? res.data.booking : res.data.instantService
-      }));
-
+      showToast(`تم التوثيق وإضافة ${res.data.points} نقطة بنجاح`, 'success');
+      setPointsData(prev => ({ ...prev, data: type === 'booking' ? res.data.booking : res.data.instantService }));
       await fetchAllData();
     } catch (err) {
-      console.error('Execute service error:', err.response?.data || err.message);
       showToast(err.response?.data?.msg || 'خطأ في تنفيذ الخدمة', 'danger');
     }
-  };
-
-  const handleOpenQrModal = () => {
-    setShowQrModal(true);
   };
 
   const handleOpenGift = async (giftId) => {
@@ -286,595 +231,576 @@ function EmployeeDashboard({ user }) {
       const res = await axios.post(`/api/users/gifts/open/${giftId}`, {}, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
-      showToast(res.data.msg || 'تم فتح الهدية', 'success');
-      await Promise.all([fetchPointsSummary(), fetchPendingGifts(), fetchTodayGifts()]);
+      showToast(res.data.msg || 'تم فتح الهدية بنجاح', 'success');
+      await fetchAllData();
     } catch (err) {
-      console.error('Gift open error:', err.response?.data || err.message);
       showToast(err.response?.data?.msg || 'تعذر فتح الهدية الآن', 'danger');
     }
   };
 
+  // Safe Extraction
   const coinsCount = pointsSummary?.coins?.totalCount || 0;
   const topCoinLevel = getTopCoinLevel(pointsSummary?.coins?.byLevel || {});
   const topCoinColor = getCoinColor(topCoinLevel);
   const convertiblePoints = pointsSummary?.convertiblePoints || 0;
   const canConvert = convertiblePoints >= 1000;
-  const remainingSalary = pointsSummary?.remainingSalary || 0;
+  const rankNumber = pointsSummary?.rank;
+  const teamSize = pointsSummary?.teamSize || 0;
+  const monthlyRankNumber = pointsSummary?.monthlyRank;
+  
+  const rankLabel = rankNumber ? `#${rankNumber}` : '—';
+  const monthlyRankLabel = monthlyRankNumber ? `#${monthlyRankNumber}` : '—';
+  
   const progressPercent = pointsSummary?.progress?.percent ?? 0;
   const currentLevel = pointsSummary?.level ?? 1;
 
-  const executedServicesList = useMemo(() => executedServices, [executedServices]);
-  const todayPoints = useMemo(() => executedServicesList.reduce((sum, s) => sum + (s.points || 0), 0), [executedServicesList]);
+  const todayPoints = useMemo(() => executedServices.reduce((sum, s) => sum + (s.points || 0), 0), [executedServices]);
 
-  const last7DaysSeries = useMemo(() => weeklySeries, [weeklySeries]);
-
-  const weeklyCount = useMemo(() => last7DaysSeries.reduce((sum, d) => sum + d.total, 0), [last7DaysSeries]);
-  const bookingTotal = useMemo(() => last7DaysSeries.reduce((sum, d) => sum + d.booking, 0), [last7DaysSeries]);
-  const instantTotal = useMemo(() => last7DaysSeries.reduce((sum, d) => sum + d.instant, 0), [last7DaysSeries]);
-  const rankNumber = pointsSummary?.rank;
-  const teamSize = pointsSummary?.teamSize || 0;
-  const rankLabel = rankNumber ? `#${rankNumber}${teamSize ? ` من ${teamSize}` : ''}` : '—';
-  const monthlyRankNumber = pointsSummary?.monthlyRank;
-  const monthlyTeamSize = pointsSummary?.monthlyTeamSize || 0;
-  const monthlyRankLabel = monthlyRankNumber ? `#${monthlyRankNumber}${monthlyTeamSize ? ` من ${monthlyTeamSize}` : ''}` : '—';
-  const topServices = pointsSummary?.topServices || {};
-
-  const renderTopServices = (list) => {
-    if (!list || list.length === 0) return <div className="text-muted small">لا يوجد بيانات</div>;
-    return list.map((item, idx) => (
-      <div key={`${item.name}-${idx}`} className="d-flex justify-content-between align-items-center mb-1">
-        <div>
-          <div className="fw-bold">{item.name}</div>
-          <div className="text-muted small">{item.count} مرة</div>
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="custom-tooltip" style={{ background: 'var(--dash-surface)', border: '1px solid var(--dash-border)', padding: '10px', borderRadius: '8px', color: 'var(--dash-text)' }}>
+          <p className="fw-bold mb-1">{label}</p>
+          {payload.map((entry, index) => (
+            <p key={`item-${index}`} style={{ color: entry.color, margin: 0, fontSize: '14px' }}>
+              {entry.name}: {formatNumber(entry.value)}
+            </p>
+          ))}
         </div>
-        <span className="badge-soft">{formatNumber(item.points)} نقطة</span>
-      </div>
-    ));
+      );
+    }
+    return null;
   };
 
-  const sparkPath = (arr) => {
-    if (!arr.length) return '';
-    const w = 220;
-    const h = 90;
-    const max = Math.max(...arr, 1);
-    const min = Math.min(...arr, 0);
-    const span = max - min || 1;
-    const step = arr.length === 1 ? w : w / (arr.length - 1);
-    return arr.map((v, i) => {
-      const x = i * step;
-      const y = h - ((v - min) / span) * h;
-      return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
-    }).join(' ');
-  };
   return (
-    <Container className="mt-5">
+    <div className="employee-dashboard-wrapper" dir="rtl">
       <style>{`
-        .battle-card { background: linear-gradient(120deg, var(--surface), var(--bg)); color: var(--text); border: 1px solid var(--border); box-shadow: 0 10px 24px var(--shadow); position: relative; overflow: hidden; border-radius: 12px; }
-        .battle-grid { position: absolute; inset: 0; background-image: linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px); background-size: 38px 38px; opacity: 0.45; pointer-events: none; }
-        .battle-header { position: relative; z-index: 1; }
-        .battle-title { font-size: 20px; font-weight: 800; letter-spacing: 0.4px; }
-        .battle-sub { color: var(--muted); font-size: 13px; }
-        .battle-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 10px; margin-top: 14px; position: relative; z-index: 1; }
-        .battle-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 8px 18px var(--shadow); }
-        .battle-chip .label { color: var(--muted); font-size: 12px; }
-        .battle-chip .value { font-weight: 800; font-size: 18px; color: var(--accent); }
-        .battle-bar { background: rgba(0,0,0,0.06); border-radius: 10px; overflow: hidden; height: 12px; }
-        .battle-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), #0f2736); }
-        .battle-section { position: relative; z-index: 1; margin-top: 14px; }
-        .battle-section h6 { color: var(--muted); font-weight: 700; font-size: 14px; margin-bottom: 8px; }
-        .mini-vs { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 12px; }
-        .chart-card, .mini-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; box-shadow: 0 6px 16px var(--shadow); }
-        .mini-card .label, .chart-title { color: var(--muted); font-size: 12px; }
-        .mini-card .value { color: var(--text); font-weight: 800; font-size: 16px; }
-        .mini-card .tag { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; margin-top: 4px; background: rgba(0,0,0,0.06); color: var(--accent); }
-        .battle-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
-        .battle-btn { border-radius: 12px; }
-        .chart-title { font-weight: 700; font-size: 13px; margin-bottom: 6px; }
-        .spark-svg { width: 100%; height: 90px; }
-        .spark-line-total { stroke: var(--accent); fill: none; stroke-width: 2.5; }
-        .spark-line-booking { stroke: var(--accent); fill: none; stroke-width: 2; opacity: 0.8; }
-        .spark-line-instant { stroke: #f28b30; fill: none; stroke-width: 2; opacity: 0.9; }
-        .badge-soft { background: rgba(0,0,0,0.05); color: var(--text); border: 1px solid var(--border); padding: 4px 8px; border-radius: 10px; font-size: 12px; }
-        .battle-ai { background: var(--surface); border-radius: 12px; padding: 10px; border: 1px dashed var(--border); color: var(--text); }
-        .battle-ai strong { color: var(--accent); }
-        .spark-labels { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; margin-top: 4px; direction: ltr; gap: 4px; }
-        .spark-labels span { flex: 1; text-align: center; white-space: nowrap; }
-        @media (max-width: 768px) { .mini-vs { grid-template-columns: 1fr; } }
+        :root {
+          --dash-bg: var(--bg, #0f172a);
+          --dash-surface: var(--surface, #1e293b);
+          --dash-surface-hover: var(--surface-hover, #334155);
+          --dash-border: var(--border, #334155);
+          --dash-text: var(--text, #f8fafc);
+          --dash-muted: var(--muted, #94a3b8);
+          --dash-accent: var(--accent, #3b82f6);
+          --dash-success: #10b981;
+          --dash-warning: #f59e0b;
+        }
+        [data-theme='light'] .employee-dashboard-wrapper {
+          --dash-bg: #f8fafc;
+          --dash-surface: #ffffff;
+          --dash-surface-hover: #f1f5f9;
+          --dash-border: #e2e8f0;
+          --dash-text: #0f172a;
+          --dash-muted: #64748b;
+          --dash-accent: #2563eb;
+        }
+
+        .employee-dashboard-wrapper {
+          background-color: var(--dash-bg);
+          color: var(--dash-text);
+          min-height: 100vh;
+          font-family: 'Tajawal', sans-serif;
+          padding-bottom: 60px;
+        }
+        
+        .premium-card {
+          background: var(--dash-surface);
+          border: 1px solid var(--dash-border);
+          border-radius: 16px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+          overflow: hidden;
+        }
+        
+        .hero-banner {
+          background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1));
+          border-bottom: 1px solid var(--dash-border);
+          padding: 40px 0;
+          position: relative;
+        }
+
+        .hero-banner::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(circle at right top, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+                      radial-gradient(circle at left bottom, rgba(16, 185, 129, 0.15) 0%, transparent 50%);
+          pointer-events: none;
+        }
+
+        .stat-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 16px;
+          border-radius: 12px;
+          background: var(--dash-surface-hover);
+          border: 1px solid var(--dash-border);
+          font-weight: bold;
+          font-size: 1.1rem;
+        }
+
+        .level-circle {
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          background: conic-gradient(var(--dash-accent) calc(var(--progress) * 1%), var(--dash-border) 0);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+          margin: 0 auto;
+        }
+
+        .level-circle::after {
+          content: attr(data-level);
+          position: absolute;
+          inset: 6px;
+          background: var(--dash-surface);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.5rem;
+          font-weight: 800;
+          color: var(--dash-accent);
+        }
+
+        .btn-modern {
+          border-radius: 12px;
+          font-weight: 600;
+          padding: 10px 20px;
+          transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-modern:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .btn-scan { background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; border: none; width: 100%; font-size: 1.2rem; }
+        .btn-convert { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; }
+        .btn-redeem { background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; }
+
+        .coin-icon {
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-size: 0.9rem;
+          font-weight: bold;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .section-title {
+          font-size: 1.25rem;
+          font-weight: 800;
+          margin-bottom: 20px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          color: var(--dash-text);
+        }
+
+        .salary-card {
+          background: linear-gradient(145deg, var(--dash-surface), var(--dash-surface-hover));
+          border-left: 4px solid var(--dash-success);
+        }
+        .advance-table-wrapper {
+          max-height: 250px;
+          overflow-y: auto;
+          border-radius: 8px;
+          border: 1px solid var(--dash-border);
+        }
+        
+        .service-list-card {
+          background: var(--dash-surface);
+          border: 1px solid var(--dash-border);
+          border-radius: 12px;
+          padding: 16px;
+          transition: transform 0.2s;
+        }
+        .service-list-card:hover { transform: translateY(-3px); border-color: var(--dash-accent); }
+
+        .gift-alert {
+          background: linear-gradient(135deg, #ec4899, #be185d);
+          color: white;
+          border: none;
+          border-radius: 16px;
+          box-shadow: 0 8px 24px rgba(236, 72, 153, 0.4);
+        }
+
+        .recharts-cartesian-grid-horizontal line, .recharts-cartesian-grid-vertical line {
+          stroke: var(--dash-border);
+        }
+        .recharts-text { fill: var(--dash-muted) !important; }
       `}</style>
-      {pendingGifts.length > 0 && (
-        <Card className="mb-4 gift-card">
-          <Card.Body>
-            <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
-              <div className="d-flex align-items-center gap-3">
-                <div className="gift-box">
-                  <div className="gift-lid" />
-                  <div className="gift-body" />
-                  <div className="gift-ribbon" />
+      
+      {/* 1. Hero & Profile Section */}
+      <div className="hero-banner mb-4">
+        <Container style={{ position: 'relative', zIndex: 1 }}>
+          <Row className="align-items-center text-center text-md-start">
+            <Col md={3} className="mb-4 mb-md-0 text-center">
+              <div 
+                className="level-circle mb-2" 
+                style={{ '--progress': progressPercent }} 
+                data-level={`L${currentLevel}`} 
+              />
+              <div className="fw-bold text-muted">تقدم المستوى: {progressPercent}%</div>
+              <div className="small text-muted mt-1">متبقي {Math.max(0, (pointsSummary?.progress?.target || 0) - (pointsSummary?.progress?.current || 0))} نقطة</div>
+            </Col>
+            
+            <Col md={5} className="mb-4 mb-md-0">
+              <h2 className="fw-bold mb-3">مرحباً يا بطل 🚀</h2>
+              <div className="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start">
+                <div className="stat-badge">
+                  <span className="text-muted">النقاط:</span>
+                  <span className="text-primary">{formatNumber(pointsSummary?.totalPoints || 0)}</span>
                 </div>
-                <div>
-                  <Card.Title className="mb-1">عندك هدية نقاط مستنياك</Card.Title>
-                  <div className="text-muted small">افتح الصندوق علشان النقاط تضاف لرصيدك</div>
+                <div className="stat-badge">
+                  <span className="text-muted">مركزك حالياً:</span>
+                  <span className="text-warning">{rankLabel} <small>من {teamSize}</small></span>
+                </div>
+                <div className="stat-badge">
+                  <span className="text-muted">العملات:</span>
+                  <span style={{ color: topCoinColor }}>
+                    <FontAwesomeIcon icon={faCoins} className="me-1" />
+                    {coinsCount}
+                  </span>
                 </div>
               </div>
-              <div className="d-flex flex-column gap-2 flex-fill">
-                {pendingGifts.map((g) => (
-                  <div key={g._id} className="d-flex flex-wrap align-items-center gap-2 justify-content-between gift-row">
-                    <div className="text-muted small">من: {g.giftedByName || 'الإدارة'} — السبب: {g.note || 'هدية تقدير'}</div>
-                    <Button variant="success" className="gift-open-btn" onClick={() => handleOpenGift(g._id)}>
-                      افتح +{g.amount} نقطة
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Card.Body>
-        </Card>
-      )}
+            </Col>
 
-
-      <Row className="mb-4 justify-content-center">
-        <Col md={8} lg={6}>
-          <div className="scan-panel text-center">
-            <Button variant="primary" onClick={handleOpenQrModal} className="scan-btn simple-scan-btn">
-              <FontAwesomeIcon icon={faQrcode} className="me-2" />
-              مسح الباركود
-            </Button>
-            <Form onSubmit={handleReceiptSubmit} className="mt-3">
-              <Form.Group>
-                <Form.Label>أو اكتب رقم الوصل</Form.Label>
-                <div className="d-flex gap-2">
+            <Col md={4}>
+              <div className="d-flex flex-column gap-3">
+                <Button onClick={handleOpenQrModal} className="btn-modern btn-scan py-3">
+                  <FontAwesomeIcon icon={faQrcode} className="me-2" /> مسح باركود أداء الخدمة
+                </Button>
+                <Form onSubmit={handleReceiptSubmit} className="d-flex gap-2">
                   <Form.Control
                     type="text"
                     value={receiptNumber}
                     onChange={(e) => setReceiptNumber(e.target.value)}
-                    placeholder="أدخل رقم الوصل"
+                    placeholder="أو أكتب رقم الوصل هنا..."
+                    style={{ background: 'var(--dash-surface)', color: 'var(--dash-text)', borderColor: 'var(--dash-border)' }}
                   />
-                  <Button type="submit" variant="outline-primary">بحث</Button>
-                </div>
-              </Form.Group>
-            </Form>
-          </div>
-        </Col>
-      </Row>
-
-      <Card className="mb-4 points-card">
-        <Card.Body>
-          <Card.Title>لوحة المكافآت</Card.Title>
-          {pointsSummary ? (
-            <>
-              <div className="d-flex flex-wrap align-items-center justify-content-between gap-3 points-top">
-                <div className="coin-chip">
-                  <div
-                    className="coin-illustration"
-                    style={{ background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.7), rgba(255,255,255,0.1)), linear-gradient(135deg, ${topCoinColor}, ${topCoinColor}aa)` }}
-                  >
-                    <span className="coin-glow" />
-                    <span className="coin-level">L{topCoinLevel}</span>
-                  </div>
-                  <div className="coin-meta">
-                    <div className="coin-title">أعلى عملة وصلت لها</div>
-                    <div className="coin-count-text">
-                      <FontAwesomeIcon icon={faCoins} className="me-2" />
-                      {coinsCount}
-                    </div>
-                    <div className="coin-desc">اللون يعكس مستوى العملة الحالي</div>
-                  </div>
-                </div>
-
-                <div className="level-progress-wrap">
-                  <div className="d-flex align-items-center gap-2 mb-1">
-                    <span className="text-muted small">المستوى الحالي</span>
-                    <span className="level-badge">L{pointsSummary.level}</span>
-                  </div>
-                  <div className="progress" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pointsSummary.progress?.percent || 0}>
-                    <div
-                      className="progress-bar"
-                      style={{ width: `${pointsSummary.progress?.percent || 0}%` }}
-                    />
-                  </div>
-                  <div className="small text-muted mt-1">
-                    متبقي: {Math.max(0, (pointsSummary.progress?.target || 0) - (pointsSummary.progress?.current || 0))} نقطة للوصول للمستوى التالي
-                  </div>
-                </div>
-
-                {coinsCount > 0 && (
-                  <Button variant="outline-success" className="gift-btn" onClick={() => { setRedeemCount(1); setShowRedeemModal(true); }}>
-                    <FontAwesomeIcon icon={faGift} className="me-2" /> استبدال العملات
-                  </Button>
-                )}
+                  <Button type="submit" variant="primary" className="btn-modern px-4">بحث</Button>
+                </Form>
               </div>
-
-              <div className="counter-block mt-3">
-                <div className="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                  <div>
-                    <div className="small text-muted">عداد النقاط القابلة للتحويل</div>
-                    <div className={`points-counter ${convertCelebration ? 'burst' : ''}`}>
-                      {formatNumber(convertiblePoints)}
-                    </div>
-                  </div>
-                  <div className="text-end">
-                    <div className="small text-muted">قيمة العملة الحالية</div>
-                    <div className="fw-bold">{formatNumber(pointsSummary.currentCoinValue)} جنيه</div>
-                    <div className="small text-muted mt-1">متبقي راتب الشهر: {formatNumber(remainingSalary)} جنيه</div>
-                  </div>
-                </div>
-
-                {canConvert ? (
-                  <Button
-                    className={`convert-btn mt-2 ${convertCelebration ? 'celebrate' : ''}`}
-                    onClick={handleConvertPoints}
-                    disabled={converting}
-                  >
-                    <FontAwesomeIcon icon={faBolt} className="me-2" />
-                    حوّل كل 1000 نقطة إلى عملة
-                  </Button>
-                ) : (
-                  <div className="text-muted small mt-2">اجمع {formatNumber(Math.max(0, 1000 - convertiblePoints))} نقطة إضافية علشان تحوّل أول عملة</div>
-                )}
-              </div>
-            </>
-          ) : (
-            <div>جارٍ التحميل...</div>
-          )}
-        </Card.Body>
-      </Card>
-
-      <Card className="mb-4 battle-card">
-        <div className="battle-glow" aria-hidden />
-        <div className="battle-grid" aria-hidden />
-        <Card.Body className="battle-header">
-          <div className="d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <div>
-              <div className="battle-title">إحصائيات ذكية</div>
-              <div className="battle-sub">عرض سريع لأداء اليوم مع مقارنة الأيام اللي فاتت</div>
-            </div>
-          </div>
-
-          <div className="battle-meta">
-            <div className="battle-chip">
-              <div>
-                <div className="label">مستواك الحالي</div>
-                <div className="value">L{currentLevel}</div>
-              </div>
-              <span className="pill text-dark" style={{ background: '#ffdd7a', padding: '4px 10px', borderRadius: 20 }}>Progress</span>
-            </div>
-            <div className="battle-chip">
-              <div>
-                <div className="label">نقاط اليوم</div>
-                <div className="value">{formatNumber(todayPoints)}</div>
-              </div>
-              <span className="text-muted" style={{ fontSize: 12 }}>مهام: {executedServicesList.length}</span>
-            </div>
-            <div className="battle-chip">
-              <div>
-                <div className="label">مركزك طوال الفترة</div>
-                <div className="value">{rankLabel}</div>
-              </div>
-              <span className="text-muted" style={{ fontSize: 12 }}>ترتيبك بإجمالي النقاط بين الفريق</span>
-            </div>
-            <div className="battle-chip">
-              <div>
-                <div className="label">مركزك هذا الشهر</div>
-                <div className="value">{monthlyRankLabel}</div>
-              </div>
-              <span className="text-muted" style={{ fontSize: 12 }}>ترتيبك بإجمالي نقاط هذا الشهر بين الفريق</span>
-            </div>
-            <div className="battle-chip">
-              <div>
-                <div className="label">العملات معاك</div>
-                <div className="value">{formatNumber(coinsCount)}</div>
-              </div>
-              <span className="text-muted" style={{ fontSize: 12 }}>قيمة: {formatNumber(pointsSummary?.coins?.totalValue || 0)} ج</span>
-            </div>
-          </div>
-
-          <div className="battle-section">
-            <h6>التقدم نحو المستوى التالي</h6>
-            <div className="battle-bar"><span style={{ width: `${progressPercent}%` }} /></div>
-            <div className="d-flex justify-content-between mt-1" style={{ color: 'var(--muted)', fontSize: 12 }}>
-              <span>تقدم المستوى</span>
-              <span>{progressPercent}%</span>
-            </div>
-          </div>
-
-          <div className="battle-section">
-            <h6>إحصائيات سريعة</h6>
-            <div className="mini-vs">
-              <div className="chart-card">
-                <div className="chart-title">نقاط آخر ٧ أيام</div>
-                <svg className="spark-svg" viewBox="0 0 220 90" preserveAspectRatio="none">
-                  <path className="spark-line-total" d={sparkPath(last7DaysSeries.map((d) => d.total))} />
-                </svg>
-                <div className="spark-labels">
-                  {last7DaysSeries.map((d, idx) => (
-                    <span key={`total-label-${idx}`}>{d.label}</span>
-                  ))}
-                </div>
-                <div className="d-flex justify-content-between text-muted small mt-1">
-                  <span>الإجمالي: {formatNumber(weeklyCount)}</span>
-                  <span>آخر يوم: {formatNumber(last7DaysSeries[last7DaysSeries.length - 1]?.total || 0)}</span>
-                </div>
-              </div>
-              <div className="chart-card">
-                <div className="chart-title">حجوزات مقابل فوري</div>
-                <svg className="spark-svg" viewBox="0 0 220 90" preserveAspectRatio="none">
-                  <path className="spark-line-booking" d={sparkPath(last7DaysSeries.map((d) => d.booking))} />
-                  <path className="spark-line-instant" d={sparkPath(last7DaysSeries.map((d) => d.instant))} />
-                </svg>
-                <div className="spark-labels">
-                  {last7DaysSeries.map((d, idx) => (
-                    <span key={`mix-label-${idx}`}>{d.label}</span>
-                  ))}
-                </div>
-                <div className="d-flex justify-content-between small mt-1" style={{ color: 'var(--muted)' }}>
-                  <span className="badge-soft">حجوزات: {formatNumber(bookingTotal)}</span>
-                  <span className="badge-soft">فوري: {formatNumber(instantTotal)}</span>
-                </div>
-              </div>
-              <div className="mini-card">
-                <div className="label">أكثر الخدمات تنفيذاً</div>
-                <div className="text-muted small mb-2">أفضل ٣ خدمات بالأسبوع/الشهر/كل الوقت</div>
-                <div className="d-flex flex-column gap-2">
-                  <div>
-                    <span className="tag">هذا الأسبوع</span>
-                    <div className="mt-1">{renderTopServices(topServices.week)}</div>
-                  </div>
-                  <div>
-                    <span className="tag">هذا الشهر</span>
-                    <div className="mt-1">{renderTopServices(topServices.month)}</div>
-                  </div>
-                  <div>
-                    <span className="tag">كل الوقت</span>
-                    <div className="mt-1">{renderTopServices(topServices.all)}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </Card.Body>
-      </Card>
-
-      <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-        <h3 className="mb-0">الخدمات اللي نفذتها النهارده</h3>
-        <Button
-          variant="outline-light"
-          className="refresh-btn"
-          onClick={fetchAllData}
-          disabled={loadingData}
-        >
-          <FontAwesomeIcon icon={faRotateRight} className="me-2" />
-          {loadingData ? 'جاري التحديث...' : 'تحديث البيانات'}
-        </Button>
+            </Col>
+          </Row>
+        </Container>
       </div>
-      {executedServicesList.length === 0 && (
-        <Alert variant="info">لسه ما نفذت خدمات النهارده</Alert>
-      )}
-      <Row>
-        {executedServicesList.map((srv, idx) => (
-          <Col md={4} key={`${srv.receiptNumber}-${idx}`} className="mb-3">
-            <Card className="service-card">
-              <Card.Body>
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                  <span className="service-type">{srv.source === 'instant' ? 'خدمة فورية' : 'باكدج'}</span>
-                  <span className="points-pill">+{formatNumber(srv.points)} نقطة</span>
+
+      <Container>
+        {loadingData && <Alert variant="info" className="text-center rounded-3 border-0">جاري مزامنة البيانات...</Alert>}
+        
+        {/* Pending Gifts Alerts */}
+        {pendingGifts.length > 0 && (
+          <div className="mb-4">
+            {pendingGifts.map((g) => (
+              <Alert key={g._id} className="gift-alert d-flex align-items-center justify-content-between p-4 mb-3">
+                <div>
+                  <h5 className="fw-bold mb-1"><FontAwesomeIcon icon={faGift} className="me-2"/> صندوق مكافأة بانتظارك!</h5>
+                  <p className="mb-0 opacity-75">المصدر: {g.giftedByName || 'رسالة إدارة'} — {g.note || 'تقدير لمجهودك'}</p>
                 </div>
-                <Card.Title className="mb-2">{srv.serviceName}</Card.Title>
-                <Card.Text className="mb-1">رقم الوصل: {srv.receiptNumber}</Card.Text>
-                {srv.source !== 'instant' && (
-                  <Card.Text className="text-muted small">العروسة: {srv.clientName}</Card.Text>
-                )}
-                <Card.Text className="text-muted small">وقت التنفيذ: {formatTime(srv.executedAt)}</Card.Text>
-              </Card.Body>
-            </Card>
-          </Col>
-        ))}
-      </Row>
+                <Button variant="light" className="btn-modern fw-bold px-4" onClick={() => handleOpenGift(g._id)}>
+                  افتح الصندوق (+{g.amount} نقطة)
+                </Button>
+              </Alert>
+            ))}
+          </div>
+        )}
 
-      {todayGifts.length > 0 && (
-        <Card className="mb-4">
-          <Card.Body>
-            <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-              <Card.Title className="mb-0">الهدايا اللي استلمتها النهارده</Card.Title>
-            </div>
-            <Row>
-              {todayGifts.map((g) => (
-                <Col md={4} key={g._id} className="mb-3">
-                  <Card className="gift-log-card h-100">
-                    <Card.Body>
-                      <div className="d-flex justify-content-between align-items-center mb-2">
-                        <span className="badge bg-success">+{g.amount} نقطة</span>
-                        <span className="text-muted small">{g.openedAt ? new Date(g.openedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
-                      </div>
-                      <div className="fw-bold mb-1">من: {g.giftedByName || 'الإدارة'}</div>
-                      <div className="text-muted small">السبب: {g.note || 'هدية تقدير'}</div>
-                    </Card.Body>
-                  </Card>
+        <Row className="mb-4 g-4">
+          <Col lg={7}>
+            <div className="premium-card p-4 h-100">
+              <h5 className="section-title">محفظة التحويلات والاستبدال</h5>
+              
+              <Row className="align-items-center">
+                <Col md={6} className="mb-4 mb-md-0 text-center text-md-start">
+                  <div className="mb-3">
+                    <div className="text-muted mb-1">نقاط إضافية قابلة للتحويل لعملات</div>
+                    <h2 className={`fw-bold mb-0 ${canConvert ? 'text-success' : 'text-danger'}`}>
+                      {formatNumber(convertiblePoints)} <small className="text-muted fs-6">نقطة</small>
+                    </h2>
+                  </div>
+                  {canConvert ? (
+                    <Button onClick={handleConvertPoints} disabled={converting} className="btn-modern btn-convert w-100">
+                      <FontAwesomeIcon icon={faBolt} className="me-2" /> حوّل إلى عملات
+                    </Button>
+                  ) : (
+                    <div className="alert alert-secondary p-2 mb-0 text-center rounded-3 border-0">
+                      باقي {formatNumber(1000 - convertiblePoints)} للعملة القادمة
+                    </div>
+                  )}
                 </Col>
-              ))}
-            </Row>
-          </Card.Body>
-        </Card>
-      )}
+                
+                <Col md={6}>
+                  <div className="p-3 bg-dark bg-opacity-10 rounded-3 border h-100 d-flex flex-column justify-content-center text-center text-md-start">
+                    <div className="text-muted mb-1">العملات المتاحة للاستبدال للمرتب</div>
+                    <div className="d-flex align-items-center gap-3 mb-3 justify-content-center justify-content-md-start">
+                      <div className="coin-icon" style={{ background: topCoinColor, width: 45, height: 45, fontSize: '1.2rem' }}>
+                        <FontAwesomeIcon icon={faCoins} />
+                      </div>
+                      <div>
+                        <h3 className="mb-0 fw-bold">{coinsCount} <small className="fs-6 fw-normal">عملات</small></h3>
+                        <div className="text-success fw-bold">إجمالي قيمتها = {formatNumber(pointsSummary?.coins?.totalValue || 0)} ج.م</div>
+                      </div>
+                    </div>
+                    {coinsCount > 0 && (
+                      <Button onClick={() => { setRedeemCount(1); setShowRedeemModal(true); }} className="btn-modern btn-redeem w-100">
+                        <FontAwesomeIcon icon={faMoneyBillWave} className="me-2" /> استبدل لإضافة للمرتب
+                      </Button>
+                    )}
+                  </div>
+                </Col>
+              </Row>
+            </div>
+          </Col>
 
-      <Modal show={showRedeemModal} onHide={() => setShowRedeemModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>استبدال العملات</Modal.Title>
+          <Col lg={5}>
+            <div className="premium-card salary-card p-4 h-100">
+              <h5 className="section-title"><FontAwesomeIcon icon={faWallet} className="me-2" /> راتب الشهر</h5>
+              <div className="d-flex justify-content-between mb-2">
+                <span className="text-muted">الراتب الأساسي:</span>
+                <span className="fw-bold fs-5">{formatNumber(pointsSummary?.monthlySalary || 0)} ج.م</span>
+              </div>
+              <div className="d-flex justify-content-between mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+                <span className="text-muted">الراتب المتبقي (الصافي):</span>
+                <span className="fw-bold fs-3 text-success">{formatNumber(pointsSummary?.remainingSalary || 0)} ج.م</span>
+              </div>
+
+              <div className="mt-2">
+                <h6 className="fw-bold mb-3">السلف والخصومات الأخيرة</h6>
+                <div className="advance-table-wrapper">
+                  <Table variant={localStorage.getItem('theme') === 'dark' ? 'dark' : 'light'} borderless hover size="sm" className="mb-0 text-center align-middle">
+                    <thead style={{ position: 'sticky', top: 0, background: 'var(--dash-surface)', zIndex: 1 }}>
+                      <tr className="border-bottom border-secondary border-opacity-25">
+                        <th className="py-2 text-muted fw-normal">النوع</th>
+                        <th className="py-2 text-muted fw-normal">المبلغ</th>
+                        <th className="py-2 text-muted fw-normal">التاريخ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(!pointsSummary?.advances?.length && !pointsSummary?.deductions?.length) ? (
+                        <tr><td colSpan="3" className="py-4 text-muted">لا توجد حركات مؤخراً</td></tr>
+                      ) : (
+                        <>
+                          {pointsSummary.advances?.map((adv, idx) => (
+                            <tr key={`adv-${idx}`}>
+                              <td><Badge bg="warning" text="dark">سلفة</Badge></td>
+                              <td className="text-danger fw-bold">-{formatNumber(adv.amount)} ج.م</td>
+                              <td className="text-muted">{formatDate(adv.date)}</td>
+                            </tr>
+                          ))}
+                          {pointsSummary.deductions?.map((ded, idx) => (
+                            <tr key={`ded-${idx}`}>
+                              <td><Badge bg="danger">خصم إداري</Badge></td>
+                              <td className="text-danger fw-bold">-{formatNumber(ded.amount)} ج.م <small>({ded.reason})</small></td>
+                              <td className="text-muted">{formatDate(ded.date)}</td>
+                            </tr>
+                          ))}
+                        </>
+                      )}
+                    </tbody>
+                  </Table>
+                </div>
+              </div>
+
+            </div>
+          </Col>
+        </Row>
+
+        {/* Charts Section */}
+        <Row className="mb-4 g-4">
+          <Col lg={8}>
+            <div className="premium-card p-4 h-100">
+              <h5 className="section-title">نقاط آخر ٧ أيام</h5>
+              <div style={{ height: '300px', width: '100%' }}>
+                <ResponsiveContainer>
+                  <AreaChart data={weeklySeries} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--dash-accent)" stopOpacity={0.4}/>
+                        <stop offset="95%" stopColor="var(--dash-accent)" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fill: 'var(--dash-muted)' }} tickMargin={10} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: 'var(--dash-muted)' }} axisLine={false} tickLine={false} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="total" name="النقاط" stroke="var(--dash-accent)" strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </Col>
+          <Col lg={4}>
+            <div className="premium-card p-4 h-100">
+              <h5 className="section-title">حجوزات مقابل خدمات فورية</h5>
+              <div style={{ height: '300px', width: '100%' }}>
+                <ResponsiveContainer>
+                  <BarChart data={weeklySeries} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fill: 'var(--dash-muted)' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: 'var(--dash-muted)' }} axisLine={false} tickLine={false} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--dash-surface-hover)' }} />
+                    <Legend wrapperStyle={{ color: 'var(--dash-muted)' }} />
+                    <Bar dataKey="booking" name="حجوزات/باكدج" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="instant" name="فوري" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </Col>
+        </Row>
+
+        {/* Executed Services Today */}
+        <div className="d-flex justify-content-between align-items-center mb-3 mt-5">
+          <h4 className="fw-bold m-0">سجل خدماتك اليوم</h4>
+          <Button variant="outline-primary" className="btn-modern" onClick={fetchAllData} disabled={loadingData}>
+            <FontAwesomeIcon icon={faRotateRight} className="me-2" /> تحديث السجل
+          </Button>
+        </div>
+
+        {executedServices.length === 0 ? (
+          <div className="premium-card p-5 text-center mb-4">
+            <h5 className="text-muted">لم تقم بتسجيل أي خدمات اليوم حتى الآن.</h5>
+            <p className="text-muted mb-0">اسحب الباركود الخاص بالعميل من الوصل علشان يتسجل في رصيدك!</p>
+          </div>
+        ) : (
+          <Row className="g-3">
+            {executedServices.map((srv, idx) => (
+              <Col md={6} lg={4} key={`srv-${srv.receiptNumber}-${idx}`}>
+                <div className="service-list-card h-100 d-flex flex-column">
+                  <div className="d-flex justify-content-between align-items-start mb-2">
+                    <Badge bg={srv.source === 'instant' ? 'secondary' : 'primary'} className="rounded-pill px-3 py-2">
+                      {srv.source === 'instant' ? 'خدمة فورية' : 'حجز/باكدج'}
+                    </Badge>
+                    <div className="text-success fw-bold fs-5">+{formatNumber(srv.points)}</div>
+                  </div>
+                  <h5 className="fw-bold mb-1">{srv.serviceName}</h5>
+                  <div className="text-muted mb-2">رقم الوصل: {srv.receiptNumber}</div>
+                  <div className="mt-auto d-flex justify-content-between align-items-end pt-3 border-top border-secondary border-opacity-10">
+                    <div>
+                      {srv.source !== 'instant' && <div className="text-muted small">عميل: <span className="text-body fw-bold">{srv.clientName}</span></div>}
+                    </div>
+                    <div className="text-muted small bg-dark bg-opacity-10 px-2 py-1 rounded">{formatTime(srv.executedAt)}</div>
+                  </div>
+                </div>
+              </Col>
+            ))}
+          </Row>
+        )}
+
+      </Container>
+
+      {/* Modals */}
+      <Modal show={showRedeemModal} onHide={() => setShowRedeemModal(false)} centered contentClassName="premium-card border-0">
+        <Modal.Header closeButton className="border-0 pb-0">
+          <Modal.Title className="fw-bold">صرف العملات</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <div className="d-flex align-items-center gap-2 mb-3">
-            <FontAwesomeIcon icon={faGift} />
-            <span>معاك {formatNumber(coinsCount)} عملة بقيمة إجمالية {formatNumber(pointsSummary?.coins?.totalValue || 0)} جنيه</span>
+          <div className="alert alert-info rounded-3 text-center border-0 mb-4">
+            تحويل عملاتك الحالية لفلوس تضاف إلي <strong>الراتب المتبقي</strong> حالاً.
           </div>
           <Form.Group>
-            <Form.Label>عدد العملات للاستبدال</Form.Label>
+            <Form.Label className="fw-bold">حدد الكمية المراد صرفها (الحد الأقصى {coinsCount}):</Form.Label>
             <Form.Control
               type="number"
               min={1}
               max={coinsCount}
               value={redeemCount}
               onChange={(e) => setRedeemCount(Number(e.target.value))}
+              style={{ background: 'var(--dash-surface)', color: 'var(--dash-text)', borderColor: 'var(--dash-border)' }}
             />
           </Form.Group>
         </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowRedeemModal(false)}>إغلاق</Button>
-          <Button variant="success" onClick={handleRedeemCoins} disabled={redeeming}>
-            <FontAwesomeIcon icon={faGift} className="me-2" />
-            {redeeming ? 'جاري الاستبدال...' : 'تأكيد الاستبدال'}
+        <Modal.Footer className="border-0 pt-0">
+          <Button variant="light" onClick={() => setShowRedeemModal(false)} className="btn-modern">إلغاء</Button>
+          <Button variant="success" onClick={handleRedeemCoins} disabled={redeeming} className="btn-modern px-4">
+            <FontAwesomeIcon icon={faMoneyBillWave} className="me-2" /> تأكيد الصرف
           </Button>
         </Modal.Footer>
       </Modal>
 
-      <Modal show={showQrModal} onHide={() => setShowQrModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>مسح الباركود</Modal.Title>
+      <Modal show={showQrModal} onHide={() => setShowQrModal(false)} centered contentClassName="premium-card border-0">
+        <Modal.Header closeButton className="border-0 pb-0">
+          <Modal.Title className="fw-bold">مسح الباركود</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
-          <div id="qr-reader" style={{ width: '100%', height: '300px' }} />
+        <Modal.Body className="text-center">
+          <p className="text-muted mb-3">ضع الباركود الموجود بوصل العميل أمام الكاميرا</p>
+          <div id="qr-reader" style={{ width: '100%', maxWidth: '400px', margin: '0 auto', borderRadius: '12px', overflow: 'hidden' }} />
         </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowQrModal(false)}>
-            إغلاق
-          </Button>
-        </Modal.Footer>
       </Modal>
 
-      <Modal show={showPointsModal} onHide={() => setShowPointsModal(false)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>تفاصيل الوصل</Modal.Title>
+      <Modal show={showPointsModal} onHide={() => setShowPointsModal(false)} size="lg" centered contentClassName="premium-card border-0">
+        <Modal.Header closeButton className="border-0 pb-0">
+          <Modal.Title className="fw-bold">تأكيد الخدمات للوصل {pointsData?.data?.receiptNumber}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {pointsData && (
             <div>
-              {pointsData.type === 'booking' ? (
-                <>
-                  <p>اسم العميل: {pointsData.data.clientName}</p>
-                  <p>رقم الهاتف: {pointsData.data.clientPhone}</p>
-                  <p>رقم الوصل: {pointsData.data.receiptNumber}</p>
-                  <p>تاريخ المناسبة: {new Date(pointsData.data.eventDate).toLocaleDateString()}</p>
-                  {pointsData.data.hennaDate && <p>تاريخ الحنة: {new Date(pointsData.data.hennaDate).toLocaleDateString()}</p>}
-                  {pointsData.data.returnedServices?.length > 0 && (
-                    <p>الخدمات المرتجعة: {pointsData.data.returnedServices.map(srv => srv.name).join(', ')}</p>
+              <div className="bg-dark bg-opacity-10 p-3 rounded-3 mb-4 border border-secondary border-opacity-25">
+                <Row>
+                  <Col md={6} className="mb-2 mb-md-0">
+                    <div className="text-muted small">العميل</div>
+                    <div className="fw-bold fs-5">{pointsData.data.clientName || 'عميل فوري'}</div>
+                  </Col>
+                  {pointsData.data.clientPhone && (
+                    <Col md={6}>
+                      <div className="text-muted small">الموبايل</div>
+                      <div className="fw-bold">{pointsData.data.clientPhone}</div>
+                    </Col>
                   )}
-                  {pointsData.data.extraServices?.length > 0 && (
-                    <p>الخدمات الإضافية: {pointsData.data.extraServices.map(srv => srv.name).join(', ')}</p>
-                  )}
-                  <h5>الخدمات:</h5>
-                  <Table striped bordered hover>
-                    <thead>
-                      <tr>
-                        <th>اسم الخدمة</th>
-                        <th>السعر</th>
-                        <th>الحالة</th>
-                        <th>استلام</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pointsData.data.packageServices?.map((srv, index) => {
-                        const serviceId = typeof srv._id === 'object' && srv._id._id ? srv._id._id.toString() : (srv._id ? srv._id.toString() : `service-${index}`);
-                        const rowKey = serviceId || `service-${index}`;
-                        return (
-                          <tr key={rowKey}>
-                            <td>{srv.name || 'غير معروف'}</td>
-                            <td>{srv.price ? `${srv.price} جنيه` : 'غير معروف'}</td>
-                            <td>
-                              {srv.executed ? (
-                                `نفذت بواسطة ${srv.executedBy?.username || 'غير معروف'}`
-                              ) : (
-                                'لم يتم الاستلام'
-                              )}
-                            </td>
-                            <td>
-                              {!srv.executed && (
-                                <Button
-                                  variant="success"
-                                  onClick={() => handleExecuteService(serviceId, 'booking', pointsData.data._id)}
-                                >
-                                  <FontAwesomeIcon icon={faCheck} /> استلام
-                                </Button>
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                      {pointsData.data.hairStraightening && (
-                        <tr key="hairStraightening">
-                          <td>فرد شعر</td>
-                          <td>{pointsData.data.hairStraighteningPrice ? `${pointsData.data.hairStraighteningPrice} جنيه` : 'غير معروف'}</td>
-                          <td>
-                            {pointsData.data.hairStraighteningExecuted ? (
-                              `نفذت بواسطة ${pointsData.data.hairStraighteningExecutedBy?.username || 'غير معروف'}`
-                            ) : (
-                              'لم يتم الاستلام'
-                            )}
-                          </td>
-                          <td>
-                            {!pointsData.data.hairStraighteningExecuted && (
-                              <Button
-                                variant="success"
-                                onClick={() => handleExecuteService('hairStraightening', 'booking', pointsData.data._id)}
-                              >
-                                <FontAwesomeIcon icon={faCheck} /> استلام
-                              </Button>
-                            )}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </Table>
-                </>
-              ) : (
-                <>
-                  <p>رقم الوصل: {pointsData.data.receiptNumber}</p>
-                  <p>تاريخ الخدمة: {new Date(pointsData.data.createdAt).toLocaleDateString()}</p>
-                  <p>الموظف: {pointsData.data.services.find(srv => srv.executed && srv.executedBy) ? pointsData.data.services.find(srv => srv.executed && srv.executedBy).executedBy.username : 'غير محدد'}</p>
-                  <h5>الخدمات:</h5>
-                  <Table striped bordered hover>
-                    <thead>
-                      <tr>
-                        <th>اسم الخدمة</th>
-                        <th>السعر</th>
-                        <th>الحالة</th>
-                        <th>استلام</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pointsData.data.services?.map((srv, index) => (
-                        <tr key={srv._id ? srv._id.toString() : `service-${index}`}>
-                          <td>{srv.name || 'غير معروف'}</td>
-                          <td>{srv.price ? `${srv.price} جنيه` : 'غير معروف'}</td>
-                          <td>
+                </Row>
+              </div>
+
+              <h5 className="fw-bold mb-3">الخدمات المطلوبة:</h5>
+              <div className="table-responsive">
+                <Table variant={localStorage.getItem('theme') === 'dark' ? 'dark' : 'light'} borderless hover className="align-middle">
+                  <thead className="border-bottom border-secondary border-opacity-25">
+                    <tr>
+                      <th className="text-muted fw-normal">الخدمة</th>
+                      <th className="text-muted fw-normal text-center">السعر</th>
+                      <th className="text-muted fw-normal text-center">الحالة</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(pointsData.type === 'booking' ? pointsData.data.packageServices : pointsData.data.services)?.map((srv, index) => {
+                      const serviceId = typeof srv._id === 'object' && srv._id._id ? srv._id._id.toString() : (srv._id ? srv._id.toString() : `service-${index}`);
+                      return (
+                        <tr key={serviceId}>
+                          <td className="fw-bold">{srv.name || 'غير معروف'}</td>
+                          <td className="text-center">{srv.price ? `${srv.price} جنيه` : 'غير معروف'}</td>
+                          <td className="text-center">
                             {srv.executed ? (
-                              `نفذت بواسطة ${srv.executedBy?.username || 'غير معروف'}`
+                              <Badge bg="success" className="p-2"><FontAwesomeIcon icon={faCheck} className="me-1"/> مستلمة بواسطة {srv.executedBy?.username || ''}</Badge>
                             ) : (
-                              'لم يتم الاستلام'
-                            )}
-                          </td>
-                          <td>
-                            {!srv.executed && (
                               <Button
-                                variant="success"
-                                onClick={() => handleExecuteService(srv._id ? srv._id.toString() : '', 'instant', pointsData.data._id)}
+                                variant="primary"
+                                className="btn-modern py-1 px-3"
+                                onClick={() => handleExecuteService(serviceId, pointsData.type, pointsData.data._id)}
                               >
-                                <FontAwesomeIcon icon={faCheck} /> استلام
+                                استلام النقاط
                               </Button>
                             )}
                           </td>
                         </tr>
-                      ))}
-                    </tbody>
-                  </Table>
-                </>
-              )}
+                      );
+                    })}
+                  </tbody>
+                </Table>
+              </div>
             </div>
           )}
         </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowPointsModal(false)}>إغلاق</Button>
-        </Modal.Footer>
       </Modal>
-    </Container>
+
+    </div>
   );
 }
 
