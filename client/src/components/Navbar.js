@@ -43,7 +43,7 @@ function Navbar({ user, setUser }) {
       onToggle={(isOpen) => setExpanded(isOpen)}
     >
       <BootstrapNavbar.Brand>
-        <img src="/logo.png" alt="Logo" className="logo" /> مرحباً بعودتك, {user.username}
+        <img src="/logo.png" alt="Logo" className="logo" /> أهلاً, {user.username}
       </BootstrapNavbar.Brand>
       <BootstrapNavbar.Toggle aria-controls="basic-navbar-nav" onClick={() => setExpanded(!expanded)} />
       <BootstrapNavbar.Collapse id="basic-navbar-nav">
