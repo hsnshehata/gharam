@@ -19,6 +19,12 @@ function PackagesServices() {
   const [pkgSubmitting, setPkgSubmitting] = useState(false);
   const [srvSubmitting, setSrvSubmitting] = useState(false);
 
+  // Search and Filter States
+  const [packageSearch, setPackageSearch] = useState('');
+  const [packageFilter, setPackageFilter] = useState('all');
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [serviceFilter, setServiceFilter] = useState('all');
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -142,6 +148,18 @@ function PackagesServices() {
     }
   };
 
+  const filteredPackages = packages.filter(pkg => {
+    const matchSearch = pkg.name.toLowerCase().includes(packageSearch.toLowerCase());
+    const matchFilter = packageFilter === 'all' || pkg.type === packageFilter;
+    return matchSearch && matchFilter;
+  });
+
+  const filteredServices = services.filter(srv => {
+    const matchSearch = srv.name.toLowerCase().includes(serviceSearch.toLowerCase());
+    const matchFilter = serviceFilter === 'all' || srv.type === serviceFilter;
+    return matchSearch && matchFilter;
+  });
+
   return (
     <Container className="mt-5">
       <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
@@ -159,8 +177,30 @@ function PackagesServices() {
       {message && <Alert variant={message.includes('خطأ') ? 'danger' : 'success'}>{message}</Alert>}
       
       <h3 className="mt-4">الباكدجات</h3>
+      <Row className="mb-3">
+        <Col md={8} className="mb-2">
+          <Form.Control 
+            type="text" 
+            placeholder="ابحث عن باكدج بالاسم..." 
+            value={packageSearch}
+            onChange={(e) => setPackageSearch(e.target.value)}
+          />
+        </Col>
+        <Col md={4}>
+          <Form.Control 
+            as="select" 
+            value={packageFilter}
+            onChange={(e) => setPackageFilter(e.target.value)}
+          >
+            <option value="all">كل الأنواع</option>
+            <option value="makeup">ميك اب</option>
+            <option value="photography">تصوير</option>
+          </Form.Control>
+        </Col>
+      </Row>
+      {filteredPackages.length === 0 && <Alert variant="info">لا توجد باكدجات مطابقة للبحث</Alert>}
       <Row>
-        {packages.map(pkg => (
+        {filteredPackages.map(pkg => (
           <Col md={4} key={pkg._id} className="mb-3">
             <Card>
               <Card.Body>
@@ -183,8 +223,30 @@ function PackagesServices() {
       </Row>
 
       <h3 className="mt-5">الخدمات</h3>
+      <Row className="mb-3">
+        <Col md={8} className="mb-2">
+          <Form.Control 
+            type="text" 
+            placeholder="ابحث عن خدمة بالاسم..." 
+            value={serviceSearch}
+            onChange={(e) => setServiceSearch(e.target.value)}
+          />
+        </Col>
+        <Col md={4}>
+          <Form.Control 
+            as="select" 
+            value={serviceFilter}
+            onChange={(e) => setServiceFilter(e.target.value)}
+          >
+            <option value="all">كل الأنواع</option>
+            <option value="instant">فورية</option>
+            <option value="package">خدمة باكدج</option>
+          </Form.Control>
+        </Col>
+      </Row>
+      {filteredServices.length === 0 && <Alert variant="info">لا توجد خدمات مطابقة للبحث</Alert>}
       <Row>
-        {services.map(srv => (
+        {filteredServices.map(srv => (
           <Col md={4} key={srv._id} className="mb-3">
             <Card>
               <Card.Body>
