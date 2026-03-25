@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Button, Container, Alert, Tabs, Tab, Card, Row, Col, Modal } from 'react-bootstrap';
+import { Form, Button, Container, Alert, Card, Row, Col, Modal } from 'react-bootstrap';
 import axios from 'axios';
 
 function PackagesServices() {
@@ -10,7 +10,12 @@ function PackagesServices() {
   const [message, setMessage] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteItem, setDeleteItem] = useState(null);
+  
+  // New modal states
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [formType, setFormType] = useState('package'); // 'package' or 'service'
   const [editItem, setEditItem] = useState(null);
+  
   const [pkgSubmitting, setPkgSubmitting] = useState(false);
   const [srvSubmitting, setSrvSubmitting] = useState(false);
 
@@ -32,6 +37,36 @@ function PackagesServices() {
     fetchData();
   }, []);
 
+  const closeFormModal = () => {
+    setShowFormModal(false);
+    setEditItem(null);
+    setPackageForm({ name: '', price: 0, type: 'makeup' });
+    setServiceForm({ name: '', price: 0, type: 'instant', packageId: '' });
+  };
+
+  const openAddModal = (type) => {
+    setFormType(type);
+    setEditItem(null);
+    if (type === 'package') {
+      setPackageForm({ name: '', price: 0, type: 'makeup' });
+    } else {
+      setServiceForm({ name: '', price: 0, type: 'instant', packageId: '' });
+    }
+    setShowFormModal(true);
+  };
+
+  const handleEdit = (item, type) => {
+    setFormType(type);
+    if (type === 'package') {
+      setPackageForm({ name: item.name, price: item.price, type: item.type });
+      setEditItem(item);
+    } else {
+      setServiceForm({ name: item.name, price: item.price, type: item.type, packageId: item.packageId?._id || '' });
+      setEditItem(item);
+    }
+    setShowFormModal(true);
+  };
+
   const handlePackageSubmit = async (e) => {
     e.preventDefault();
     if (pkgSubmitting) return;
@@ -43,7 +78,6 @@ function PackagesServices() {
         });
         setPackages(packages.map(pkg => (pkg._id === editItem._id ? res.data.pkg : pkg)));
         setMessage('تم تعديل الباكدج بنجاح');
-        setEditItem(null);
       } else {
         const res = await axios.post('/api/packages/package', packageForm, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -51,7 +85,7 @@ function PackagesServices() {
         setPackages([...packages, res.data.pkg]);
         setMessage('تم إضافة الباكدج بنجاح');
       }
-      setPackageForm({ name: '', price: 0, type: 'makeup' });
+      closeFormModal();
     } catch (err) {
       setMessage('خطأ في إضافة/تعديل الباكدج');
     } finally {
@@ -70,7 +104,6 @@ function PackagesServices() {
         });
         setServices(services.map(srv => (srv._id === editItem._id ? res.data.service : srv)));
         setMessage('تم تعديل الخدمة بنجاح');
-        setEditItem(null);
       } else {
         const res = await axios.post('/api/packages/service', serviceForm, {
           headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -78,21 +111,11 @@ function PackagesServices() {
         setServices([...services, res.data.service]);
         setMessage('تم إضافة الخدمة بنجاح');
       }
-      setServiceForm({ name: '', price: 0, type: 'instant', packageId: '' });
+      closeFormModal();
     } catch (err) {
       setMessage('خطأ في إضافة/تعديل الخدمة');
     } finally {
       setSrvSubmitting(false);
-    }
-  };
-
-  const handleEdit = (item, type) => {
-    if (type === 'package') {
-      setPackageForm({ name: item.name, price: item.price, type: item.type });
-      setEditItem(item);
-    } else {
-      setServiceForm({ name: item.name, price: item.price, type: item.type, packageId: item.packageId?._id || '' });
-      setEditItem(item);
     }
   };
 
@@ -121,105 +144,21 @@ function PackagesServices() {
 
   return (
     <Container className="mt-5">
-      <h2>إضافة باكدجات وخدمات</h2>
+      <div className="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <h2>إدارة الباكدجات والخدمات</h2>
+        <div>
+          <Button variant="success" className="me-2" onClick={() => openAddModal('package')}>
+            + إضافة باكدج
+          </Button>
+          <Button variant="info" className="text-white" onClick={() => openAddModal('service')}>
+            + إضافة خدمة
+          </Button>
+        </div>
+      </div>
+      
       {message && <Alert variant={message.includes('خطأ') ? 'danger' : 'success'}>{message}</Alert>}
-      <Tabs defaultActiveKey="package" className="mb-3">
-        <Tab eventKey="package" title="إضافة باكدج">
-          <Form onSubmit={handlePackageSubmit}>
-            <Form.Group>
-              <Form.Label>اسم الباكدج</Form.Label>
-              <Form.Control
-                type="text"
-                value={packageForm.name}
-                onChange={(e) => setPackageForm({ ...packageForm, name: e.target.value })}
-                required
-              />
-            </Form.Group>
-            <Form.Group>
-              <Form.Label>السعر</Form.Label>
-              <Form.Control
-                type="number"
-                value={packageForm.price}
-                onChange={(e) => setPackageForm({ ...packageForm, price: e.target.value })}
-                required
-              />
-            </Form.Group>
-            <Form.Group>
-              <Form.Label>نوع الباكدج</Form.Label>
-              <Form.Control
-                as="select"
-                value={packageForm.type}
-                onChange={(e) => setPackageForm({ ...packageForm, type: e.target.value })}
-              >
-                <option value="makeup">ميك اب</option>
-                <option value="photography">تصوير</option>
-              </Form.Control>
-            </Form.Group>
-            <Button type="submit" className="mt-3" disabled={pkgSubmitting}>
-              {pkgSubmitting ? 'جارٍ الحفظ...' : editItem ? 'تعديل' : 'حفظ'}
-            </Button>
-            <Button variant="secondary" className="mt-3 ms-2" onClick={() => { setPackageForm({ name: '', price: 0, type: 'makeup' }); setEditItem(null); }}>
-              إلغاء
-            </Button>
-          </Form>
-        </Tab>
-        <Tab eventKey="service" title="إضافة خدمة">
-          <Form onSubmit={handleServiceSubmit}>
-            <Form.Group>
-              <Form.Label>اسم الخدمة</Form.Label>
-              <Form.Control
-                type="text"
-                value={serviceForm.name}
-                onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })}
-                required
-              />
-            </Form.Group>
-            <Form.Group>
-              <Form.Label>السعر</Form.Label>
-              <Form.Control
-                type="number"
-                value={serviceForm.price}
-                onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })}
-                required
-              />
-            </Form.Group>
-            <Form.Group>
-              <Form.Label>نوع الخدمة</Form.Label>
-              <Form.Control
-                as="select"
-                value={serviceForm.type}
-                onChange={(e) => setServiceForm({ ...serviceForm, type: e.target.value })}
-              >
-                <option value="instant">فورية</option>
-                <option value="package">خدمة باكدج</option>
-              </Form.Control>
-            </Form.Group>
-            {serviceForm.type === 'package' && (
-              <Form.Group>
-                <Form.Label>الباكدج</Form.Label>
-                <Form.Control
-                  as="select"
-                  value={serviceForm.packageId}
-                  onChange={(e) => setServiceForm({ ...serviceForm, packageId: e.target.value })}
-                >
-                  <option value="">اختر باكدج</option>
-                  {packages.map(pkg => (
-                    <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
-                  ))}
-                </Form.Control>
-              </Form.Group>
-            )}
-            <Button type="submit" className="mt-3" disabled={srvSubmitting}>
-              {srvSubmitting ? 'جارٍ الحفظ...' : editItem ? 'تعديل' : 'حفظ'}
-            </Button>
-            <Button variant="secondary" className="mt-3 ms-2" onClick={() => { setServiceForm({ name: '', price: 0, type: 'instant', packageId: '' }); setEditItem(null); }}>
-              إلغاء
-            </Button>
-          </Form>
-        </Tab>
-      </Tabs>
-
-      <h3 className="mt-5">الباكدجات</h3>
+      
+      <h3 className="mt-4">الباكدجات</h3>
       <Row>
         {packages.map(pkg => (
           <Col md={4} key={pkg._id} className="mb-3">
@@ -268,6 +207,116 @@ function PackagesServices() {
         ))}
       </Row>
 
+      {/* Form Modal */}
+      <Modal show={showFormModal} onHide={closeFormModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>
+            {editItem 
+              ? (formType === 'package' ? 'تعديل باكدج' : 'تعديل خدمة') 
+              : (formType === 'package' ? 'إضافة باكدج' : 'إضافة خدمة')}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {formType === 'package' ? (
+            <Form onSubmit={handlePackageSubmit}>
+              <Form.Group className="mb-3">
+                <Form.Label>اسم الباكدج</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={packageForm.name}
+                  onChange={(e) => setPackageForm({ ...packageForm, name: e.target.value })}
+                  required
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>السعر</Form.Label>
+                <Form.Control
+                  type="number"
+                  value={packageForm.price}
+                  onChange={(e) => setPackageForm({ ...packageForm, price: e.target.value })}
+                  required
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>نوع الباكدج</Form.Label>
+                <Form.Control
+                  as="select"
+                  value={packageForm.type}
+                  onChange={(e) => setPackageForm({ ...packageForm, type: e.target.value })}
+                >
+                  <option value="makeup">ميك اب</option>
+                  <option value="photography">تصوير</option>
+                </Form.Control>
+              </Form.Group>
+              <div className="d-flex justify-content-end">
+                <Button variant="secondary" className="ms-2" onClick={closeFormModal}>
+                  إلغاء
+                </Button>
+                <Button type="submit" disabled={pkgSubmitting} variant="primary">
+                  {pkgSubmitting ? 'جارٍ الحفظ...' : editItem ? 'تعديل' : 'حفظ'}
+                </Button>
+              </div>
+            </Form>
+          ) : (
+            <Form onSubmit={handleServiceSubmit}>
+              <Form.Group className="mb-3">
+                <Form.Label>اسم الخدمة</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={serviceForm.name}
+                  onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })}
+                  required
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>السعر</Form.Label>
+                <Form.Control
+                  type="number"
+                  value={serviceForm.price}
+                  onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })}
+                  required
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>نوع الخدمة</Form.Label>
+                <Form.Control
+                  as="select"
+                  value={serviceForm.type}
+                  onChange={(e) => setServiceForm({ ...serviceForm, type: e.target.value })}
+                >
+                  <option value="instant">فورية</option>
+                  <option value="package">خدمة باكدج</option>
+                </Form.Control>
+              </Form.Group>
+              {serviceForm.type === 'package' && (
+                <Form.Group className="mb-3">
+                  <Form.Label>الباكدج</Form.Label>
+                  <Form.Control
+                    as="select"
+                    value={serviceForm.packageId}
+                    onChange={(e) => setServiceForm({ ...serviceForm, packageId: e.target.value })}
+                  >
+                    <option value="">اختر باكدج</option>
+                    {packages.map(pkg => (
+                      <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
+                    ))}
+                  </Form.Control>
+                </Form.Group>
+              )}
+              <div className="d-flex justify-content-end">
+                <Button variant="secondary" className="ms-2" onClick={closeFormModal}>
+                  إلغاء
+                </Button>
+                <Button type="submit" disabled={srvSubmitting} variant="primary">
+                  {srvSubmitting ? 'جارٍ الحفظ...' : editItem ? 'تعديل' : 'حفظ'}
+                </Button>
+              </div>
+            </Form>
+          )}
+        </Modal.Body>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
       <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
         <Modal.Header closeButton>
           <Modal.Title>تأكيد الحذف</Modal.Title>
