@@ -239,6 +239,7 @@ function EmployeeDashboard({ user }) {
   };
 
   // Safe Extraction
+  const handleOpenQrModal = () => setShowQrModal(true);
   const coinsCount = pointsSummary?.coins?.totalCount || 0;
   const topCoinLevel = getTopCoinLevel(pointsSummary?.coins?.byLevel || {});
   const topCoinColor = getCoinColor(topCoinLevel);
