@@ -1,6 +1,8 @@
 const User = require('../models/User');
 const Booking = require('../models/Booking');
 const InstantService = require('../models/InstantService');
+const Advance = require('../models/Advance');
+const Deduction = require('../models/Deduction');
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const { resetAllSalaries } = require('../services/salaryResetService');
@@ -440,6 +442,9 @@ exports.getPointsSummary = async (req, res) => {
 
         recomputeConvertible(user);
         await user.save();
+        
+        const userAdvances = await Advance.find({ userId: userId }).sort({ createdAt: -1 });
+        const userDeductions = await Deduction.find({ userId: userId }).sort({ createdAt: -1 });
 
         const totalPoints = user.totalPoints || 0;
         const level = user.level || getLevel(totalPoints);
@@ -577,6 +582,9 @@ exports.getPointsSummary = async (req, res) => {
           currentCoinValue: getCoinValue(level),
           convertiblePoints: user.convertiblePoints || 0,
           remainingSalary: user.remainingSalary || 0,
+          monthlySalary: user.monthlySalary || 0,
+          advances: userAdvances.map(a => ({ amount: a.amount, date: a.createdAt, paymentMethod: a.paymentMethod })),
+          deductions: userDeductions.map(d => ({ amount: d.amount, date: d.createdAt, reason: d.reason })),
           coins: {
             totalCount: coins.length,
             totalValue: coinsTotalValue,
