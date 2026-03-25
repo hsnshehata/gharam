@@ -241,15 +241,15 @@ function InstantServices({ user }) {
                     <Button variant="primary" onClick={() => handleShowDetails(service)}>
                       <FontAwesomeIcon icon={faEye} />
                     </Button>
-                    {user?.role === 'admin' && (
-                      <>
+                    {['admin', 'supervisor'].includes(user?.role) && (
                         <Button variant="primary" onClick={() => handleEditClick(service)}>
                           <FontAwesomeIcon icon={faEdit} />
                         </Button>
+                    )}
+                    {user?.role === 'admin' && (
                         <Button variant="danger" onClick={() => { setDeleteItem(service); setShowDeleteModal(true); }}>
                           <FontAwesomeIcon icon={faTrash} />
                         </Button>
-                      </>
                     )}
                   </div>
                 </Card.Body>
