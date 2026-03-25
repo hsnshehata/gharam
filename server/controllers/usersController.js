@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 const { resetAllSalaries } = require('../services/salaryResetService');
 const { cacheAside, deleteByPrefix } = require('../services/cache');
 
-const LEVEL_THRESHOLDS = [0, 3000, 8000, 18000, 38000, 73000, 118000, 178000, 268000, 418000];
+const LEVEL_THRESHOLDS = [0, 3000, 8000, 18000, 38000, 73000, 118000, 208000, 368000, 600000];
 const COIN_VALUES = [0, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600];
 const MAX_LEVEL = 10;
 
