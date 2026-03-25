@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table, Badge, Spinner } from 'react-bootstrap';
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCheck, faQrcode, faGift, faCoins, faBolt, faRotateRight, faWallet, faMoneyBillWave, faArrowDown, faHistory } from '@fortawesome/free-solid-svg-icons';
@@ -32,6 +32,8 @@ function EmployeeDashboard({ user }) {
   const [converting, setConverting] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
+  const [isLoadingScan, setIsLoadingScan] = useState(false);
+  const [advancesMonth, setAdvancesMonth] = useState(new Date().toISOString().slice(0, 7));
   const [weeklySeries, setWeeklySeries] = useState([]);
   const qrCodeScanner = useRef(null);
   const { showToast } = useToast();
@@ -115,6 +117,7 @@ function EmployeeDashboard({ user }) {
       showToast('الرجاء إدخال رقم الوصل', 'warning');
       return;
     }
+    setIsLoadingScan(true);
     try {
       const res = await axios.get(`/api/public/receipt/${normalized}`, {
         headers: { 'x-auth-token': localStorage.getItem('token') }
@@ -133,6 +136,8 @@ function EmployeeDashboard({ user }) {
       showToast('لم يتم العثور على حجز أو خدمة فورية بهذا الرقم', 'warning');
     } catch (err) {
       showToast(err.response?.data?.msg || 'خطأ في البحث عن الوصل', 'danger');
+    } finally {
+      setIsLoadingScan(false);
     }
   }, [showToast]);
 
@@ -462,22 +467,38 @@ function EmployeeDashboard({ user }) {
             </Col>
             
             <Col md={5} className="mb-4 mb-md-0">
-              <h2 className="fw-bold mb-3">مرحباً يا بطل 🚀</h2>
+              <h2 className="fw-bold mb-3">مرحباً {user?.username} 🚀</h2>
               <div className="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start">
                 <div className="stat-badge">
                   <span className="text-muted">النقاط:</span>
                   <span className="text-primary">{formatNumber(pointsSummary?.totalPoints || 0)}</span>
                 </div>
                 <div className="stat-badge">
-                  <span className="text-muted">مركزك حالياً:</span>
+                  <span className="text-muted">الترتيب هذا الشهر:</span>
+                  <span className="text-warning">{monthlyRankLabel} <small>من {pointsSummary?.monthlyTeamSize || 0}</small></span>
+                </div>
+                <div className="stat-badge">
+                  <span className="text-muted">الترتيب العام:</span>
                   <span className="text-warning">{rankLabel} <small>من {teamSize}</small></span>
                 </div>
                 <div className="stat-badge">
-                  <span className="text-muted">العملات:</span>
+                  <span className="text-muted">العملات الحالية:</span>
                   <span style={{ color: topCoinColor }}>
                     <FontAwesomeIcon icon={faCoins} className="me-1" />
                     {coinsCount}
                   </span>
+                </div>
+                <div className="stat-badge">
+                  <span className="text-muted">سعر العملة حالياً:</span>
+                  <span className="text-success">{pointsSummary?.currentCoinValue || 0} ج.م</span>
+                </div>
+                <div className="stat-badge">
+                  <span className="text-muted">عملات محولة هذا الشهر:</span>
+                  <span className="text-primary">{pointsSummary?.monthlyCoinsEarnedCount || 0}</span>
+                </div>
+                <div className="stat-badge">
+                  <span className="text-muted">إجمالي العملات طوال المدة:</span>
+                  <span className="text-primary">{pointsSummary?.lifetimeCoinsEarnedCount || 0}</span>
                 </div>
               </div>
             </Col>
@@ -495,7 +516,9 @@ function EmployeeDashboard({ user }) {
                     placeholder="أو أكتب رقم الوصل هنا..."
                     style={{ background: 'var(--dash-surface)', color: 'var(--dash-text)', borderColor: 'var(--dash-border)' }}
                   />
-                  <Button type="submit" variant="primary" className="btn-modern px-4">بحث</Button>
+                  <Button type="submit" variant="primary" className="btn-modern px-4" disabled={isLoadingScan}>
+                    {isLoadingScan ? <Spinner size="sm" animation="border" /> : 'بحث'}
+                  </Button>
                 </Form>
               </div>
             </Col>
@@ -577,13 +600,28 @@ function EmployeeDashboard({ user }) {
                 <span className="text-muted">الراتب الأساسي:</span>
                 <span className="fw-bold fs-5">{formatNumber(pointsSummary?.monthlySalary || 0)} ج.م</span>
               </div>
-              <div className="d-flex justify-content-between mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+              <div className="d-flex justify-content-between mb-2 pb-2">
                 <span className="text-muted">الراتب المتبقي (الصافي):</span>
                 <span className="fw-bold fs-3 text-success">{formatNumber(pointsSummary?.remainingSalary || 0)} ج.م</span>
               </div>
+              
+              <div className="d-flex justify-content-between mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+                <span className="text-muted">إجمالي المكافآت المضافة هذا الشهر:</span>
+                <span className="fw-bold fs-5 text-primary">{formatNumber(pointsSummary?.monthlyRedeemedValue || 0)} ج.م</span>
+              </div>
 
               <div className="mt-2">
-                <h6 className="fw-bold mb-3">السلف والخصومات الأخيرة</h6>
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h6 className="fw-bold mb-0">السلف والخصومات الإدارية</h6>
+                  <Form.Control
+                    type="month"
+                    size="sm"
+                    style={{ width: '150px' }}
+                    value={advancesMonth}
+                    onChange={(e) => setAdvancesMonth(e.target.value)}
+                    title="اختر شهر لعرض عملياته، واتركه فارغاً لعرض الكل"
+                  />
+                </div>
                 <div className="advance-table-wrapper">
                   <Table variant={theme === 'dark' ? 'dark' : 'light'} borderless hover size="sm" className="mb-0 text-center align-middle">
                     <thead style={{ position: 'sticky', top: 0, background: 'var(--dash-surface)', zIndex: 1 }}>
@@ -594,26 +632,33 @@ function EmployeeDashboard({ user }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {(!pointsSummary?.advances?.length && !pointsSummary?.deductions?.length) ? (
-                        <tr><td colSpan="3" className="py-4 text-muted">لا توجد حركات مؤخراً</td></tr>
-                      ) : (
-                        <>
-                          {pointsSummary.advances?.map((adv, idx) => (
-                            <tr key={`adv-${idx}`}>
-                              <td><Badge bg="warning" text="dark">سلفة</Badge></td>
-                              <td className="text-danger fw-bold">-{formatNumber(adv.amount)} ج.م</td>
-                              <td className="text-muted">{formatDate(adv.date)}</td>
+                      {(() => {
+                        let combined = [
+                          ...(pointsSummary?.advances || []).map(a => ({ ...a, recordType: 'سلفة' })),
+                          ...(pointsSummary?.deductions || []).map(d => ({ ...d, recordType: `خصم (${d.reason || ''})` }))
+                        ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                        if (advancesMonth) {
+                          combined = combined.filter(c => c.date && c.date.startsWith(advancesMonth));
+                        }
+
+                        if (combined.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan="3" className="text-muted py-4">لا توجد حركات مؤخراً في هذا الشهر</td>
                             </tr>
-                          ))}
-                          {pointsSummary.deductions?.map((ded, idx) => (
-                            <tr key={`ded-${idx}`}>
-                              <td><Badge bg="danger">خصم إداري</Badge></td>
-                              <td className="text-danger fw-bold">-{formatNumber(ded.amount)} ج.م <small>({ded.reason})</small></td>
-                              <td className="text-muted">{formatDate(ded.date)}</td>
-                            </tr>
-                          ))}
-                        </>
-                      )}
+                          );
+                        }
+                        return combined.map((item, idx) => (
+                          <tr key={`adv-ded-${idx}`}>
+                            <td>
+                              <Badge bg={item.recordType === 'سلفة' ? 'warning' : 'danger'} text={item.recordType === 'سلفة' ? 'dark' : 'light'}>{item.recordType}</Badge>
+                            </td>
+                            <td className="text-danger fw-bold">-{formatNumber(item.amount)} ج.م</td>
+                            <td className="text-muted small">{formatDate(item.date)}</td>
+                          </tr>
+                        ));
+                      })()}
                     </tbody>
                   </Table>
                 </div>
