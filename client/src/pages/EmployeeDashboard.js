@@ -466,8 +466,31 @@ function EmployeeDashboard({ user }) {
               <div className="small text-muted mt-1">متبقي {Math.max(0, (pointsSummary?.progress?.target || 0) - (pointsSummary?.progress?.current || 0))} نقطة</div>
             </Col>
             
-            <Col md={5} className="mb-4 mb-md-0">
+            <Col md={9} className="mb-4 mb-md-0">
               <h2 className="fw-bold mb-3">مرحباً {user?.username} 🚀</h2>
+              
+              <Row className="mb-4">
+                <Col lg={8} xl={6}>
+                  <div className="d-flex flex-column gap-3">
+                    <Button onClick={handleOpenQrModal} className="btn-modern btn-scan py-3">
+                      <FontAwesomeIcon icon={faQrcode} className="me-2" /> مسح باركود أداء الخدمة
+                    </Button>
+                    <Form onSubmit={handleReceiptSubmit} className="d-flex gap-2">
+                      <Form.Control
+                        type="text"
+                        value={receiptNumber}
+                        onChange={(e) => setReceiptNumber(e.target.value)}
+                        placeholder="أو أكتب رقم الوصل هنا..."
+                        style={{ background: 'var(--dash-surface)', color: 'var(--dash-text)', borderColor: 'var(--dash-border)' }}
+                      />
+                      <Button type="submit" variant="primary" className="btn-modern px-4" disabled={isLoadingScan}>
+                        {isLoadingScan ? <Spinner size="sm" animation="border" /> : 'بحث'}
+                      </Button>
+                    </Form>
+                  </div>
+                </Col>
+              </Row>
+
               <div className="d-flex flex-wrap gap-2 justify-content-center justify-content-md-start">
                 <div className="stat-badge">
                   <span className="text-muted">النقاط:</span>
@@ -500,26 +523,6 @@ function EmployeeDashboard({ user }) {
                   <span className="text-muted">إجمالي العملات طوال المدة:</span>
                   <span className="text-primary">{pointsSummary?.lifetimeCoinsEarnedCount || 0}</span>
                 </div>
-              </div>
-            </Col>
-
-            <Col md={4}>
-              <div className="d-flex flex-column gap-3">
-                <Button onClick={handleOpenQrModal} className="btn-modern btn-scan py-3">
-                  <FontAwesomeIcon icon={faQrcode} className="me-2" /> مسح باركود أداء الخدمة
-                </Button>
-                <Form onSubmit={handleReceiptSubmit} className="d-flex gap-2">
-                  <Form.Control
-                    type="text"
-                    value={receiptNumber}
-                    onChange={(e) => setReceiptNumber(e.target.value)}
-                    placeholder="أو أكتب رقم الوصل هنا..."
-                    style={{ background: 'var(--dash-surface)', color: 'var(--dash-text)', borderColor: 'var(--dash-border)' }}
-                  />
-                  <Button type="submit" variant="primary" className="btn-modern px-4" disabled={isLoadingScan}>
-                    {isLoadingScan ? <Spinner size="sm" animation="border" /> : 'بحث'}
-                  </Button>
-                </Form>
               </div>
             </Col>
           </Row>
