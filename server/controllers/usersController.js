@@ -138,15 +138,23 @@ exports.updateUser = async (req, res) => {
   if (password && password !== confirmPassword) return res.status(400).json({ msg: 'Passwords do not match' });
 
   try {
-    const updateData = { username, role, monthlySalary, phone };
+    const oldUser = await User.findById(req.params.id);
+    if (!oldUser) return res.status(404).json({ msg: 'User not found' });
+
+    const updateData = { username, role, phone };
     if (password) {
       updateData.password = await bcrypt.hash(password, 10);
     }
     if (monthlySalary !== undefined) {
-      updateData.remainingSalary = monthlySalary;
+      const newMonthly = Number(monthlySalary) || 0;
+      const oldMonthly = oldUser.monthlySalary || 0;
+      const diff = newMonthly - oldMonthly;
+      
+      updateData.monthlySalary = newMonthly;
+      updateData.remainingSalary = (oldUser.remainingSalary || 0) + diff;
     }
+
     const user = await User.findByIdAndUpdate(req.params.id, updateData, { new: true }).select('-password');
-    if (!user) return res.status(404).json({ msg: 'User not found' });
     res.json({ msg: 'User updated successfully', user });
   } catch (err) {
     console.error(err);
