@@ -246,7 +246,7 @@ function InstantServices({ user }) {
                           <FontAwesomeIcon icon={faEdit} />
                         </Button>
                     )}
-                    {user?.role === 'admin' && (
+                    {['admin', 'supervisor'].includes(user?.role) && (
                         <Button variant="danger" onClick={() => { setDeleteItem(service); setShowDeleteModal(true); }}>
                           <FontAwesomeIcon icon={faTrash} />
                         </Button>
