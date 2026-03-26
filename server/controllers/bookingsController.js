@@ -205,25 +205,23 @@ exports.updateBooking = async (req, res) => {
     // إضافة الخدمات الإكسترا إلى packageServices
     if (extraServices && extraServices.length > 0) {
       const extraSrvRecords = await Service.find({ _id: { $in: extraServices } }).select('_id name price');
-      const formattedExtraServices = extraSrvRecords.map(srv => ({
+      packageServices = [...packageServices, ...extraSrvRecords];
+    }
+
+    const formattedPackageServices = packageServices.map(srv => {
+      const existingService = oldBooking.packageServices.find(
+        oldSrv => oldSrv._id && oldSrv._id.toString() === srv._id.toString()
+      );
+      
+      return {
         _id: srv._id,
         name: srv.name,
         price: srv.price,
-        executed: false,
-        executedBy: null,
-        executedAt: null
-      }));
-      packageServices = [...packageServices, ...formattedExtraServices];
-    }
-
-    const formattedPackageServices = packageServices.map(srv => ({
-      _id: srv._id,
-      name: srv.name,
-      price: srv.price,
-      executed: false,
-      executedBy: null,
-      executedAt: null
-    }));
+        executed: existingService && existingService.executed ? existingService.executed : false,
+        executedBy: existingService && existingService.executedBy ? existingService.executedBy : null,
+        executedAt: existingService && existingService.executedAt ? existingService.executedAt : null
+      };
+    });
 
     const changes = {};
     if (oldBooking.total !== total) changes.total = total;
