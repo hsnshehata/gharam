@@ -272,8 +272,8 @@ exports.updateInstantService = async (req, res) => {
 };
 
 exports.deleteInstantService = async (req, res) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ msg: 'غير مصرح لك بالحذف، هذه الصلاحية للمدير فقط' });
+  if (!['admin', 'supervisor'].includes(req.user.role)) {
+    return res.status(403).json({ msg: 'غير مصرح لك بالحذف، هذه الصلاحية للمدير والمشرف فقط' });
   }
   try {
     const instantService = await InstantService.findByIdAndDelete(req.params.id);
