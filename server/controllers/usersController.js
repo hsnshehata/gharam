@@ -887,6 +887,79 @@ exports.getExecutedServices = async (req, res) => {
   }
 };
 
+exports.getEmployeesRanking = async (req, res) => {
+  try {
+    const { filter = 'month' } = req.query; // 'all', 'month', 'today'
+    
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    const users = await User.find({ role: { $in: ['admin', 'supervisor', 'hallSupervisor', 'employee'] } }).select('-password -efficiencyCoins -coinsRedeemed').lean();
+    
+    const rankings = users.map(user => {
+      let periodPoints = 0;
+      const monthlyPointsMap = new Map();
+      
+      let allTimePoints = 0;
+      let totalServices = 0;
+
+      (user.points || []).forEach(p => {
+         if (p.type !== 'work' || !p.date) return;
+         const amt = Number(p.amount) || 0;
+         const dt = new Date(p.date);
+         
+         allTimePoints += amt;
+         totalServices += 1;
+         
+         if (filter === 'all') {
+           periodPoints += amt;
+         } else if (filter === 'month' && dt >= startOfMonth) {
+           periodPoints += amt;
+         } else if (filter === 'today' && dt >= startOfDay) {
+           periodPoints += amt;
+         }
+         
+         const monthKey = `${dt.getFullYear()}-${(dt.getMonth() + 1).toString().padStart(2, '0')}`;
+         monthlyPointsMap.set(monthKey, (monthlyPointsMap.get(monthKey) || 0) + amt);
+      });
+      
+      let bestMonthKey = '-';
+      let bestMonthPoints = 0;
+      for (const [mKey, mPts] of monthlyPointsMap.entries()) {
+        if (mPts > bestMonthPoints) {
+          bestMonthPoints = mPts;
+          bestMonthKey = mKey;
+        }
+      }
+      
+      return {
+        _id: user._id,
+        username: user.username,
+        role: user.role,
+        level: user.level || 1,
+        totalPoints: user.totalPoints || 0,
+        periodPoints,
+        bestMonthKey,
+        bestMonthPoints,
+        allTimePoints,
+        totalServices
+      };
+    });
+    
+    rankings.sort((a, b) => b.periodPoints - a.periodPoints);
+    
+    rankings.forEach((r, idx) => {
+      r.rank = idx + 1;
+    });
+
+    res.json(rankings);
+  } catch (err) {
+    console.error('Error in getEmployeesRanking:', err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
 // Internal helpers for other controllers
 exports.addPointsAndConvertInternal = addPointsAndConvert;
 exports.removePointsAndCoinsInternal = removePointsAndCoins;
