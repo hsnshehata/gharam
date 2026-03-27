@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Container, Row, Col, Card, Form, Button, Alert, Table } from 'react-bootstrap';
+import { Container, Row, Col, Card, Form, Button, Alert, Table, ButtonGroup, Badge } from 'react-bootstrap';
 import axios from 'axios';
 import Select from 'react-select';
 
@@ -11,6 +11,9 @@ function EmployeeReports() {
   const [report, setReport] = useState(null);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [rankings, setRankings] = useState([]);
+  const [rankingFilter, setRankingFilter] = useState('month');
+  const [loadingRankings, setLoadingRankings] = useState(false);
 
   const userOptions = useMemo(() => (
     users.map(u => ({ value: u._id?.toString(), label: u.username }))
@@ -29,6 +32,23 @@ function EmployeeReports() {
     };
     fetchUsers();
   }, []);
+
+  useEffect(() => {
+    const fetchRankings = async () => {
+      setLoadingRankings(true);
+      try {
+        const res = await axios.get(`/api/users/ranking?filter=${rankingFilter}`, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        });
+        setRankings(res.data);
+      } catch (err) {
+        setMessage('خطأ في جلب ترتيب الموظفين');
+      } finally {
+        setLoadingRankings(false);
+      }
+    };
+    fetchRankings();
+  }, [rankingFilter]);
 
   const loadReport = async () => {
     if (!selectedUser) {
@@ -90,8 +110,63 @@ function EmployeeReports() {
         </Row>
       </Card>
 
+      {!report && (
+        <Card className="p-3 mb-4">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h5>ترتيب الموظفين حسب النقاط</h5>
+            <ButtonGroup>
+              <Button variant={rankingFilter === 'today' ? 'primary' : 'outline-primary'} onClick={() => setRankingFilter('today')}>اليوم</Button>
+              <Button variant={rankingFilter === 'month' ? 'primary' : 'outline-primary'} onClick={() => setRankingFilter('month')}>هذا الشهر</Button>
+              <Button variant={rankingFilter === 'all' ? 'primary' : 'outline-primary'} onClick={() => setRankingFilter('all')}>كل الفترة</Button>
+            </ButtonGroup>
+          </div>
+          {loadingRankings ? (
+            <p className="text-muted">جارٍ التحميل...</p>
+          ) : (
+            <Table striped responsive hover className="mt-2 text-center align-middle">
+              <thead>
+                <tr>
+                  <th>الترتيب</th>
+                  <th>الموظف</th>
+                  <th>المستوى</th>
+                  <th>النقاط ({rankingFilter === 'today' ? 'اليوم' : rankingFilter === 'month' ? 'الشهر' : 'الكل'})</th>
+                  <th>أفضل شهر (النقاط)</th>
+                  <th>كل النقاط</th>
+                  <th>إجمالي الخدمات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rankings.map((r) => (
+                  <tr key={r._id}>
+                    <td>
+                      <Badge bg={r.rank === 1 ? 'warning' : r.rank <= 3 ? 'success' : 'secondary'} className="p-2 fs-6">
+                        #{r.rank}
+                      </Badge>
+                    </td>
+                    <td><strong>{r.username}</strong></td>
+                    <td>{r.level}</td>
+                    <td><strong className="text-primary">{r.periodPoints}</strong></td>
+                    <td>{r.bestMonthKey} ({r.bestMonthPoints})</td>
+                    <td>{r.allTimePoints}</td>
+                    <td>{r.totalServices}</td>
+                  </tr>
+                ))}
+                {rankings.length === 0 && (
+                  <tr>
+                    <td colSpan="7">لا يوجد بيانات لعرضها</td>
+                  </tr>
+                )}
+              </tbody>
+            </Table>
+          )}
+        </Card>
+      )}
+
       {report && (
         <>
+          <div className="d-flex justify-content-end mb-3">
+            <Button variant="outline-danger" onClick={() => setReport(null)}>إغلاق التقرير</Button>
+          </div>
           <Row className="mb-3">
             <Col md={4}>
               <Card className="p-3">
