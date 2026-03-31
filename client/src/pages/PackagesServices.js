@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Button, Container, Alert, Card, Row, Col, Modal } from 'react-bootstrap';
+import { Form, Button, Container, Alert, Card, Row, Col, Modal, Badge } from 'react-bootstrap';
 import axios from 'axios';
 
 function PackagesServices() {
-  const [packageForm, setPackageForm] = useState({ name: '', price: 0, type: 'makeup' });
-  const [serviceForm, setServiceForm] = useState({ name: '', price: 0, type: 'instant', packageId: '' });
+  const [packageForm, setPackageForm] = useState({ name: '', price: 0, type: 'makeup', isActive: true, showInPrices: false, expiresAt: '' });
+  const [serviceForm, setServiceForm] = useState({ name: '', price: 0, type: 'instant', packageId: '', isActive: true, showInPrices: false, expiresAt: '' });
   const [packages, setPackages] = useState([]);
   const [services, setServices] = useState([]);
   const [message, setMessage] = useState('');
@@ -46,17 +46,17 @@ function PackagesServices() {
   const closeFormModal = () => {
     setShowFormModal(false);
     setEditItem(null);
-    setPackageForm({ name: '', price: 0, type: 'makeup' });
-    setServiceForm({ name: '', price: 0, type: 'instant', packageId: '' });
+    setPackageForm({ name: '', price: 0, type: 'makeup', isActive: true, showInPrices: false, expiresAt: '' });
+    setServiceForm({ name: '', price: 0, type: 'instant', packageId: '', isActive: true, showInPrices: false, expiresAt: '' });
   };
 
   const openAddModal = (type) => {
     setFormType(type);
     setEditItem(null);
     if (type === 'package') {
-      setPackageForm({ name: '', price: 0, type: 'makeup' });
+      setPackageForm({ name: '', price: 0, type: 'makeup', isActive: true, showInPrices: false, expiresAt: '' });
     } else {
-      setServiceForm({ name: '', price: 0, type: 'instant', packageId: '' });
+      setServiceForm({ name: '', price: 0, type: 'instant', packageId: '', isActive: true, showInPrices: false, expiresAt: '' });
     }
     setShowFormModal(true);
   };
@@ -64,10 +64,18 @@ function PackagesServices() {
   const handleEdit = (item, type) => {
     setFormType(type);
     if (type === 'package') {
-      setPackageForm({ name: item.name, price: item.price, type: item.type });
+      setPackageForm({ 
+        name: item.name, price: item.price, type: item.type,
+        isActive: item.isActive !== false, showInPrices: item.showInPrices || false,
+        expiresAt: item.expiresAt ? new Date(item.expiresAt).toISOString().split('T')[0] : ''
+      });
       setEditItem(item);
     } else {
-      setServiceForm({ name: item.name, price: item.price, type: item.type, packageId: item.packageId?._id || '' });
+      setServiceForm({ 
+        name: item.name, price: item.price, type: item.type, packageId: item.packageId?._id || '',
+        isActive: item.isActive !== false, showInPrices: item.showInPrices || false,
+        expiresAt: item.expiresAt ? new Date(item.expiresAt).toISOString().split('T')[0] : ''
+      });
       setEditItem(item);
     }
     setShowFormModal(true);
@@ -208,7 +216,12 @@ function PackagesServices() {
                 <Card.Text>
                   السعر: {pkg.price} جنيه<br />
                   النوع: {pkg.type === 'makeup' ? 'ميك اب' : 'تصوير'}<br />
-                  تاريخ الإضافة: {new Date(pkg.createdAt).toLocaleDateString()}
+                  تاريخ الإضافة: {new Date(pkg.createdAt).toLocaleDateString()}<br />
+                  <div className="mt-2">
+                    {pkg.isActive !== false ? <Badge bg="success" className="me-1">متاح الاستخدام</Badge> : <Badge bg="danger" className="me-1">غير متاح</Badge>}
+                    {pkg.expiresAt && <Badge bg="warning" className="me-1">مؤقت: {new Date(pkg.expiresAt).toLocaleDateString()}</Badge>}
+                    {pkg.showInPrices && <Badge bg="info">عرض للجمهور</Badge>}
+                  </div>
                 </Card.Text>
                 <Button variant="primary" className="me-2" onClick={() => handleEdit(pkg, 'package')}>
                   تعديل
@@ -255,7 +268,12 @@ function PackagesServices() {
                   السعر: {srv.price} جنيه<br />
                   النوع: {srv.type === 'instant' ? 'فورية' : 'خدمة باكدج'}<br />
                   {srv.packageId && `الباكدج: ${srv.packageId.name}`}<br />
-                  تاريخ الإضافة: {new Date(srv.createdAt).toLocaleDateString()}
+                  تاريخ الإضافة: {new Date(srv.createdAt).toLocaleDateString()}<br />
+                  <div className="mt-2">
+                    {srv.isActive !== false ? <Badge bg="success" className="me-1">متاح الاستخدام</Badge> : <Badge bg="danger" className="me-1">غير متاح</Badge>}
+                    {srv.expiresAt && <Badge bg="warning" className="me-1">مؤقت: {new Date(srv.expiresAt).toLocaleDateString()}</Badge>}
+                    {srv.showInPrices && <Badge bg="info">عرض للجمهور</Badge>}
+                  </div>
                 </Card.Text>
                 <Button variant="primary" className="me-2" onClick={() => handleEdit(srv, 'service')}>
                   تعديل
@@ -309,6 +327,30 @@ function PackagesServices() {
                   <option value="makeup">ميك اب</option>
                   <option value="photography">تصوير</option>
                 </Form.Control>
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Check 
+                  type="checkbox"
+                  label="متاح للاستخدام (تفعيل للخدمة الجديدة)"
+                  checked={packageForm.isActive}
+                  onChange={(e) => setPackageForm({ ...packageForm, isActive: e.target.checked })}
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Check 
+                  type="checkbox"
+                  label="عرض في صفحة الأسعار للجمهور للاندينج بيج"
+                  checked={packageForm.showInPrices}
+                  onChange={(e) => setPackageForm({ ...packageForm, showInPrices: e.target.checked })}
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>تاريخ الانتهاء المؤقت (اختياري)</Form.Label>
+                <Form.Control
+                  type="date"
+                  value={packageForm.expiresAt}
+                  onChange={(e) => setPackageForm({ ...packageForm, expiresAt: e.target.value })}
+                />
               </Form.Group>
               <div className="d-flex justify-content-end">
                 <Button variant="secondary" className="ms-2" onClick={closeFormModal}>
@@ -365,6 +407,30 @@ function PackagesServices() {
                   </Form.Control>
                 </Form.Group>
               )}
+              <Form.Group className="mb-3">
+                <Form.Check 
+                  type="checkbox"
+                  label="متاح للاستخدام (تفعيل للخدمة الجديدة)"
+                  checked={serviceForm.isActive}
+                  onChange={(e) => setServiceForm({ ...serviceForm, isActive: e.target.checked })}
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Check 
+                  type="checkbox"
+                  label="عرض في صفحة الأسعار للجمهور للاندينج بيج"
+                  checked={serviceForm.showInPrices}
+                  onChange={(e) => setServiceForm({ ...serviceForm, showInPrices: e.target.checked })}
+                />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>تاريخ الانتهاء المؤقت (اختياري)</Form.Label>
+                <Form.Control
+                  type="date"
+                  value={serviceForm.expiresAt}
+                  onChange={(e) => setServiceForm({ ...serviceForm, expiresAt: e.target.value })}
+                />
+              </Form.Group>
               <div className="d-flex justify-content-end">
                 <Button variant="secondary" className="ms-2" onClick={closeFormModal}>
                   إلغاء

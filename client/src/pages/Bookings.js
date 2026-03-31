@@ -524,7 +524,7 @@ function Bookings({ user }) {
                     required
                   >
                     <option value="">اختر باكدج</option>
-                    {packages.map(pkg => (
+                    {packages.filter(pkg => (pkg.isActive !== false && (!pkg.expiresAt || new Date(pkg.expiresAt) > new Date())) || formData.packageId === pkg._id).map(pkg => (
                       <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
                     ))}
                   </Form.Control>
@@ -550,7 +550,7 @@ function Bookings({ user }) {
                     onChange={(e) => setFormData({ ...formData, hennaPackageId: e.target.value })}
                   >
                     <option value="">لا يوجد</option>
-                    {packages.filter(pkg => pkg.type === 'makeup').map(pkg => (
+                    {packages.filter(pkg => pkg.type === 'makeup' && ((pkg.isActive !== false && (!pkg.expiresAt || new Date(pkg.expiresAt) > new Date())) || formData.hennaPackageId === pkg._id)).map(pkg => (
                       <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
                     ))}
                   </Form.Control>
@@ -578,7 +578,7 @@ function Bookings({ user }) {
                     onChange={(e) => setFormData({ ...formData, photographyPackageId: e.target.value })}
                   >
                     <option value="">لا يوجد</option>
-                    {packages.filter(pkg => pkg.type === 'photography').map(pkg => (
+                    {packages.filter(pkg => pkg.type === 'photography' && ((pkg.isActive !== false && (!pkg.expiresAt || new Date(pkg.expiresAt) > new Date())) || formData.photographyPackageId === pkg._id)).map(pkg => (
                       <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
                     ))}
                   </Form.Control>
@@ -605,7 +605,7 @@ function Bookings({ user }) {
                   <Form.Label>خدمات إضافية (اختياري)</Form.Label>
                   <Select
                     isMulti
-                    options={services.filter(srv => srv.type === 'instant').map(srv => ({ value: srv._id, label: srv.name, price: srv.price }))}
+                    options={services.filter(srv => srv.type === 'instant' && ((srv.isActive !== false && (!srv.expiresAt || new Date(srv.expiresAt) > new Date())) || formData.extraServices.some(s => s.value === srv._id))).map(srv => ({ value: srv._id, label: srv.name, price: srv.price }))}
                     value={formData.extraServices}
                     onChange={(selected) => setFormData({ ...formData, extraServices: selected })}
                     isSearchable

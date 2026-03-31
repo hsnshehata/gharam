@@ -1174,7 +1174,7 @@ function Dashboard({ user }) {
                     required
                   >
                     <option value="">اختر باكدج</option>
-                    {packages.map(pkg => (
+                    {packages.filter(pkg => (pkg.isActive !== false && (!pkg.expiresAt || new Date(pkg.expiresAt) > new Date())) || bookingFormData.packageId === pkg._id).map(pkg => (
                       <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
                     ))}
                   </Form.Control>
@@ -1189,7 +1189,7 @@ function Dashboard({ user }) {
                     onChange={(e) => setBookingFormData({ ...bookingFormData, hennaPackageId: e.target.value })}
                   >
                     <option value="">لا يوجد</option>
-                    {packages.filter(pkg => pkg.type === 'makeup').map(pkg => (
+                    {packages.filter(pkg => pkg.type === 'makeup' && ((pkg.isActive !== false && (!pkg.expiresAt || new Date(pkg.expiresAt) > new Date())) || bookingFormData.hennaPackageId === pkg._id)).map(pkg => (
                       <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
                     ))}
                   </Form.Control>
@@ -1217,7 +1217,7 @@ function Dashboard({ user }) {
                     onChange={(e) => setBookingFormData({ ...bookingFormData, photographyPackageId: e.target.value })}
                   >
                     <option value="">لا يوجد</option>
-                    {packages.filter(pkg => pkg.type === 'photography').map(pkg => (
+                    {packages.filter(pkg => pkg.type === 'photography' && ((pkg.isActive !== false && (!pkg.expiresAt || new Date(pkg.expiresAt) > new Date())) || bookingFormData.photographyPackageId === pkg._id)).map(pkg => (
                       <option key={pkg._id} value={pkg._id}>{pkg.name}</option>
                     ))}
                   </Form.Control>
@@ -1324,7 +1324,7 @@ function Dashboard({ user }) {
                   <Form.Label>خدمات إضافية (اختياري)</Form.Label>
                   <Select
                     isMulti
-                    options={services.filter(srv => srv.type === 'instant').map(srv => ({ value: srv._id, label: srv.name, price: srv.price }))}
+                    options={services.filter(srv => srv.type === 'instant' && ((srv.isActive !== false && (!srv.expiresAt || new Date(srv.expiresAt) > new Date())) || bookingFormData.extraServices.some(s => s.value === srv._id))).map(srv => ({ value: srv._id, label: srv.name, price: srv.price }))}
                     value={bookingFormData.extraServices}
                     onChange={(selected) => setBookingFormData({ ...bookingFormData, extraServices: selected })}
                     isSearchable
@@ -1447,7 +1447,7 @@ function Dashboard({ user }) {
                     isMulti
                     options={[
                       { value: 'custom-trigger', label: 'إدخال حر (خدمة خاصة)' },
-                      ...services.filter(srv => srv.type === 'instant').map(srv => ({ value: srv._id, label: srv.name }))
+                      ...services.filter(srv => srv.type === 'instant' && ((srv.isActive !== false && (!srv.expiresAt || new Date(srv.expiresAt) > new Date())) || instantServiceFormData.services.some(s => s.value === srv._id))).map(srv => ({ value: srv._id, label: srv.name }))
                     ]}
                     value={instantServiceFormData.services}
                     onChange={(selected) => setInstantServiceFormData({ ...instantServiceFormData, services: selected })}
