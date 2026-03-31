@@ -68,7 +68,7 @@ const themes = {
 const makeupPackages = [
 	{
 		title: 'باكدج زفاف سبيشيال',
-		price: '4,500 ج',
+		price: '5,000 ج',
 		items: [
 			'ميك أب زفاف',
 			'لف طرحة أو تسريحة',
@@ -82,7 +82,7 @@ const makeupPackages = [
 	},
 	{
 		title: 'باكدج زفاف سبيشيال بلس',
-		price: '5,500 ج',
+		price: '6,000 ج',
 		items: [
 			'ميك أب زفاف',
 			'تسريحة شعر أو لف طرحة',
@@ -103,7 +103,7 @@ const makeupPackages = [
 	},
 	{
 		title: 'باكدج حنة أورجينال',
-		price: '3,000 ج',
+		price: '3,500 ج',
 		items: [
 			'ميك أب',
 			'لف طرحة أو تسريحة',
@@ -115,7 +115,7 @@ const makeupPackages = [
 	},
 	{
 		title: 'باكدج خطوبة/شبكة',
-		price: '3,500 ج',
+		price: '4,000 ج',
 		items: [
 			'ميك أب خطوبة',
 			'لف طرحة أو تسريحة',
