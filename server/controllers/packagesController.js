@@ -2,9 +2,10 @@ const Package = require('../models/Package');
 const Service = require('../models/Service');
 
 exports.addPackage = async (req, res) => {
-  const { name, price, type } = req.body;
+  let { name, price, type, isActive, expiresAt, showInPrices } = req.body;
+  expiresAt = expiresAt || null;
   try {
-    const pkg = new Package({ name, price, type });
+    const pkg = new Package({ name, price, type, isActive, expiresAt, showInPrices });
     await pkg.save();
     res.json({ msg: 'Package added successfully', pkg });
   } catch (err) {
@@ -14,9 +15,10 @@ exports.addPackage = async (req, res) => {
 };
 
 exports.updatePackage = async (req, res) => {
-  const { name, price, type } = req.body;
+  let { name, price, type, isActive, expiresAt, showInPrices } = req.body;
+  expiresAt = expiresAt || null;
   try {
-    const pkg = await Package.findByIdAndUpdate(req.params.id, { name, price, type }, { new: true });
+    const pkg = await Package.findByIdAndUpdate(req.params.id, { name, price, type, isActive, expiresAt, showInPrices }, { new: true });
     if (!pkg) return res.status(404).json({ msg: 'Package not found' });
     res.json({ msg: 'Package updated successfully', pkg });
   } catch (err) {
@@ -40,9 +42,10 @@ exports.deletePackage = async (req, res) => {
 };
 
 exports.addService = async (req, res) => {
-  const { name, price, type, packageId } = req.body;
+  let { name, price, type, packageId, isActive, expiresAt, showInPrices } = req.body;
+  expiresAt = expiresAt || null;
   try {
-    const serviceData = { name, price, type };
+    const serviceData = { name, price, type, isActive, expiresAt, showInPrices };
     if (type === 'package' && packageId) {
       serviceData.packageId = packageId;
     }
@@ -56,9 +59,10 @@ exports.addService = async (req, res) => {
 };
 
 exports.updateService = async (req, res) => {
-  const { name, price, type, packageId } = req.body;
+  let { name, price, type, packageId, isActive, expiresAt, showInPrices } = req.body;
+  expiresAt = expiresAt || null;
   try {
-    const serviceData = { name, price, type };
+    const serviceData = { name, price, type, isActive, expiresAt, showInPrices };
     if (type === 'package' && packageId) {
       serviceData.packageId = packageId;
     } else {
