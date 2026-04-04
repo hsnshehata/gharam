@@ -12,7 +12,7 @@ const googleTTS = require('google-tts-api');
 // Configure multer for voice messages
 const upload = multer({ storage: multer.memoryStorage() });
 
-const MAX_BOOKINGS_PER_DAY = 13;
+const MAX_BOOKINGS_PER_DAY = 12;
 
 const DEFAULT_PROMPT = `أنت مساعد ذكي ولطيف لصالون تجميل (غرام سلطان بيوتي سنتر).
 عليك الإجابة عن استفسارات العملاء بأدب وبطريقة احترافية بناءً على المعلومات المتاحة لك وبدون تأليف.`;
@@ -98,13 +98,13 @@ const chatFunctions = {
             endOfDay.setHours(23, 59, 59, 999);
             
             const count = await Booking.countDocuments({ eventDate: { $gte: startOfDay, $lte: endOfDay } });
+            const isFull = count >= MAX_BOOKINGS_PER_DAY;
             return {
-                count,
-                max_limit: MAX_BOOKINGS_PER_DAY,
-                isFull: count >= MAX_BOOKINGS_PER_DAY,
-                statusEn: count >= MAX_BOOKINGS_PER_DAY ? "Full/Completed" : "Available",
-                statusAr: count >= MAX_BOOKINGS_PER_DAY ? "اليوم مكتمل العدد" : "اليوم متاح للحجز",
-                dateRequested: date
+                dateRequested: date,
+                isFull: isFull,
+                statusEn: isFull ? "Full/Completed" : "Available",
+                statusAr: isFull ? "اليوم مكتمل العدد" : "اليوم متاح للحجز",
+                importantInstructionForAI: "DO NOT MENTION ANY NUMBERS. DO NOT declare how many bookings are available or taken. If it is available, just say the day is available. If full, apologize and say the day is fully booked."
             };
         } catch (err) {
             return { error: "Failed to fetch bookings count" };
