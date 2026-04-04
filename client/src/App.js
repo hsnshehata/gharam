@@ -18,6 +18,7 @@ import PriceList from './pages/PriceList';
 import MassageChair from './pages/MassageChair';
 import Gallery from './pages/Gallery';
 import GalleryAdmin from './pages/GalleryAdmin';
+import AISettings from './pages/AISettings';
 import PointsAdmin from './pages/PointsAdmin';
 import Navbar from './components/Navbar';
 import { ToastProvider } from './components/ToastProvider';
@@ -96,7 +97,7 @@ function AppContent() {
           </div>
         ) : (
           <>
-            {user && <Navbar user={user} setUser={setUser} />}
+            {user && !['/landing', '/prices', '/massage-chair', '/gallery'].includes(location.pathname) && <Navbar user={user} setUser={setUser} />}
             <Routes>
           <Route path="/login" element={<Login setUser={setUser} />} />
           <Route path="/landing" element={<Landing />} />
@@ -106,6 +107,10 @@ function AppContent() {
           <Route
             path="/gallery-admin"
             element={user && user.role === 'admin' ? <GalleryAdmin /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/ai-settings"
+            element={user && user.role === 'admin' ? <AISettings /> : <Navigate to="/login" />}
           />
           <Route
             path="/users"

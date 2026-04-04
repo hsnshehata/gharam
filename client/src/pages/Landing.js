@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { googleReviews } from '../data/googleReviews';
 import { API_BASE } from '../utils/apiBase';
+import AIChatPopup from '../components/AIChatPopup';
 
 const WHATSAPP_LINK = 'https://wa.me/gharam';
 const MAP_LINK = 'https://maps.app.goo.gl/cpF8J7rw6ScxZwiv5';
@@ -10,9 +11,8 @@ const TIKTOK_LINK = 'https://www.tiktok.com/@gharamsoltan';
 const INSTAGRAM_LINK = 'https://www.instagram.com/gharamsoltan';
 const FACEBOOK_LINK = 'https://www.facebook.com/gharam.ml';
 const THREADS_LINK = 'https://www.threads.net/@gharamsoltan';
-const SUPPORT_LINK = 'https://zainbot.com/chat/ghazal';
-const LANDLINE = '0472570908';
 const CANONICAL_URL = 'https://gharam.art/';
+const LANDLINE = '0472570908';
 const BUSINESS_NAME = 'غرام سلطان بيوتي سنتر وستوديو';
 const BUSINESS_DESCRIPTION = 'ميكب ارتيست وتصوير احترافي وحجز باكدجات زفاف، صبغة وفرد شعر، ومساج ضد الجاذبية في كفر الشيخ. حجزي أونلاين وتابعي التوافر الفوري.';
 const BUSINESS_EMAIL = 'info@gharam.art';
@@ -64,30 +64,7 @@ const socialLinks = [
 ];
 
 const socialLinksNoWhatsApp = socialLinks.filter((s) => s.label !== 'WhatsApp');
-const themes = {
-	light: {
-		bg: '#f9f6f1',
-		card: '#ffffff',
-		text: '#1d130d',
-		muted: '#5e5146',
-		border: '#e6dfd4',
-		gold: '#c49841',
-		accent: '#1fb6a6',
-		overlay: '#f1e7d8',
-		shadow: 'rgba(0,0,0,0.08)'
-	},
-	dark: {
-		bg: '#0f0b0a',
-		card: '#181210',
-		text: '#f7f3ee',
-		muted: '#cfc5b7',
-		border: '#2b2320',
-		gold: '#c6a15b',
-		accent: '#1aa193',
-		overlay: '#241915',
-		shadow: 'rgba(0,0,0,0.28)'
-	}
-};
+// palette is now defined within the component for internal use
 
 const PhoneIcon = ({ size = 18 }) => (
 	<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -218,25 +195,40 @@ const formatReviewDate = (rev) => {
 };
 
 function Landing() {
+	const palette = {
+		bg: '#080f0b',
+		card: 'rgba(15,36,25,0.65)',
+		cardSolid: '#0d2118',
+		text: '#f5f0e8',
+		muted: '#b0a08a',
+		border: 'rgba(201,160,78,0.12)',
+		gold: '#c9a04e',
+		goldLight: '#e6c27b',
+		accent: '#1a3a2a',
+		overlay: 'rgba(13,31,21,0.8)',
+		shadow: 'rgba(0,0,0,0.45)',
+		glassBlur: 'blur(18px)',
+		gradientCard: 'linear-gradient(145deg, rgba(15,36,25,0.7), rgba(10,26,18,0.5))',
+		gradientGold: 'linear-gradient(135deg, #c9a04e, #e6c27b)',
+		gradientGreen: 'linear-gradient(135deg, #1a3a2a, #2a5a3a)'
+	};
+
 	const [packageType, setPackageType] = useState('makeup');
 	const [date, setDate] = useState('');
 	const [availability, setAvailability] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState('');
-	const [showChat, setShowChat] = useState(false);
+	const [showAIChat, setShowAIChat] = useState(false);
+	const [fabOpen, setFabOpen] = useState(false);
 	const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
-	const [theme, setTheme] = useState(() => {
-		if (typeof window === 'undefined') return 'light';
-		return localStorage.getItem('theme') || 'light';
-	});
-	const [spinSpeed, setSpinSpeed] = useState(1);
+	// Dark mode only - no theme toggle needed
+
 	const [currentFaqIdx, setCurrentFaqIdx] = useState(0);
 	const [expandedFaqAnswer, setExpandedFaqAnswer] = useState(false);
 	const [autoRotatePaused, setAutoRotatePaused] = useState(false);
 	const [facebookFeed, setFacebookFeed] = useState([]);
 	const [currentFbItemIdx, setCurrentFbItemIdx] = useState(0);
 	const [fbAutoRotatePaused, setFbAutoRotatePaused] = useState(false);
-	const [fbExpandedComments, setFbExpandedComments] = useState(false);
 	const [fbTouchStart, setFbTouchStart] = useState(null);
 	const DESIRED_REVIEW_COUNT = 12;
 	const fallbackReviews = useMemo(() => shuffle(googleReviews).slice(0, DESIRED_REVIEW_COUNT), []);
@@ -249,14 +241,12 @@ function Landing() {
 	const [reviewsLoading, setReviewsLoading] = useState(false);
 	const [reviewsError, setReviewsError] = useState('');
 
-	const palette = themes[theme];
+	// palette is now a constant defined at module level
 	const availabilityBadge = availability ? availabilityCopy[availability.status] : null;
-	const spinADuration = Math.max(25, 35 / spinSpeed);
-	const spinBDuration = Math.max(25, 35 / spinSpeed);
+
 	const formattedRating = typeof reviewsData.rating === 'number' ? reviewsData.rating.toFixed(1) : '5.0';
 	const formattedTotalReviews = reviewsData.totalReviews ? reviewsData.totalReviews.toLocaleString('en-US') : '1100+';
 	const isGoogleReviews = reviewsData.source === 'google';
-	const activeFbPost = facebookFeed[currentFbItemIdx] || facebookFeed[0];
 	const fbVisiblePosts = useMemo(() => {
 		if (!facebookFeed.length) return [];
 		const count = Math.min(3, facebookFeed.length);
@@ -470,9 +460,13 @@ function Landing() {
 		jsonLd.textContent = JSON.stringify([localBusiness, breadcrumb, article, faqSchema]);
 	}, [reviewsData]);
 
+	// Theme Isolation: Landing in Dark, Rest in Light
 	useEffect(() => {
-		localStorage.setItem('theme', theme);
-	}, [theme]);
+		document.documentElement.setAttribute('data-theme', 'dark');
+		return () => {
+			document.documentElement.setAttribute('data-theme', 'light');
+		};
+	}, []);
 
 	// FAQ auto-rotate: show one question at a time, change every 4 seconds
 	useEffect(() => {
@@ -535,16 +529,7 @@ function Landing() {
 		setFbAutoRotatePaused(false);
 	};
 
-	useEffect(() => {
-		const link = document.createElement('link');
-		link.rel = 'preconnect';
-		link.href = new URL(SUPPORT_LINK).origin;
-		link.crossOrigin = 'anonymous';
-		document.head.appendChild(link);
-		return () => {
-			if (link.parentNode) link.parentNode.removeChild(link);
-		};
-	}, []);
+	// SUPPORT_LINK iframe connect removed
 
 	// Keep chat iframe mounted once so it stays دافئ وجاهز للعرض
 
@@ -564,21 +549,7 @@ function Landing() {
 		return () => observer.disconnect();
 	}, []);
 
-	useEffect(() => {
-		let frame;
-		const handleScroll = () => {
-			if (frame) cancelAnimationFrame(frame);
-			frame = requestAnimationFrame(() => {
-				const factor = 1 + Math.min(window.scrollY / 1400, 0.4);
-				setSpinSpeed((prev) => (Math.abs(prev - factor) > 0.02 ? factor : prev));
-			});
-		};
-		window.addEventListener('scroll', handleScroll, { passive: true });
-		return () => {
-			if (frame) cancelAnimationFrame(frame);
-			window.removeEventListener('scroll', handleScroll);
-		};
-	}, []);
+
 
 	const handleCheckAvailability = async () => {
 		setError('');
@@ -647,18 +618,14 @@ function Landing() {
 			--accent: ${palette.accent};
 			--overlay: ${palette.overlay};
 			--shadow: ${palette.shadow};
-			--social-base: ${theme === 'dark' ? '#f7f3ee' : palette.muted};
+			--social-base: #f7f3ee;
+			--glass: rgba(15,36,25,0.55);
+			--glass-border: rgba(201,160,78,0.15);
 		}
-		body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Tajawal', 'Arial', sans-serif; }
-		.landing-page { background: var(--bg); min-height: 100vh; position: relative; overflow: hidden; }
-		.floating-icons { position: fixed; inset: 0; pointer-events: auto; z-index: 0; }
-		.floating-icons span { position: absolute; font-size: 40px; opacity: 0.22; animation: float 6s ease-in-out infinite, drift 14s linear infinite; transition: transform 0.28s ease, opacity 0.18s ease; cursor: default; }
-		.floating-icons span:hover { opacity: 0.4; transform: scale(1.18) rotate(6deg); }
-		.floating-icons span:nth-child(1) { top: 10%; left: 14%; animation-duration: 6.5s, 16s; }
-		.floating-icons span:nth-child(2) { top: 26%; right: 14%; animation-duration: 6s, 15s; }
-		.floating-icons span:nth-child(3) { top: 50%; left: 6%; animation-duration: 6.2s, 17s; }
-		.floating-icons span:nth-child(4) { top: 64%; right: 10%; animation-duration: 6.8s, 16.5s; }
-		.floating-icons span:nth-child(5) { top: 80%; left: 44%; animation-duration: 6.1s, 15.5s; }
+		.landing-page { margin: 0; background: #080f0b; color: #f5f0e8; font-family: 'Tajawal', 'Arial', sans-serif; min-height: 100vh; position: relative; overflow: hidden; }
+		.landing-page::before { content: ''; position: fixed; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(ellipse at 20% 50%, rgba(26,58,42,0.15) 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, rgba(201,160,78,0.06) 0%, transparent 40%), radial-gradient(ellipse at 50% 80%, rgba(26,58,42,0.1) 0%, transparent 50%); pointer-events: none; z-index: 0; animation: ambientShift 20s ease-in-out infinite alternate; }
+		@keyframes ambientShift { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(-3%, 2%) scale(1.05); } }
+
 		@keyframes float {
 			0% { transform: translateY(0); }
 			50% { transform: translateY(-18px); }
@@ -669,75 +636,57 @@ function Landing() {
 			50% { transform: translateX(12px) rotate(6deg); }
 			100% { transform: translateX(0) rotate(0deg); }
 		}
-		.sparkles { position: fixed; inset: 0; pointer-events: none; z-index: 0; mix-blend-mode: screen; }
-		.sparkles span { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 60%); opacity: 0.5; animation: twinkle 2.6s ease-in-out infinite; }
-		.sparkles span:nth-child(1) { top: 14%; left: 32%; animation-delay: 0.2s; }
-		.sparkles span:nth-child(2) { top: 38%; right: 24%; animation-delay: 0.6s; }
-		.sparkles span:nth-child(3) { top: 58%; left: 22%; animation-delay: 1.1s; }
-		.sparkles span:nth-child(4) { top: 72%; right: 30%; animation-delay: 0.4s; }
-		.sparkles span:nth-child(5) { top: 18%; right: 48%; animation-delay: 1s; }
-		.sparkles span:nth-child(6) { top: 66%; left: 52%; animation-delay: 1.4s; }
-		.sparkles span:nth-child(7) { top: 30%; left: 12%; animation-delay: 0.8s; }
-		.sparkles span:nth-child(8) { top: 82%; right: 12%; animation-delay: 1.6s; }
-		@keyframes twinkle {
-			0%, 100% { transform: scale(0.6); opacity: 0.2; }
-			50% { transform: scale(1.4); opacity: 0.8; }
-		}
-		@keyframes float {
-			0% { transform: translateY(0); }
-			50% { transform: translateY(-12px); }
-			100% { transform: translateY(0); }
-		}
-		@keyframes drift {
-			0% { transform: translateX(0) rotate(0deg); }
-			50% { transform: translateX(6px) rotate(4deg); }
-			100% { transform: translateX(0) rotate(0deg); }
-		}
-		.container { width: min(1200px, 92%); margin: 0 auto; position: relative; z-index: 1; }
-		.topbar { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 18px 0; }
-		.brand { display: flex; align-items: center; justify-content: center; text-align: center; gap: 12px; font-weight: 800; }
+
+		.container { width: min(1200px, 92%); margin: 0 auto; position: relative; z-index: 1; padding-top: 40px; display: flex; flex-direction: column; gap: 32px; }
+		.container > section, .container > .card { position: relative; }
+		.container h2 { color: #f5f0e8; font-size: clamp(20px, 3vw, 26px); }
+		.container h2::after { content: ''; display: block; width: 50px; height: 2px; background: linear-gradient(90deg, #c9a04e, transparent); margin-top: 8px; border-radius: 2px; }
 		.brand img { width: 64px; height: 64px; object-fit: contain; }
 		.pill { display: inline-flex; gap: 8px; align-items: center; padding: 10px 14px; background: rgba(0,0,0,0.03); border: 1px solid var(--border); border-radius: 999px; color: var(--muted); font-size: 14px; }
-		.hero { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 32px; align-items: center; padding: 24px 0 12px; }
-		.hero > * { position: relative; z-index: 1; }
-		.hero img { position: relative; z-index: 1; width: 100%; border-radius: 16px; object-fit: cover; box-shadow: none; border: none; background: transparent; mix-blend-mode: normal; filter: none; }
-		.hero-visual { position: relative; display: flex; align-items: center; justify-content: center; padding: 12px; }
-		.floating-squares { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; filter: drop-shadow(0 12px 24px var(--shadow)); z-index: 0; }
-		.square { position: absolute; display: grid; place-items: center; border-radius: 18px; pointer-events: none; }
-		.square .ring { position: absolute; inset: 0; border-radius: 18px; mix-blend-mode: screen; opacity: 0.65; backdrop-filter: blur(6px); }
-		.square.gold { width: 86%; height: 86%; animation: swap-large 12s ease-in-out infinite; }
-		.square.gold .ring { border: 1px solid var(--gold); background: linear-gradient(135deg, rgba(196,152,65,0.25), rgba(196,152,65,0.08)); box-shadow: 0 18px 36px rgba(196,152,65,0.18); animation: spin-cw ${spinADuration}s linear infinite; }
-		.square.turquoise { width: 66%; height: 66%; animation: swap-small 12s ease-in-out infinite; }
-		.square.turquoise .ring { border: 1px solid var(--accent); background: linear-gradient(135deg, rgba(31,182,166,0.22), rgba(31,182,166,0.06)); box-shadow: 0 18px 36px rgba(31,182,166,0.16); animation: spin-ccw ${spinBDuration}s linear infinite; }
-		@keyframes spin-cw { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-		@keyframes spin-ccw { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
-		@keyframes swap-large { 0%,100% { transform: scale(1); } 50% { transform: scale(0.74); } }
-		@keyframes swap-small { 0%,100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+		.hero { position: relative; width: 100%; height: 100vh; min-height: 600px; display: flex; align-items: center; justify-content: flex-end; overflow: hidden; margin: 0 -4%; width: 108%; border-radius: 0 0 32px 32px; }
+		.hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; z-index: 0; }
+		.hero-overlay { position: absolute; inset: 0; z-index: 1; background: linear-gradient(to left, rgba(26,58,42,0.0) 35%, rgba(26,58,42,0.55) 60%, rgba(26,58,42,0.92) 100%); }
+		.hero-content { position: relative; z-index: 2; max-width: 680px; padding: 48px 8%; display: flex; flex-direction: column; gap: 20px; text-align: center; align-items: center; }
+		.hero-tag { display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 999px; background: rgba(201,160,78,0.15); border: 1px solid rgba(201,160,78,0.35); color: #c9a04e; font-weight: 700; font-size: 14px; width: fit-content; backdrop-filter: blur(4px); }
+		.hero-particles { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+		.hero-particle { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: radial-gradient(circle, rgba(201,160,78,0.8) 0%, rgba(201,160,78,0) 70%); animation: particleFloat 8s ease-in-out infinite; }
+		@keyframes particleFloat { 0%,100% { transform: translateY(0) scale(0.5); opacity: 0.3; } 50% { transform: translateY(-60px) scale(1.2); opacity: 0.8; } }
+		@keyframes heroFadeIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+		.hero-content > * { animation: heroFadeIn 0.8s ease both; }
+		.hero-content > *:nth-child(1) { animation-delay: 0.2s; }
+		.hero-content > *:nth-child(2) { animation-delay: 0.4s; }
+		.hero-content > *:nth-child(3) { animation-delay: 0.6s; }
+		.hero-content > *:nth-child(4) { animation-delay: 0.8s; }
+		.hero-content > *:nth-child(5) { animation-delay: 1s; }
 		h1 { margin: 8px 0 16px; font-size: clamp(28px, 4vw, 42px); line-height: 1.2; }
 		h2 { margin: 0 0 12px; }
 		p { color: var(--muted); line-height: 1.75; margin: 0; }
 		.cta-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
 		.cta-row.center { justify-content: center; }
-		.btn { border: none; cursor: pointer; padding: 12px 18px; border-radius: 12px; font-weight: 700; transition: transform 0.15s ease, box-shadow 0.15s ease; color: #0f0b0a; }
-		.btn:hover { transform: translateY(-2px); box-shadow: 0 12px 28px var(--shadow); }
-		.btn-primary { background: linear-gradient(135deg, var(--gold), #e6c27b); color: #0f0b0a; }
-		.btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
-		.btn-ghost { background: rgba(0,0,0,0.03); color: var(--text); border: 1px solid var(--border); }
-		.btn-prices { background: linear-gradient(135deg, var(--gold), #e6c27b); color: #0f0b0a; padding: 14px 24px; font-size: 16px; min-width: 220px; text-align: center; box-shadow: 0 14px 30px var(--shadow); border: 1px solid var(--border); }
+		.btn { border: none; cursor: pointer; padding: 12px 24px; border-radius: 14px; font-weight: 700; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+		.btn:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(0,0,0,0.4); }
+		.btn-primary { background: linear-gradient(135deg, #c9a04e, #e6c27b); color: #080f0b !important; border: 1px solid rgba(255,255,255,0.2); }
+		.btn-primary:hover { background: linear-gradient(135deg, #e6c27b, #c9a04e); box-shadow: 0 10px 25px rgba(201,160,78,0.3); }
+		.btn-outline { background: rgba(201,160,78,0.05); color: #c9a04e !important; border: 1px solid rgba(201,160,78,0.3); backdrop-filter: blur(8px); }
+		.btn-outline:hover { background: rgba(201,160,78,0.12); border-color: #c9a04e; }
+		.btn-artistic { background: rgba(255,255,255,0.03); color: #f5f0e8 !important; border: 1px solid rgba(201,160,78,0.4); position: relative; overflow: hidden; z-index: 1; }
+		.btn-artistic::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(201,160,78,0.1), transparent); transform: translateX(-100%); transition: transform 0.6s; z-index: -1; }
+		.btn-artistic:hover::after { transform: translateX(100%); }
+		.btn-artistic:hover { border-color: #c9a04e; background: rgba(201,160,78,0.08); }
+		.btn-green { background: linear-gradient(135deg, #1a3a2a, #2a5a3a); color: #fff !important; border: 1px solid rgba(201,160,78,0.2); }
+		.btn-green:hover { box-shadow: 0 10px 25px rgba(26,58,42,0.4); }
 		.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 26px 0; }
-		.landing-page .card { background: var(--card) !important; color: var(--text) !important; border: 1px solid var(--border) !important; box-shadow: 0 15px 30px var(--shadow) !important; padding: 18px; border-radius: 14px; }
-		.card h3 { margin: 0 0 6px; font-size: 19px; color: var(--text); }
+		.landing-page .card { background: var(--glass) !important; color: var(--text) !important; border: 1px solid var(--glass-border) !important; box-shadow: 0 15px 40px var(--shadow), inset 0 1px 0 rgba(201,160,78,0.08) !important; padding: 28px; border-radius: 22px; transition: all 0.4s ease; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+		.landing-page .card:hover { box-shadow: 0 24px 50px var(--shadow), inset 0 1px 0 rgba(201,160,78,0.15) !important; border-color: rgba(201,160,78,0.3) !important; transform: translateY(-2px); }
+		.card h3 { margin: 0 0 6px; font-size: 19px; color: var(--gold); }
 		.card p { margin: 0; }
-		.badge { display: inline-block; background: rgba(198,161,91,0.18); color: var(--text); padding: 6px 12px; border-radius: 999px; font-size: 13px; border: 1px solid rgba(198,161,91,0.4); }
+		.badge { display: inline-block; background: rgba(201,160,78,0.12); color: var(--gold); padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 700; border: 1px solid rgba(201,160,78,0.3); backdrop-filter: blur(8px); }
 		.highlight { margin: 32px 0; }
-		.massage-banner { position: relative; overflow: hidden; border-radius: 16px; min-height: 340px; color: #fff; display: flex; align-items: flex-end; justify-content: flex-start; padding: 26px 30px; background: url('https://www.irestonline.com.au/wp-content/uploads/2024/04/02-brown.jpg') center/cover no-repeat; box-shadow: 0 20px 40px var(--shadow); border: 1px solid var(--border); }
-		.massage-banner::after { content: ''; position: absolute; inset: 0; background: linear-gradient(130deg, rgba(0,0,0,0.35) 18%, rgba(0,0,0,0.18) 52%, rgba(0,0,0,0.05)); }
-		.massage-banner .content { position: relative; z-index: 1; max-width: 520px; display: grid; gap: 10px; text-align: right; margin-right: auto; background: rgba(0,0,0,0.34); backdrop-filter: blur(4px); padding: 16px 18px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.18); box-shadow: 0 12px 28px rgba(0,0,0,0.3); }
-		.massage-banner h2 { margin: 0; color: #fff; }
-		.massage-banner p { color: #f0eae4; margin: 0; }
-		.badge-new { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.14); color: #fff; padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.3); font-weight: 700; }
-		.massage-banner .cta-row .btn-outline { border-color: rgba(255,255,255,0.4); color: #fff; background: rgba(255,255,255,0.08); }
-		.massage-banner .cta-row .btn-outline:hover { background: rgba(255,255,255,0.14); }
+		.massage-banner { position: relative; overflow: hidden; border-radius: 32px; min-height: 400px; color: #fff; display: flex; align-items: center; justify-content: flex-end; padding: 40px; background: url('https://www.irestonline.com.au/wp-content/uploads/2024/04/02-brown.jpg') center/cover no-repeat; box-shadow: 0 30px 60px var(--shadow); border: 1px solid rgba(201,160,78,0.2); margin: 40px 0; }
+		.massage-banner::after { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, rgba(10,26,18,0.85) 30%, rgba(10,26,18,0.4) 60%, transparent 100%); }
+		.massage-banner .content { position: relative; z-index: 2; max-width: 480px; text-align: right; margin-left: 0; }
+		.massage-banner h2 { font-size: clamp(24px, 4vw, 32px); line-height: 1.2; margin-bottom: 16px; }
+		.massage-glass-card { background: rgba(26,58,42,0.6); backdrop-filter: blur(12px); padding: 28px; border-radius: 24px; border: 1px solid rgba(201,160,78,0.2); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
 		.why-card { margin: 10px 0 32px; }
 		.availability { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; align-items: start; margin: 32px 0; }
 		.availability form { display: grid; gap: 12px; }
@@ -746,35 +695,43 @@ function Landing() {
 		.availability-result { padding: 18px; border-radius: 14px; border: 1px solid var(--border); background: var(--card); min-width: min(460px, 92vw); box-shadow: 0 24px 48px var(--shadow); color: var(--text); }
 		.availability-result h4 { margin: 0 0 6px; color: var(--text); }
 		.contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin: 20px 0; }
-		.contact-card { display: flex; flex-direction: column; gap: 8px; padding: 16px; border-radius: 14px; border: 1px solid var(--border); background: rgba(0,0,0,0.02); box-shadow: 0 10px 22px var(--shadow); }
-		.contact-title { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--text); }
+		.contact-card { display: flex; flex-direction: column; gap: 8px; padding: 20px; border-radius: 18px; border: 1px solid var(--glass-border); background: var(--glass); box-shadow: 0 10px 30px var(--shadow), inset 0 1px 0 rgba(201,160,78,0.06); transition: all 0.4s ease; backdrop-filter: blur(16px); }
+		.contact-card:hover { border-color: rgba(201,160,78,0.35); transform: translateY(-4px); box-shadow: 0 20px 40px var(--shadow), inset 0 1px 0 rgba(201,160,78,0.12); }
+		.contact-title { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; color: var(--gold); }
 		.contact-desc { color: var(--muted); font-size: 14px; }
 		.quick-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 8px 0 24px; }
-		.quick-link { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; border: 1px solid var(--border); background: rgba(0,0,0,0.02); color: var(--text); text-decoration: none; transition: transform 0.15s ease, box-shadow 0.15s ease; }
-		.quick-link:hover { transform: translateY(-2px); box-shadow: 0 10px 20px var(--shadow); }
+		.quick-link { display: flex; align-items: center; gap: 10px; padding: 14px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass); color: var(--text); text-decoration: none; transition: all 0.35s ease; backdrop-filter: blur(12px); }
+		.quick-link:hover { transform: translateY(-3px); box-shadow: 0 14px 28px var(--shadow); border-color: rgba(201,160,78,0.4); background: rgba(201,160,78,0.08); }
 		.quick-link span.icon { font-size: 18px; }
 		.quick-link svg { width: 26px; height: 26px; fill: currentColor; }
 		.map-embed-card { margin: 22px 0; }
 		.map-frame { position: relative; width: 100%; padding-top: 56%; border-radius: 14px; overflow: hidden; box-shadow: 0 14px 28px var(--shadow); border: 1px solid var(--border); background: var(--card); }
 		.map-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
-		.trust-section { padding: 40px 0; margin: 28px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-		.trust-heading { text-align: center; color: var(--muted); font-weight: 700; margin-bottom: 16px; letter-spacing: 0.5px; }
+		.trust-section { padding: 48px 0; margin: 28px 0; border-radius: 18px; background: linear-gradient(135deg, #1a3a2a, #0f2419); border: 1px solid rgba(201,160,78,0.2); }
+		.trust-heading { text-align: center; color: #c9a04e; font-weight: 700; margin-bottom: 16px; letter-spacing: 0.5px; font-size: 18px; }
 		.trust-logos { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px 32px; align-items: center; }
-		.trust-item { display: inline-flex; align-items: center; gap: 12px; font-weight: 900; font-size: 22px; filter: grayscale(1); opacity: 0.4; transition: filter 0.7s ease, opacity 0.7s ease, transform 0.25s ease; }
-		.trust-item:hover { filter: grayscale(0); opacity: 1; transform: translateY(-2px); }
+		.trust-item { display: inline-flex; align-items: center; gap: 12px; font-weight: 900; font-size: 22px; color: rgba(245,240,232,0.85); filter: none; opacity: 0.8; transition: opacity 0.4s ease, transform 0.25s ease; }
+		.trust-item:hover { opacity: 1; transform: translateY(-2px); }
 		.trust-item svg { flex-shrink: 0; }
 		.reviews { margin: 30px 0 40px; }
 		.reviews-header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
-		.stars { color: #f4c150; font-size: 18px; letter-spacing: 1px; }
+		.stars { color: #c9a04e; font-size: 18px; letter-spacing: 1px; }
 		.review-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 16px; }
-		.review-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; min-height: 170px; box-shadow: 0 14px 28px var(--shadow); }
-		.review-card.google { border-color: rgba(31,182,166,0.35); box-shadow: 0 16px 30px rgba(31,182,166,0.18); }
+		.review-card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 18px; padding: 20px; min-height: 170px; box-shadow: 0 14px 30px var(--shadow), inset 0 1px 0 rgba(201,160,78,0.06); transition: all 0.4s ease; backdrop-filter: blur(14px); }
+		.review-card:hover { border-color: rgba(201,160,78,0.35); transform: translateY(-4px); box-shadow: 0 20px 40px var(--shadow); }
+		.review-card.google { border-color: rgba(201,160,78,0.3); box-shadow: 0 16px 30px rgba(201,160,78,0.06); }
 		.review-meta { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
-		.package-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin: 20px 0; }
-		.package-card { position: relative; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: 0 14px 28px var(--shadow); display: grid; gap: 10px; }
-		.package-label { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 999px; border: 1px solid rgba(198,161,91,0.4); background: rgba(198,161,91,0.12); color: var(--text); font-weight: 700; width: fit-content; }
-		.package-price { color: var(--gold); font-weight: 800; }
-		.package-points { margin: 0; padding-inline-start: 18px; color: var(--muted); line-height: 1.6; }
+		.package-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin: 30px 0; }
+		.package-card { position: relative; background: var(--glass); border: 1px solid var(--glass-border); border-radius: 28px; padding: 32px; box-shadow: 0 14px 35px var(--shadow); display: flex; flex-direction: column; gap: 16px; transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); backdrop-filter: blur(20px); overflow: hidden; }
+		.package-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: linear-gradient(90deg, transparent, var(--gold), transparent); opacity: 0; transition: opacity 0.3s; }
+		.package-card:hover { transform: translateY(-10px); border-color: rgba(201,160,78,0.5); box-shadow: 0 30px 60px var(--shadow); }
+		.package-card:hover::before { opacity: 1; }
+		.package-label { display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: 999px; background: rgba(201,160,78,0.1); border: 1px solid rgba(201,160,78,0.3); color: var(--gold); font-weight: 700; font-size: 13px; width: fit-content; }
+		.package-price { color: #fff; font-weight: 800; font-size: 1.5em; margin: 10px 0; display: flex; align-items: baseline; gap: 4px; }
+		.package-price span { font-size: 0.6em; color: var(--gold); }
+		.package-points { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+		.package-points li { position: relative; padding-inline-start: 22px; color: rgba(245,240,232,0.8); font-size: 15px; }
+		.package-points li::before { content: '✦'; position: absolute; right: 0; color: var(--gold); font-size: 12px; }
 		.package-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 		.reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.7s ease, transform 0.7s ease; }
 		.reveal.visible { opacity: 1; transform: translateY(0); }
@@ -916,52 +873,58 @@ function Landing() {
 		.fb-carousel-item { opacity: 0; visibility: hidden; transition: opacity 0.5s ease, visibility 0.5s ease; position: absolute; width: 100%; }
 		.fb-carousel-item.active { opacity: 1; visibility: visible; position: relative; }
 		.fb-section { animation: fadeIn 0.6s ease both; }
-		.fb-post-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 0; overflow: hidden; box-shadow: 0 12px 28px var(--shadow); }
-		.fb-post-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
-		.fb-post-header img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-		.fb-post-meta { display: flex; flex-direction: column; gap: 2px; flex: 1; }
-		.fb-post-meta h4 { margin: 0; font-size: 14px; font-weight: 700; color: var(--text); }
-		.fb-post-meta small { color: var(--muted); font-size: 12px; }
-		.fb-post-image { width: 100%; height: 240px; object-fit: cover; background: var(--overlay); }
-		.fb-post-video { width: 100%; max-height: 400px; background: var(--overlay); display: flex; align-items: center; justify-content: center; position: relative; }
-		.fb-video-play { width: 60px; height: 60px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; transition: transform 0.2s ease; }
-		.fb-video-play:hover { transform: scale(1.1); }
-		.fb-post-message { padding: 16px; color: var(--text); font-size: 14px; line-height: 1.6; }
-		.fb-post-stats { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); font-size: 13px; color: var(--muted); }
-		.fb-stat-item { display: flex; align-items: center; gap: 6px; }
-		.fb-comments-section { padding: 12px 16px; }
-		.fb-comment { display: flex; gap: 10px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
-		.fb-comment:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-		.fb-comment-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--overlay); flex-shrink: 0; }
-		.fb-comment-body { flex: 1; }
-		.fb-comment-author { font-weight: 700; font-size: 13px; color: var(--text); }
-		.fb-comment-text { color: var(--text); font-size: 13px; line-height: 1.5; margin: 4px 0 0; }
-		.fb-view-all-comments { width: 100%; padding: 10px; text-align: center; color: var(--accent); cursor: pointer; font-weight: 700; font-size: 13px; background: var(--overlay); border: 1px solid var(--border); border-radius: 8px; transition: all 0.2s ease; margin-top: 8px; }
-		.fb-view-all-comments:hover { background: var(--card); border-color: var(--accent); }
-		.fb-post-actions { display: flex; gap: 8px; padding: 12px 16px; }
-		.fb-action-btn { flex: 1; padding: 10px; background: var(--overlay); border: 1px solid var(--border); border-radius: 8px; color: var(--text); cursor: pointer; font-weight: 700; font-size: 13px; transition: all 0.2s ease; }
-		.fb-action-btn:hover { background: linear-gradient(135deg, rgba(196,152,65,0.1), rgba(31,182,166,0.08)); border-color: var(--gold); }
-		.fb-nav-dots { display: flex; justify-content: center; gap: 8px; margin-top: 14px; }
-		.fb-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); cursor: pointer; transition: all 0.3s ease; }
-		.fb-dot.active { background: var(--gold); width: 24px; border-radius: 999px; box-shadow: 0 4px 12px rgba(196,152,65,0.3); }
-		.fb-dot:hover { background: var(--gold); }
-		.google-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(66,133,244,0.12); color: #1a73e8; padding: 4px 10px; border-radius: 999px; font-weight: 700; border: 1px solid rgba(66,133,244,0.2); font-size: 12px; }
-		.fallback-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(198,161,91,0.14); color: var(--text); padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(198,161,91,0.3); font-size: 12px; }
-		.footer { margin: 28px 0 56px; text-align: center; color: var(--muted); font-size: 14px; }
+		.fb-carousel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; width: 100%; }
+		.fb-post-card { position: relative; border-radius: 18px; overflow: hidden; aspect-ratio: 4/5; background: var(--card); border: 1px solid var(--glass-border); box-shadow: 0 14px 35px var(--shadow); transition: all 0.4s ease; }
+		.fb-post-card:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 24px 50px var(--shadow); border-color: rgba(201,160,78,0.4); }
+		.fb-post-card:hover .fb-post-overlay { opacity: 1; }
+		.fb-post-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s ease; }
+		.fb-post-card:hover .fb-post-image { transform: scale(1.08); }
+		.fb-post-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(10,26,18,0.95) 0%, rgba(10,26,18,0.3) 50%, transparent 100%); display: flex; flex-direction: column; justify-content: flex-end; padding: 20px; opacity: 0; transition: opacity 0.4s ease; z-index: 2; }
+		.fb-play-icon { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 56px; height: 56px; background: rgba(201,160,78,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; color: #0f2419; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+		.fb-post-bottom { display: flex; flex-direction: column; gap: 8px; }
+		.fb-post-caption { color: rgba(245,240,232,0.9); font-size: 13px; line-height: 1.5; margin: 0; }
+		.fb-post-engagement { display: flex; gap: 14px; font-size: 13px; color: rgba(201,160,78,0.9); font-weight: 700; }
+		.fb-nav-dots { display: flex; justify-content: center; gap: 12px; margin-top: 24px; }
+		.fb-dot { width: 30px; height: 3px; background: rgba(201,160,78,0.15); border-radius: 4px; cursor: pointer; transition: all 0.4s ease; position: relative; overflow: hidden; }
+		.fb-dot::after { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 0; background: #c9a04e; transition: width 0.4s ease; }
+		.fb-dot.active { width: 50px; background: rgba(201,160,78,0.3); }
+		.fb-dot.active::after { width: 100%; box-shadow: 0 0 10px #c9a04e; }
+		@media (max-width: 768px) { .fb-carousel { grid-template-columns: repeat(2, 1fr); gap: 10px; } .fb-post-overlay { opacity: 1; } }
+		@media (max-width: 480px) { .fb-carousel { grid-template-columns: 1fr; gap: 12px; } }
+		.google-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(201,160,78,0.12); color: var(--gold); padding: 4px 10px; border-radius: 999px; font-weight: 700; border: 1px solid rgba(201,160,78,0.25); font-size: 12px; }
+		.fallback-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(201,160,78,0.08); color: var(--muted); padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(201,160,78,0.2); font-size: 12px; }
+		.footer { margin: 28px 0 0; text-align: center; padding: 40px 0 90px; background: linear-gradient(135deg, #1a3a2a, #0f2419); border-radius: 18px 18px 0 0; border-top: 1px solid rgba(201,160,78,0.2); color: rgba(245,240,232,0.85); font-size: 14px; }
+		.footer .social-link { color: rgba(245,240,232,0.6); }
+		.footer .social-link:hover { color: #c9a04e; }
 		.social-row { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 12px; }
 		.social-link { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; color: var(--social-base); border-radius: 10px; transition: color 0.2s ease, transform 0.2s ease; }
 		.social-link svg { width: 28px; height: 28px; fill: currentColor; }
 		.social-link:hover { transform: translateY(-2px); color: var(--hover, var(--gold)); }
-		.sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 8px 10px; background: ${theme === 'light' ? 'rgba(255,255,255,0.96)' : 'rgba(24,18,16,0.92)'}; border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 20px 40px var(--shadow); z-index: 100; width: fit-content; max-width: calc(100% - 24px); }
-		.sticky-bar .btn { padding: 10px 12px; }
+		.fab-container { position: fixed; bottom: 24px; right: 24px; z-index: 100; display: flex; flex-direction: column-reverse; align-items: center; gap: 12px; }
+		.fab-trigger { width: 56px; height: 56px; border-radius: 50%; border: none; background: linear-gradient(135deg, #1a3a2a, #2a5a3a); color: #c9a04e; font-size: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 28px rgba(26,58,42,0.5); transition: transform 0.3s ease, box-shadow 0.3s ease; }
+		.fab-trigger:hover { transform: scale(1.08); box-shadow: 0 12px 36px rgba(26,58,42,0.6); }
+		.fab-trigger.open { transform: rotate(45deg); background: linear-gradient(135deg, #2a5a3a, #1a3a2a); }
+		.fab-actions { display: flex; flex-direction: column; gap: 10px; align-items: center; opacity: 0; transform: translateY(20px) scale(0.8); pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease; }
+		.fab-actions.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+		.fab-action { position: relative; width: 48px; height: 48px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: transform 0.2s ease, box-shadow 0.2s ease; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+		.fab-action:hover { transform: scale(1.12); box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+		.fab-tooltip { position: absolute; right: 60px; white-space: nowrap; background: rgba(24,18,16,0.95); color: var(--text); padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; box-shadow: 0 4px 12px var(--shadow); pointer-events: none; border: 1px solid var(--glass-border); backdrop-filter: blur(8px); }
+		.fab-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.15); z-index: 99; backdrop-filter: blur(2px); }
 		.support-floating { position: fixed; bottom: 20px; right: 20px; z-index: 120; }
 		.chat-frame { position: fixed; bottom: 20px; right: 20px; width: 360px; max-width: 90vw; height: 520px; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.35); z-index: 121; }
 		.close-btn { position: absolute; top: 10px; left: 10px; background: #dc3545; color: #fff; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 2; }
 		.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 130; padding: 16px; }
 		.modal-card { position: relative; }
 		@media (max-width: 768px) {
-			hero { grid-template-columns: 1fr; padding-top: 12px; }
-			.sticky-bar { justify-content: center; background: ${theme === 'light' ? 'rgba(255,255,255,0.98)' : 'rgba(24,18,16,0.95)'}; }
+			.hero { height: 100vh; min-height: 580px; align-items: flex-end; justify-content: center; }
+			.hero-bg { object-position: 70% center; }
+			.hero-overlay { background: linear-gradient(to top, rgba(26,58,42,0.95) 0%, rgba(26,58,42,0.7) 40%, rgba(26,58,42,0.1) 70%, transparent 100%) !important; }
+			.hero-content { max-width: 100%; padding: 0 20px 100px; text-align: center; align-items: center; gap: 14px; }
+			.hero-content h1 { font-size: clamp(24px, 7vw, 34px); }
+			.hero-content p { font-size: 0.9rem; }
+			.hero-tag { font-size: 12px; padding: 6px 14px; }
+			.cta-row { justify-content: center; }
+			.sticky-bar { justify-content: center; background: rgba(24,18,16,0.95); }
 			.topbar { flex-direction: column; align-items: flex-start; }
 			.fb-carousel { grid-template-columns: 1fr; }
 			.fb-post-card:nth-child(n+2) { display: none; }
@@ -969,146 +932,127 @@ function Landing() {
 		}
 	`;
 
-	const toggleTheme = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+	// Theme toggle removed - dark mode only
 
 	return (
 		<div className="landing-page" dir="rtl">
 			<style>{css}</style>
-			<div className="floating-icons" aria-hidden>
-				<span>💄</span>
-				<span>💅</span>
-				<span>✨</span>
-				<span>👑</span>
-				<span>🌸</span>
-			</div>
-			<div className="sparkles" aria-hidden>
-				<span></span><span></span><span></span><span></span>
-				<span></span><span></span><span></span><span></span>
-			</div>
-			<div className="container">
-				<div className="topbar">
-					<div className="brand">
-						<img src="/logo.png" alt="شعار غرام سلطان" loading="lazy" />
-						<div>
-							<div style={{ fontSize: 18 }}>غرام سلطان</div>
-							<div className="pill">بيوتي سنتر وستوديو </div>
-						</div>
+			<section className="hero reveal">
+					<img
+						className="hero-bg"
+						src="/banner-b.png"
+						alt="غرام سلطان تجهز عروسة في صالون بيوتي سنتر"
+						loading="eager"
+					/>
+					{/* Gradient overlay */}
+					<div className="hero-overlay" />
+					{/* Floating gold particles */}
+					<div className="hero-particles" aria-hidden>
+						{Array.from({ length: 12 }).map((_, i) => (
+							<span
+								key={i}
+								className="hero-particle"
+								style={{
+									top: `${10 + Math.random() * 80}%`,
+									left: `${Math.random() * 60}%`,
+									animationDelay: `${i * 0.7}s`,
+									animationDuration: `${6 + Math.random() * 6}s`,
+									width: `${3 + Math.random() * 4}px`,
+									height: `${3 + Math.random() * 4}px`,
+								}}
+							/>
+						))}
 					</div>
-				</div>
-
-				<section className="hero reveal">
-					<div className="hero-visual">
-						<div className="floating-squares" aria-hidden>
-							<div className="square gold"><div className="ring"></div></div>
-							<div className="square turquoise"><div className="ring"></div></div>
+					{/* Hero content */}
+					<div className="hero-content">
+						<img src="/logo.png" alt="شعار غرام سلطان" style={{ width: '180px', height: '180px', objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))', alignSelf: 'center' }} />
+						<div className="hero-tag">
+							<span>✨</span>
+							<span>خبيرة التجميل الأولى في كفر الشيخ</span>
 						</div>
-						<img src="/Gharam.png" alt="غرام سلطان تحمل شهادة البورد الأمريكي" loading="lazy" />
-					</div>
-					<div>
-						<h1>إطلالة ساحرة مع خبيرة الميكب غرام سلطان</h1>
-						<p>
-							احصلي على أحدث صيحات الميكب والتصوير الاحترافي بلمسة تجمع الخبرة والابتكار.
-							راحة فاخرة بضغطة زر مع كرسي المساج الذكي ضد الجاذبية.
+						<h1 style={{ color: '#fff', margin: '0', textShadow: '0 2px 20px rgba(0,0,0,0.3)' }}>
+							إطلالة ساحرة مع<br />
+							<span style={{ color: '#c9a04e' }}>غرام سلطان</span>
+						</h1>
+						<p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '1.05rem', maxWidth: '420px' }}>
+							أحدث صيحات الميكب والتصوير الاحترافي بلمسة تجمع الخبرة والابتكار.
+							ليلة العمر تستاهل الأفضل.
 						</p>
-						<div className="pill">جودة عالمية • اهتمام بالتفاصيل • راحة فاخرة</div>
-						<div className="cta-row center">
-							<button className="btn btn-prices" onClick={() => window.location.href = '/prices'} aria-label="أسعار الخدمات">
-								<span role="img" aria-label="قائمة">💸</span>
-								<span style={{ marginInlineStart: 8, fontSize: 16 }}>أسعار الخدمات</span>
+						<div className="cta-row" style={{ gap: '12px' }}>
+							<button
+								className="btn"
+								onClick={() => window.location.href = '/prices'}
+								style={{
+									background: 'linear-gradient(135deg, #1a3a2a, #2a5a3a)',
+									color: '#fff',
+									padding: '14px 28px',
+									fontSize: '15px',
+									fontWeight: 800,
+									borderRadius: '14px',
+									border: '1px solid rgba(201,160,78,0.3)',
+									boxShadow: '0 8px 24px rgba(26,58,42,0.4)'
+								}}
+							>
+								💸 أسعار الخدمات
+							</button>
+							<button
+								className="btn btn-primary"
+								onClick={() => window.open(WHATSAPP_LINK, '_blank')}
+								style={{
+									padding: '14px 28px',
+									fontSize: '15px',
+									fontWeight: 700,
+								}}
+							>
+								<WhatsAppIcon size={18} /> احجزي الآن
 							</button>
 						</div>
 					</div>
 				</section>
 
-				{facebookFeed.length > 0 && (
-					<section className="card fb-section" id="facebook-feed">
-						<h2 style={{ marginTop: 0, marginBottom: 6 }}>آخر بوستاتنا</h2>
+
+			<div className="container">
+
+			{facebookFeed.length > 0 && (
+					<section className="fb-section reveal" id="facebook-feed">
+						<h2 style={{ marginTop: 0, marginBottom: 6 }}>آخر أعمالنا</h2>
+						<p style={{ color: 'var(--muted)', margin: '0 0 20px' }}>أحدث لوكات العرايس والجلسات من صفحتنا على فيسبوك</p>
 						<div className="fb-carousel">
 							{fbVisiblePosts.map((post, idx) => (
 								<div
 									key={post.facebookId || `${post.permalink}-${idx}`}
 									className="fb-post-card"
+									onClick={() => window.open(post.permalink, '_blank')}
 									onTouchStart={handleFbTouchStart}
 									onTouchEnd={handleFbTouchEnd}
+									style={{ cursor: 'pointer' }}
 								>
-
 									{post.fullPicture && (
-										<div style={{ position: 'relative', overflow: 'hidden', borderRadius: '8px' }}>
-											<img
-												src={post.fullPicture}
-												alt="البوست"
-												className="fb-post-image"
-												loading="lazy"
-												referrerPolicy="no-referrer"
-												style={{ display: 'block' }}
-											/>
-											{post.type === 'video' && (
-												<div
-													style={{
-														position: 'absolute',
-														top: '50%',
-														left: '50%',
-														transform: 'translate(-50%, -50%)',
-														width: '60px',
-														height: '60px',
-														backgroundColor: 'rgba(0, 0, 0, 0.6)',
-														borderRadius: '50%',
-														display: 'flex',
-														alignItems: 'center',
-														justifyContent: 'center',
-														cursor: 'pointer',
-														transition: 'all 0.3s ease'
-													}}
-													onMouseEnter={(e) => {
-														e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-														e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1.1)';
-													}}
-													onMouseLeave={(e) => {
-														e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
-														e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1)';
-													}}
-													onClick={() => window.open(post.permalink, '_blank')}
-												>
-													<span style={{ color: 'white', fontSize: '30px' }}>▶</span>
-												</div>
+										<img
+											src={post.fullPicture}
+											alt="عمل من أعمالنا"
+											className="fb-post-image"
+											loading="lazy"
+											referrerPolicy="no-referrer"
+										/>
+									)}
+									<div className="fb-post-overlay">
+										{post.type === 'video' && (
+											<div className="fb-play-icon">▶</div>
+										)}
+										<div className="fb-post-bottom">
+											{(post.message || post.story) && (
+												<p className="fb-post-caption">
+													{(post.message || post.story).length > 80
+														? `${(post.message || post.story).substring(0, 80)}...`
+														: (post.message || post.story)}
+												</p>
 											)}
+											<div className="fb-post-engagement">
+												<span>❤️ {Number(post.likeCount || 0).toLocaleString()}</span>
+												<span>💬 {Number(post.commentCount || 0).toLocaleString()}</span>
+											</div>
 										</div>
-									)}
-
-									{(post.message || post.story) && (
-										<div className="fb-post-message">
-											{(post.message || post.story).length > 200
-												? `${(post.message || post.story).substring(0, 200)}...`
-												: (post.message || post.story)}
-										</div>
-									)}
-
-									<div className="fb-post-stats">
-										<div className="fb-stat-item">❤️ {Number(post.likeCount || 0).toLocaleString()}</div>
-										<div className="fb-stat-item">💬 {Number(post.commentCount || 0).toLocaleString()}</div>
-										<a
-											href={post.permalink}
-											target="_blank"
-											rel="noreferrer"
-											style={{ color: 'var(--accent)', textDecoration: 'none', cursor: 'pointer' }}
-										>
-											♗ افتحي على Facebook
-										</a>
-									</div>
-
-									<div className="fb-post-actions">
-										<button
-											className="fb-action-btn"
-											onClick={() => window.open(FACEBOOK_LINK, '_blank')}
-										>
-											👍 Follow
-										</button>
-										<button
-											className="fb-action-btn"
-											onClick={() => window.open(post.permalink, '_blank')}
-										>
-											↗️ البوست
-										</button>
 									</div>
 								</div>
 							))}
@@ -1121,7 +1065,6 @@ function Landing() {
 										className={`fb-dot ${idx === currentFbItemIdx ? 'active' : ''}`}
 										onClick={() => {
 											setCurrentFbItemIdx(idx);
-											setFbExpandedComments(false);
 											setFbAutoRotatePaused(false);
 										}}
 										title={`بوست ${idx + 1}`}
@@ -1129,34 +1072,39 @@ function Landing() {
 								))}
 							</div>
 						)}
-						<div className="cta-row" style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border)' }}>
-							<button className="btn btn-primary" onClick={() => window.location.href = '/gallery'} aria-label="فتح المعرض">
-								<span>🎨</span>
-								<span style={{ marginInlineStart: 6 }}>روحي للمعرض</span>
+						<div className="cta-row" style={{ marginTop: '24px', justifyContent: 'center', gap: '16px' }}>
+							<button className="btn btn-artistic" onClick={() => window.location.href = '/gallery'} style={{ padding: '14px 32px' }}>
+								🎨 <span>معرض الأعمال الفني</span>
+							</button>
+							<button className="btn btn-outline" onClick={() => window.open(FACEBOOK_LINK, '_blank')} style={{ padding: '14px 28px' }}>
+								تابعينا على فيسبوك
 							</button>
 						</div>
 					</section>
 				)}
 
 				<section className="availability reveal">
-					<div className="card">
-						<span className="badge">تأكيد التوافر</span>
-						<h2 style={{ margin: '8px 0 12px' }}>تأكدي إن اليوم متاح للحجز</h2>
-						<form onSubmit={(e) => { e.preventDefault(); handleCheckAvailability(); }}>
-							<div>
-								<label>نوع الباكدج</label>
-								<select value={packageType} onChange={(e) => setPackageType(e.target.value)}>
-									<option value="makeup">ميك أب </option>
-									<option value="photo">تصوير</option>
-								</select>
+					<div className="card" style={{ padding: '32px' }}>
+						<span className="badge">التحقق من المواعيد</span>
+						<h2 style={{ margin: '12px 0 16px' }}>تأكدي إن اليوم متاح للحجز</h2>
+						<form onSubmit={(e) => { e.preventDefault(); handleCheckAvailability(); }} style={{ display: 'grid', gap: '20px' }}>
+							<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+								<div>
+									<label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>نوع الباكدج</label>
+									<select value={packageType} onChange={(e) => setPackageType(e.target.value)} style={{ padding: '14px', borderRadius: '14px', background: 'rgba(26,58,42,0.4)', border: '1px solid var(--glass-border)', color: '#fff', width: '100%' }}>
+										<option value="makeup">💄 ميك أب</option>
+										<option value="photo">📸 تصوير</option>
+									</select>
+								</div>
+								<div>
+									<label style={{ display: 'block', marginBottom: '8px', fontWeight: 600 }}>تاريخ الحجز</label>
+									<input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={{ padding: '14px', borderRadius: '14px', background: 'rgba(26,58,42,0.4)', border: '1px solid var(--glass-border)', color: '#fff', width: '100%' }} />
+								</div>
 							</div>
-							<div>
-								<label>تاريخ الحجز</label>
-								<input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-							</div>
-							<p style={{ color: 'var(--muted)', fontSize: 13, margin: '4px 0 0' }}>اختاري نوع الباكدج والتاريخ واعرفي التوافر فورًا.</p>
-							{error && <div style={{ color: '#d9534f', fontSize: 14 }}>{error}</div>}
-							<button type="submit" className="btn btn-primary" disabled={loading}>{loading ? 'بيتحقق...' : 'افحص التوافر'}</button>
+							{error && <div style={{ color: '#ff6b6b', fontSize: '14px', textAlign: 'center' }}>{error}</div>}
+							<button type="submit" className="btn btn-primary" disabled={loading} style={{ padding: '16px', fontSize: '16px', marginTop: '8px', width: '100%', color: '#080f0b' }}>
+								{loading ? 'بيتحقق...' : 'افحصي التوافر فوراً ✦'}
+							</button>
 						</form>
 					</div>
 				</section>
@@ -1167,13 +1115,15 @@ function Landing() {
 							<div key={pkg.title} className="package-card">
 								<span className="package-label">{pkg.label}</span>
 								<h3 style={{ margin: '4px 0 4px' }}>{pkg.title}</h3>
-								<div className="package-price">{pkg.price}</div>
+								<div className="package-price">
+									{pkg.price} <span>ج.م</span>
+								</div>
 								<ul className="package-points">
-									{pkg.points.map((pt) => <li key={pt}>{pt}</li>)}
+									{pkg.points.map((pt, i) => <li key={i}>{pt}</li>)}
 								</ul>
-								<div className="package-actions">
-									<button className="btn btn-primary" onClick={() => handlePackageWhatsApp(pkg.title)}>احجز الآن</button>
-									<button className="btn btn-outline" onClick={() => (window.location.href = '/prices')}>شوفي باقي الباكدجات وأسعار الخدمات</button>
+								<div className="package-actions" style={{ marginTop: 'auto', paddingTop: '10px' }}>
+									<button className="btn btn-primary" onClick={() => handlePackageWhatsApp(pkg.title)} style={{ width: '100%', color: '#080f0b' }}>احجزي الآن</button>
+									<button className="btn btn-outline" onClick={() => (window.location.href = '/prices')} style={{ width: '100%', fontSize: '13px' }}>شوفي باقي الباكدجات</button>
 								</div>
 							</div>
 						))}
@@ -1184,15 +1134,17 @@ function Landing() {
 				<section className="highlight reveal">
 					<div className="massage-banner">
 						<div className="content">
-							<span className="badge-new">✨ متوفر الآن</span>
-							<h2>كرسي المساج الذكي ضد الجاذبية</h2>
-							<p>راحة فاخرة تحسسك إنك طايرة. جربي جلسة الاسترخاء مع تقنيات انعدام الوزن. إحساس مختلف بعد يوم طويل، مع ضغط وتدفئة تخلّي جسمك يشكرك.</p>
-							<div className="cta-row">
-								<button className="btn btn-primary" onClick={() => window.open(WHATSAPP_LINK, '_blank')} aria-label="احجزي جلسة واتساب">
-									<WhatsAppIcon size={18} />
-									<span style={{ marginInlineStart: 6 }}>احجزي جلسة</span>
-								</button>
-								<button className="btn btn-outline" onClick={() => window.location.href = '/massage-chair'} aria-label="تفاصيل الكرسي">💺 تفاصيل الكرسي</button>
+							<div className="massage-glass-card">
+								<span className="badge-new">✨ متوفر الآن</span>
+								<h2 style={{ margin: '8px 0 12px' }}>كرسي المساج الذكي ضد الجاذبية</h2>
+								<p>راحة فاخرة تحسسك إنك طايرة. جربي جلسة الاسترخاء مع تقنيات انعدام الوزن. إحساس مختلف بعد يوم طويل، مع ضغط وتدفئة تخلّي جسمك يشكرك.</p>
+								<div className="cta-row" style={{ marginTop: '20px' }}>
+									<button className="btn btn-primary" onClick={() => window.open(WHATSAPP_LINK, '_blank')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#080f0b' }}>
+										<WhatsAppIcon size={18} />
+										<span>احجزي جلسة</span>
+									</button>
+									<button className="btn btn-outline" onClick={() => window.location.href = '/massage-chair'}>💺 تفاصيل الكرسي</button>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -1200,60 +1152,84 @@ function Landing() {
 
 				<section className="card why-card reveal">
 					<h3 style={{ marginTop: 0 }}>ليه تختارينا؟</h3>
-					<div style={{ color: 'var(--text)', lineHeight: 1.7, display: 'grid', gap: 8 }}>
-						<div>خبرة واحترافية: سنوات من الخبرة في مجال التجميل تضمن لكِ نتائج مبهرة.</div>
-						<div>منتجات عالية الجودة: نستخدم أفضل المنتجات العالمية لضمان سلامة بشرتكِ وجمالها.</div>
-						<div>اهتمام بالتفاصيل: نحرص على تقديم تجربة مريحة وممتعة، مع التركيز على أدق التفاصيل لتحقيق إطلالة مثالية.</div>
-						<div>سنتر غرام سلطان حاصل على البورد الأمريكي وهي شهادة معتمدة دوليًا.</div>
+					<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginTop: '12px' }}>
+						<div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+							<span style={{ fontSize: '24px', flexShrink: 0 }}>🏆</span>
+							<div>
+								<div style={{ color: '#c9a04e', fontWeight: 700, marginBottom: '4px' }}>خبرة واحترافية</div>
+								<div style={{ color: 'var(--muted)', fontSize: '14px', lineHeight: 1.6 }}>سنوات من الخبرة في مجال التجميل تضمن لكِ نتائج مبهرة.</div>
+							</div>
+						</div>
+						<div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+							<span style={{ fontSize: '24px', flexShrink: 0 }}>💎</span>
+							<div>
+								<div style={{ color: '#c9a04e', fontWeight: 700, marginBottom: '4px' }}>منتجات عالية الجودة</div>
+								<div style={{ color: 'var(--muted)', fontSize: '14px', lineHeight: 1.6 }}>نستخدم أفضل المنتجات العالمية لضمان سلامة بشرتكِ وجمالها.</div>
+							</div>
+						</div>
+						<div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+							<span style={{ fontSize: '24px', flexShrink: 0 }}>✨</span>
+							<div>
+								<div style={{ color: '#c9a04e', fontWeight: 700, marginBottom: '4px' }}>اهتمام بالتفاصيل</div>
+								<div style={{ color: 'var(--muted)', fontSize: '14px', lineHeight: 1.6 }}>نحرص على تقديم تجربة مريحة، مع التركيز على أدق التفاصيل لإطلالة مثالية.</div>
+							</div>
+						</div>
+						<div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+							<span style={{ fontSize: '24px', flexShrink: 0 }}>🎓</span>
+							<div>
+								<div style={{ color: '#c9a04e', fontWeight: 700, marginBottom: '4px' }}>البورد الأمريكي</div>
+								<div style={{ color: 'var(--muted)', fontSize: '14px', lineHeight: 1.6 }}>سنتر غرام سلطان حاصل على البورد الأمريكي — شهادة معتمدة دوليًا.</div>
+							</div>
+						</div>
 					</div>
 				</section>
 
 				<section className="card reveal">
 					<h2 style={{ marginTop: 0, marginBottom: 6 }}>تواصل فوري وكل القنوات</h2>
 					<p style={{ color: 'var(--muted)', margin: '0 0 14px' }}>اختاري الطريقة المناسبة ليكي؛ مكالمة، واتساب، خريطة أو سوشيال في ضغطة.</p>
-					<div className="contact-grid" style={{ marginBottom: 12 }}>
-						<div className="contact-card" style={{ borderColor: '#25d36655' }}>
+					<div className="contact-grid" style={{ marginBottom: 20 }}>
+						<div className="contact-card">
 							<span className="contact-title">
-								<svg viewBox="0 0 448 512" role="img" aria-hidden="true" focusable="false" style={{ width: 18, height: 18, color: '#0f0b0a' }}>{WHATSAPP_SVG}</svg>
+								<svg viewBox="0 0 448 512" style={{ width: 18, height: 18, fill: 'var(--gold)' }}>{WHATSAPP_SVG}</svg>
 								واتساب
 							</span>
 							<span className="contact-desc">رد سريع وتأكيد تفاصيل الميعاد.</span>
-							<button className="btn" style={{ background: '#25d366', color: '#0f0b0a', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => window.open(WHATSAPP_LINK, '_blank')}>
-								<svg viewBox="0 0 448 512" role="img" aria-hidden="true" focusable="false" style={{ width: 18, height: 18, color: '#0f0b0a' }}>{WHATSAPP_SVG}</svg>
+							<button className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 'auto' }} onClick={() => window.open(WHATSAPP_LINK, '_blank')}>
+								<svg viewBox="0 0 448 512" style={{ width: 18, height: 18, fill: 'currentColor' }}>{WHATSAPP_SVG}</svg>
 								<span>مراسلة واتساب</span>
 							</button>
 						</div>
-						<div className="contact-card" style={{ borderColor: '#c6a15b55' }}>
+						<div className="contact-card">
 							<span className="contact-title"><PhoneIcon size={18} />اتصال أرضي</span>
 							<span className="contact-desc">للاستفسارات السريعة: {LANDLINE}</span>
-							<button className="btn" style={{ background: '#c6a15b', color: '#0f0b0a', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => window.location.href = `tel:${LANDLINE}`}>
+							<button className="btn btn-gold-premium" style={{ background: 'linear-gradient(135deg, #c9a04e, #e6c27b)', color: '#080f0b', display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 'auto' }} onClick={() => window.location.href = `tel:${LANDLINE}`}>
 								<PhoneIcon size={18} />
 								<span>اتصلي الآن</span>
 							</button>
 						</div>
-						<div className="contact-card" style={{ borderColor: '#4ea1ff55' }}>
+						<div className="contact-card">
 							<span className="contact-title"><MapPinIcon size={18} />الموقع</span>
-							<span className="contact-desc">شارع الجيش، مدينة دسوق . </span>
-							<button className="btn" style={{ background: '#4ea1ff', color: '#0f0b0a', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => window.location.href = MAP_LINK}>
+							<span className="contact-desc">شارع الجيش، مدينة دسوق.</span>
+							<button className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 'auto', color: '#080f0b' }} onClick={() => window.location.href = MAP_LINK}>
 								<MapPinIcon size={18} />
 								<span>افتحي الخريطة</span>
 							</button>
 						</div>
-						<div className="contact-card" style={{ borderColor: '#1aa19355' }}>
-							<span className="contact-title"><BotIcon size={18} />دعم فوري</span>
-							<span className="contact-desc">ردود فورية بالذكاء الاصطتناعي للأسئلة الشائعة.</span>
-							<button className="btn" style={{ background: '#1aa193', color: '#0f0b0a', display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => setShowChat(true)}>
+						<div className="contact-card">
+							<span className="contact-title"><BotIcon size={18} />مساعد ذكي</span>
+							<span className="contact-desc">ردود فورية لأي سؤال يخطر في بالك.</span>
+							<button className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 'auto' }} onClick={() => setShowAIChat(true)}>
 								<BotIcon size={18} />
-								<span>افتحي البوت</span>
+								<span>اسألي الذكاء الاصطناعي</span>
 							</button>
 						</div>
 					</div>
-					<p style={{ color: 'var(--muted)', margin: '0 0 10px', fontWeight: 600 }}>تابعي غرام سلطان على السوشيال عشان تشوفي أحدث لوكات العرايس، الكواليس، والعروض الخاصة.</p>
+					<p style={{ color: 'var(--muted)', margin: '20px 0 10px', fontWeight: 600, textAlign: 'center' }}>تابعي غرام سلطان على السوشيال عشان تشوفي أحدث الكواليس</p>
 					<div className="quick-links">
 						{socialLinksNoWhatsApp.map((s) => (
 							<a className="quick-link" key={s.href} href={s.href} target="_blank" rel="noreferrer">
-								<svg viewBox="0 0 448 512" role="img" aria-hidden="true" focusable="false" style={{ width: 26, height: 26, color: 'inherit' }}>{s.svg}</svg>
-								<span>{s.text || s.label}</span>
+								<svg viewBox="0 0 448 512" style={{ width: 22, height: 22, fill: 'currentColor', color: s.color || 'var(--gold)' }}>{s.svg}</svg>
+								<span style={{ fontWeight: 600 }}>{s.text || s.label}</span>
 							</a>
 						))}
 					</div>
@@ -1273,7 +1249,7 @@ function Landing() {
 							</div>
 						</div>
 						<div className="cta-row">
-							<button className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => window.open('https://g.page/r/CeoPiyI-r3niEAE/review', '_blank')} aria-label="اكتبي تقييمك">
+							<button className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#080f0b' }} onClick={() => window.open('https://g.page/r/CeoPiyI-r3niEAE/review', '_blank')} aria-label="اكتبي تقييمك">
 								<span>✍️</span>
 								<span>اكتبي تقييمك</span>
 							</button>
@@ -1284,33 +1260,20 @@ function Landing() {
 							const letter = rev.author?.trim()?.charAt(0)?.toUpperCase() || 'ج';
 							const bg = colorFromName(rev.author || 'ج');
 							return (
-								<div className={`review-card ${isGoogleReviews ? 'google' : ''}`} key={`${rev.author}-${idx}`}>
+								<div className="review-card" key={`${rev.author}-${idx}`} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 									<div className="review-head">
 										{rev.photoUrl ? (
-											<img className="avatar-img" src={rev.photoUrl} alt={`صورة ${rev.author || 'العميل'}`} loading="lazy" />
+											<img className="avatar-img" src={rev.photoUrl} alt={rev.author} loading="lazy" style={{ border: '2px solid var(--gold)' }} />
 										) : (
-											<div className="avatar" style={{ background: bg }}>{letter}</div>
+											<div className="avatar" style={{ background: bg, border: '2px solid rgba(255,255,255,0.1)' }}>{letter}</div>
 										)}
 										<div>
-											<h5>
-												{rev.authorUrl ? (
-													<a href={rev.authorUrl} target="_blank" rel="noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
-														{rev.author || 'عميلة من جوجل'}
-													</a>
-												) : (
-													rev.author || 'عميلة من جوجل'
-												)}
-											</h5>
-											<small>{formatReviewDate(rev)}</small>
+											<h5 style={{ color: '#fff', fontSize: '16px' }}>{rev.author || 'عميلة من جوجل'}</h5>
+											<small style={{ color: 'var(--gold)', fontSize: '12px' }}>{formatReviewDate(rev)}</small>
 										</div>
 									</div>
-									<div className="review-meta">
-										<div className="stars" style={{ fontSize: 15 }}>{renderStars(rev.rating)}</div>
-										<span className={isGoogleReviews ? 'google-chip' : 'fallback-chip'}>
-											{isGoogleReviews ? 'Google' : 'عينة محفوظة'}
-										</span>
-									</div>
-									<p>{rev.text}</p>
+									<div className="stars" style={{ fontSize: '14px' }}>{renderStars(rev.rating)}</div>
+									<p style={{ color: 'rgba(245,240,232,0.85)', fontSize: '14px', lineHeight: 1.6, margin: 0 }}>{rev.text}</p>
 								</div>
 							);
 						})}
@@ -1427,18 +1390,21 @@ function Landing() {
 					</div>
 				</section>
 
-				<section className="footer reveal" style={{ paddingBottom: 90 }}>
-					<div>تابعينا على السوشيال</div>
-					<div style={{ color: 'var(--muted)', marginTop: 6, fontSize: 14 }}>تابعي غرام سلطان على السوشيال عشان تشوفي أحدث لوكات العرايس، الكواليس، والعروض الخاصة.</div>
-					<div className="social-row">
+				<section className="footer reveal" style={{ background: 'linear-gradient(to bottom, #0f2419, #08140e)', borderTop: '2px solid #c9a04e', borderRadius: '40px 40px 0 0', marginTop: '60px', padding: '60px 20px' }}>
+					<img src="/logo.png" alt="غرام سلطان" style={{ width: '120px', marginBottom: '24px', opacity: 0.9, filter: 'drop-shadow(0 4px 15px rgba(201,160,78,0.2))' }} />
+					<div style={{ color: '#c9a04e', fontSize: '20px', fontWeight: 800, letterSpacing: '1px', marginBottom: '8px' }}>غرام سلطان بيوتي سنتر</div>
+					<p style={{ color: 'rgba(245,240,232,0.6)', marginTop: 10, fontSize: '15px', maxWidth: '600px', marginInline: 'auto' }}>
+						خبيرة التجميل الأولى في كفر الشيخ - نعتني بأدق تفاصيل إطلالتكِ لنجعلكِ ملكة في ليلة العمر.
+					</p>
+					<div className="social-row" style={{ margin: '30px 0' }}>
 						{socialLinks.map((s) => (
-							<a key={s.href} className="social-link" href={s.href} target="_blank" rel="noreferrer" style={{ '--hover': s.color }} aria-label={s.label}>
-								<svg viewBox="0 0 448 512" role="img" aria-hidden="true" focusable="false">{s.svg}</svg>
+							<a key={s.href} className="social-link" href={s.href} target="_blank" rel="noreferrer" style={{ '--hover': s.color, background: 'rgba(255,255,255,0.05)', width: '50px', height: '50px', borderRadius: '15px', border: '1px solid rgba(201,160,78,0.1)' }} aria-label={s.label}>
+								<svg viewBox="0 0 448 512" style={{ width: '28px', height: '28px' }}>{s.svg}</svg>
 							</a>
 						))}
 					</div>
-					<div style={{ marginTop: 6, fontSize: 13 }}>
-						© غرام سلطان بيوتي سنتر · اسم يعني الثقة
+					<div style={{ color: 'rgba(201,160,78,0.4)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '2px' }}>
+						© {new Date().getFullYear()} Gharam Sultan Beauty Center · Premium Experience
 					</div>
 				</section>
 			</div>
@@ -1458,70 +1424,107 @@ function Landing() {
 				</div>
 			)}
 
-			<div className="sticky-bar">
+			{/* FAB Overlay */}
+			{fabOpen && <div className="fab-overlay" onClick={() => setFabOpen(false)} />}
+
+			{/* Floating Action Button */}
+			<div className="fab-container">
 				<button
-					className="btn"
-					style={{ background: 'transparent', border: 'none', padding: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-					onClick={() => window.open(WHATSAPP_LINK, '_blank')}
-					aria-label="واتساب"
+					className={`fab-trigger ${fabOpen ? 'open' : ''}`}
+					onClick={() => setFabOpen(!fabOpen)}
+					aria-label="القائمة السريعة"
 				>
-					<WhatsAppIcon size={32} />
+					✦
 				</button>
-				<button
-					className="btn"
-					style={{ background: 'transparent', border: 'none', padding: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: palette.text }}
-					onClick={() => window.location.href = `tel:${LANDLINE}`}
-					aria-label="اتصال أرضي"
-				>
-					<span style={{ fontSize: 22 }}>📞</span>
-				</button>
-				<button
-					className="btn"
-					style={{ background: 'transparent', border: 'none', padding: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-					onClick={() => setShowChat(true)}
-					aria-label="دعم البوت"
-				>
-					<img src="https://i.ibb.co/7JJScM0Q/zain-ai.png" alt="دعم العملاء" style={{ width: 34, height: 34 }} />
-				</button>
-				<button
-					className="btn btn-ghost"
-					style={{ background: 'transparent', border: 'none', padding: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: palette.text }}
-					onClick={toggleTheme}
-					aria-label="تبديل الثيم"
-				>
-					{theme === 'light' ? '🌙' : '☀️'}
-				</button>
+				<div className={`fab-actions ${fabOpen ? 'open' : ''}`}>
+					<button
+						className="fab-action"
+						style={{ background: '#25d366', color: '#fff' }}
+						onClick={() => { window.open(WHATSAPP_LINK, '_blank'); setFabOpen(false); }}
+						aria-label="واتساب"
+					>
+						<span className="fab-tooltip">واتساب</span>
+						<WhatsAppIcon size={22} />
+					</button>
+					<button
+						className="fab-action"
+						style={{ background: 'linear-gradient(135deg, #c9a04e, #e6c27b)', color: '#0f2419' }}
+						onClick={() => { window.location.href = `tel:${LANDLINE}`; setFabOpen(false); }}
+						aria-label="اتصال أرضي"
+					>
+						<span className="fab-tooltip">اتصال أرضي</span>
+						📞
+					</button>
+					<button
+						className="fab-action"
+						style={{ background: 'linear-gradient(135deg, #1a3a2a, #2a5a3a)', color: '#fff' }}
+						onClick={() => { window.open(MAP_LINK, '_blank'); setFabOpen(false); }}
+						aria-label="الموقع"
+					>
+						<span className="fab-tooltip">موقعنا</span>
+						📍
+					</button>
+				</div>
 			</div>
-			<div
-				className="chat-frame"
-				style={{
-					position: 'fixed',
-					top: '50%',
-					left: '50%',
-					bottom: 'auto',
-					right: 'auto',
-					transform: 'translate(-50%, -50%)',
-					width: 'min(420px, 92vw)',
-					height: 'min(520px, 90vh)',
-					background: '#fff',
-					borderRadius: 14,
-					overflow: 'hidden',
-					boxShadow: '0 25px 50px rgba(0,0,0,0.35)',
-					zIndex: 121,
-					opacity: showChat ? 1 : 0,
-					visibility: showChat ? 'visible' : 'hidden',
-					pointerEvents: showChat ? 'auto' : 'none',
-					transition: 'opacity 0.2s ease'
-				}}
-			>
-				<button className="close-btn" onClick={() => setShowChat(false)}>✕</button>
-				<iframe
-					title="support"
-					src={SUPPORT_LINK}
-					style={{ position: 'absolute', top: '-25px', left: 0, right: 0, bottom: 0, width: '100%', height: 'calc(100% + 25px)', border: 'none', display: 'block' }}
-					scrolling="no"
-				/>
-			</div>
+
+			{/* الذكاء الاصطناعي Floating Button */}
+			{!showAIChat && (
+				<>
+					<button
+						className="ai-floating-btn"
+						onClick={() => setShowAIChat(true)}
+						aria-label="الذكاء الاصطناعي"
+					>
+						<div className="ai-btn-glow"></div>
+						<div className="ai-btn-content">
+							<img src="https://i.ibb.co/7JJScM0Q/zain-ai.png" alt="AI" />
+							<span>مساعدة ذكية</span>
+						</div>
+					</button>
+					<style>{`
+						.ai-floating-btn {
+							position: fixed;
+							bottom: 24px;
+							left: 24px;
+							z-index: 100;
+							background: linear-gradient(135deg, #1a3a2a, #2a5a3a);
+							border: none;
+							border-radius: 999px;
+							padding: 4px;
+							cursor: pointer;
+							box-shadow: 0 10px 25px rgba(26,58,42,0.5);
+							animation: pulse-ai 2s infinite;
+							transition: transform 0.3s ease;
+						}
+						.ai-floating-btn:hover {
+							transform: scale(1.05) translateY(-5px);
+						}
+						.ai-btn-content {
+							display: flex;
+							align-items: center;
+							gap: 10px;
+							background: rgba(0,0,0,0.15);
+							padding: 8px 18px 8px 12px;
+							border-radius: 999px;
+							color: #c9a04e;
+							font-weight: bold;
+							font-size: 15px;
+						}
+						.ai-floating-btn img {
+							width: 28px;
+							height: 28px;
+							filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+						}
+						@keyframes pulse-ai {
+							0% { box-shadow: 0 0 0 0 rgba(201,160,78,0.4); }
+							70% { box-shadow: 0 0 0 15px rgba(201,160,78,0); }
+							100% { box-shadow: 0 0 0 0 rgba(201,160,78,0); }
+						}
+					`}</style>
+				</>
+			)}
+
+			{showAIChat && <AIChatPopup onClose={() => setShowAIChat(false)} />}
 		</div>
 	);
 }

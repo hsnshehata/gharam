@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Navbar as BootstrapNavbar, Nav } from 'react-bootstrap';
+import { Navbar as BootstrapNavbar, Nav, NavDropdown } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 
 function Navbar({ user, setUser }) {
@@ -58,7 +58,10 @@ function Navbar({ user, setUser }) {
               <Nav.Link as={Link} to="/employee-reports" onClick={closeMenu}>تقارير الموظفين</Nav.Link>
               <Nav.Link as={Link} to="/packages-services" onClick={closeMenu}>إضافة باكدجات/خدمات</Nav.Link>
               <Nav.Link as={Link} to="/points-admin" onClick={closeMenu}>نقاط الموظفين</Nav.Link>
-              <Nav.Link as={Link} to="/gallery-admin" onClick={closeMenu}>المعرض</Nav.Link>
+              <NavDropdown title="المحتوى" id="content-nav-dropdown">
+                <NavDropdown.Item as={Link} to="/gallery-admin" onClick={closeMenu}>المعرض</NavDropdown.Item>
+                <NavDropdown.Item as={Link} to="/ai-settings" onClick={closeMenu}>الذكاء الاصطناعي</NavDropdown.Item>
+              </NavDropdown>
               <Nav.Link as={Link} to="/users" onClick={closeMenu}>الموظفين</Nav.Link>
               <Nav.Link as={Link} to="/reports" onClick={closeMenu}>التقارير</Nav.Link>
             </>

@@ -1,9 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../utils/apiBase';
-
-const SUPPORT_LINK = 'https://zainbot.com/chat/ghazal';
+import AIChatPopup from '../components/AIChatPopup';
 const LANDLINE = '0472570908';
+const MAP_LINK = 'https://maps.app.goo.gl/cpF8J7rw6ScxZwiv5';
+const WHATSAPP_LINK = 'https://wa.me/gharam';
+
+const WhatsAppIcon = ({ size = 18 }) => (
+	<svg width={size} height={size} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+		<path d="M16 2.7c-7.3 0-13.3 5.9-13.3 13.2 0 2.4.6 4.6 1.8 6.6L2 30l7.6-2.4c1.9 1 4 1.5 6.1 1.5 7.3 0 13.3-5.9 13.3-13.2S23.3 2.7 16 2.7z" fill="#25d366" />
+		<path d="M24 20.8c-.3.9-1.7 1.6-2.4 1.7-.6.1-1.4.2-2.2-.1-.5-.2-1.1-.4-1.8-.8-3.1-1.8-5.1-4.7-5.2-4.9-.2-.3-1.2-1.6-1.2-3.1 0-1.5.8-2.2 1.1-2.6.3-.3.7-.4.9-.4h.6c.2 0 .5-.1.8.6.3.7 1 2.4 1.1 2.6.1.2.1.4 0 .6-.1.2-.2.4-.4.6-.2.2-.4.5-.6.7-.2.3-.4.5-.2.9.2.3 1 1.6 2.2 2.6 1.5 1.4 2.7 1.8 3.1 2 .3.1.6.1.8-.1.2-.2.9-1 .1-2.1-.8-1.1-1.7-1.5-2-.1-.3.4-.8.5-1.3.3-.6-.3-1.8-.9-2.6-1.6-.8-.7-1.4-1.7-1.6-2-.2-.3-.1-.6.1-.8.2-.2.6-.7.8-.9.3-.3.3-.5.5-.8.2-.3.1-.6 0-.8-.1-.2-.8-2-1.1-2.6-.3-.6-.5-.5-.7-.5H14c-.3 0-.7.1-1 .5-.3.4-1.2 1.1-1.2 2.6 0 1.5 1.2 2.9 1.3 3.1.1.2 2.2 3.5 5.5 5.4.4.2 2.9 1.2 4 .6.9-.5 1.5-1.3 1.7-1.5.2-.2.2-.4.1-.5-.1-.2-.5-.4-.6-.4z" fill="#fff" />
+	</svg>
+);
+
 const INSTAGRAM_LINK = 'https://www.instagram.com/gharamsoltan';
 const TIKTOK_LINK = 'https://www.tiktok.com/@gharamsoltan';
 const FACEBOOK_LINK = 'https://www.facebook.com/gharam.ml';
@@ -32,31 +41,6 @@ const socialLinks = [
 	)},
 ];
 
-const themes = {
-	light: {
-		bg: '#f9f6f1',
-		card: '#ffffff',
-		text: '#1d130d',
-		muted: '#5e5146',
-		border: '#e6dfd4',
-		gold: '#c49841',
-		accent: '#1fb6a6',
-		overlay: '#f1e7d8',
-		shadow: 'rgba(0,0,0,0.08)'
-	},
-	dark: {
-		bg: '#0f0b0a',
-		card: '#181210',
-		text: '#f7f3ee',
-		muted: '#cfc5b7',
-		border: '#2b2320',
-		gold: '#c6a15b',
-		accent: '#1aa193',
-		overlay: '#241915',
-		shadow: 'rgba(0,0,0,0.28)'
-	}
-};
-
 const isFacebookUrl = (url) => Boolean(url && url.includes('facebook.com'));
 
 const getFacebookEmbedUrl = (url) => {
@@ -73,22 +57,37 @@ const getVideoEmbedUrl = (item) => {
 };
 
 function Gallery() {
-	const [theme, setTheme] = useState(() => {
-		if (typeof window === 'undefined') return 'light';
-		return localStorage.getItem('theme') || 'light';
-	});
-	const palette = themes[theme];
+	const palette = {
+		bg: '#080f0b',
+		card: 'rgba(15,36,25,0.65)',
+		cardSolid: '#0d2118',
+		text: '#f5f0e8',
+		muted: '#b0a08a',
+		border: 'rgba(201,160,78,0.12)',
+		gold: '#c9a04e',
+		goldLight: '#e6c27b',
+		accent: '#1a3a2a',
+		overlay: 'rgba(13,31,21,0.8)',
+		shadow: 'rgba(0,0,0,0.45)',
+		glassBlur: 'blur(18px)',
+		gradientCard: 'linear-gradient(145deg, rgba(15,36,25,0.7), rgba(10,26,18,0.5))',
+		gradientGold: 'linear-gradient(135deg, #c9a04e, #e6c27b)',
+		gradientGreen: 'linear-gradient(135deg, #1a3a2a, #2a5a3a)'
+	};
 	const [media, setMedia] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
-	const [stats, setStats] = useState(null);
 	const [filterType, setFilterType] = useState('all');
 	const [selectedMedia, setSelectedMedia] = useState(null);
-	const [showChat, setShowChat] = useState(false);
+	const [showAIChat, setShowAIChat] = useState(false);
+	const [fabOpen, setFabOpen] = useState(false);
 
 	useEffect(() => {
-		localStorage.setItem('theme', theme);
-	}, [theme]);
+		document.documentElement.setAttribute('data-theme', 'dark');
+		return () => {
+			document.documentElement.setAttribute('data-theme', 'light');
+		};
+	}, []);
 
 	useEffect(() => {
 		const setMeta = (name, content, attr = 'name') => {
@@ -140,9 +139,6 @@ function Gallery() {
 				if (mediaRes.data.success) {
 					setMedia(mediaRes.data.data || []);
 				}
-				if (statsRes.data.success) {
-					setStats(statsRes.data.data);
-				}
 			} catch (err) {
 				console.error('خطأ في تحميل المعرض:', err);
 				setError('حصل خطأ في تحميل الصور والفيديوهات');
@@ -154,7 +150,7 @@ function Gallery() {
 		fetchData();
 	}, []);
 
-	const toggleTheme = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+	// Removed toggleTheme
 	const handleMediaClick = (item) => {
 		if (item.type === 'video') {
 			const targetUrl = item.permalink || (item.facebookPostId ? `https://www.facebook.com/${item.facebookPostId}` : item.mediaUrl);
@@ -182,36 +178,25 @@ function Gallery() {
 			--shadow: ${palette.shadow};
 		}
 		* { margin: 0; padding: 0; box-sizing: border-box; }
-		html, body { background: var(--bg); color: var(--text); }
-		body { font-family: 'Cairo', 'Marcellus', serif; }
 		.gallery-page {
-			background: radial-gradient(circle at 20% 20%, rgba(196,152,65,0.12), transparent 40%),
-				linear-gradient(120deg, rgba(31,182,166,0.08), transparent 55%),
-				var(--bg);
-			min-height: 100vh;
-			padding: 20px;
 			position: relative;
+			color: var(--text);
+			font-family: 'Cairo', 'Marcellus', serif;
+			min-height: 100vh;
+			padding: 24px 20px 80px 20px;
 			overflow: hidden;
 		}
-		.gallery-glow { position: absolute; inset: 0; pointer-events: none; }
-		.gallery-glow span {
-			position: absolute;
-			width: 240px;
-			height: 240px;
-			border-radius: 999px;
-			background: radial-gradient(circle, rgba(198,161,91,0.25), transparent 65%);
-			filter: blur(10px);
-			opacity: 0.7;
-			animation: drift 12s ease-in-out infinite;
-		}
-		.gallery-glow span:nth-child(1) { top: 5%; left: 8%; animation-delay: 0s; }
-		.gallery-glow span:nth-child(2) { top: 40%; right: 12%; animation-delay: 2s; }
-		.gallery-glow span:nth-child(3) { bottom: 8%; left: 30%; animation-delay: 4s; }
-		@keyframes drift {
-			0%, 100% { transform: translateY(0) translateX(0) scale(1); }
-			50% { transform: translateY(-14px) translateX(12px) scale(1.05); }
-		}
-		.container { max-width: 1200px; margin: 0 auto; }
+		.hero-bg { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; object-fit: cover; z-index: -2; filter: brightness(0.7) contrast(1.1); pointer-events: none; }
+		.hero-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: -1; background: linear-gradient(to top, rgba(8,15,11,1) 0%, rgba(8,15,11,0.85) 40%, rgba(8,15,11,0.4) 100%); pointer-events: none; }
+		.hero-particles { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; z-index: -1; pointer-events: none; background-image: radial-gradient(circle at center, rgba(201,160,78,0.1) 0%, transparent 8%); background-size: 60px 60px; animation: particleFloat 20s linear infinite; opacity: 0.5; }
+		@keyframes particleFloat { 0% { background-position: 0 0; } 100% { background-position: -60px -60px; } }
+		
+		.container { max-width: 1200px; margin: 0 auto; position: relative; z-index: 1; }
+		
+		.footer { margin-top: 80px; text-align: center; padding: 60px 20px 100px; background: linear-gradient(135deg, #1a3a2a, #0f2419); border-radius: 40px 40px 0 0; border-top: 2px solid #c9a04e; color: rgba(245,240,232,0.85); font-size: 14px; position: relative; z-index: 1; }
+		.footer .social-link { width: 50px; height: 50px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); border-radius: 15px; transition: color 0.2s ease, transform 0.2s ease; background: rgba(255,255,255,0.05); border: 1px solid rgba(201,160,78,0.1); }
+		.footer .social-link:hover { color: #c9a04e; transform: translateY(-4px); border-color: rgba(201,160,78,0.4); }
+		.social-row { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 12px; }
 		.topbar { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid var(--border); margin-bottom: 30px; }
 		.topbar h1 { font-size: 28px; font-weight: 700; color: var(--text); }
 		.topbar button { background: var(--card); border: 2px solid var(--border); padding: 10px 16px; border-radius: 10px; cursor: pointer; color: var(--text); font-weight: 600; transition: all 0.2s ease; }
@@ -265,10 +250,21 @@ function Gallery() {
 		.social-link { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); border-radius: 10px; transition: color 0.2s ease, transform 0.2s ease; }
 		.social-link svg { width: 28px; height: 28px; fill: currentColor; }
 		.social-link:hover { transform: translateY(-2px); color: var(--hover, var(--gold)); }
-		.sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; padding: 8px 10px; background: ${theme === 'light' ? 'rgba(255,255,255,0.96)' : 'rgba(24,18,16,0.92)'}; border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 20px 40px var(--shadow); z-index: 100; width: fit-content; max-width: calc(100% - 24px); }
-		.sticky-bar .btn { padding: 10px 12px; border: none; background: transparent; cursor: pointer; }
-		.chat-frame { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(420px, 92vw); height: min(520px, 90vh); background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 25px 50px rgba(0,0,0,0.35); z-index: 121; opacity: ${showChat ? 1 : 0}; visibility: ${showChat ? 'visible' : 'hidden'}; pointer-events: ${showChat ? 'auto' : 'none'}; transition: opacity 0.2s ease; }
-		.close-btn { position: absolute; top: 10px; left: 10px; background: #dc3545; color: #fff; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 2; }
+		.fab-container { position: fixed; bottom: 24px; right: 24px; z-index: 100; display: flex; flex-direction: column-reverse; align-items: center; gap: 12px; }
+		.fab-trigger { width: 56px; height: 56px; border-radius: 50%; border: none; background: linear-gradient(135deg, #1a3a2a, #2a5a3a); color: #c9a04e; font-size: 28px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 28px rgba(26,58,42,0.5); transition: transform 0.3s ease, box-shadow 0.3s ease; }
+		.fab-trigger:hover { transform: scale(1.08); box-shadow: 0 12px 36px rgba(26,58,42,0.6); }
+		.fab-trigger.open { transform: rotate(45deg); background: linear-gradient(135deg, #2a5a3a, #1a3a2a); }
+		.fab-actions { display: flex; flex-direction: column; gap: 10px; align-items: center; opacity: 0; transform: translateY(20px) scale(0.8); pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease; }
+		.fab-actions.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+		.fab-action { position: relative; width: 48px; height: 48px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: transform 0.2s ease, box-shadow 0.2s ease; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+		.fab-action:hover { transform: scale(1.12); box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+		.fab-tooltip { position: absolute; right: 60px; white-space: nowrap; background: rgba(24,18,16,0.95); color: var(--text); padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; box-shadow: 0 4px 12px var(--shadow); pointer-events: none; border: 1px solid var(--glass-border); backdrop-filter: blur(8px); }
+		.fab-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.15); z-index: 99; backdrop-filter: blur(2px); }
+		.ai-floating-btn { position: fixed; bottom: 24px; left: 24px; z-index: 100; background: linear-gradient(135deg, #1a3a2a, #2a5a3a); border: none; border-radius: 999px; padding: 4px; cursor: pointer; box-shadow: 0 10px 25px rgba(26,58,42,0.5); animation: pulse-ai 2s infinite; transition: transform 0.3s ease; }
+		.ai-floating-btn:hover { transform: scale(1.05) translateY(-5px); }
+		.ai-btn-content { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.15); padding: 8px 18px 8px 12px; border-radius: 999px; color: #c9a04e; font-weight: bold; font-size: 15px; }
+		.ai-floating-btn img { width: 28px; height: 28px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); }
+		@keyframes pulse-ai { 0% { box-shadow: 0 0 0 0 rgba(201,160,78,0.4); } 70% { box-shadow: 0 0 0 15px rgba(201,160,78,0); } 100% { box-shadow: 0 0 0 0 rgba(201,160,78,0); } }
 		@media (max-width: 768px) {
 			.topbar { flex-direction: column; gap: 16px; }
 			.gallery-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
@@ -278,38 +274,20 @@ function Gallery() {
 	return (
 		<div className="gallery-page" dir="rtl">
 			<style>{css}</style>
-			<div className="gallery-glow" aria-hidden>
-				<span></span>
-				<span></span>
-				<span></span>
-			</div>
+			
+			<img className="hero-bg" src="/banner-b.png" alt="خلفية المعرض" aria-hidden="true" />
+			<div className="hero-overlay" aria-hidden="true" />
+			<div className="hero-particles" aria-hidden="true" />
+
 			<div className="container">
 				<div className="topbar">
 					<div>
 						<h1>معرض الصور والفيديوهات</h1>
 						<p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>تصفحي أحدث الصور والفيديوهات من خدماتنا</p>
 					</div>
-					<button onClick={toggleTheme}>
-						{theme === 'light' ? '🌙' : '☀️'}
-					</button>
 				</div>
 
-				{stats && (
-					<div className="stats-bar">
-						<div className="stat-card">
-							<div className="count">{stats.totalMedia}</div>
-							<div className="label">إجمالي الصور والفيديوهات</div>
-						</div>
-						<div className="stat-card">
-							<div className="count">{stats.totalImages}</div>
-							<div className="label">صور</div>
-						</div>
-						<div className="stat-card">
-							<div className="count">{stats.totalVideos}</div>
-							<div className="label">فيديوهات</div>
-						</div>
-					</div>
-				)}
+
 
 				<div className="filter-bar">
 					<button 
@@ -406,69 +384,92 @@ function Gallery() {
 					</div>
 				)}
 
-				<div className="footer">
-					<p>تابعينا على وسائل التواصل الاجتماعي</p>
-					<div className="social-row">
-						{socialLinks.map((link) => (
-							<a
-								key={link.href}
-								className="social-link"
-								href={link.href}
-								target="_blank"
-								rel="noreferrer"
-								style={{ '--hover': link.color }}
-								aria-label={link.label}
-							>
-								<svg viewBox="0 0 448 512" role="img" aria-hidden="true" focusable="false" style={{ width: 28, height: 28 }}>
-									{link.svg}
-								</svg>
+				<section className="footer">
+					<img src="/logo.png" alt="غرام سلطان" style={{ width: '120px', marginBottom: '24px', opacity: 0.9, filter: 'drop-shadow(0 4px 15px rgba(201,160,78,0.2))' }} />
+					<div style={{ color: '#c9a04e', fontSize: '20px', fontWeight: 800, letterSpacing: '1px', marginBottom: '8px' }}>غرام سلطان بيوتي سنتر</div>
+					<p style={{ color: 'rgba(245,240,232,0.6)', marginTop: 10, fontSize: '15px', maxWidth: '600px', marginInline: 'auto' }}>
+						خبيرة التجميل الأولى في كفر الشيخ - نعتني بأدق تفاصيل إطلالتكِ لنجعلكِ ملكة في ليلة العمر.
+					</p>
+					<div className="social-row" style={{ margin: '30px 0' }}>
+						{socialLinks.map((s) => (
+							<a key={s.href} className="social-link" href={s.href} target="_blank" rel="noreferrer" style={{ '--hover': s.color }} aria-label={s.label}>
+								<svg viewBox="0 0 448 512" style={{ width: '28px', height: '28px' }}>{s.svg}</svg>
 							</a>
 						))}
 					</div>
-					<p style={{ marginTop: 20, fontSize: 13 }}>© 2024 {BUSINESS_NAME}. جميع الحقوق محفوظة.</p>
+					<div style={{ color: 'rgba(201,160,78,0.4)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '2px' }}>
+						© {new Date().getFullYear()} Gharam Sultan Beauty Center · Premium Experience
+					</div>
+				</section>
+			</div>
+
+			{/* FAB Overlay */}
+			{fabOpen && <div className="fab-overlay" onClick={() => setFabOpen(false)} />}
+
+			{/* Floating Action Button */}
+			<div className="fab-container">
+				<button
+					className={`fab-trigger ${fabOpen ? 'open' : ''}`}
+					onClick={() => setFabOpen(!fabOpen)}
+					aria-label="القائمة السريعة"
+				>
+					✦
+				</button>
+				<div className={`fab-actions ${fabOpen ? 'open' : ''}`}>
+					<button
+						className="fab-action"
+						style={{ background: '#25d366', color: '#fff' }}
+						onClick={() => { window.open(WHATSAPP_LINK, '_blank'); setFabOpen(false); }}
+						aria-label="واتساب"
+					>
+						<span className="fab-tooltip">واتساب</span>
+						<WhatsAppIcon size={22} />
+					</button>
+					<button
+						className="fab-action"
+						style={{ background: 'linear-gradient(135deg, #c9a04e, #e6c27b)', color: '#0f2419' }}
+						onClick={() => { window.location.href = `tel:${LANDLINE}`; setFabOpen(false); }}
+						aria-label="اتصال أرضي"
+					>
+						<span className="fab-tooltip">اتصال أرضي</span>
+						📞
+					</button>
+					<button
+						className="fab-action"
+						style={{ background: 'linear-gradient(135deg, #1a3a2a, #2a5a3a)', color: '#fff' }}
+						onClick={() => { window.open(MAP_LINK, '_blank'); setFabOpen(false); }}
+						aria-label="الموقع"
+					>
+						<span className="fab-tooltip">موقعنا</span>
+						📍
+					</button>
+					<button
+						className="fab-action"
+						style={{ background: 'linear-gradient(135deg, #1a1a2e, #16213e)', color: '#c9a04e', fontSize: '20px' }}
+						onClick={() => { window.location.href = '/'; setFabOpen(false); }}
+						aria-label="الرئيسية"
+					>
+						<span className="fab-tooltip">الرئيسية</span>
+						🏠
+					</button>
 				</div>
 			</div>
 
-			<div className="sticky-bar">
+			{/* الذكاء الاصطناعي Floating Button */}
+			{!showAIChat && (
 				<button
-					className="btn"
-					onClick={() => window.location.href = '/landing'}
-					aria-label="العودة للرئيسية"
+					className="ai-floating-btn"
+					onClick={() => setShowAIChat(true)}
+					aria-label="الذكاء الاصطناعي"
 				>
-					<span style={{ fontSize: 22 }}>🏠</span>
+					<div className="ai-btn-content">
+						<img src="https://i.ibb.co/7JJScM0Q/zain-ai.png" alt="AI" />
+						<span>مساعدة ذكية</span>
+					</div>
 				</button>
-				<button
-					className="btn"
-					onClick={() => window.location.href = `tel:${LANDLINE}`}
-					aria-label="اتصال أرضي"
-				>
-					<span style={{ fontSize: 22 }}>📞</span>
-				</button>
-				<button
-					className="btn"
-					onClick={() => setShowChat(true)}
-					aria-label="دعم البوت"
-				>
-					<img src="https://i.ibb.co/7JJScM0Q/zain-ai.png" alt="دعم العملاء" style={{ width: 34, height: 34 }} />
-				</button>
-				<button
-					className="btn"
-					onClick={toggleTheme}
-					aria-label="تبديل الثيم"
-				>
-					{theme === 'light' ? '🌙' : '☀️'}
-				</button>
-			</div>
+			)}
 
-			<div className="chat-frame">
-				<button className="close-btn" onClick={() => setShowChat(false)}>✕</button>
-				<iframe
-					title="support"
-					src={SUPPORT_LINK}
-					style={{ position: 'absolute', top: '-25px', left: 0, right: 0, bottom: 0, width: '100%', height: 'calc(100% + 25px)', border: 'none', display: 'block' }}
-					scrolling="no"
-				/>
-			</div>
+			{showAIChat && <AIChatPopup onClose={() => setShowAIChat(false)} />}
 		</div>
 	);
 }
