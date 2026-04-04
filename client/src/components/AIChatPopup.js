@@ -57,14 +57,30 @@ export default function AIChatPopup({ onClose }) {
 
     const formatText = (text) => {
         if (!text) return "";
-        // Simple formatter for **bold** and newlines
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
         return text.split('\n').map((line, i) => (
             <span key={i}>
-                {line.split(/(\*\*.*?\*\*)/g).map((part, j) => {
-                    if (part.startsWith('**') && part.endsWith('**')) {
-                        return <strong key={j} style={{ color: '#168a7d' }}>{part.slice(2, -2)}</strong>;
+                {line.split(urlRegex).map((part, j) => {
+                    if (part.match(urlRegex)) {
+                        return (
+                            <a 
+                                key={j} 
+                                href={part} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="chat-link-btn"
+                            >
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginLeft: '6px'}}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                                رابط الصفحة المطلوب
+                            </a>
+                        );
                     }
-                    return part;
+                    return part.split(/(\*\*.*?\*\*)/g).map((subPart, k) => {
+                        if (subPart.startsWith('**') && subPart.endsWith('**')) {
+                            return <strong key={`${j}-${k}`} style={{ color: '#168a7d' }}>{subPart.slice(2, -2)}</strong>;
+                        }
+                        return subPart;
+                    });
                 })}
                 <br />
             </span>
@@ -298,6 +314,24 @@ export default function AIChatPopup({ onClose }) {
                     0% { transform: scale(1); }
                     50% { transform: scale(1.15); }
                     100% { transform: scale(1); }
+                }
+                .chat-link-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    background: linear-gradient(135deg, #1fb6a6, #168a7d);
+                    color: #fff !important;
+                    padding: 8px 16px;
+                    border-radius: 12px;
+                    text-decoration: none;
+                    font-weight: 700;
+                    font-size: 0.85rem;
+                    margin: 8px 4px;
+                    box-shadow: 0 4px 10px rgba(31,182,166,0.3);
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
+                }
+                .chat-link-btn:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 14px rgba(31,182,166,0.4);
                 }
                 
                 ::-webkit-scrollbar { width: 5px; }
