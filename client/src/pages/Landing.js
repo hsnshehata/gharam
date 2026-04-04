@@ -646,6 +646,7 @@ function Landing() {
 		.hero { position: relative; width: 100%; height: 100vh; min-height: 600px; display: flex; align-items: center; justify-content: flex-end; overflow: hidden; margin: 0 -4%; width: 108%; border-radius: 0 0 32px 32px; }
 		.hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; z-index: 0; }
 		.hero-overlay { position: absolute; inset: 0; z-index: 1; background: linear-gradient(to left, rgba(26,58,42,0.0) 35%, rgba(26,58,42,0.55) 60%, rgba(26,58,42,0.92) 100%); }
+		.hero-logo { width: 180px; height: 180px; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3)); align-self: center; }
 		.hero-content { position: relative; z-index: 2; max-width: 680px; padding: 48px 8%; display: flex; flex-direction: column; gap: 20px; text-align: center; align-items: center; }
 		.hero-tag { display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 999px; background: rgba(201,160,78,0.15); border: 1px solid rgba(201,160,78,0.35); color: #c9a04e; font-weight: 700; font-size: 14px; width: fit-content; backdrop-filter: blur(4px); }
 		.hero-particles { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
@@ -919,11 +920,13 @@ function Landing() {
 			.hero { height: 100vh; min-height: 580px; align-items: flex-end; justify-content: center; }
 			.hero-bg { object-position: 70% center; }
 			.hero-overlay { background: linear-gradient(to top, rgba(26,58,42,0.95) 0%, rgba(26,58,42,0.7) 40%, rgba(26,58,42,0.1) 70%, transparent 100%) !important; }
-			.hero-content { max-width: 100%; padding: 0 20px 100px; text-align: center; align-items: center; gap: 14px; }
-			.hero-content h1 { font-size: clamp(24px, 7vw, 34px); }
+			.hero-logo { position: absolute; top: 30px; width: 90px; height: 90px; }
+			.hero-content { max-width: 100%; padding: 0 20px 40px; text-align: center; align-items: center; gap: 14px; position: static; }
+			.hero-content h1 { font-size: clamp(24px, 7vw, 34px); margin-top: auto; }
 			.hero-content p { font-size: 0.9rem; }
 			.hero-tag { font-size: 12px; padding: 6px 14px; }
-			.cta-row { justify-content: center; }
+			.cta-row { justify-content: center; flex-wrap: nowrap; width: 100%; gap: 8px; }
+			.cta-row .btn { padding: 12px 10px; font-size: 13px; flex: 1; }
 			.sticky-bar { justify-content: center; background: rgba(24,18,16,0.95); }
 			.topbar { flex-direction: column; align-items: flex-start; }
 			.fb-carousel { grid-template-columns: 1fr; }
@@ -965,7 +968,7 @@ function Landing() {
 					</div>
 					{/* Hero content */}
 					<div className="hero-content">
-						<img src="/logo.png" alt="شعار غرام سلطان" style={{ width: '180px', height: '180px', objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))', alignSelf: 'center' }} />
+						<img className="hero-logo" src="/logo.png" alt="شعار غرام سلطان" />
 						<div className="hero-tag">
 							<span>✨</span>
 							<span>خبيرة التجميل الأولى في كفر الشيخ</span>
