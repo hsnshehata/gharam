@@ -59,6 +59,7 @@ app.use('/api/today-work', require('./server/routes/todayWork'));
 app.use('/api/public', require('./server/routes/public'));
 app.use('/api/public/facebook', require('./server/routes/facebook'));
 app.use('/api/facebook', require('./server/routes/facebookAdmin'));
+app.use('/api/ai', require('./server/routes/ai'));
 console.log('Routes registered successfully');
 
 // Facebook Cron Job: تحديث البوستات كل 30 دقيقة
