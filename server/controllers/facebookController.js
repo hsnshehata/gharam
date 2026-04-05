@@ -538,6 +538,53 @@ const handleWebhook = async (req, res) => {
     }
 };
 
+const forceSubscribePage = async (req, res) => {
+    try {
+        const pageId = process.env.FACEBOOK_PAGE_ID;
+        const pageToken = process.env.FACEBOOK_ACCESS_TOKEN; 
+        const messengerToken = process.env.FACEBOOK_MESSENGER_TOKEN;
+
+        const results = {};
+
+        // محاولة الاشتراك باستخدام المفتاح القديم (يمتلك غالباً صلاحيات عامة للصفحة)
+        try {
+            const resp1 = await axios.post(`https://graph.facebook.com/v24.0/${pageId}/subscribed_apps`, null, {
+                params: {
+                    subscribed_fields: 'feed,messages,message_edits',
+                    access_token: pageToken
+                }
+            });
+            results.oldToken = resp1.data;
+        } catch(e) {
+            results.oldTokenError = e.response?.data || e.message;
+        }
+
+        // محاولة الاشتراك باستخدام مفتاح الماسنجر
+        if (messengerToken && messengerToken !== pageToken) {
+            try {
+                const resp2 = await axios.post(`https://graph.facebook.com/v24.0/${pageId}/subscribed_apps`, null, {
+                    params: {
+                        subscribed_fields: 'feed,messages,message_edits',
+                        access_token: messengerToken
+                    }
+                });
+                results.messengerToken = resp2.data;
+            } catch(e) {
+                results.messengerTokenError = e.response?.data || e.message;
+            }
+        }
+
+        res.json({
+            success: true,
+            message: "تم محاولة ربط الصفحة بالـ Webhook برمجياً",
+            results
+        });
+
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
 module.exports = {
 	syncFacebookPosts,
 	getFacebookFeed,
@@ -547,5 +594,6 @@ module.exports = {
 	getAdminMediaGallery,
 	updateMediaVisibility,
     verifyWebhook,
-    handleWebhook
+    handleWebhook,
+    forceSubscribePage
 };
