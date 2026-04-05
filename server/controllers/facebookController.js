@@ -433,25 +433,41 @@ const handleWebhook = async (req, res) => {
         const body = req.body;
         if (body.object === 'page') {
             for (const entry of body.entry) {
-                // Handling messaging events (Messages & Edits)
+                // Handling messaging events (Messages, Edits, Attachments)
                 if (entry.messaging) {
                     for (const webhook_event of entry.messaging) {
                         const sender_psid = webhook_event.sender.id;
                         let messageText = null;
+                        let fileBuffer = null;
+                        let fileMimeType = null;
 
                         if (webhook_event.message && webhook_event.message.text) {
                             messageText = webhook_event.message.text;
                         } else if (webhook_event.message_edit && webhook_event.message_edit.text) {
                             messageText = webhook_event.message_edit.text;
                             console.log(`Received EDITED message from FB ${sender_psid}: ${messageText}`);
+                        } else if (webhook_event.message && webhook_event.message.attachments) {
+                            const attachment = webhook_event.message.attachments.find(a => a.type === 'audio' || a.type === 'image');
+                            if (attachment && attachment.payload && attachment.payload.url) {
+                                const attachTypeAr = attachment.type === 'audio' ? 'رسالة صوتية' : 'صورة';
+                                messageText = `[${attachTypeAr}]`;
+                                console.log(`Received ${attachment.type.toUpperCase()} message from FB ${sender_psid}`);
+                                try {
+                                    const resData = await axios.get(attachment.payload.url, { responseType: 'arraybuffer' });
+                                    fileBuffer = Buffer.from(resData.data);
+                                    fileMimeType = resData.headers['content-type'] || (attachment.type === 'audio' ? 'audio/mp4' : 'image/jpeg'); 
+                                } catch (downloadErr) {
+                                    console.error(`Failed to download FB ${attachment.type}:`, downloadErr.message);
+                                }
+                            }
                         }
 
-                        if (messageText) {
+                        if (messageText || fileBuffer) {
                             // Process AI Chat for Messaging
-                            sessionCache.addUserMessage(sender_psid, messageText);
+                            sessionCache.addUserMessage(sender_psid, messageText || "[مرفق]");
                             const history = sessionCache.getUserHistory(sender_psid);
                             try {
-                                const aiReply = await processAiChat(history, null, null, true);
+                                const aiReply = await processAiChat(history, fileBuffer, fileMimeType, true);
                                 sessionCache.addAssistantMessage(sender_psid, aiReply);
 
                                 const MESSENGER_TOKEN = process.env.FACEBOOK_MESSENGER_TOKEN || process.env.FACEBOOK_ACCESS_TOKEN;
