@@ -245,11 +245,34 @@ function Gallery() {
 		.empty-state h2 { color: var(--text); margin-bottom: 12px; }
 		.loading { text-align: center; padding: 40px; color: var(--muted); }
 		.error { background: rgba(220, 53, 69, 0.1); border: 1px solid rgba(220, 53, 69, 0.3); border-radius: 10px; padding: 16px; color: #dc3545; margin: 20px 0; }
-		.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
-		.modal-content { background: var(--card); border-radius: 12px; max-width: 90vw; max-height: 90vh; position: relative; }
-		.modal-image, .modal-video { max-width: 100%; max-height: 80vh; object-fit: contain; }
-		.modal-close { position: absolute; top: 10px; right: 10px; width: 40px; height: 40px; background: rgba(0,0,0,0.5); border: none; border-radius: 50%; color: white; font-size: 24px; cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center; }
-		.modal-close:hover { background: rgba(0,0,0,0.7); }
+		.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 0; backdrop-filter: blur(8px); animation: fadeIn 0.3s ease; }
+		.modal-content { background: var(--card); border-radius: 16px; width: 100%; max-width: 100vw; height: 100vh; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: floatIn 0.3s ease; }
+		@media (min-width: 768px) {
+			.modal-overlay { padding: 40px; }
+			.modal-content { max-width: 1200px; height: auto; max-height: 90vh; box-shadow: 0 25px 50px rgba(0,0,0,0.5); border: 1px solid var(--border); }
+		}
+		.modal-media-container { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 0 60px 80px 60px; }
+		@media (max-width: 768px) { .modal-media-container { padding: 0 0 120px 0; } }
+		.modal-image, .modal-video { max-width: 100%; max-height: 100%; object-fit: contain; }
+		
+		.modal-close { position: absolute; top: 16px; right: 16px; width: 44px; height: 44px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; color: white; font-size: 24px; cursor: pointer; z-index: 20; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; }
+		.modal-close:hover { background: rgba(220,53,69,0.9); transform: scale(1.05); }
+		
+		.modal-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 50px; height: 50px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; font-size: 20px; z-index: 10; transition: all 0.2s ease; }
+		.modal-nav:hover { background: var(--gold); border-color: var(--gold); color: #080f0b; transform: translateY(-50%) scale(1.1); }
+		.modal-nav.prev { right: 20px; }
+		.modal-nav.next { left: 20px; }
+		
+		.modal-info-bar { position: absolute; bottom: 0; left: 0; width: 100%; padding: 24px 20px; background: linear-gradient(to top, rgba(0,0,0,0.95) 10%, rgba(0,0,0,0.7) 60%, transparent); z-index: 15; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+		@media (max-width: 768px) { .modal-info-bar { flex-direction: column; align-items: center; text-align: center; gap: 14px; padding-bottom: 30px; } }
+		
+		.modal-caption { color: #fff; max-width: calc(100% - 160px); }
+		@media (max-width: 768px) { .modal-caption { max-width: 100%; } }
+		.modal-caption h4 { margin: 0 0 6px; font-size: 16px; color: var(--gold); }
+		.modal-caption p { margin: 0; font-size: 14px; opacity: 0.9; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+		
+		.modal-fb-btn { flex-shrink: 0; background: #1877f2; color: #fff; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(24,119,242,0.4); text-decoration: none; font-size: 14px; }
+		.modal-fb-btn:hover { background: #166fe5; transform: translateY(-3px); box-shadow: 0 6px 20px rgba(24,119,242,0.5); }
 		.footer { text-align: center; padding: 40px 20px; border-top: 1px solid var(--border); color: var(--muted); }
 		.social-row { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 12px; }
 		.social-link { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); border-radius: 10px; transition: color 0.2s ease, transform 0.2s ease; }
@@ -354,40 +377,81 @@ function Gallery() {
 					</div>
 				)}
 
-				{selectedMedia && (
-					<div className="modal-overlay" onClick={() => setSelectedMedia(null)}>
-						<div className="modal-content" onClick={(e) => e.stopPropagation()}>
-							<button className="modal-close" onClick={() => setSelectedMedia(null)}>✕</button>
-							{selectedMedia.type === 'video' ? (
-								getVideoEmbedUrl(selectedMedia) ? (
-									<iframe
-										title="facebook-video"
-										src={getVideoEmbedUrl(selectedMedia)}
-										width="640"
-										height="360"
-										style={{ border: 'none', borderRadius: 12, width: 'min(90vw, 800px)', height: 'min(70vh, 450px)' }}
-										allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-										allowFullScreen
-									/>
-								) : (
-									<video
-										className="modal-video"
-										controls
-										playsInline
-										preload="metadata"
-										src={selectedMedia.mediaUrl}
-									/>
-								)
-							) : (
-								<img
-									className="modal-image"
-									src={selectedMedia.mediaUrl}
-									alt={selectedMedia.title || 'صورة'}
-								/>
-							)}
+				{selectedMedia && (() => {
+					const currentIndex = filteredMedia.findIndex(m => m._id === selectedMedia._id);
+					const hasPrev = currentIndex > 0;
+					const hasNext = currentIndex !== -1 && currentIndex < filteredMedia.length - 1;
+					const postUrl = selectedMedia.permalink || (selectedMedia.facebookPostId ? `https://www.facebook.com/${selectedMedia.facebookPostId}` : selectedMedia.mediaUrl);
+
+					const handlePrev = (e) => {
+						e.stopPropagation();
+						if (hasPrev) setSelectedMedia(filteredMedia[currentIndex - 1]);
+					};
+					const handleNext = (e) => {
+						e.stopPropagation();
+						if (hasNext) setSelectedMedia(filteredMedia[currentIndex + 1]);
+					};
+
+					return (
+						<div className="modal-overlay" onClick={() => setSelectedMedia(null)}>
+							<div className="modal-content" onClick={(e) => e.stopPropagation()}>
+								<button className="modal-close" onClick={() => setSelectedMedia(null)} aria-label="إغلاق">✕</button>
+								
+								{hasPrev && (
+									<button className="modal-nav prev" onClick={handlePrev} aria-label="السابق">❯</button>
+								)}
+								{hasNext && (
+									<button className="modal-nav next" onClick={handleNext} aria-label="التالي">❮</button>
+								)}
+
+								<div className="modal-media-container">
+									{selectedMedia.type === 'video' ? (
+										getVideoEmbedUrl(selectedMedia) ? (
+											<iframe
+												title="facebook-video"
+												src={getVideoEmbedUrl(selectedMedia)}
+												width="640"
+												height="360"
+												style={{ border: 'none', borderRadius: 12, width: 'min(90vw, 800px)', height: 'min(70vh, 450px)' }}
+												allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+												allowFullScreen
+											/>
+										) : (
+											<video
+												className="modal-video"
+												controls
+												playsInline
+												preload="metadata"
+												src={selectedMedia.mediaUrl}
+											/>
+										)
+									) : (
+										<img
+											className="modal-image"
+											src={selectedMedia.mediaUrl}
+											alt={selectedMedia.title || 'صورة'}
+										/>
+									)}
+								</div>
+
+								<div className="modal-info-bar">
+									<div className="modal-caption">
+										<h4>{selectedMedia.title || 'من أعمالنا'}</h4>
+										{(selectedMedia.description || selectedMedia.caption || selectedMedia.message) && (
+											<p>{selectedMedia.description || selectedMedia.caption || selectedMedia.message}</p>
+										)}
+									</div>
+									{postUrl && (
+										<a href={postUrl} target="_blank" rel="noreferrer" className="modal-fb-btn" onClick={(e) => e.stopPropagation()}>
+											<svg viewBox="0 0 448 512" style={{ width: 18, height: 18, fill: 'currentColor' }}><path d="M279.14 288l14.22-92.66h-88.91v-60.13c0-25.35 12.42-50.06 52.24-50.06h40.42V6.26S260.43 0 225.36 0c-73.22 0-121.08 44.38-121.08 124.72v70.62H22.89V288h81.39v224h100.17V288z" /></svg>
+											<span>عرض البوست</span>
+										</a>
+									)}
+								</div>
+							</div>
 						</div>
-					</div>
-				)}
+					);
+				})()}
 
 				<section className="footer">
 					<img src="/logo.png" alt="غرام سلطان" style={{ width: '120px', marginBottom: '24px', opacity: 0.9, filter: 'drop-shadow(0 4px 15px rgba(201,160,78,0.2))' }} />
