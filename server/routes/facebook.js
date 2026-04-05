@@ -6,10 +6,14 @@ const {
 	getMediaGalleryStats,
 	manualSyncPosts,
     verifyWebhook,
-    handleWebhook
+    handleWebhook,
+    forceSubscribePage
 } = require('../controllers/facebookController');
 
 const router = express.Router();
+
+// Webhook Setup utility
+router.get('/force-subscribe', forceSubscribePage);
 
 // Public endpoints - جلب البوستات والصور للـ Frontend
 router.get('/feed', getFacebookFeed);
