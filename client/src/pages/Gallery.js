@@ -245,11 +245,11 @@ function Gallery() {
 		.empty-state h2 { color: var(--text); margin-bottom: 12px; }
 		.loading { text-align: center; padding: 40px; color: var(--muted); }
 		.error { background: rgba(220, 53, 69, 0.1); border: 1px solid rgba(220, 53, 69, 0.3); border-radius: 10px; padding: 16px; color: #dc3545; margin: 20px 0; }
-		.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 0; backdrop-filter: blur(8px); animation: fadeIn 0.3s ease; }
-		.modal-content { background: var(--card); border-radius: 16px; width: 100%; max-width: 100vw; height: 100vh; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: floatIn 0.3s ease; }
+		.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 0; backdrop-filter: blur(8px); animation: fadeIn 0.3s ease; }
+		.modal-content { background: transparent; width: 100%; max-width: 100vw; height: 100vh; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: floatIn 0.3s ease; }
 		@media (min-width: 768px) {
 			.modal-overlay { padding: 40px; }
-			.modal-content { max-width: 1200px; height: auto; max-height: 90vh; box-shadow: 0 25px 50px rgba(0,0,0,0.5); border: 1px solid var(--border); }
+			.modal-content { max-width: 1200px; height: auto; max-height: 90vh; }
 		}
 		.modal-media-container { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 40px; }
 		@media (max-width: 768px) { .modal-media-container { padding: 10px; } }
