@@ -258,7 +258,7 @@ function Gallery() {
 		.modal-close { position: absolute; top: 16px; right: 16px; width: 44px; height: 44px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; color: white; font-size: 24px; cursor: pointer; z-index: 50; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; }
 		.modal-close:hover { background: rgba(220,53,69,0.9); transform: scale(1.05); }
 
-		.modal-info-bar { position: absolute; bottom: 95px; left: 0; right: 0; width: 100%; padding: 0 20px; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; pointer-events: none; text-align: center; }
+		.modal-info-bar { position: absolute; bottom: 0; left: 0; right: 0; width: 100%; padding: 40px 20px 115px 20px; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 12px; pointer-events: none; text-align: center; background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, transparent 100%); }
 		.modal-info-bar > * { pointer-events: auto; }
 		
 		.modal-caption { color: #fff; max-width: 90%; text-shadow: 0 2px 8px rgba(0,0,0,0.8); }
@@ -397,10 +397,14 @@ function Gallery() {
 								<button className="modal-close" onClick={() => setSelectedMedia(null)} aria-label="إغلاق">✕</button>
 								
 								{hasPrev && (
-									<button className="modal-nav prev" onClick={handlePrev} aria-label="السابق">❯</button>
+									<button className="modal-nav prev" onClick={handlePrev} aria-label="السابق">
+										<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+									</button>
 								)}
 								{hasNext && (
-									<button className="modal-nav next" onClick={handleNext} aria-label="التالي">❮</button>
+									<button className="modal-nav next" onClick={handleNext} aria-label="التالي">
+										<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+									</button>
 								)}
 
 								<div className="modal-media-container">
