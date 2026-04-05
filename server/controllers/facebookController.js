@@ -433,32 +433,76 @@ const handleWebhook = async (req, res) => {
         const body = req.body;
         if (body.object === 'page') {
             for (const entry of body.entry) {
-                const webhook_event = entry.messaging[0];
-                const sender_psid = webhook_event.sender.id;
+                // Handling messaging events (Messages & Edits)
+                if (entry.messaging) {
+                    for (const webhook_event of entry.messaging) {
+                        const sender_psid = webhook_event.sender.id;
+                        let messageText = null;
 
-                if (webhook_event.message && webhook_event.message.text) {
-                    const messageText = webhook_event.message.text;
-                    console.log(`Received message from FB ${sender_psid}: ${messageText}`);
+                        if (webhook_event.message && webhook_event.message.text) {
+                            messageText = webhook_event.message.text;
+                        } else if (webhook_event.message_edit && webhook_event.message_edit.text) {
+                            messageText = webhook_event.message_edit.text;
+                            console.log(`Received EDITED message from FB ${sender_psid}: ${messageText}`);
+                        }
 
-                    // Add user message to session
-                    sessionCache.addUserMessage(sender_psid, messageText);
-                    const history = sessionCache.getUserHistory(sender_psid);
+                        if (messageText) {
+                            // Process AI Chat for Messaging
+                            sessionCache.addUserMessage(sender_psid, messageText);
+                            const history = sessionCache.getUserHistory(sender_psid);
+                            try {
+                                const aiReply = await processAiChat(history, null, null, true);
+                                sessionCache.addAssistantMessage(sender_psid, aiReply);
 
-                    // Call AI
-                    try {
-                        const aiReply = await processAiChat(history, null, null, true);
-                        
-                        // Add AI reply to session
-                        sessionCache.addAssistantMessage(sender_psid, aiReply);
+                                const MESSENGER_TOKEN = process.env.FACEBOOK_MESSENGER_TOKEN || process.env.FACEBOOK_ACCESS_TOKEN;
+                                await axios.post(`https://graph.facebook.com/v24.0/me/messages?access_token=${MESSENGER_TOKEN}`, {
+                                    recipient: { id: sender_psid },
+                                    message: { text: aiReply }
+                                });
+                            } catch (aiError) {
+                                console.error('Error generating AI reply for FB Webhook (Message):', aiError);
+                            }
+                        }
+                    }
+                }
 
-                        // Send back to FB
-                        const PAGE_ACCESS_TOKEN = process.env.FACEBOOK_ACCESS_TOKEN;
-                        await axios.post(`https://graph.facebook.com/v24.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
-                            recipient: { id: sender_psid },
-                            message: { text: aiReply }
-                        });
-                    } catch (aiError) {
-                        console.error('Error generating AI reply for FB Webhook:', aiError);
+                // Handling Feed events (Comments)
+                if (entry.changes) {
+                    for (const change of entry.changes) {
+                        if (change.field === 'feed') {
+                            const value = change.value;
+                            // Check if it's a new or edited comment by a user (not the page itself)
+                            if (value.item === 'comment' && (value.verb === 'add' || value.verb === 'edit')) {
+                                // Skip if the comment is made by the page itself to avoid infinite loops
+                                const pageId = process.env.FACEBOOK_PAGE_ID;
+                                if (value.from && value.from.id === pageId) continue;
+
+                                const commentText = value.message;
+                                const commentId = value.comment_id;
+                                const senderId = value.from ? value.from.id : 'unknown_user';
+
+                                if (commentText) {
+                                    console.log(`Received Comment from ${senderId}: ${commentText}`);
+                                    
+                                    // Treat comment as a single message context for now
+                                    sessionCache.addUserMessage(senderId, commentText);
+                                    const history = sessionCache.getUserHistory(senderId);
+
+                                    try {
+                                        const aiReply = await processAiChat(history, null, null, true);
+                                        sessionCache.addAssistantMessage(senderId, aiReply);
+
+                                        const MESSENGER_TOKEN = process.env.FACEBOOK_MESSENGER_TOKEN || process.env.FACEBOOK_ACCESS_TOKEN;
+                                        // Reply to the comment
+                                        await axios.post(`https://graph.facebook.com/v24.0/${commentId}/comments?access_token=${MESSENGER_TOKEN}`, {
+                                            message: aiReply
+                                        });
+                                    } catch (err) {
+                                        console.error('Error replying to FB Webhook (Comment):', err);
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
