@@ -455,7 +455,13 @@ const handleWebhook = async (req, res) => {
                                 try {
                                     const resData = await axios.get(attachment.payload.url, { responseType: 'arraybuffer' });
                                     fileBuffer = Buffer.from(resData.data);
-                                    fileMimeType = resData.headers['content-type'] || (attachment.type === 'audio' ? 'audio/mp4' : 'image/jpeg'); 
+                                    
+                                    // Force audio mime type if FB CDN mistakenly sends video/mp4 for voice notes
+                                    if (attachment.type === 'audio') {
+                                        fileMimeType = 'audio/mp4';
+                                    } else {
+                                        fileMimeType = resData.headers['content-type'] || 'image/jpeg';
+                                    }
                                 } catch (downloadErr) {
                                     console.error(`Failed to download FB ${attachment.type}:`, downloadErr.message);
                                 }
