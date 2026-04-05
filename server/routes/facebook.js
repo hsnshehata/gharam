@@ -4,7 +4,9 @@ const {
 	getFacebookFeed,
 	getMediaGallery,
 	getMediaGalleryStats,
-	manualSyncPosts
+	manualSyncPosts,
+    verifyWebhook,
+    handleWebhook
 } = require('../controllers/facebookController');
 
 const router = express.Router();
@@ -13,6 +15,10 @@ const router = express.Router();
 router.get('/feed', getFacebookFeed);
 router.get('/gallery', getMediaGallery);
 router.get('/gallery/stats', getMediaGalleryStats);
+
+// Webhook endpoints
+router.get('/webhook', verifyWebhook);
+router.post('/webhook', handleWebhook);
 
 // Admin endpoint - تحديث يدوي
 router.post('/sync', manualSyncPosts);

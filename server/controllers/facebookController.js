@@ -1,8 +1,8 @@
 const axios = require('axios');
 const FacebookPost = require('../models/FacebookPost');
 const MediaGallery = require('../models/MediaGallery');
-
-// استخراج كل الصور والفيديوهات من البوست والحفظ في MediaGallery
+const { processAiChat } = require('../services/aiService');
+const sessionCache = require('../services/sessionCache');// استخراج كل الصور والفيديوهات من البوست والحفظ في MediaGallery
 const extractAndSaveMediaItems = async (post) => {
 	const mediaItems = [];
 	const postId = post.id;
@@ -409,6 +409,69 @@ const manualSyncPosts = async (req, res) => {
 	return syncFacebookPosts(req, res);
 };
 
+// ====== Facebook Messenger Webhook ======
+const verifyWebhook = (req, res) => {
+    const VERIFY_TOKEN = process.env.FACEBOOK_VERIFY_TOKEN;
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    if (mode && token) {
+        if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+            console.log('WEBHOOK_VERIFIED');
+            res.status(200).send(challenge);
+        } else {
+            res.sendStatus(403);
+        }
+    } else {
+        res.sendStatus(400);
+    }
+};
+
+const handleWebhook = async (req, res) => {
+    try {
+        const body = req.body;
+        if (body.object === 'page') {
+            for (const entry of body.entry) {
+                const webhook_event = entry.messaging[0];
+                const sender_psid = webhook_event.sender.id;
+
+                if (webhook_event.message && webhook_event.message.text) {
+                    const messageText = webhook_event.message.text;
+                    console.log(`Received message from FB ${sender_psid}: ${messageText}`);
+
+                    // Add user message to session
+                    sessionCache.addUserMessage(sender_psid, messageText);
+                    const history = sessionCache.getUserHistory(sender_psid);
+
+                    // Call AI
+                    try {
+                        const aiReply = await processAiChat(history, null, null, true);
+                        
+                        // Add AI reply to session
+                        sessionCache.addAssistantMessage(sender_psid, aiReply);
+
+                        // Send back to FB
+                        const PAGE_ACCESS_TOKEN = process.env.FACEBOOK_ACCESS_TOKEN;
+                        await axios.post(`https://graph.facebook.com/v24.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
+                            recipient: { id: sender_psid },
+                            message: { text: aiReply }
+                        });
+                    } catch (aiError) {
+                        console.error('Error generating AI reply for FB Webhook:', aiError);
+                    }
+                }
+            }
+            res.status(200).send('EVENT_RECEIVED');
+        } else {
+            res.sendStatus(404);
+        }
+    } catch (err) {
+        console.error('FB Webhook Error:', err);
+        res.sendStatus(500);
+    }
+};
+
 module.exports = {
 	syncFacebookPosts,
 	getFacebookFeed,
@@ -416,5 +479,7 @@ module.exports = {
 	getMediaGalleryStats,
 	manualSyncPosts,
 	getAdminMediaGallery,
-	updateMediaVisibility
+	updateMediaVisibility,
+    verifyWebhook,
+    handleWebhook
 };
