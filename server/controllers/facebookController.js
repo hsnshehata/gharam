@@ -516,11 +516,12 @@ const handleWebhook = async (req, res) => {
 
                                         const MESSENGER_TOKEN = process.env.FACEBOOK_MESSENGER_TOKEN || process.env.FACEBOOK_ACCESS_TOKEN;
                                         // Reply to the comment
-                                        await axios.post(`https://graph.facebook.com/v24.0/${commentId}/comments?access_token=${MESSENGER_TOKEN}`, {
+                                        const fbRes = await axios.post(`https://graph.facebook.com/v24.0/${commentId}/comments?access_token=${MESSENGER_TOKEN}`, {
                                             message: aiReply
                                         });
+                                        console.log(`Successfully replied to comment ${commentId}. Reply ID:`, fbRes.data.id);
                                     } catch (err) {
-                                        console.error('Error replying to FB Webhook (Comment):', err);
+                                        console.error('Error replying to FB Webhook (Comment):', err.response?.data || err.message);
                                     }
                                 }
                             }
