@@ -251,28 +251,28 @@ function Gallery() {
 			.modal-overlay { padding: 40px; }
 			.modal-content { max-width: 1200px; height: auto; max-height: 90vh; box-shadow: 0 25px 50px rgba(0,0,0,0.5); border: 1px solid var(--border); }
 		}
-		.modal-media-container { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 0 60px 80px 60px; }
-		@media (max-width: 768px) { .modal-media-container { padding: 0 0 120px 0; } }
+		.modal-media-container { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 0; }
 		.modal-image, .modal-video { max-width: 100%; max-height: 100%; object-fit: contain; }
 		
-		.modal-close { position: absolute; top: 16px; right: 16px; width: 44px; height: 44px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; color: white; font-size: 24px; cursor: pointer; z-index: 20; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; }
+		.modal-info-bar { position: absolute; top: 0; left: 0; width: 100%; padding: 20px 20px 50px 20px; background: linear-gradient(to bottom, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 40%, transparent); z-index: 20; display: flex; align-items: flex-start; gap: 16px; pointer-events: none; }
+		.modal-info-bar > * { pointer-events: auto; }
+		@media (max-width: 768px) { .modal-info-bar { flex-wrap: wrap; padding-bottom: 40px; } }
+		
+		.modal-close { width: 44px; height: 44px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; color: white; font-size: 24px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; }
 		.modal-close:hover { background: rgba(220,53,69,0.9); transform: scale(1.05); }
+
+		.modal-caption { color: #fff; flex: 1; text-align: right; }
+		.modal-caption h4 { margin: 0 0 6px; font-size: 16px; color: var(--gold); }
+		.modal-caption p { margin: 0; font-size: 14px; opacity: 0.9; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+		
+		.modal-fb-btn { flex-shrink: 0; background: #1877f2; color: #fff; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(24,119,242,0.4); text-decoration: none; font-size: 14px; }
+		.modal-fb-btn:hover { background: #166fe5; transform: translateY(-3px); box-shadow: 0 6px 20px rgba(24,119,242,0.5); }
+		@media (max-width: 768px) { .modal-fb-btn { width: 100%; margin-top: 4px; } }
 		
 		.modal-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 50px; height: 50px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; font-size: 20px; z-index: 10; transition: all 0.2s ease; }
 		.modal-nav:hover { background: var(--gold); border-color: var(--gold); color: #080f0b; transform: translateY(-50%) scale(1.1); }
 		.modal-nav.prev { right: 20px; }
 		.modal-nav.next { left: 20px; }
-		
-		.modal-info-bar { position: absolute; bottom: 0; left: 0; width: 100%; padding: 24px 20px; background: linear-gradient(to top, rgba(0,0,0,0.95) 10%, rgba(0,0,0,0.7) 60%, transparent); z-index: 15; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
-		@media (max-width: 768px) { .modal-info-bar { flex-direction: column; align-items: center; text-align: center; gap: 14px; padding-bottom: 30px; } }
-		
-		.modal-caption { color: #fff; max-width: calc(100% - 160px); }
-		@media (max-width: 768px) { .modal-caption { max-width: 100%; } }
-		.modal-caption h4 { margin: 0 0 6px; font-size: 16px; color: var(--gold); }
-		.modal-caption p { margin: 0; font-size: 14px; opacity: 0.9; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-		
-		.modal-fb-btn { flex-shrink: 0; background: #1877f2; color: #fff; border: none; padding: 12px 20px; border-radius: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(24,119,242,0.4); text-decoration: none; font-size: 14px; }
-		.modal-fb-btn:hover { background: #166fe5; transform: translateY(-3px); box-shadow: 0 6px 20px rgba(24,119,242,0.5); }
 		.footer { text-align: center; padding: 40px 20px; border-top: 1px solid var(--border); color: var(--muted); }
 		.social-row { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 12px; }
 		.social-link { width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); border-radius: 10px; transition: color 0.2s ease, transform 0.2s ease; }
@@ -473,77 +473,79 @@ function Gallery() {
 			</div>
 
 			{/* FAB Overlay */}
-			{fabOpen && <div className="fab-overlay" onClick={() => setFabOpen(false)} />}
+			{!selectedMedia && fabOpen && <div className="fab-overlay" onClick={() => setFabOpen(false)} />}
 
 			{/* Floating Action Button */}
-			<div className="fab-container">
-				<button
-					className={`fab-trigger ${fabOpen ? 'open' : ''}`}
-					onClick={() => setFabOpen(!fabOpen)}
-					aria-label="القائمة السريعة"
-				>
-					<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-				</button>
-				<div className={`fab-actions ${fabOpen ? 'open' : ''}`}>
+			{!selectedMedia && (
+				<div className="fab-container">
 					<button
-						className="fab-action"
-						style={{ background: '#25d366', color: '#fff', boxShadow: '0 4px 15px rgba(37,211,102,0.4)' }}
-						onClick={() => { window.open(WHATSAPP_LINK, '_blank'); setFabOpen(false); }}
-						aria-label="واتساب"
+						className={`fab-trigger ${fabOpen ? 'open' : ''}`}
+						onClick={() => setFabOpen(!fabOpen)}
+						aria-label="القائمة السريعة"
 					>
-						<span className="fab-tooltip">واتساب</span>
-						<svg width="22" height="22" viewBox="0 0 448 512" fill="currentColor"><path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z" /></svg>
+						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
 					</button>
-					<button
-						className="fab-action"
-						style={{ background: 'linear-gradient(135deg, #c9a04e, #e6c27b)', color: '#0f2419' }}
-						onClick={() => { window.location.href = `tel:${LANDLINE}`; setFabOpen(false); }}
-						aria-label="اتصال أرضي"
-					>
-						<span className="fab-tooltip">اتصال أرضي</span>
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-					</button>
-					<button
-						className="fab-action"
-						style={{ background: 'linear-gradient(135deg, #1a3a2a, #2a5a3a)', color: '#fff' }}
-						onClick={() => { window.open(MAP_LINK, '_blank'); setFabOpen(false); }}
-						aria-label="الموقع"
-					>
-						<span className="fab-tooltip">موقعنا</span>
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-					</button>
-					<button
-						className="fab-action"
-						style={{ background: 'linear-gradient(135deg, #1a1a2e, #16213e)', color: '#c9a04e' }}
-						onClick={() => { window.location.href = '/prices'; setFabOpen(false); }}
-						aria-label="الأسعار"
-					>
-						<span className="fab-tooltip">قائمة الأسعار</span>
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
-					</button>
-					<button
-						className="fab-action"
-						style={{ background: 'linear-gradient(135deg, #1a1a2e, #16213e)', color: '#c9a04e' }}
-						onClick={() => { window.location.href = '/massage-chair'; setFabOpen(false); }}
-						aria-label="كرسي المساج"
-					>
-						<span className="fab-tooltip">كرسي المساج</span>
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-					</button>
-					<button
-						className="fab-action"
-						style={{ background: 'linear-gradient(135deg, #1a1a2e, #16213e)', color: '#c9a04e' }}
-						onClick={() => { window.location.href = '/'; setFabOpen(false); }}
-						aria-label="الرئيسية"
-					>
-						<span className="fab-tooltip">الرئيسية</span>
-						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-					</button>
+					<div className={`fab-actions ${fabOpen ? 'open' : ''}`}>
+						<button
+							className="fab-action"
+							style={{ background: '#25d366', color: '#fff', boxShadow: '0 4px 15px rgba(37,211,102,0.4)' }}
+							onClick={() => { window.open(WHATSAPP_LINK, '_blank'); setFabOpen(false); }}
+							aria-label="واتساب"
+						>
+							<span className="fab-tooltip">واتساب</span>
+							<svg width="22" height="22" viewBox="0 0 448 512" fill="currentColor"><path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z" /></svg>
+						</button>
+						<button
+							className="fab-action"
+							style={{ background: 'linear-gradient(135deg, #c9a04e, #e6c27b)', color: '#0f2419' }}
+							onClick={() => { window.location.href = `tel:${LANDLINE}`; setFabOpen(false); }}
+							aria-label="اتصال أرضي"
+						>
+							<span className="fab-tooltip">اتصال أرضي</span>
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+						</button>
+						<button
+							className="fab-action"
+							style={{ background: 'linear-gradient(135deg, #1a3a2a, #2a5a3a)', color: '#fff' }}
+							onClick={() => { window.open(MAP_LINK, '_blank'); setFabOpen(false); }}
+							aria-label="الموقع"
+						>
+							<span className="fab-tooltip">موقعنا</span>
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+						</button>
+						<button
+							className="fab-action"
+							style={{ background: 'linear-gradient(135deg, #1a1a2e, #16213e)', color: '#c9a04e' }}
+							onClick={() => { window.location.href = '/prices'; setFabOpen(false); }}
+							aria-label="الأسعار"
+						>
+							<span className="fab-tooltip">قائمة الأسعار</span>
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+						</button>
+						<button
+							className="fab-action"
+							style={{ background: 'linear-gradient(135deg, #1a1a2e, #16213e)', color: '#c9a04e' }}
+							onClick={() => { window.location.href = '/massage-chair'; setFabOpen(false); }}
+							aria-label="كرسي المساج"
+						>
+							<span className="fab-tooltip">كرسي المساج</span>
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+						</button>
+						<button
+							className="fab-action"
+							style={{ background: 'linear-gradient(135deg, #1a1a2e, #16213e)', color: '#c9a04e' }}
+							onClick={() => { window.location.href = '/'; setFabOpen(false); }}
+							aria-label="الرئيسية"
+						>
+							<span className="fab-tooltip">الرئيسية</span>
+							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+						</button>
+					</div>
 				</div>
-			</div>
+			)}
 
 			{/* الذكاء الاصطناعي Floating Button */}
-			{!showAIChat && (
+			{!selectedMedia && !showAIChat && (
 				<button
 					className="ai-floating-btn"
 					onClick={() => setShowAIChat(true)}
