@@ -97,7 +97,7 @@ function AppContent() {
           </div>
         ) : (
           <>
-            {user && !['/landing', '/prices', '/massage-chair', '/gallery'].includes(location.pathname) && <Navbar user={user} setUser={setUser} />}
+            {user && !['/landing', '/prices', '/massage-chair', '/gallery'].includes(location.pathname.replace(/\/+$/, '')) && <Navbar user={user} setUser={setUser} />}
             <Routes>
           <Route path="/login" element={<Login setUser={setUser} />} />
           <Route path="/landing" element={<Landing />} />
