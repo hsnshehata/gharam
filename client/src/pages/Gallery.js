@@ -245,8 +245,9 @@ function Gallery() {
 		.empty-state h2 { color: var(--text); margin-bottom: 12px; }
 		.loading { text-align: center; padding: 40px; color: var(--muted); }
 		.error { background: rgba(220, 53, 69, 0.1); border: 1px solid rgba(220, 53, 69, 0.3); border-radius: 10px; padding: 16px; color: #dc3545; margin: 20px 0; }
-		.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 0; backdrop-filter: blur(8px); animation: fadeIn 0.3s ease; }
-		.gallery-lightbox { background: transparent !important; border: none !important; box-shadow: none !important; width: 100%; max-width: 100vw; height: 100vh; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: floatIn 0.3s ease; pointer-events: none; }
+		.modal-overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 0; animation: fadeIn 0.3s ease; }
+		.modal-overlay-bg { position: absolute; inset: -40px; background: url('/banner-b.png') no-repeat center center; background-size: cover; filter: blur(15px) brightness(0.2); z-index: 0; pointer-events: none; }
+		.gallery-lightbox { z-index: 10; background: transparent !important; border: none !important; box-shadow: none !important; width: 100%; max-width: 100vw; height: 100vh; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: floatIn 0.3s ease; pointer-events: none; }
 		.gallery-lightbox > * { pointer-events: auto; }
 		@media (min-width: 768px) {
 			.modal-overlay { padding: 40px; }
@@ -269,7 +270,7 @@ function Gallery() {
 		.modal-fb-btn { background: #1877f2; color: #fff; border: none; padding: 10px 24px; border-radius: 20px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(24,119,242,0.4); text-decoration: none; font-size: 14px; }
 		.modal-fb-btn:hover { background: #166fe5; transform: translateY(-3px); box-shadow: 0 6px 20px rgba(24,119,242,0.5); }
 		
-		.modal-nav { pointer-events: auto; position: absolute; top: 50%; transform: translateY(-50%); width: 50px; height: 50px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; font-size: 20px; z-index: 10; transition: all 0.2s ease; }
+		.modal-nav { pointer-events: auto; position: absolute; top: 50%; transform: translateY(-50%); width: 50px; height: 50px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; font-size: 20px; z-index: 100; transition: all 0.2s ease; }
 		.modal-nav:hover { background: var(--gold); border-color: var(--gold); color: #080f0b; transform: translateY(-50%) scale(1.1); }
 		.modal-nav.prev { right: 20px; }
 		.modal-nav.next { left: 20px; }
@@ -394,16 +395,17 @@ function Gallery() {
 
 					return (
 						<div className="modal-overlay" onClick={() => setSelectedMedia(null)}>
+							<div className="modal-overlay-bg" />
 							<div className="gallery-lightbox" onClick={(e) => e.stopPropagation()}>
 								
 								{hasPrev && (
 									<button className="modal-nav prev" onClick={(e) => { e.stopPropagation(); handlePrev(e); }} aria-label="السابق">
-										<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+										<svg style={{ pointerEvents: 'none' }} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
 									</button>
 								)}
 								{hasNext && (
 									<button className="modal-nav next" onClick={(e) => { e.stopPropagation(); handleNext(e); }} aria-label="التالي">
-										<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+										<svg style={{ pointerEvents: 'none' }} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
 									</button>
 								)}
 								{/* Media Container */}
