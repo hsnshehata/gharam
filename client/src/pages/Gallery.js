@@ -246,16 +246,17 @@ function Gallery() {
 		.loading { text-align: center; padding: 40px; color: var(--muted); }
 		.error { background: rgba(220, 53, 69, 0.1); border: 1px solid rgba(220, 53, 69, 0.3); border-radius: 10px; padding: 16px; color: #dc3545; margin: 20px 0; }
 		.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 0; backdrop-filter: blur(8px); animation: fadeIn 0.3s ease; }
-		.modal-content { background: transparent; width: 100%; max-width: 100vw; height: 100vh; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: floatIn 0.3s ease; }
+		.gallery-lightbox { background: transparent !important; border: none !important; box-shadow: none !important; width: 100%; max-width: 100vw; height: 100vh; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: floatIn 0.3s ease; pointer-events: none; }
+		.gallery-lightbox > * { pointer-events: auto; }
 		@media (min-width: 768px) {
 			.modal-overlay { padding: 40px; }
-			.modal-content { max-width: 1200px; height: auto; max-height: 90vh; }
+			.gallery-lightbox { max-width: 1200px; height: auto; max-height: 90vh; }
 		}
-		.modal-media-container { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 40px; }
+		.modal-media-container { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 40px; pointer-events: none; }
 		@media (max-width: 768px) { .modal-media-container { padding: 10px; } }
-		.modal-image, .modal-video { max-width: 100%; max-height: 100%; object-fit: contain; }
+		.modal-image, .modal-video { max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: auto; }
 		
-		.modal-close { position: absolute; top: 16px; right: 16px; width: 44px; height: 44px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; color: white; font-size: 24px; cursor: pointer; z-index: 50; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; }
+		.modal-close { pointer-events: auto; position: absolute; top: 16px; right: 16px; width: 44px; height: 44px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.1); border-radius: 50%; color: white; font-size: 24px; cursor: pointer; z-index: 50; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; }
 		.modal-close:hover { background: rgba(220,53,69,0.9); transform: scale(1.05); }
 
 		.modal-info-bar { position: absolute; bottom: 0; left: 0; right: 0; width: 100%; padding: 40px 20px 115px 20px; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 12px; pointer-events: none; text-align: center; background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 60%, transparent 100%); }
@@ -268,7 +269,7 @@ function Gallery() {
 		.modal-fb-btn { background: #1877f2; color: #fff; border: none; padding: 10px 24px; border-radius: 20px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(24,119,242,0.4); text-decoration: none; font-size: 14px; }
 		.modal-fb-btn:hover { background: #166fe5; transform: translateY(-3px); box-shadow: 0 6px 20px rgba(24,119,242,0.5); }
 		
-		.modal-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 50px; height: 50px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; font-size: 20px; z-index: 10; transition: all 0.2s ease; }
+		.modal-nav { pointer-events: auto; position: absolute; top: 50%; transform: translateY(-50%); width: 50px; height: 50px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; font-size: 20px; z-index: 10; transition: all 0.2s ease; }
 		.modal-nav:hover { background: var(--gold); border-color: var(--gold); color: #080f0b; transform: translateY(-50%) scale(1.1); }
 		.modal-nav.prev { right: 20px; }
 		.modal-nav.next { left: 20px; }
@@ -393,21 +394,21 @@ function Gallery() {
 
 					return (
 						<div className="modal-overlay" onClick={() => setSelectedMedia(null)}>
-							<div className="modal-content" onClick={(e) => e.stopPropagation()}>
-								<button className="modal-close" onClick={() => setSelectedMedia(null)} aria-label="إغلاق">✕</button>
+							<div className="gallery-lightbox" onClick={(e) => e.stopPropagation()}>
 								
 								{hasPrev && (
-									<button className="modal-nav prev" onClick={handlePrev} aria-label="السابق">
+									<button className="modal-nav prev" onClick={(e) => { e.stopPropagation(); handlePrev(e); }} aria-label="السابق">
 										<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
 									</button>
 								)}
 								{hasNext && (
-									<button className="modal-nav next" onClick={handleNext} aria-label="التالي">
+									<button className="modal-nav next" onClick={(e) => { e.stopPropagation(); handleNext(e); }} aria-label="التالي">
 										<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
 									</button>
 								)}
-
-								<div className="modal-media-container">
+								{/* Media Container */}
+								<div className="modal-media-container" onClick={() => setSelectedMedia(null)}>
+									<button className="modal-close" onClick={() => setSelectedMedia(null)} aria-label="إغلاق">✕</button>
 									{selectedMedia.type === 'video' ? (
 										getVideoEmbedUrl(selectedMedia) ? (
 											<iframe
