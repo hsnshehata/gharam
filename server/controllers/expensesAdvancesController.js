@@ -5,6 +5,7 @@ const User = require('../models/User');
 const mongoose = require('mongoose');
 const { cacheAside, deleteByPrefix } = require('../services/cache');
 const { logActivity } = require('../services/activityLogger');
+const dataStore = require('../services/dataStore');
 
 const invalidateExpenseCaches = async () => {
   await Promise.all([
@@ -42,6 +43,7 @@ exports.addExpenseAdvance = async (req, res) => {
       });
 
       await invalidateExpenseCaches();
+      if (dataStore.isReady()) await dataStore.onExpenseCreated(expense._id);
       return res.json({ msg: 'تم إضافة المصروف بنجاح', item: populatedExpense, type: 'expense' });
     } else if (type === 'advance') {
       if (!userId || !amount || amount <= 0) {
@@ -73,6 +75,10 @@ exports.addExpenseAdvance = async (req, res) => {
       });
 
       await invalidateExpenseCaches();
+      if (dataStore.isReady()) {
+        await dataStore.onAdvanceCreated(advance._id);
+        await dataStore.onUserUpdated(userId);
+      }
       return res.json({ msg: 'تم إضافة السلفة بنجاح', item: populatedAdvance, type: 'advance' });
     } else if (type === 'deduction') {
       if (!userId || !amount || amount <= 0 || !details) {
@@ -93,6 +99,10 @@ exports.addExpenseAdvance = async (req, res) => {
 
       const populatedDeduction = await Deduction.findById(deduction._id).populate('userId createdBy', 'username remainingSalary');
       await invalidateExpenseCaches();
+      if (dataStore.isReady()) {
+        await dataStore.onDeductionCreated(deduction._id);
+        await dataStore.onUserUpdated(userId);
+      }
       return res.json({ msg: 'تم إضافة الخصم الإداري بنجاح', item: populatedDeduction, type: 'deduction' });
     }
   } catch (err) {
@@ -135,6 +145,7 @@ exports.updateExpenseAdvance = async (req, res) => {
       });
 
       await invalidateExpenseCaches();
+      if (dataStore.isReady()) await dataStore.onExpenseUpdated(expense._id);
       return res.json({ msg: 'تم تعديل المصروف بنجاح', item: expense, type: 'expense' });
     } else if (type === 'advance') {
       if (!userId || !amount || amount <= 0) {
@@ -179,6 +190,11 @@ exports.updateExpenseAdvance = async (req, res) => {
       });
 
       await invalidateExpenseCaches();
+      if (dataStore.isReady()) {
+        await dataStore.onAdvanceUpdated(advance._id);
+        await dataStore.onUserUpdated(userId);
+        if (oldAdvance.userId.toString() !== userId) await dataStore.onUserUpdated(oldAdvance.userId);
+      }
       return res.json({ msg: 'تم تعديل السلفة بنجاح', item: advance, type: 'advance' });
     } else if (type === 'deduction') {
       if (!userId || !amount || amount <= 0 || !details) {
@@ -209,6 +225,10 @@ exports.updateExpenseAdvance = async (req, res) => {
 
       await User.updateOne({ _id: userId }, { $set: { remainingSalary: user.remainingSalary - amount } });
       await invalidateExpenseCaches();
+      if (dataStore.isReady()) {
+        await dataStore.onUserUpdated(userId);
+        if (oldDeduction.userId.toString() !== userId) await dataStore.onUserUpdated(oldDeduction.userId);
+      }
       return res.json({ msg: 'تم تعديل الخصم الإداري بنجاح', item: deduction, type: 'deduction' });
     }
   } catch (err) {
@@ -246,6 +266,7 @@ exports.deleteExpenseAdvance = async (req, res) => {
       });
 
       await invalidateExpenseCaches();
+      if (dataStore.isReady()) dataStore.onExpenseDeleted(req.params.id);
       return res.json({ msg: 'تم حذف المصروف بنجاح', type: 'expense' });
     } else if (type === 'advance') {
       const advance = await Advance.findById(req.params.id);
@@ -271,6 +292,10 @@ exports.deleteExpenseAdvance = async (req, res) => {
       });
 
       await invalidateExpenseCaches();
+      if (dataStore.isReady()) {
+        dataStore.onAdvanceDeleted(req.params.id);
+        if (user) await dataStore.onUserUpdated(advance.userId);
+      }
       return res.json({ msg: 'تم حذف السلفة بنجاح', type: 'advance' });
     } else if (type === 'deduction') {
       const deduction = await Deduction.findById(req.params.id);
@@ -283,6 +308,10 @@ exports.deleteExpenseAdvance = async (req, res) => {
 
       await Deduction.findByIdAndDelete(req.params.id);
       await invalidateExpenseCaches();
+      if (dataStore.isReady()) {
+        dataStore.onDeductionDeleted(req.params.id);
+        if (user) await dataStore.onUserUpdated(deduction.userId);
+      }
       return res.json({ msg: 'تم حذف الخصم الإداري بنجاح', type: 'deduction' });
     }
   } catch (err) {
@@ -295,6 +324,11 @@ exports.getExpensesAdvances = async (req, res) => {
   const { page = 1, limit = 50, search } = req.query;
 
   try {
+    if (dataStore.isReady()) {
+      const payload = dataStore.getExpensesAdvances({ page: parseInt(page), limit: parseInt(limit), search });
+      return res.json(payload);
+    }
+    // Fallback to MongoDB
     const key = `expenses:list:${JSON.stringify({ page, limit, search })}`;
     const payload = await cacheAside({
       key,

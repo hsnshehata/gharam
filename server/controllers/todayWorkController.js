@@ -1,8 +1,15 @@
 const Booking = require('../models/Booking');
+const dataStore = require('../services/dataStore');
 
 exports.getTodayWork = async (req, res) => {
   const { date } = req.query; // التاريخ على شكل YYYY-MM-DD
   try {
+    // Use cache if ready
+    if (dataStore.isReady()) {
+      return res.json(dataStore.getTodayBookings(date));
+    }
+
+    // Fallback to MongoDB
     const startDate = date ? new Date(date) : new Date();
     startDate.setHours(0, 0, 0, 0);
     const endDate = new Date(startDate);

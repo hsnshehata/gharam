@@ -4,6 +4,7 @@ const User = require('../models/User');
 const { cacheAside, deleteByPrefix } = require('../services/cache');
 const { addPointsAndConvertInternal, removePointsAndCoinsInternal } = require('./usersController');
 const { logActivity } = require('../services/activityLogger');
+const dataStore = require('../services/dataStore');
 
 const invalidateInstantServiceCaches = async () => {
   await Promise.all([
@@ -123,6 +124,8 @@ exports.addInstantService = async (req, res) => {
     const populatedService = await InstantService.findById(instantService._id)
       .populate('employeeId', 'username')
       .populate('services.executedBy', 'username');
+
+    if (dataStore.isReady()) await dataStore.onInstantServiceCreated(instantService._id);
 
     return res.json({ msg: 'تم إضافة الخدمة الفورية بنجاح', instantService: populatedService, points: totalPoints });
   } catch (err) {
@@ -263,6 +266,7 @@ exports.updateInstantService = async (req, res) => {
     });
 
     await invalidateInstantServiceCaches();
+    if (dataStore.isReady()) await dataStore.onInstantServiceUpdated(instantService._id);
 
     return res.json({ msg: 'تم تعديل الخدمة الفورية بنجاح', instantService, points: addedPoints });
   } catch (err) {
@@ -291,6 +295,7 @@ exports.deleteInstantService = async (req, res) => {
     });
 
     await invalidateInstantServiceCaches();
+    if (dataStore.isReady()) dataStore.onInstantServiceDeleted(req.params.id);
     return res.json({ msg: 'تم حذف الخدمة الفورية بنجاح' });
   } catch (err) {
     console.error('Error in deleteInstantService:', err);
@@ -302,6 +307,11 @@ exports.getInstantServices = async (req, res) => {
   const { page = 1, limit = 50, search, date, receiptNumber } = req.query;
 
   try {
+    if (dataStore.isReady()) {
+      const payload = dataStore.getInstantServices({ page: parseInt(page), limit: parseInt(limit), search, date, receiptNumber });
+      return res.json({ instantServices: payload.instantServices, total: payload.total, pages: payload.pages });
+    }
+    // Fallback to MongoDB
     const key = `instantServices:list:${JSON.stringify({ page, limit, search, date, receiptNumber })}`;
     const payload = await cacheAside({
       key,
@@ -358,6 +368,12 @@ exports.getInstantServiceByReceipt = async (req, res) => {
   if (!receiptNumber) return res.status(400).json({ msg: 'رقم الوصل غير صالح' });
 
   try {
+    if (dataStore.isReady()) {
+      const instantService = dataStore.getInstantServiceByReceipt(receiptNumber);
+      if (!instantService) return res.status(404).json({ msg: 'لم يتم العثور على خدمة فورية بهذا الرقم' });
+      return res.json({ instantService });
+    }
+    // Fallback
     const instantService = await InstantService.findOne({ receiptNumber })
       .populate('employeeId', 'username')
       .populate('services.executedBy', 'username');
@@ -430,6 +446,7 @@ exports.executeService = async (req, res) => {
       .populate('services.executedBy', 'username');
 
     await invalidateInstantServiceCaches();
+    if (dataStore.isReady()) await dataStore.onInstantServiceUpdated(id);
 
     return res.json({ msg: 'تم تنفيذ الخدمة بنجاح', instantService: populatedService, points });
   } catch (err) {
@@ -474,6 +491,7 @@ exports.resetService = async (req, res) => {
       .populate('services.executedBy', 'username');
 
     await invalidateInstantServiceCaches();
+    if (dataStore.isReady()) await dataStore.onInstantServiceUpdated(id);
 
     return res.json({ msg: 'تم سحب التكليف وإلغاء النقاط', instantService: populatedService, removedPoints: points });
   } catch (err) {

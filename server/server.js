@@ -12,11 +12,15 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+const { warmUp: warmUpDataStore } = require('./services/dataStore');
+
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
+  .then(async () => {
     console.log('MongoDB connected');
     startSalaryResetScheduler();
+    // Warm up the in-memory data store for instant reads
+    await warmUpDataStore();
   })
   .catch(err => console.log(err));
 

@@ -5,6 +5,7 @@ const Advance = require('../models/Advance');
 const User = require('../models/User');
 const ActivityLog = require('../models/ActivityLog');
 const { cacheAside } = require('../services/cache');
+const dataStore = require('../services/dataStore');
 
 const toNumber = (v) => Number(v) || 0;
 
@@ -123,8 +124,14 @@ const buildDashboardSummary = async (startDate, endDate) => {
 };
 
 exports.getDashboardSummary = async (req, res) => {
-  const { date } = req.query; // التاريخ على شكل YYYY-MM-DD
+  const { date } = req.query;
   try {
+    // Use cache if ready
+    if (dataStore.isReady()) {
+      return res.json(dataStore.getDashboardSummary(date));
+    }
+
+    // Fallback to MongoDB
     const startDate = date ? new Date(date) : new Date();
     startDate.setHours(0, 0, 0, 0);
     const endDate = new Date(startDate);
@@ -148,6 +155,12 @@ exports.getDashboardSummary = async (req, res) => {
 exports.getTodayOperations = async (req, res) => {
   const { date } = req.query;
   try {
+    // Use cache if ready
+    if (dataStore.isReady()) {
+      return res.json(dataStore.getTodayOperations(date));
+    }
+
+    // Fallback to MongoDB
     const startDate = date ? new Date(date) : new Date();
     startDate.setHours(0, 0, 0, 0);
     const endDate = new Date(startDate);
@@ -188,29 +201,19 @@ exports.getTodayOperations = async (req, res) => {
       operations.push({
         _id: log._id.toString(),
         entityId: log.entityId ? log.entityId.toString() : null,
-        actionType: log.action, // 'CREATE', 'UPDATE', 'DELETE'
+        actionType: log.action,
         type: typeLabel,
         details: log.details,
         amount: log.amount || 0,
         time: log.createdAt,
         addedBy: log.performedBy?.username || 'غير معروف',
         paymentMethod: log.paymentMethod || '-',
-        isLog: true // Flag to identify new logs
+        isLog: true
       });
     });
 
-    // For backward compatibility (legacy data without ActivityLog)
-    // We only add old ones IF there are NO new logs for them recently
-    // Easiest is to just include them but marked as legacy "CREATE" if ActivityLog is empty
-    // To prevent total duplication, since we just launched this, 
-    // we can keep the old logic but ONLY for CREATE of legacy records.
-    // However, it's safer to just return the combined list and sort descending.
-    // User will see old "حجز جديد" and new "إضافة حجز" side by side for today.
-    // Starting tomorrow, old logic will just be redundant but harmless, or we can remove old logic later.
-
-    // 1. New Bookings (Legacy)
+    // Legacy bookings
     bookings.forEach(b => {
-      // Skip if we already logged this creation in ActivityLog (starts today)
       const hasLog = operations.find(op => op.isLog && op.entityId === b._id.toString() && op.actionType === 'CREATE');
       if (!hasLog) {
         operations.push({
@@ -225,11 +228,10 @@ exports.getTodayOperations = async (req, res) => {
       }
     });
 
-    // 2. Installments (Legacy)
+    // Legacy installments
     bookingsWithInstallments.forEach(b => {
       b.installments.forEach(ins => {
         if (ins.date >= startDate && ins.date <= endDate) {
-          // Because installments use the booking _id in legacy, we check by exact time or related entity
           const hasLog = operations.find(op => op.isLog && op.entityId === b._id.toString() && op.actionType === 'CREATE' && op.type === 'إضافة قسط' && op.amount === ins.amount);
           if (!hasLog) {
             operations.push({
@@ -246,7 +248,7 @@ exports.getTodayOperations = async (req, res) => {
       });
     });
 
-    // 3. Instant Services (Legacy)
+    // Legacy instant services
     instantServices.forEach(is => {
       const serviceNames = is.services.map(s => s.name).join(', ');
       const hasLog = operations.find(op => op.isLog && op.entityId === is._id.toString() && op.actionType === 'CREATE');
@@ -263,7 +265,7 @@ exports.getTodayOperations = async (req, res) => {
       }
     });
 
-    // 4. Expenses (Legacy)
+    // Legacy expenses
     expenses.forEach(e => {
       const hasLog = operations.find(op => op.isLog && op.entityId === e._id.toString() && op.actionType === 'CREATE');
       if (!hasLog) {
@@ -279,7 +281,7 @@ exports.getTodayOperations = async (req, res) => {
       }
     });
 
-    // 5. Advances (Legacy)
+    // Legacy advances
     advances.forEach(a => {
       const hasLog = operations.find(op => op.isLog && op.entityId === a._id.toString() && op.actionType === 'CREATE');
       if (!hasLog) {
@@ -295,9 +297,7 @@ exports.getTodayOperations = async (req, res) => {
       }
     });
 
-    // Sort by time descending
     operations.sort((a, b) => new Date(b.time) - new Date(a.time));
-
     res.json(operations);
   } catch (err) {
     console.error('Error in getTodayOperations:', err);

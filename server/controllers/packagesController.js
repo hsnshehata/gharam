@@ -1,5 +1,6 @@
 const Package = require('../models/Package');
 const Service = require('../models/Service');
+const dataStore = require('../services/dataStore');
 
 exports.addPackage = async (req, res) => {
   let { name, price, type, isActive, expiresAt, showInPrices } = req.body;
@@ -7,6 +8,7 @@ exports.addPackage = async (req, res) => {
   try {
     const pkg = new Package({ name, price, type, isActive, expiresAt, showInPrices });
     await pkg.save();
+    if (dataStore.isReady()) await dataStore.onPackageChanged();
     res.json({ msg: 'Package added successfully', pkg });
   } catch (err) {
     console.error(err);
@@ -20,6 +22,7 @@ exports.updatePackage = async (req, res) => {
   try {
     const pkg = await Package.findByIdAndUpdate(req.params.id, { name, price, type, isActive, expiresAt, showInPrices }, { new: true });
     if (!pkg) return res.status(404).json({ msg: 'Package not found' });
+    if (dataStore.isReady()) await dataStore.onPackageChanged();
     res.json({ msg: 'Package updated successfully', pkg });
   } catch (err) {
     console.error(err);
@@ -34,6 +37,7 @@ exports.deletePackage = async (req, res) => {
   try {
     const pkg = await Package.findByIdAndDelete(req.params.id);
     if (!pkg) return res.status(404).json({ msg: 'Package not found' });
+    if (dataStore.isReady()) await dataStore.onPackageChanged();
     res.json({ msg: 'Package deleted successfully' });
   } catch (err) {
     console.error(err);
@@ -51,6 +55,7 @@ exports.addService = async (req, res) => {
     }
     const service = new Service(serviceData);
     await service.save();
+    if (dataStore.isReady()) await dataStore.onServiceChanged();
     res.json({ msg: 'Service added successfully', service });
   } catch (err) {
     console.error(err);
@@ -70,6 +75,7 @@ exports.updateService = async (req, res) => {
     }
     const service = await Service.findByIdAndUpdate(req.params.id, serviceData, { new: true }).populate('packageId');
     if (!service) return res.status(404).json({ msg: 'Service not found' });
+    if (dataStore.isReady()) await dataStore.onServiceChanged();
     res.json({ msg: 'Service updated successfully', service });
   } catch (err) {
     console.error(err);
@@ -84,6 +90,7 @@ exports.deleteService = async (req, res) => {
   try {
     const service = await Service.findByIdAndDelete(req.params.id);
     if (!service) return res.status(404).json({ msg: 'Service not found' });
+    if (dataStore.isReady()) await dataStore.onServiceChanged();
     res.json({ msg: 'Service deleted successfully' });
   } catch (err) {
     console.error(err);
@@ -93,6 +100,9 @@ exports.deleteService = async (req, res) => {
 
 exports.getPackages = async (req, res) => {
   try {
+    if (dataStore.isReady()) {
+      return res.json(dataStore.getPackages());
+    }
     const packages = await Package.find();
     res.json(packages);
   } catch (err) {
@@ -103,6 +113,9 @@ exports.getPackages = async (req, res) => {
 
 exports.getServices = async (req, res) => {
   try {
+    if (dataStore.isReady()) {
+      return res.json(dataStore.getServices());
+    }
     const services = await Service.find().populate('packageId');
     res.json(services);
   } catch (err) {

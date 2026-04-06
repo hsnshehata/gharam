@@ -5,6 +5,7 @@ const User = require('../models/User');
 const { cacheAside, deleteByPrefix } = require('../services/cache');
 const { addPointsAndConvertInternal, removePointsAndCoinsInternal } = require('./usersController');
 const { logActivity } = require('../services/activityLogger');
+const dataStore = require('../services/dataStore');
 
 const invalidateBookingRelated = async () => {
   await Promise.all([
@@ -128,6 +129,7 @@ exports.addBooking = async (req, res) => {
     });
 
     await invalidateBookingRelated();
+    if (dataStore.isReady()) await dataStore.onBookingCreated(booking._id);
     res.json({ msg: 'Booking added successfully', booking: populatedBooking });
   } catch (err) {
     console.error(err);
@@ -258,6 +260,7 @@ exports.updateBooking = async (req, res) => {
     });
 
     await invalidateBookingRelated();
+    if (dataStore.isReady()) await dataStore.onBookingUpdated(booking._id);
     res.json({ msg: 'Booking updated successfully', booking });
   } catch (err) {
     console.error(err);
@@ -283,6 +286,7 @@ exports.deleteBooking = async (req, res) => {
     });
 
     await invalidateBookingRelated();
+    if (dataStore.isReady()) dataStore.onBookingDeleted(req.params.id);
     res.json({ msg: 'Booking deleted successfully' });
   } catch (err) {
     console.error(err);
@@ -321,6 +325,7 @@ exports.addInstallment = async (req, res) => {
     });
 
     await invalidateBookingRelated();
+    if (dataStore.isReady()) await dataStore.onBookingUpdated(booking._id);
     res.json({ msg: 'Installment added successfully', booking: populatedBooking });
   } catch (err) {
     console.error(err);
@@ -367,6 +372,7 @@ exports.updateInstallment = async (req, res) => {
     });
 
     await invalidateBookingRelated();
+    if (dataStore.isReady()) await dataStore.onBookingUpdated(booking._id);
     res.json({ msg: 'Installment updated successfully', booking: populatedBooking });
   } catch (err) {
     console.error(err);
@@ -409,6 +415,7 @@ exports.deleteInstallment = async (req, res) => {
     });
 
     await invalidateBookingRelated();
+    if (dataStore.isReady()) await dataStore.onBookingUpdated(booking._id);
     res.json({ msg: 'Installment deleted successfully', booking: populatedBooking });
   } catch (err) {
     console.error(err);
@@ -419,6 +426,11 @@ exports.deleteInstallment = async (req, res) => {
 exports.getBookings = async (req, res) => {
   const { page = 1, limit = 50, search, date, receiptNumber } = req.query;
   try {
+    if (dataStore.isReady()) {
+      const payload = dataStore.getBookings({ page: parseInt(page), limit: parseInt(limit), search, date, receiptNumber });
+      return res.json(payload);
+    }
+    // Fallback to MongoDB if cache not ready
     const key = `bookings:list:${JSON.stringify({ page, limit, search, date, receiptNumber })}`;
     const payload = await cacheAside({
       key,
@@ -469,6 +481,12 @@ exports.getBookingByReceipt = async (req, res) => {
   if (!receiptNumber) return res.status(400).json({ msg: 'رقم الوصل غير صالح' });
 
   try {
+    if (dataStore.isReady()) {
+      const booking = dataStore.getBookingByReceipt(receiptNumber);
+      if (!booking) return res.status(404).json({ msg: 'لم يتم العثور على حجز بهذا الرقم' });
+      return res.json({ booking });
+    }
+    // Fallback
     const booking = await Booking.findOne({ receiptNumber })
       .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy hairStraighteningExecutedBy hairDyeExecutedBy packageServices.executedBy');
 
@@ -538,6 +556,7 @@ exports.executeService = async (req, res) => {
     const populatedBooking = await Booking.findById(booking._id)
       .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy packageServices.executedBy hairStraighteningExecutedBy hairDyeExecutedBy');
     await invalidateBookingRelated();
+    if (dataStore.isReady()) await dataStore.onBookingUpdated(booking._id);
     res.json({ msg: 'Service executed successfully', booking: populatedBooking, points });
   } catch (err) {
     console.error(err);
@@ -601,6 +620,7 @@ exports.resetService = async (req, res) => {
       .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy packageServices.executedBy hairStraighteningExecutedBy hairDyeExecutedBy');
 
     await invalidateBookingRelated();
+    if (dataStore.isReady()) await dataStore.onBookingUpdated(booking._id);
     res.json({ msg: 'Service reset successfully', booking: populatedBooking, removedPoints: points });
   } catch (err) {
     console.error(err);

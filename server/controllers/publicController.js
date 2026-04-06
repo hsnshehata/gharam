@@ -1,5 +1,6 @@
 const Booking = require('../models/Booking');
 const InstantService = require('../models/InstantService');
+const dataStore = require('../services/dataStore');
 const GOOGLE_FIELDS = 'rating,user_ratings_total,reviews';
 
 const FALLBACK_RESPONSE = {
@@ -24,19 +25,32 @@ exports.checkAvailability = async (req, res) => {
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const query = { eventDate: { $gte: startOfDay, $lte: endOfDay } };
-
-    if (type === 'photo') {
-      query.photographyPackage = { $exists: true, $ne: null };
+    let count;
+    if (dataStore.isReady()) {
+      // Count from cache
+      const allBookings = dataStore.getBookings({ page: 1, limit: 99999 }).bookings;
+      count = allBookings.filter(b => {
+        const ed = new Date(b.eventDate);
+        if (ed < startOfDay || ed > endOfDay) return false;
+        if (type === 'photo') {
+          return b.photographyPackage;
+        } else {
+          return !b.photographyPackage;
+        }
+      }).length;
     } else {
-      // اعتبر الحجوزات الغير تصوير ضمن الميك أب
-      query.$or = [
-        { photographyPackage: { $exists: false } },
-        { photographyPackage: null }
-      ];
+      // Fallback
+      const query = { eventDate: { $gte: startOfDay, $lte: endOfDay } };
+      if (type === 'photo') {
+        query.photographyPackage = { $exists: true, $ne: null };
+      } else {
+        query.$or = [
+          { photographyPackage: { $exists: false } },
+          { photographyPackage: null }
+        ];
+      }
+      count = await Booking.countDocuments(query);
     }
-
-    const count = await Booking.countDocuments(query);
 
     let status = 'available';
     if (type === 'photo') {
@@ -105,6 +119,16 @@ exports.findByReceipt = async (req, res) => {
   if (!receiptNumber) return res.status(400).json({ msg: 'رقم الوصل غير صالح' });
 
   try {
+    if (dataStore.isReady()) {
+      const booking = dataStore.getBookingByReceipt(receiptNumber);
+      const instantService = dataStore.getInstantServiceByReceipt(receiptNumber);
+      if (!booking && !instantService) {
+        return res.status(404).json({ msg: 'لم يتم العثور على حجز أو خدمة فورية بهذا الرقم' });
+      }
+      return res.json({ booking: booking || null, instantService: instantService || null });
+    }
+
+    // Fallback
     const [booking, instantService] = await Promise.all([
       Booking.findOne({ receiptNumber })
         .populate('package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy hairStraighteningExecutedBy hairDyeExecutedBy packageServices.executedBy'),

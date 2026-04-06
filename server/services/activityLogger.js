@@ -30,6 +30,12 @@ const logActivity = async ({ action, entityType, entityId, details, amount, paym
     });
 
     await logEntry.save();
+
+    // Update DataStore cache
+    try {
+      const dataStore = require('./dataStore');
+      if (dataStore.isReady()) await dataStore.onActivityLogCreated(logEntry._id);
+    } catch (e) { /* ignore if dataStore not available */ }
   } catch (err) {
     console.error('Error saving activity log:', err);
   }

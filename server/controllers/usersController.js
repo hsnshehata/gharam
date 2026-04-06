@@ -7,6 +7,7 @@ const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const { resetAllSalaries } = require('../services/salaryResetService');
 const { cacheAside, deleteByPrefix } = require('../services/cache');
+const dataStore = require('../services/dataStore');
 
 const LEVEL_THRESHOLDS = [0, 3000, 8000, 18000, 38000, 73000, 118000, 208000, 368000, 600000];
 const COIN_VALUES = [0, 100, 150, 200, 250, 300, 350, 400, 450, 500, 600];
@@ -82,6 +83,7 @@ const addPointsAndConvert = async (userId, amount, meta = {}) => {
 
   await user.save();
   await clearUserCache(userId);
+  if (dataStore.isReady()) await dataStore.onUserUpdated(userId);
   return user;
 };
 
@@ -106,6 +108,7 @@ const removePointsAndCoins = async (userId, matchFn) => {
 
   await user.save();
   await clearUserCache(userId);
+  if (dataStore.isReady()) await dataStore.onUserUpdated(userId);
   return user;
 };
 
@@ -126,6 +129,7 @@ exports.addUser = async (req, res) => {
       phone
     });
     await user.save();
+    if (dataStore.isReady()) await dataStore.onUserUpdated(user._id);
     res.json({ msg: 'User added successfully', user: { id: user.id, username, role } });
   } catch (err) {
     console.error(err);
@@ -155,6 +159,7 @@ exports.updateUser = async (req, res) => {
     }
 
     const user = await User.findByIdAndUpdate(req.params.id, updateData, { new: true }).select('-password');
+    if (dataStore.isReady()) await dataStore.onUserUpdated(req.params.id);
     res.json({ msg: 'User updated successfully', user });
   } catch (err) {
     console.error(err);
@@ -181,6 +186,7 @@ exports.deleteUser = async (req, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);
     if (!user) return res.status(404).json({ msg: 'User not found' });
+    if (dataStore.isReady()) dataStore.onUserDeleted(req.params.id);
     res.json({ msg: 'User deleted successfully' });
   } catch (err) {
     console.error(err);
@@ -190,6 +196,9 @@ exports.deleteUser = async (req, res) => {
 
 exports.getUsers = async (req, res) => {
   try {
+    if (dataStore.isReady()) {
+      return res.json(dataStore.getUsers());
+    }
     const users = await User.find().select('-password');
     res.json(users);
   } catch (err) {
@@ -232,6 +241,7 @@ exports.giftPoints = async (req, res) => {
     user.points.push(giftPoint);
     await user.save();
     await clearUserCache(user.id);
+    if (dataStore.isReady()) await dataStore.onUserUpdated(userId);
 
     res.json({ msg: 'تم إرسال الهدية، ستظهر للموظف حتى يفتحها', gift: giftPoint });
   } catch (err) {
@@ -285,7 +295,7 @@ exports.giftPointsBulk = async (req, res) => {
 
 exports.listPendingGifts = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req.user.role === 'admin' && req.query.asUser) ? req.query.asUser : req.user.id;
     const key = `user:${userId}:gifts:pending`;
     const payload = await cacheAside({
       key,
@@ -307,7 +317,7 @@ exports.listPendingGifts = async (req, res) => {
 
 exports.listTodayGifts = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req.user.role === 'admin' && req.query.asUser) ? req.query.asUser : req.user.id;
     const key = `user:${userId}:gifts:today`;
     const payload = await cacheAside({
       key,
@@ -369,6 +379,7 @@ exports.openGift = async (req, res) => {
 
     await user.save();
     await clearUserCache(user.id);
+    if (dataStore.isReady()) await dataStore.onUserUpdated(user._id);
 
     res.json({ msg: 'تم فتح الهدية وإضافة النقاط', gift: target, totalPoints: user.totalPoints, convertiblePoints: user.convertiblePoints, level: user.level });
   } catch (err) {
@@ -416,6 +427,7 @@ exports.deductPoints = async (req, res) => {
 
     await user.save();
       await clearUserCache(user.id);
+    if (dataStore.isReady()) await dataStore.onUserUpdated(userId);
 
     res.json({ msg: 'تم الخصم وتسجيله', deduction: deductionPoint, totalPoints: user.totalPoints, convertiblePoints: user.convertiblePoints, level: user.level });
   } catch (err) {
@@ -437,7 +449,7 @@ exports.addPoints = async (req, res) => {
 
 exports.getPointsSummary = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = (req.user.role === 'admin' && req.query.asUser) ? req.query.asUser : req.user.id;
     const key = `user:${userId}:summary`;
     const payload = await cacheAside({
       key,
@@ -678,6 +690,7 @@ exports.convertPointsToCoins = async (req, res) => {
 
     await user.save();
     await clearUserCache(user.id);
+    if (dataStore.isReady()) await dataStore.onUserUpdated(user._id);
 
     res.json({
       msg: 'تم تحويل النقاط إلى عملات',
@@ -733,6 +746,7 @@ exports.redeemCoins = async (req, res) => {
     await user.save();
 
     await clearUserCache(user.id);
+    if (dataStore.isReady()) await dataStore.onUserUpdated(user._id);
 
     res.json({
       msg: 'تم استبدال العملات وإضافتها للراتب الحالي',
@@ -749,7 +763,7 @@ exports.redeemCoins = async (req, res) => {
 // جلب كل الخدمات اللي نفذها الموظف في تاريخ محدد (حسب وقت التنفيذ الفعلي)
 exports.getExecutedServices = async (req, res) => {
   const { date } = req.query;
-  const employeeId = req.user.id;
+  const employeeId = (req.user.role === 'admin' && req.query.asUser) ? req.query.asUser : req.user.id;
 
   const isSameEmployee = (val) => {
     if (!val) return false;
@@ -895,7 +909,12 @@ exports.getEmployeesRanking = async (req, res) => {
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     
-    const users = await User.find({ role: { $in: ['admin', 'supervisor', 'hallSupervisor', 'employee'] } }).select('-password -efficiencyCoins -coinsRedeemed').lean();
+    let users;
+    if (dataStore.isReady()) {
+      users = dataStore.getUsers().filter(u => ['admin', 'supervisor', 'hallSupervisor', 'employee'].includes(u.role));
+    } else {
+      users = await User.find({ role: { $in: ['admin', 'supervisor', 'hallSupervisor', 'employee'] } }).select('-password -efficiencyCoins -coinsRedeemed').lean();
+    }
     
     const rankings = users.map(user => {
       let periodPoints = 0;
