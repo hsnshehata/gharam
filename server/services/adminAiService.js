@@ -232,7 +232,7 @@ const createFunctions = (user) => ({
     }
 });
 
-const processAdminChat = async (messages, user) => {
+const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType = null) => {
     const setting = await SystemSetting.findOne({ key: 'admin_ai_system_prompt' });
     let systemPrompt = setting?.value || DEFAULT_ADMIN_PROMPT;
 
@@ -266,6 +266,15 @@ const processAdminChat = async (messages, user) => {
 
     const lastMsgObj = messages[messages.length - 1];
     let userMessageContent = [{ text: lastMsgObj?.text || "مرحباً" }];
+
+    if (fileBuffer && fileMimeType) {
+        userMessageContent.push({
+            inlineData: {
+                data: fileBuffer.toString("base64"),
+                mimeType: fileMimeType
+            }
+        });
+    }
 
     let modelFeatures = {
         model: 'gemini-1.5-flash',

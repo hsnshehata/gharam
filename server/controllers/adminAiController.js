@@ -1,5 +1,7 @@
 const { processAdminChat, generateChatTitle } = require('../services/adminAiService');
 const AdminConversation = require('../models/AdminConversation');
+const googleTTS = require('google-tts-api');
+const axios = require('axios');
 
 // Fetch user's own conversations (list)
 exports.getConversations = async (req, res) => {
@@ -51,11 +53,23 @@ exports.getAllConversationsAdmin = async (req, res) => {
 // Post Chat
 exports.chat = async (req, res) => {
     try {
-        const { text, conversationId } = req.body;
+        let { text, conversationId, messages } = req.body;
         const user = req.user;
 
-        if (!text) {
-            return res.status(400).json({ success: false, message: 'النص مطلوب' });
+        // Extract JSON messages if it came as FormData
+        if (typeof messages === 'string') {
+            try { messages = JSON.parse(messages); } catch (e) { }
+        }
+
+        if (!text && !req.file) {
+            return res.status(400).json({ success: false, message: 'النص أو الصوت مطلوب' });
+        }
+
+        let fileBuffer = null;
+        let fileMimeType = null;
+        if (req.file) {
+            fileBuffer = req.file.buffer;
+            fileMimeType = req.file.mimetype;
         }
 
         let conv;
@@ -74,15 +88,45 @@ exports.chat = async (req, res) => {
         conv.lastActivity = Date.now();
         await conv.save();
 
+        // If we didn't receive full messages state from frontend, use local length-limited fallback
+        if (!messages || !Array.isArray(messages)) {
+            messages = conv.messages;
+            if (!text) text = "رسالة صوتية"; // default if only audio
+        } else {
+            // we have messages from frontend
+            if (!text) text = messages[messages.length - 1].text || "رسالة صوتية";
+        }
+
         // Pass to processAdminChat
-        const reply = await processAdminChat(conv.messages, user);
+        const reply = await processAdminChat(messages, user, fileBuffer, fileMimeType);
 
         // Push model message
         conv.messages.push({ role: 'model', text: reply });
         conv.lastActivity = Date.now();
         await conv.save();
 
-        res.json({ success: true, reply, conversationId: conv._id, title: conv.title });
+        let audioParts = [];
+        try {
+            const cleanReply = reply.replace(/[*#]/g, '').slice(0, 800);
+            const urls = googleTTS.getAllAudioUrls(cleanReply, {
+                lang: 'ar',
+                slow: false,
+                host: 'https://translate.google.com',
+            });
+            for (const item of urls) {
+                try {
+                    const audioRes = await axios.get(item.url, { responseType: 'arraybuffer' });
+                    const base64 = Buffer.from(audioRes.data).toString('base64');
+                    audioParts.push(`data:audio/mpeg;base64,${base64}`);
+                } catch (fetchErr) {
+                    console.error('Error fetching TTS chunk:', fetchErr.message);
+                }
+            }
+        } catch (ttsErr) {
+            console.error('TTS error:', ttsErr);
+        }
+
+        res.json({ success: true, reply, audioParts, conversationId: conv._id, title: conv.title });
 
         // Generate title asynchronously if new
         if (isNew) {

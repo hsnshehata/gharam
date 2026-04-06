@@ -1,31 +1,48 @@
 const express = require('express');
 const router = express.Router();
 const adminAiController = require('../controllers/adminAiController');
-const { verifyToken, isAdmin, isAdminOrSupervisor } = require('../utils/authMiddleware');
+const authenticate = require('../middleware/authenticate');
 const SystemSetting = require('../models/SystemSetting');
 const { DEFAULT_ADMIN_PROMPT } = require('../services/adminAiService');
 
+const isAdminOrSupervisor = (req, res, next) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'supervisor') {
+        return res.status(403).json({ success: false, message: 'Forbidden' });
+    }
+    next();
+};
+
+const isAdmin = (req, res, next) => {
+    if (req.user.role !== 'admin') {
+        return res.status(403).json({ success: false, message: 'Forbidden' });
+    }
+    next();
+};
+
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+
 // Admin AI Conversations
-router.get('/conversations', verifyToken, isAdminOrSupervisor, adminAiController.getConversations);
-router.get('/conversations/:id', verifyToken, isAdminOrSupervisor, adminAiController.getConversationById);
-router.delete('/conversations/:id', verifyToken, isAdminOrSupervisor, adminAiController.deleteConversation);
-router.get('/all-conversations', verifyToken, isAdmin, adminAiController.getAllConversationsAdmin);
+router.get('/conversations', authenticate, isAdminOrSupervisor, adminAiController.getConversations);
+router.get('/conversations/:id', authenticate, isAdminOrSupervisor, adminAiController.getConversationById);
+router.delete('/conversations/:id', authenticate, isAdminOrSupervisor, adminAiController.deleteConversation);
+router.get('/all-conversations', authenticate, isAdmin, adminAiController.getAllConversationsAdmin);
 
 // Admin AI Chat
-router.post('/chat', verifyToken, isAdminOrSupervisor, adminAiController.chat);
+router.post('/chat', authenticate, isAdminOrSupervisor, upload.single('audio'), adminAiController.chat);
 
 // Admin AI Prompt Management
-router.get('/prompt', verifyToken, isAdmin, async (req, res) => {
+router.get('/prompt', authenticate, isAdmin, async (req, res) => {
     try {
         const setting = await SystemSetting.findOne({ key: 'admin_ai_system_prompt' });
-        res.json({ success: true, data: setting ? setting.value : "أنت مساعد ذكي للمديرين والمشرفين في غرام سلطان بيوتي سنتر.\nمهمتك مساعدة الإدارة في الرد على جميع الأسئلة المتعلقة بقواعد البيانات والتقارير المالية والعمليات.\nدائماً اعتمد على الأدوات المتاحة لجلب أحدث البيانات.\nوكن احترافياً في عرض الجداول والبيانات." });
+        res.json({ success: true, data: setting ? setting.value : DEFAULT_ADMIN_PROMPT });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server error' });
     }
 });
 
-router.post('/prompt', verifyToken, isAdmin, async (req, res) => {
+router.post('/prompt', authenticate, isAdmin, async (req, res) => {
     try {
         const { prompt } = req.body;
         if (!prompt) return res.status(400).json({ message: 'Prompt missing' });
