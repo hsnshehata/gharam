@@ -539,12 +539,14 @@ function ConversationsTab() {
 
                             {/* Messages */}
                             <div style={styles.convMessages}>
-                                {selectedConvData.messages?.map((msg, idx) => (
+                                {[...(selectedConvData.messages || [])]
+                                    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+                                    .map((msg, idx) => (
                                     <div key={idx} style={{
                                         ...styles.convMsg,
                                         ...(msg.role === 'user' ? styles.convMsgUser : styles.convMsgBot)
                                     }}>
-                                        <div style={styles.convMsgRole}>
+                                        <div style={{ ...styles.convMsgRole, color: msg.role === 'user' ? '#1fb6a6' : '#8e44ad' }}>
                                             {msg.role === 'user' ? '👤 العميل' : '🤖 البوت'}
                                             <span style={styles.convMsgTime}>{formatTime(msg.timestamp)}</span>
                                         </div>
@@ -762,12 +764,12 @@ const styles = {
     convDetail: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' },
     convDetailInner: { display: 'flex', flexDirection: 'column', height: '100%' },
     convDetailHeader: { padding: '16px 24px', borderBottom: '1px solid var(--border, #e6dfd4)', background: 'var(--card, #fdfbf9)', display: 'flex', flexDirection: 'column', gap: 4 },
-    convMessages: { flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12 },
-    convMsg: { padding: '12px 16px', borderRadius: 14, maxWidth: '85%', lineHeight: 1.7 },
-    convMsgUser: { alignSelf: 'flex-start', background: '#e8f8f5', border: '1px solid #c8ede5' },
-    convMsgBot: { alignSelf: 'flex-end', background: '#fff', border: '1px solid #ececec' },
-    convMsgRole: { fontSize: 11, fontWeight: 700, color: '#888', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 },
-    convMsgTime: { fontSize: 10, color: '#bbb', fontWeight: 400 },
+    convMessages: { flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 8 },
+    convMsg: { padding: '14px 18px', borderRadius: 12, lineHeight: 1.7, width: '100%' },
+    convMsgUser: { background: '#e8f8f5', borderRight: '4px solid #1fb6a6' },
+    convMsgBot: { background: '#f8f4ff', borderRight: '4px solid #8e44ad' },
+    convMsgRole: { fontSize: 12, fontWeight: 700, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 },
+    convMsgTime: { fontSize: 10, color: '#bbb', fontWeight: 400, marginRight: 'auto' },
     convMsgText: { fontSize: 14, color: '#333', whiteSpace: 'pre-wrap', wordBreak: 'break-word' },
 
     emptyState: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 40 },
