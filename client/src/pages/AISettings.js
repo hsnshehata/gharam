@@ -834,12 +834,12 @@ function AdminPromptTab() {
         const fetchData = async () => {
             try {
                 const res = await axios.get(`${API_BASE}/api/admin-ai/prompt`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'x-auth-token': localStorage.getItem('token') }
                 });
                 if (res.data.success) setPrompt(res.data.data);
 
                 const convRes = await axios.get(`${API_BASE}/api/admin-ai/all-conversations`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'x-auth-token': localStorage.getItem('token') }
                 });
                 if (convRes.data.success) setAllConvs(convRes.data.data);
 
@@ -858,7 +858,7 @@ function AdminPromptTab() {
         setError('');
         try {
             const res = await axios.post(`${API_BASE}/api/admin-ai/prompt`, { prompt }, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                headers: { 'x-auth-token': localStorage.getItem('token') }
             });
             if (res.data.success) {
                 setMessage(res.data.message);

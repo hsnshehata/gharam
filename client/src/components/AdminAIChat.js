@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { Spinner } from 'react-bootstrap';
 import { API_BASE } from '../utils/apiBase';
@@ -15,30 +15,30 @@ function AdminAIChat({ user }) {
   
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
   
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  // Initial Fetch of Conversations
   useEffect(() => {
     if (isOpen && user) {
       fetchConversations();
     }
   }, [isOpen, user]);
 
-  // Load a specific conversation if currentId changes
   useEffect(() => {
     if (!user) return;
     
     if (currentId) {
       loadConversation(currentId);
     } else {
-      // New Chat
       setMessages([{
         role: 'model',
         text: `مرحباً بك أستاذ ${user?.username} في المساعد الذكي للإدارة 🤖\nكيف يمكنني مساعدتك اليوم؟ (تقارير مالية، عمليات موظفين، حجوزات...)`
@@ -49,7 +49,7 @@ function AdminAIChat({ user }) {
   const fetchConversations = async () => {
     try {
       const res = await axios.get(`${API_BASE}/api/admin-ai/conversations`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       if (res.data.success) {
         setConversations(res.data.data);
@@ -63,7 +63,7 @@ function AdminAIChat({ user }) {
     try {
       setLoading(true);
       const res = await axios.get(`${API_BASE}/api/admin-ai/conversations/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       if (res.data.success && res.data.data) {
         setMessages(res.data.data.messages);
@@ -79,49 +79,92 @@ function AdminAIChat({ user }) {
     e.stopPropagation();
     try {
       await axios.delete(`${API_BASE}/api/admin-ai/conversations/${id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'x-auth-token': localStorage.getItem('token') }
       });
       setConversations(prev => prev.filter(c => c._id !== id));
-      if (currentId === id) {
-        setCurrentId(null);
-      }
+      if (currentId === id) setCurrentId(null);
+    } catch (err) {}
+  };
+
+  const startRecording = async () => {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
+        
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) audioChunksRef.current.push(e.data);
+        };
+        
+        mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+            handleSend(null, audioBlob);
+            stream.getTracks().forEach(track => track.stop());
+        };
+        
+        mediaRecorder.start();
+        setIsRecording(true);
     } catch (err) {
-      console.error(err);
+        alert("يرجى السماح بالوصول إلى المايكروفون للتسجيل.");
     }
   };
 
-  const handleSend = async (e) => {
+  const stopRecording = () => {
+      if (mediaRecorderRef.current && isRecording) {
+          mediaRecorderRef.current.stop();
+          setIsRecording(false);
+      }
+  };
+
+  const handleSend = async (e, voiceBlob = null) => {
     e?.preventDefault();
     const txt = input.trim();
-    if (!txt) return;
+    if (!voiceBlob && !txt) return;
 
-    const newMsgs = [...messages, { role: 'user', text: txt }];
+    const userMessage = { role: 'user', text: voiceBlob ? "🎤 رسالة صوتية..." : txt };
+    const newMsgs = [...messages, userMessage];
     setMessages(newMsgs);
     setInput('');
     setLoading(true);
 
     try {
-      const payload = { messages: newMsgs, text: txt };
-      if (currentId) payload.conversationId = currentId;
+      const cleanMessages = newMsgs
+        .filter((_, i) => i > 0)
+        .map(m => ({ role: m.role, text: m.text }));
 
-      const res = await axios.post(`${API_BASE}/api/admin-ai/chat`, payload, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      let res;
+      if (voiceBlob) {
+          const formData = new FormData();
+          formData.append('audio', voiceBlob, 'voice.webm');
+          formData.append('messages', JSON.stringify(cleanMessages));
+          if (currentId) formData.append('conversationId', currentId);
+          res = await axios.post(`${API_BASE}/api/admin-ai/chat`, formData, {
+              headers: { 
+                  'x-auth-token': localStorage.getItem('token'),
+                  'Content-Type': 'multipart/form-data' 
+              }
+          });
+      } else {
+          const payload = { messages: cleanMessages, text: txt };
+          if (currentId) payload.conversationId = currentId;
+          res = await axios.post(`${API_BASE}/api/admin-ai/chat`, payload, {
+              headers: { 'x-auth-token': localStorage.getItem('token') }
+          });
+      }
 
       if (res.data.success) {
-        setMessages([...newMsgs, { role: 'model', text: res.data.reply }]);
-        
-        // If it was a new chat, update ID and fetch to get the generated title
+        setMessages(prev => [...prev, { role: 'model', text: res.data.reply, audioParts: res.data.audioParts }]);
         if (!currentId && res.data.conversationId) {
           setCurrentId(res.data.conversationId);
-          setTimeout(fetchConversations, 2000); // give it 2 secs to gen title in backend
+          setTimeout(fetchConversations, 2000);
         }
       } else {
-        setMessages([...newMsgs, { role: 'model', text: 'عذراً، حدث خطأ أثناء الاستعلام. يرجى المحاولة مرة أخرى.' }]);
+        setMessages(prev => [...prev, { role: 'model', text: 'عذراً، حدث خطأ.' }]);
       }
     } catch (err) {
-      const errText = err.response?.data?.error || err.response?.data?.message || err.message;
-      setMessages([...newMsgs, { role: 'model', text: `عذراً، حدث خطأ: ${errText}` }]);
+      const errText = err.response?.data?.message || err.message;
+      setMessages(prev => [...prev, { role: 'model', text: `خطأ: ${errText}` }]);
     } finally {
       setLoading(false);
     }
@@ -132,6 +175,48 @@ function AdminAIChat({ user }) {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  // Helper component to play TTS response
+  const VoiceResponse = ({ parts }) => {
+    const [playing, setPlaying] = useState(false);
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const audioRef = useRef(new Audio());
+
+    const playNext = useCallback((index) => {
+        if (index < parts.length) {
+            audioRef.current.src = parts[index];
+            audioRef.current.play().catch(e => console.error(e));
+            setCurrentIndex(index);
+            setPlaying(true);
+        } else {
+            setPlaying(false);
+            setCurrentIndex(0);
+        }
+    }, [parts]);
+
+    useEffect(() => {
+        const handleEnded = () => playNext(currentIndex + 1);
+        const audio = audioRef.current;
+        audio.addEventListener('ended', handleEnded);
+        return () => audio.removeEventListener('ended', handleEnded);
+    }, [currentIndex, playNext]);
+
+    return (
+        <button type="button" onClick={() => playing ? (audioRef.current.pause(), setPlaying(false)) : playNext(0)} style={styles.voicePlayBtn}>
+            {playing ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="4" width="4" height="16" />
+                    <rect x="14" y="4" width="4" height="16" />
+                </svg>
+            ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M8 5v14l11-7z" />
+                </svg>
+            )}
+            <span>{playing ? "إيقاف" : "استماع"}</span>
+        </button>
+    );
   };
 
   if (!user || (user.role !== 'admin' && user.role !== 'supervisor')) return null;
@@ -145,8 +230,6 @@ function AdminAIChat({ user }) {
 
       {isOpen && (
         <div style={styles.chatWindow}>
-          
-          {/* Header */}
           <div style={styles.chatHeader}>
             <div style={styles.headerLeft}>
               <button style={styles.menuBtn} onClick={() => setIsSidebarOpen(!isSidebarOpen)}>☰</button>
@@ -161,7 +244,6 @@ function AdminAIChat({ user }) {
             </div>
           </div>
 
-          {/* Sidebar Overlay */}
           <div style={{ ...styles.sidebarOverlay, ...(isSidebarOpen ? styles.sidebarOverlayOpen : {}) }} onClick={() => setIsSidebarOpen(false)} />
           <div style={{ ...styles.sidebar, ...(isSidebarOpen ? styles.sidebarOpen : {}) }}>
             <div style={styles.sidebarHeader}>
@@ -182,12 +264,14 @@ function AdminAIChat({ user }) {
             </div>
           </div>
 
-          {/* Chat Body */}
           <div style={styles.chatBody}>
             {messages.map((msg, idx) => (
               <div key={idx} style={msg.role === 'user' ? styles.msgUserWrap : styles.msgModelWrap}>
                 <div style={msg.role === 'user' ? styles.msgUser : styles.msgModel}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
+                  {msg.role === 'model' && msg.audioParts && msg.audioParts.length > 0 && (
+                      <VoiceResponse parts={msg.audioParts} />
+                  )}
                 </div>
               </div>
             ))}
@@ -195,25 +279,33 @@ function AdminAIChat({ user }) {
               <div style={styles.msgModelWrap}>
                 <div style={styles.msgModel}>
                   <Spinner animation="border" size="sm" style={{ color: '#028090', borderWidth: '2px' }} />
-                  <span style={{ fontSize: 12, marginRight: 8, color: '#666' }}>جاري التحليل المعقد للبيانات...</span>
+                  <span style={{ fontSize: 12, marginRight: 8, color: '#666' }}>جاري التحليل المعقد...</span>
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Chat Footer */}
           <div style={styles.chatFooter}>
+            <button 
+                onClick={isRecording ? stopRecording : startRecording} 
+                className={`voice-btn ${isRecording ? 'recording' : ''}`}
+                style={{ ...styles.micBtn, backgroundColor: isRecording ? '#ff4757' : '#f1f2f6', color: isRecording ? '#fff' : '#2d3436' }}
+                disabled={loading}
+            >
+                {isRecording ? "⬛" : "🎤"}
+            </button>
             <textarea
               ref={inputRef}
               style={styles.inputArea}
-              placeholder="اكتب استفسارك للإدارة هنا..."
+              placeholder={isRecording ? "جاري التسجيل..." : "اكتب استفسارك هنا..."}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
+              disabled={isRecording}
               rows={1}
             />
-            <button style={{ ...styles.sendBtn, opacity: !input.trim() || loading ? 0.6 : 1 }} onClick={handleSend} disabled={!input.trim() || loading}>
+            <button style={{ ...styles.sendBtn, opacity: !input.trim() || loading || isRecording ? 0.6 : 1 }} onClick={handleSend} disabled={!input.trim() || loading || isRecording}>
               إرسال
             </button>
           </div>
@@ -253,9 +345,11 @@ const styles = {
   msgModelWrap: { display: 'flex', justifyContent: 'flex-end' },
   msgUser: { backgroundColor: '#028090', color: '#fff', padding: '10px 14px', borderRadius: '16px 16px 0 16px', maxWidth: '85%', lineHeight: 1.5, boxShadow: '0 2px 8px rgba(2,128,144,0.2)' },
   msgModel: { backgroundColor: '#ffffff', color: '#2d3436', padding: '10px 14px', borderRadius: '16px 16px 16px 0', maxWidth: '95%', lineHeight: 1.6, border: '1px solid #e0e0e0', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', fontSize: 14 },
-  chatFooter: { padding: 12, backgroundColor: '#fff', borderTop: '1px solid #e0e0e0', display: 'flex', gap: 10, alignItems: 'flex-end' },
+  chatFooter: { padding: 12, backgroundColor: '#fff', borderTop: '1px solid #e0e0e0', display: 'flex', gap: 8, alignItems: 'flex-end' },
+  micBtn: { width: 44, height: 44, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', transition: '0.3s', fontSize: 18, border: '1px solid #ccc' },
   inputArea: { flex: 1, border: '1px solid #ccc', borderRadius: 14, padding: '10px 14px', resize: 'none', backgroundColor: '#f1f2f6', color: '#2d3436', outline: 'none', fontFamily: 'inherit', maxHeight: 100 },
-  sendBtn: { backgroundColor: '#028090', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 16px', fontWeight: 700, cursor: 'pointer', height: 44 }
+  sendBtn: { backgroundColor: '#028090', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 16px', fontWeight: 700, cursor: 'pointer', height: 44 },
+  voicePlayBtn: { marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', border: '1px solid #e0e0e0', borderRadius: 20, background: '#f8f9fa', color: '#028090', fontSize: 12, cursor: 'pointer', fontWeight: 600, transition: '0.2s'}
 };
 
 export default AdminAIChat;
