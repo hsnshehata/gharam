@@ -156,16 +156,16 @@ router.post('/chat', upload.single('audio'), async (req, res) => {
             return res.status(500).json({ message: genErr.message || 'خطأ في التواصل مع الذكاء الاصطناعي' });
         }
 
-        // Persist messages to MongoDB (fire-and-forget)
+        // Persist messages to MongoDB (sequential to guarantee order)
         if (sessionId) {
             const lastUserMsg = messages[messages.length - 1];
             const clientIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '';
             const userAgent = req.headers['user-agent'] || '';
             
-            sessionCache.persistMessage(sessionId, 'web', 'user', lastUserMsg.text, {
+            await sessionCache.persistMessage(sessionId, 'web', 'user', lastUserMsg.text, {
                 metadata: { ip: clientIp, userAgent }
             });
-            sessionCache.persistMessage(sessionId, 'web', 'model', reply);
+            await sessionCache.persistMessage(sessionId, 'web', 'model', reply);
         }
 
         // Generate Audio Response (Base64 parts to avoid browser blocks)

@@ -476,7 +476,7 @@ const handleWebhook = async (req, res) => {
                         if (messageText || fileBuffer) {
                             const msgText = messageText || "[مرفق]";
                             // Persist user message to MongoDB
-                            sessionCache.persistMessage(`messenger_${sender_psid}`, 'messenger', 'user', msgText, {
+                            await sessionCache.persistMessage(`messenger_${sender_psid}`, 'messenger', 'user', msgText, {
                                 senderId: sender_psid,
                                 senderName: `Messenger ${sender_psid.slice(-4)}`
                             });
@@ -494,7 +494,7 @@ const handleWebhook = async (req, res) => {
                                 sessionCache.addAssistantMessage(sender_psid, aiReply);
 
                                 // Persist bot reply to MongoDB
-                                sessionCache.persistMessage(`messenger_${sender_psid}`, 'messenger', 'model', aiReply);
+                                await sessionCache.persistMessage(`messenger_${sender_psid}`, 'messenger', 'model', aiReply);
 
                                 const MESSENGER_TOKEN = process.env.FACEBOOK_MESSENGER_TOKEN || process.env.FACEBOOK_ACCESS_TOKEN;
                                 await axios.post(`https://graph.facebook.com/v24.0/me/messages?access_token=${MESSENGER_TOKEN}`, {
@@ -528,7 +528,7 @@ const handleWebhook = async (req, res) => {
                                     const senderName = value.from?.name || `User ${senderId.slice(-4)}`;
 
                                     // Persist comment to MongoDB
-                                    sessionCache.persistMessage(`comment_${commentId}`, 'comment', 'user', commentText, {
+                                    await sessionCache.persistMessage(`comment_${commentId}`, 'comment', 'user', commentText, {
                                         senderId,
                                         senderName
                                     });
@@ -547,7 +547,7 @@ const handleWebhook = async (req, res) => {
                                         sessionCache.addAssistantMessage(senderId, aiReply);
 
                                         // Persist bot reply to MongoDB
-                                        sessionCache.persistMessage(`comment_${commentId}`, 'comment', 'model', aiReply);
+                                        await sessionCache.persistMessage(`comment_${commentId}`, 'comment', 'model', aiReply);
 
                                         const MESSENGER_TOKEN = process.env.FACEBOOK_MESSENGER_TOKEN || process.env.FACEBOOK_ACCESS_TOKEN;
                                         // Reply to the comment

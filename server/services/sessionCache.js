@@ -57,21 +57,15 @@ const persistMessage = async (sessionId, source, role, text, extra = {}) => {
     try {
         const update = {
             $push: { messages: { role, text, timestamp: new Date() } },
-            $set: { lastActivity: new Date() }
+            $set: { lastActivity: new Date() },
+            $setOnInsert: { sessionId, source }
         };
 
-        // Set fields only on creation (first message)
-        const setOnInsert = { sessionId, source };
-        if (extra.senderName) setOnInsert.senderName = extra.senderName;
-        if (extra.senderId) setOnInsert.senderId = extra.senderId;
-        if (extra.metadata) setOnInsert.metadata = extra.metadata;
-
-        update.$setOnInsert = setOnInsert;
-
-        // Also update senderName if provided (may change for messenger)
-        if (extra.senderName) {
-            update.$set.senderName = extra.senderName;
-        }
+        // Put extra fields in $set (works for both insert and update)
+        // NOT in $setOnInsert to avoid MongoDB conflict errors
+        if (extra.senderName) update.$set.senderName = extra.senderName;
+        if (extra.senderId) update.$set.senderId = extra.senderId;
+        if (extra.metadata) update.$set.metadata = extra.metadata;
 
         await Conversation.findOneAndUpdate(
             { sessionId, source },
