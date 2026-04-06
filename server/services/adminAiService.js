@@ -268,39 +268,67 @@ const createFunctions = (user) => ({
             let start = new Date(startDate); start.setHours(0, 0, 0, 0);
             let end = new Date(endDate); end.setHours(23, 59, 59, 999);
 
-            // Bookings revenue: uses eventDate
-            const revBookings = await Booking.aggregate([
-                { $match: { remaining: { $lte: 0 }, eventDate: { $gte: start, $lte: end } } },
-                { $group: { _id: null, total: { $sum: "$total" } } }
-            ]);
+            // === Revenue from NEW bookings created in this period ===
+            // Revenue = deposit - sum(installments) = only the INITIAL deposit that was paid
+            const newBookings = await Booking.find({ createdAt: { $gte: start, $lte: end } }).lean();
+            let depositRevenue = 0;
+            for (const b of newBookings) {
+                const installmentsSum = (b.installments || []).reduce((s, i) => s + (Number(i.amount) || 0), 0);
+                const initialDeposit = (Number(b.deposit) || 0) - installmentsSum;
+                depositRevenue += Math.max(0, initialDeposit);
+            }
 
-            // Instant revenue: uses createdAt
-            const revInstant = await InstantService.aggregate([
+            // === Revenue from INSTALLMENTS paid in this period (from any booking) ===
+            const bookingsWithInstallments = await Booking.find({
+                'installments.date': { $gte: start, $lte: end }
+            }).lean();
+            let installmentRevenue = 0;
+            for (const b of bookingsWithInstallments) {
+                for (const inst of (b.installments || [])) {
+                    const instDate = new Date(inst.date);
+                    if (instDate >= start && instDate <= end) {
+                        installmentRevenue += Number(inst.amount) || 0;
+                    }
+                }
+            }
+
+            const totalBookingRevenue = depositRevenue + installmentRevenue;
+
+            // === Revenue from instant services in this period ===
+            const instantRevenue = await InstantService.aggregate([
                 { $match: { createdAt: { $gte: start, $lte: end } } },
                 { $group: { _id: null, total: { $sum: "$total" } } }
             ]);
+            const revI = instantRevenue[0]?.total || 0;
 
-            // Expenses: uses createdAt
-            const expTotal = await Expense.aggregate([
+            // === Expenses ===
+            const expResult = await Expense.aggregate([
                 { $match: { createdAt: { $gte: start, $lte: end } } },
                 { $group: { _id: null, total: { $sum: "$amount" } } }
             ]);
+            const expT = expResult[0]?.total || 0;
 
-            // Advances: uses createdAt
-            const advTotal = await Advance.aggregate([
+            // === Advances ===
+            const advResult = await Advance.aggregate([
                 { $match: { createdAt: { $gte: start, $lte: end } } },
                 { $group: { _id: null, total: { $sum: "$amount" } } }
             ]);
+            const advT = advResult[0]?.total || 0;
 
-            const revB = revBookings[0]?.total || 0;
-            const revI = revInstant[0]?.total || 0;
-            const expT = expTotal[0]?.total || 0;
-            const advT = advTotal[0]?.total || 0;
-            const netRevenue = (revB + revI) - expT;
+            const totalIncome = totalBookingRevenue + revI;
+            const net = totalIncome - expT - advT;
 
             return {
-                summary: `إيرادات حجوزات مكتملة: ${revB} ج | إيرادات خدمات سريعة: ${revI} ج | مصروفات: ${expT} ج | سلف: ${advT} ج | صافي: ${netRevenue} ج`,
-                data: { totalRevenue: revB + revI, totalExpenses: expT, totalAdvances: advT, netRevenue }
+                summary: `عربون حجوزات جديدة: ${depositRevenue} ج | أقساط مدفوعة: ${installmentRevenue} ج | خدمات سريعة: ${revI} ج | إجمالي الدخل: ${totalIncome} ج | مصروفات: ${expT} ج | سلف: ${advT} ج | صافي: ${net} ج`,
+                data: {
+                    newBookingDeposits: depositRevenue,
+                    installmentsPaid: installmentRevenue,
+                    instantServicesRevenue: revI,
+                    totalIncome,
+                    totalExpenses: expT,
+                    totalAdvances: advT,
+                    net
+                }
             };
         } catch (err) {
             console.error('[AdminAI] get_financial_report error:', err.message);
@@ -468,23 +496,33 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
     if (!process.env.GEMINI_API_KEY) throw new Error("Missing Gemini API Key");
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+    // Build proper alternating history: user, model, user, model...
+    // Gemini requires the first message to be 'user' and roles must alternate.
     let cleanHistory = [];
-    let prefixText = "";
+    const historyMessages = messages.slice(0, -1); // exclude the last (current) message
 
-    for (const m of messages.slice(0, -1)) {
+    for (const m of historyMessages) {
+        if (!m.text) continue;
         const role = m.role === 'user' ? 'user' : 'model';
+
         if (cleanHistory.length === 0) {
+            // First message MUST be 'user' for Gemini
             if (role === 'model') continue;
-            prefixText += m.text + "\n\n";
-        } else {
             cleanHistory.push({ role, parts: [{ text: m.text }] });
+        } else {
+            const last = cleanHistory[cleanHistory.length - 1];
+            if (last.role === role) {
+                // Merge consecutive same-role messages
+                last.parts[0].text += "\n" + m.text;
+            } else {
+                cleanHistory.push({ role, parts: [{ text: m.text }] });
+            }
         }
     }
 
-    if (prefixText && cleanHistory.length > 0 && cleanHistory[0].role === 'user') {
-        cleanHistory[0].parts[0].text = prefixText + cleanHistory[0].parts[0].text;
-    } else if (prefixText && cleanHistory.length === 0) {
-        cleanHistory.push({ role: 'user', parts: [{ text: prefixText }] });
+    // Ensure history ends with 'model' (so last message we send is 'user')
+    if (cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === 'user') {
+        cleanHistory.pop(); // Remove trailing user message that would conflict
     }
 
     const lastMsgObj = messages[messages.length - 1];
