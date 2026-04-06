@@ -99,6 +99,11 @@ const processAiChat = async (messages, fileBuffer = null, fileMimeType = null, f
     const setting = await SystemSetting.findOne({ key: 'ai_system_prompt' });
     let systemPromptArr = [setting?.value || DEFAULT_PROMPT];
 
+    // Force strict URL formatting so the frontend can parse buttons consistently across all pages
+    systemPromptArr.push(`IMPORTANT URL RULE:
+When sharing links to the website pages (like prices, gallery, massage), YOU MUST provide the full absolute URL starting with https://. 
+Example: https://gharam.art/prices. DO NOT use markdown format like [text](url). Just write the raw https:// URL.`);
+
     if (formatForMessenger) {
         systemPromptArr.push(`IMPORTANT FOR FACEBOOK MESSENGER: 
 DO NOT use Markdown formatting like **bold** or *italic*. Return plain text only with standard paragraph breaks.

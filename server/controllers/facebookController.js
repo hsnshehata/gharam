@@ -1,6 +1,7 @@
 const axios = require('axios');
 const FacebookPost = require('../models/FacebookPost');
 const MediaGallery = require('../models/MediaGallery');
+const SystemSetting = require('../models/SystemSetting');
 const { processAiChat } = require('../services/aiService');
 const sessionCache = require('../services/sessionCache');// استخراج كل الصور والفيديوهات من البوست والحفظ في MediaGallery
 const extractAndSaveMediaItems = async (post) => {
@@ -430,6 +431,10 @@ const verifyWebhook = (req, res) => {
 
 const handleWebhook = async (req, res) => {
     try {
+        // Check if bot is enabled
+        const botEnabledSetting = await SystemSetting.findOne({ key: 'ai_bot_enabled' });
+        const botEnabled = botEnabledSetting ? botEnabledSetting.value : true;
+
         const body = req.body;
         if (body.object === 'page') {
             for (const entry of body.entry) {
@@ -469,12 +474,27 @@ const handleWebhook = async (req, res) => {
                         }
 
                         if (messageText || fileBuffer) {
+                            const msgText = messageText || "[مرفق]";
+                            // Persist user message to MongoDB
+                            sessionCache.persistMessage(`messenger_${sender_psid}`, 'messenger', 'user', msgText, {
+                                senderId: sender_psid,
+                                senderName: `Messenger ${sender_psid.slice(-4)}`
+                            });
+
+                            if (!botEnabled) {
+                                console.log(`[FB Webhook] Bot disabled, skipping AI reply for messenger ${sender_psid}`);
+                                continue;
+                            }
+
                             // Process AI Chat for Messaging
-                            sessionCache.addUserMessage(sender_psid, messageText || "[مرفق]");
+                            sessionCache.addUserMessage(sender_psid, msgText);
                             const history = sessionCache.getUserHistory(sender_psid);
                             try {
                                 const aiReply = await processAiChat(history, fileBuffer, fileMimeType, true);
                                 sessionCache.addAssistantMessage(sender_psid, aiReply);
+
+                                // Persist bot reply to MongoDB
+                                sessionCache.persistMessage(`messenger_${sender_psid}`, 'messenger', 'model', aiReply);
 
                                 const MESSENGER_TOKEN = process.env.FACEBOOK_MESSENGER_TOKEN || process.env.FACEBOOK_ACCESS_TOKEN;
                                 await axios.post(`https://graph.facebook.com/v24.0/me/messages?access_token=${MESSENGER_TOKEN}`, {
@@ -505,6 +525,18 @@ const handleWebhook = async (req, res) => {
 
                                 if (commentText) {
                                     console.log(`Received Comment from ${senderId}: ${commentText}`);
+                                    const senderName = value.from?.name || `User ${senderId.slice(-4)}`;
+
+                                    // Persist comment to MongoDB
+                                    sessionCache.persistMessage(`comment_${commentId}`, 'comment', 'user', commentText, {
+                                        senderId,
+                                        senderName
+                                    });
+
+                                    if (!botEnabled) {
+                                        console.log(`[FB Webhook] Bot disabled, skipping AI reply for comment ${commentId}`);
+                                        continue;
+                                    }
                                     
                                     // Treat comment as a single message context for now
                                     sessionCache.addUserMessage(senderId, commentText);
@@ -513,6 +545,9 @@ const handleWebhook = async (req, res) => {
                                     try {
                                         const aiReply = await processAiChat(history, null, null, true);
                                         sessionCache.addAssistantMessage(senderId, aiReply);
+
+                                        // Persist bot reply to MongoDB
+                                        sessionCache.persistMessage(`comment_${commentId}`, 'comment', 'model', aiReply);
 
                                         const MESSENGER_TOKEN = process.env.FACEBOOK_MESSENGER_TOKEN || process.env.FACEBOOK_ACCESS_TOKEN;
                                         // Reply to the comment
