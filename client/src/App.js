@@ -22,6 +22,7 @@ import AISettings from './pages/AISettings';
 import PointsAdmin from './pages/PointsAdmin';
 import NotFound from './pages/NotFound';
 import Navbar from './components/Navbar';
+import AdminAIChat from './components/AdminAIChat';
 import { ToastProvider } from './components/ToastProvider';
 import './App.css';
 import { API_BASE } from './utils/apiBase';
@@ -164,6 +165,7 @@ function AppContent() {
               <Route path="/" element={<Navigate to={getHomePath(user)} replace />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <AdminAIChat user={user} />
           </>
         )}
       </div>

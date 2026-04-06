@@ -5,6 +5,7 @@ import { API_BASE } from '../utils/apiBase';
 
 const TABS = [
     { id: 'prompt', label: 'تعليمات البوت', icon: '📝' },
+    { id: 'admin_prompt', label: 'مساعد الإدارة', icon: '🧠' },
     { id: 'conversations', label: 'سجل المحادثات', icon: '💬' },
     { id: 'settings', label: 'الإعدادات', icon: '⚙️' },
 ];
@@ -70,6 +71,7 @@ function AISettings() {
             {/* Tab Content */}
             <div style={styles.tabContent}>
                 {activeTab === 'prompt' && <PromptTab />}
+                {activeTab === 'admin_prompt' && <AdminPromptTab />}
                 {activeTab === 'conversations' && <ConversationsTab />}
                 {activeTab === 'settings' && <SettingsTab />}
             </div>
@@ -815,5 +817,137 @@ const styles = {
     sliderValueDisplay: { display: 'flex', alignItems: 'baseline', gap: 6, justifyContent: 'center', marginTop: 8 },
     sliderValue: { fontSize: 32, fontWeight: 800, color: '#1fb6a6' },
 };
+
+// ============================================================
+//  TAB 2: ADMIN PROMPT EDITOR
+// ============================================================
+function AdminPromptTab() {
+    const [prompt, setPrompt] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
+    const [allConvs, setAllConvs] = useState([]);
+    const [showConvs, setShowConvs] = useState(false);
+    
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const res = await axios.get(`${API_BASE}/api/admin-ai/prompt`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                if (res.data.success) setPrompt(res.data.data);
+
+                const convRes = await axios.get(`${API_BASE}/api/admin-ai/all-conversations`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                if (convRes.data.success) setAllConvs(convRes.data.data);
+
+            } catch (err) {
+                // Ignore conv loading error if supervisor
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
+
+    const handleSave = async () => {
+        setSaving(true);
+        setMessage('');
+        setError('');
+        try {
+            const res = await axios.post(`${API_BASE}/api/admin-ai/prompt`, { prompt }, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+            if (res.data.success) {
+                setMessage(res.data.message);
+                setTimeout(() => setMessage(''), 3000);
+            }
+        } catch (err) {
+            setError('حدث خطأ أثناء حفظ التعديلات');
+            setTimeout(() => setError(''), 3000);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div style={styles.loadingWrapper}>
+                <Spinner animation="border" size="sm" style={{ color: '#1fb6a6' }} />
+                <span>جاري تحميل الإعدادات...</span>
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+            <div style={{ ...styles.promptHeader, borderBottom: '3px solid #028090' }}>
+                <h3 style={{ margin: 0, color: '#0f2736', fontWeight: 800 }}>🧠 تعليمات مساعد الإدارة</h3>
+                <p style={{ margin: '8px 0 0', color: '#666', fontSize: 13 }}>هذا المساعد يقرأ من قاعدة البيانات مباشرة، هذه التعليمات تحدد شخصيته وطريقة صياغته لتقارير العمل.</p>
+            </div>
+            
+            {message && <div style={styles.successToast}><span>✅</span> {message}</div>}
+            {error && <div style={styles.errorToast}><span>❌</span> {error}</div>}
+
+            <div style={styles.toolbar} className="prompt-toolbar">
+                <div style={styles.toolbarLeft} className="prompt-toolbar-left" />
+                <div style={styles.toolbarRight} className="prompt-toolbar-right">
+                    <button type="button" style={{ ...styles.saveBtn, backgroundColor: '#028090', opacity: saving || !prompt.trim() ? 0.6 : 1 }}
+                        onClick={handleSave} disabled={saving || !prompt.trim()} className="prompt-save-btn">
+                        {saving ? (<><Spinner animation="border" size="sm" style={{ marginLeft: 8 }} /> جاري الحفظ...</>) : (<>💾 حفظ التعديلات</>)}
+                    </button>
+                </div>
+            </div>
+
+            <div style={{ position: 'relative', minHeight: 250, backgroundColor: '#1e1e1e', borderRadius: '0 0 16px 16px', overflow: 'hidden', marginBottom: 20 }}>
+                <textarea
+                    style={styles.promptTextarea}
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder="اكتب تعليمات مساعد الإدارة هنا..."
+                    spellCheck="false"
+                />
+            </div>
+
+            {/* Admin Conversations Observer */}
+            {allConvs.length > 0 && (
+                <div style={{ background: '#fff', borderRadius: 16, padding: 20, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #e0e0e0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                        <h4 style={{ margin: 0, fontWeight: 800, color: '#0f2736' }}>سجل محادثات المشرفين والمديرين 🕵️</h4>
+                        <button style={{ ...styles.toolBtn, backgroundColor: '#f1f2f6', color: '#0f2736' }} onClick={() => setShowConvs(!showConvs)}>
+                            {showConvs ? 'إخفاء السجل' : `عرض السجل (${allConvs.length})`}
+                        </button>
+                    </div>
+                    {showConvs && (
+                        <div style={{ overflowX: 'auto' }}>
+                            <table className="table table-hover" style={{ textAlign: 'right', direction: 'rtl' }}>
+                                <thead style={{ background: '#f8f9fa' }}>
+                                    <tr>
+                                        <th>العنوان</th>
+                                        <th>المستخدم</th>
+                                        <th>آخر تحديث</th>
+                                        <th>عدد الرسائل</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {allConvs.map(c => (
+                                        <tr key={c._id}>
+                                            <td style={{ fontWeight: 600 }}>{c.title}</td>
+                                            <td>{c.userId?.username} <span style={{ fontSize: 11, color: '#888' }}>({c.userId?.role})</span></td>
+                                            <td style={{ direction: 'ltr', textAlign: 'right' }}>{new Date(c.lastActivity).toLocaleString('ar-EG')}</td>
+                                            <td>{c.messages?.length || 0} رسالة</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default AISettings;
