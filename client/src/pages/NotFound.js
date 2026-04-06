@@ -19,11 +19,14 @@ function NotFound() {
       background: #080f0b;
       color: #f5f0e8;
       font-family: 'Tajawal', 'Arial', sans-serif;
-      min-height: 100vh;
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 9999;
       display: flex;
       align-items: center;
       justify-content: center;
-      position: relative;
       overflow: hidden;
       text-align: center;
       direction: rtl;
@@ -189,7 +192,7 @@ function NotFound() {
         <div className="nf-content">
           <div className="nf-character">🤷‍♀️</div>
           <h1 className="nf-error-code">404</h1>
-          <h2 className="nf-title">إنت توهتي ولا إيه يا قمر؟ 😂</h2>
+          <h2 className="nf-title"> توهتي ولا إيه يا قمر؟ 😂</h2>
           <p className="nf-desc">
             استني بس... المكان ده مش موجود في السنتر عندنا! <br />
             الظاهر إنك دخلتي غرفة غلط، مفيش ميك أب هنا ولا مساج ولا تصوير. الداتا بيز بتدور ومش لاقية حاجة.
