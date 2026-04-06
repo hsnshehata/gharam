@@ -33,13 +33,15 @@ function AdminAIChat({ user }) {
 
   // Load a specific conversation if currentId changes
   useEffect(() => {
+    if (!user) return;
+    
     if (currentId) {
       loadConversation(currentId);
     } else {
       // New Chat
       setMessages([{
         role: 'model',
-        text: `مرحباً بك أستاذ ${user.username} في المساعد الذكي للإدارة 🤖\nكيف يمكنني مساعدتك اليوم؟ (تقارير مالية، عمليات موظفين، حجوزات...)`
+        text: `مرحباً بك أستاذ ${user?.username} في المساعد الذكي للإدارة 🤖\nكيف يمكنني مساعدتك اليوم؟ (تقارير مالية، عمليات موظفين، حجوزات...)`
       }]);
     }
   }, [currentId, user]);
