@@ -20,6 +20,7 @@ import Gallery from './pages/Gallery';
 import GalleryAdmin from './pages/GalleryAdmin';
 import AISettings from './pages/AISettings';
 import PointsAdmin from './pages/PointsAdmin';
+import NotFound from './pages/NotFound';
 import Navbar from './components/Navbar';
 import { ToastProvider } from './components/ToastProvider';
 import './App.css';
@@ -86,7 +87,7 @@ function AppContent() {
   }, [authLoading, user, location.pathname, navigate]);
 
   return (
-      <ToastProvider>
+    <ToastProvider>
       <div className="App">
         {authLoading ? (
           // while checking auth, render centered spinner to indicate loading
@@ -99,73 +100,74 @@ function AppContent() {
           <>
             {user && !['/landing', '/prices', '/massage-chair', '/gallery'].some(p => location.pathname.toLowerCase().replace(/\/+$/, '').endsWith(p)) && <Navbar user={user} setUser={setUser} />}
             <Routes>
-          <Route path="/login" element={<Login setUser={setUser} />} />
-          <Route path="/landing" element={<Landing />} />
-          <Route path="/prices" element={<PriceList />} />
-          <Route path="/massage-chair" element={<MassageChair />} />
-          <Route path="/gallery" element={<Gallery />} />
-          <Route
-            path="/gallery-admin"
-            element={user && user.role === 'admin' ? <GalleryAdmin /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/ai-settings"
-            element={user && user.role === 'admin' ? <AISettings /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/users"
-            element={user && user.role === 'admin' ? <Users /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/bookings"
-            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <Bookings user={user} /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/instant-services"
-            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <InstantServices user={user} /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/expenses-advances"
-            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <ExpensesAdvances user={user} /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/packages-services"
-            element={user && user.role === 'admin' ? <PackagesServices /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/points-admin"
-            element={user && user.role === 'admin' ? <PointsAdmin /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/reports"
-            element={user && user.role === 'admin' ? <DailyReports /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/daily-reports"
-            element={<Navigate to="/reports" replace />}
-          />
-          <Route
-            path="/employee-reports"
-            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <EmployeeReports /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/dashboard"
-            element={user && (user.role === 'admin' || user.role === 'supervisor') ? <Dashboard user={user} /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/hall-supervision"
-            element={user && (user.role === 'admin' || user.role === 'supervisor' || user.role === 'hallSupervisor') ? <HallSupervision /> : <Navigate to="/login" />}
-          />
-          <Route
-            path="/employee-dashboard"
-            element={user ? <EmployeeDashboard user={user} /> : <Navigate to="/login" />}
-          />
-          <Route path="/" element={<Navigate to={getHomePath(user)} replace />} />
+              <Route path="/login" element={<Login setUser={setUser} />} />
+              <Route path="/landing" element={<Landing />} />
+              <Route path="/prices" element={<PriceList />} />
+              <Route path="/massage-chair" element={<MassageChair />} />
+              <Route path="/gallery" element={<Gallery />} />
+              <Route
+                path="/gallery-admin"
+                element={user && user.role === 'admin' ? <GalleryAdmin /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/ai-settings"
+                element={user && user.role === 'admin' ? <AISettings /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/users"
+                element={user && user.role === 'admin' ? <Users /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/bookings"
+                element={user && (user.role === 'admin' || user.role === 'supervisor') ? <Bookings user={user} /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/instant-services"
+                element={user && (user.role === 'admin' || user.role === 'supervisor') ? <InstantServices user={user} /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/expenses-advances"
+                element={user && (user.role === 'admin' || user.role === 'supervisor') ? <ExpensesAdvances user={user} /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/packages-services"
+                element={user && user.role === 'admin' ? <PackagesServices /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/points-admin"
+                element={user && user.role === 'admin' ? <PointsAdmin /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/reports"
+                element={user && user.role === 'admin' ? <DailyReports /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/daily-reports"
+                element={<Navigate to="/reports" replace />}
+              />
+              <Route
+                path="/employee-reports"
+                element={user && (user.role === 'admin' || user.role === 'supervisor') ? <EmployeeReports /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/dashboard"
+                element={user && (user.role === 'admin' || user.role === 'supervisor') ? <Dashboard user={user} /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/hall-supervision"
+                element={user && (user.role === 'admin' || user.role === 'supervisor' || user.role === 'hallSupervisor') ? <HallSupervision /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/employee-dashboard"
+                element={user ? <EmployeeDashboard user={user} /> : <Navigate to="/login" />}
+              />
+              <Route path="/" element={<Navigate to={getHomePath(user)} replace />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </>
         )}
       </div>
-      </ToastProvider>
+    </ToastProvider>
   );
 }
 
