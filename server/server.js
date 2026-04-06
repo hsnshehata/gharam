@@ -39,6 +39,7 @@ app.use('/api/today-work', require('./routes/todayWork'));
 app.use('/api/public', require('./routes/public'));
 app.use('/api/sync', require('./routes/sync'));
 app.use('/api/ai', require('./routes/ai'));
+app.use('/api/admin-ai', require('./routes/adminAi'));
 
 // Serve React app
 if (process.env.NODE_ENV === 'production') {
