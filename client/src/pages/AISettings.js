@@ -19,10 +19,28 @@ function AISettings() {
     const [activeTab, setActiveTab] = useState('prompt');
 
     return (
-        <div style={styles.page} dir="rtl">
+        <div style={styles.page} dir="rtl" className="ai-settings-page">
+            <style>{`
+                @media (max-width: 768px) {
+                    .ai-settings-page .header-content { flex-direction: column; align-items: flex-start !important; gap: 8px !important; }
+                    .ai-settings-page .tab-bar { overflow-x: auto; padding: 0 10px !important; }
+                    .ai-settings-page .tab-btn { padding: 10px 15px !important; font-size: 13px !important; }
+                    .ai-settings-page .conv-container { flex-direction: column !important; }
+                    .ai-settings-page .conv-list { width: 100% !important; min-width: 100% !important; max-height: 40vh; overflow-y: auto; border-left: none !important; border-bottom: 1px solid var(--border, #e6dfd4); }
+                    .ai-settings-page .conv-toolbar { padding: 10px !important; justify-content: center; }
+                    .ai-settings-page .stats-bar { flex-wrap: wrap; }
+                    .ai-settings-page .stat-card { min-width: 45% !important; flex: 1 1 45% !important; margin-bottom: 10px; border-right: none !important; border-bottom: 3px solid; }
+                    .ai-settings-page .prompt-toolbar { flex-direction: column; align-items: flex-start !important; }
+                    .ai-settings-page .prompt-toolbar-left { margin-bottom: 10px; width: 100%; justify-content: space-between; gap: 8px !important; }
+                    .ai-settings-page .prompt-toolbar-right { width: 100%; }
+                    .ai-settings-page .prompt-save-btn { width: 100%; justify-content: center; }
+                    .ai-settings-page .conv-search-wrapper { min-width: 100% !important; margin-bottom: 10px; }
+                    .ai-settings-page .filter-chips { justify-content: center; flex-wrap: wrap; }
+                }
+            `}</style>
             {/* Header */}
             <div style={styles.header}>
-                <div style={styles.headerContent}>
+                <div style={styles.headerContent} className="header-content">
                     <div style={styles.headerIcon}>🤖</div>
                     <div>
                         <h1 style={styles.title}>لوحة تحكم الذكاء الاصطناعي</h1>
@@ -32,10 +50,11 @@ function AISettings() {
             </div>
 
             {/* Tab Navigation */}
-            <div style={styles.tabBar}>
+            <div style={styles.tabBar} className="tab-bar">
                 {TABS.map(tab => (
                     <button
                         key={tab.id}
+                        className="tab-btn"
                         style={{
                             ...styles.tabBtn,
                             ...(activeTab === tab.id ? styles.tabBtnActive : {})
@@ -218,12 +237,12 @@ function PromptTab() {
             {error && <div style={styles.errorToast}><span>❌</span> {error}</div>}
 
             {/* Toolbar */}
-            <div style={styles.toolbar}>
-                <div style={styles.toolbarLeft}>
+            <div style={styles.toolbar} className="prompt-toolbar">
+                <div style={styles.toolbarLeft} className="prompt-toolbar-left">
                     <button type="button" style={{ ...styles.toolBtn, ...(isSearchOpen ? styles.toolBtnActive : {}) }}
                         onClick={() => { setIsSearchOpen(!isSearchOpen); if (!isSearchOpen) setTimeout(() => searchInputRef.current?.focus(), 100); else setSearchQuery(''); }}
-                        title="بحث (Ctrl+F)">🔍 بحث</button>
-                    <button type="button" style={styles.toolBtn} onClick={() => setIsCollapsed(!isCollapsed)}>
+                        title="بحث (Ctrl+F)" className="prompt-tool-btn">🔍 بحث</button>
+                    <button type="button" style={styles.toolBtn} onClick={() => setIsCollapsed(!isCollapsed)} className="prompt-tool-btn">
                         {isCollapsed ? '📖 توسيع' : '📕 طي'}
                     </button>
                     <div style={styles.statsChip}>
@@ -232,9 +251,9 @@ function PromptTab() {
                         <span>🔤 {charCount.toLocaleString()} حرف</span>
                     </div>
                 </div>
-                <div style={styles.toolbarRight}>
+                <div style={styles.toolbarRight} className="prompt-toolbar-right">
                     <button type="button" style={{ ...styles.saveBtn, opacity: saving || !prompt.trim() ? 0.6 : 1 }}
-                        onClick={handleSave} disabled={saving || !prompt.trim()}>
+                        onClick={handleSave} disabled={saving || !prompt.trim()} className="prompt-save-btn">
                         {saving ? (<><Spinner animation="border" size="sm" style={{ marginLeft: 8 }} /> جاري الحفظ...</>) : (<>💾 حفظ التعديلات</>)}
                     </button>
                 </div>
@@ -407,27 +426,27 @@ function ConversationsTab() {
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* Stats Bar */}
             {stats && (
-                <div style={styles.statsBar}>
-                    <div style={styles.statCard} onClick={() => { setSourceFilter(''); setPage(1); }}>
+                <div style={styles.statsBar} className="stats-bar">
+                    <div style={{ ...styles.statCard, borderBottomColor: SOURCE_LABELS.web.color }} className="stat-card" onClick={() => { setSourceFilter(''); setPage(1); }}>
                         <div style={styles.statNumber}>{stats.total}</div>
                         <div style={styles.statLabel}>إجمالي المحادثات</div>
                     </div>
-                    <div style={{ ...styles.statCard, borderRight: `3px solid ${SOURCE_LABELS.web.color}` }}
+                    <div style={{ ...styles.statCard, borderRight: `3px solid ${SOURCE_LABELS.web.color}`, borderBottomColor: SOURCE_LABELS.web.color }} className="stat-card"
                         onClick={() => { setSourceFilter(sourceFilter === 'web' ? '' : 'web'); setPage(1); }}>
                         <div style={styles.statNumber}>{stats.web}</div>
                         <div style={styles.statLabel}>🌐 ويب</div>
                     </div>
-                    <div style={{ ...styles.statCard, borderRight: `3px solid ${SOURCE_LABELS.messenger.color}` }}
+                    <div style={{ ...styles.statCard, borderRight: `3px solid ${SOURCE_LABELS.messenger.color}`, borderBottomColor: SOURCE_LABELS.messenger.color }} className="stat-card"
                         onClick={() => { setSourceFilter(sourceFilter === 'messenger' ? '' : 'messenger'); setPage(1); }}>
                         <div style={styles.statNumber}>{stats.messenger}</div>
                         <div style={styles.statLabel}>💬 ماسنجر</div>
                     </div>
-                    <div style={{ ...styles.statCard, borderRight: `3px solid ${SOURCE_LABELS.comment.color}` }}
+                    <div style={{ ...styles.statCard, borderRight: `3px solid ${SOURCE_LABELS.comment.color}`, borderBottomColor: SOURCE_LABELS.comment.color }} className="stat-card"
                         onClick={() => { setSourceFilter(sourceFilter === 'comment' ? '' : 'comment'); setPage(1); }}>
                         <div style={styles.statNumber}>{stats.comment}</div>
                         <div style={styles.statLabel}>💭 تعليقات</div>
                     </div>
-                    <div style={styles.statCard}>
+                    <div style={{ ...styles.statCard, borderBottomColor: SOURCE_LABELS.web.color }} className="stat-card">
                         <div style={styles.statNumber}>{stats.totalMessages}</div>
                         <div style={styles.statLabel}>إجمالي الرسائل</div>
                     </div>
@@ -435,13 +454,13 @@ function ConversationsTab() {
             )}
 
             {/* Search & Filters */}
-            <div style={styles.convToolbar}>
-                <div style={styles.convSearchWrapper}>
+            <div style={styles.convToolbar} className="conv-toolbar">
+                <div style={styles.convSearchWrapper} className="conv-search-wrapper">
                     <span style={{ opacity: 0.5 }}>🔍</span>
                     <input type="text" value={searchText} onChange={(e) => { setSearchText(e.target.value); setPage(1); }}
                         placeholder="بحث في المحادثات..." style={styles.convSearchInput} />
                 </div>
-                <div style={styles.filterChips}>
+                <div style={styles.filterChips} className="filter-chips">
                     <button style={{ ...styles.filterChip, ...(sourceFilter === '' ? styles.filterChipActive : {}) }}
                         onClick={() => { setSourceFilter(''); setPage(1); }}>الكل</button>
                     {Object.entries(SOURCE_LABELS).map(([key, val]) => (
@@ -459,9 +478,9 @@ function ConversationsTab() {
             </div>
 
             {/* Main Content: Split View */}
-            <div style={styles.convContainer}>
+            <div style={styles.convContainer} className="conv-container">
                 {/* Conversation List */}
-                <div style={styles.convList}>
+                <div style={styles.convList} className="conv-list">
                     {loading ? (
                         <div style={styles.loadingWrapper}>
                             <Spinner animation="border" size="sm" style={{ color: '#1fb6a6' }} />

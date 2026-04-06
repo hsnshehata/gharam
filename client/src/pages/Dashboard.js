@@ -963,15 +963,15 @@ function Dashboard({ user }) {
         ))}
       </Row>
 
-      <div className="d-flex align-items-center justify-content-between mb-2 mt-4">
-        <div className="d-flex align-items-center">
+      <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between mb-2 mt-4 gap-3">
+        <div className="d-flex align-items-center flex-wrap">
           <h3 className="mb-0">سجل تفاصيل العمليات</h3>
-          <small className="text-muted ms-3">إجمالي العمليات اليوم: {operationsData?.length || 0}</small>
+          <small className="text-muted ms-3 mt-1 mt-md-0">إجمالي العمليات اليوم: {operationsData?.length || 0}</small>
         </div>
-        <div className="d-flex gap-2">
+        <div className="d-flex flex-wrap gap-2 w-100 w-md-auto">
           <Form.Select 
             size="sm" 
-            style={{ width: '150px' }} 
+            style={{ width: '150px', flexGrow: 1, maxWidth: '200px' }} 
             value={logFilter}
             onChange={(e) => setLogFilter(e.target.value)}
           >
@@ -999,6 +999,7 @@ function Dashboard({ user }) {
             variant="outline-secondary" 
             size="sm" 
             onClick={() => setShowOperations(!showOperations)}
+            style={{ flexShrink: 0 }}
           >
             {showOperations ? 'إخفاء السجل' : 'إظهار السجل'}
           </Button>
