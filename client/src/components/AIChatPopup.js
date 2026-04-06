@@ -4,16 +4,28 @@ import { API_BASE } from '../utils/apiBase';
 
 const BOT_IMAGE = "https://i.ibb.co/7JJScM0Q/zain-ai.png";
 
+// Generate or retrieve a persistent session ID for this device
+const getSessionId = () => {
+    let sid = localStorage.getItem('gharam_chat_session');
+    if (!sid) {
+        sid = 'web_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+        localStorage.setItem('gharam_chat_session', sid);
+    }
+    return sid;
+};
+
 export default function AIChatPopup({ onClose }) {
     const [messages, setMessages] = useState([
         { role: 'model', text: 'أهلاً بكِ في غرام سلطان بيوتي سنتر! ✨ أنا غزل مساعدتكِ الذكية، كيف يمكنني مساعدتك اليوم؟' }
     ]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [historyLoading, setHistoryLoading] = useState(true);
     const [isRecording, setIsRecording] = useState(false);
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
     const messagesEndRef = useRef(null);
+    const sessionId = useRef(getSessionId());
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -22,6 +34,29 @@ export default function AIChatPopup({ onClose }) {
     useEffect(() => {
         scrollToBottom();
     }, [messages, loading]);
+
+    // Load previous conversation history on mount
+    useEffect(() => {
+        const loadHistory = async () => {
+            try {
+                const res = await axios.get(`${API_BASE}/api/ai/chat/history/${sessionId.current}`);
+                if (res.data.success && res.data.data && res.data.data.length > 0) {
+                    // Prepend the welcome message, then add history
+                    const historyMessages = res.data.data.map(m => ({ role: m.role, text: m.text }));
+                    setMessages([
+                        { role: 'model', text: 'أهلاً بكِ في غرام سلطان بيوتي سنتر! ✨ أنا غزل مساعدتكِ الذكية، كيف يمكنني مساعدتك اليوم؟' },
+                        ...historyMessages
+                    ]);
+                }
+            } catch (err) {
+                // Silent fail - just use the default welcome message
+                console.log('No previous chat history found');
+            } finally {
+                setHistoryLoading(false);
+            }
+        };
+        loadHistory();
+    }, []);
 
     const startRecording = async () => {
         try {
@@ -103,17 +138,23 @@ export default function AIChatPopup({ onClose }) {
 
         try {
             let res;
-            const cleanMessages = newMessages.map(m => ({ role: m.role, text: m.text }));
+            const cleanMessages = newMessages
+                .filter((_, i) => i > 0) // Skip the initial welcome message
+                .map(m => ({ role: m.role, text: m.text }));
 
             if (voiceBlob) {
                 const formData = new FormData();
                 formData.append('audio', voiceBlob, 'voice.webm');
                 formData.append('messages', JSON.stringify(cleanMessages));
+                formData.append('sessionId', sessionId.current);
                 res = await axios.post(`${API_BASE}/api/ai/chat`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
             } else {
-                res = await axios.post(`${API_BASE}/api/ai/chat`, { messages: cleanMessages });
+                res = await axios.post(`${API_BASE}/api/ai/chat`, { 
+                    messages: cleanMessages, 
+                    sessionId: sessionId.current 
+                });
             }
 
             if (res.data.success) {
@@ -127,7 +168,8 @@ export default function AIChatPopup({ onClose }) {
                 throw new Error('فشل الرد');
             }
         } catch (err) {
-            setMessages(prev => [...prev, { role: 'model', text: 'عذراً، حدث خطأ في الاتصال. يرجى المحاولة لاحقاً.' }]);
+            const errMsg = err.response?.data?.message || 'عذراً، حدث خطأ في الاتصال. يرجى المحاولة لاحقاً.';
+            setMessages(prev => [...prev, { role: 'model', text: errMsg }]);
         } finally {
             setLoading(false);
         }
@@ -199,35 +241,43 @@ export default function AIChatPopup({ onClose }) {
 
                 {/* Chat Area */}
                 <div style={styles.chatBox}>
-                    {messages.map((m, idx) => (
-                        <div key={idx} style={{
-                            ...styles.messageRow,
-                            justifyContent: m.role === 'user' ? 'flex-start' : 'flex-end',
-                            flexDirection: m.role === 'user' ? 'row' : 'row-reverse'
-                        }}>
-                            {m.role === 'model' && (
-                                <div style={styles.botIconWrapper}>
-                                    <img src={BOT_IMAGE} alt="bot" style={styles.botIcon} />
-                                </div>
-                            )}
-                            <div style={{
-                                ...styles.bubble,
-                                backgroundColor: m.role === 'user' ? '#1fb6a6' : '#ffffff',
-                                color: m.role === 'user' ? '#fff' : '#2d3436',
-                                borderBottomRightRadius: m.role === 'user' ? 4 : '20px',
-                                borderBottomLeftRadius: m.role === 'model' ? 4 : '20px',
-                                boxShadow: m.role === 'user' ? '0 4px 15px rgba(31, 182, 166, 0.2)' : '0 4px 15px rgba(0,0,0,0.05)',
+                    {historyLoading ? (
+                        <div style={styles.historyLoader}>
+                            <div className="typing-dot"></div>
+                            <div className="typing-dot"></div>
+                            <div className="typing-dot"></div>
+                        </div>
+                    ) : (
+                        messages.map((m, idx) => (
+                            <div key={idx} style={{
+                                ...styles.messageRow,
+                                justifyContent: m.role === 'user' ? 'flex-start' : 'flex-end',
+                                flexDirection: m.role === 'user' ? 'row' : 'row-reverse'
                             }}>
-                                {formatText(m.text)}
-
-                                {m.role === 'model' && m.audioParts && m.audioParts.length > 0 && (
-                                    <div style={{ marginTop: '12px', borderTop: '1px solid #efefef', paddingTop: '10px' }}>
-                                        <VoiceResponse parts={m.audioParts} />
+                                {m.role === 'model' && (
+                                    <div style={styles.botIconWrapper}>
+                                        <img src={BOT_IMAGE} alt="bot" style={styles.botIcon} />
                                     </div>
                                 )}
+                                <div style={{
+                                    ...styles.bubble,
+                                    backgroundColor: m.role === 'user' ? '#1fb6a6' : '#ffffff',
+                                    color: m.role === 'user' ? '#fff' : '#2d3436',
+                                    borderBottomRightRadius: m.role === 'user' ? 4 : '20px',
+                                    borderBottomLeftRadius: m.role === 'model' ? 4 : '20px',
+                                    boxShadow: m.role === 'user' ? '0 4px 15px rgba(31, 182, 166, 0.2)' : '0 4px 15px rgba(0,0,0,0.05)',
+                                }}>
+                                    {formatText(m.text)}
+
+                                    {m.role === 'model' && m.audioParts && m.audioParts.length > 0 && (
+                                        <div style={{ marginTop: '12px', borderTop: '1px solid #efefef', paddingTop: '10px' }}>
+                                            <VoiceResponse parts={m.audioParts} />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ))
+                    )}
 
                     {loading && (
                         <div style={{ ...styles.messageRow, justifyContent: 'flex-end', flexDirection: 'row-reverse' }}>
@@ -344,7 +394,6 @@ export default function AIChatPopup({ onClose }) {
 }
 
 const styles = {
-    // ... items before inputWrapper
     overlay: {
         position: 'fixed',
         bottom: '95px',
@@ -439,6 +488,13 @@ const styles = {
         display: 'flex',
         flexDirection: 'column',
         gap: '20px',
+    },
+    historyLoader: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '4px',
+        padding: '40px 0',
     },
     messageRow: {
         display: 'flex',
