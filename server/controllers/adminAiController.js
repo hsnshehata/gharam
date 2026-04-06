@@ -1,5 +1,6 @@
 const { processAdminChat, generateChatTitle } = require('../services/adminAiService');
 const AdminConversation = require('../models/AdminConversation');
+const User = require('../models/User');
 const googleTTS = require('google-tts-api');
 const axios = require('axios');
 
@@ -54,7 +55,8 @@ exports.getAllConversationsAdmin = async (req, res) => {
 exports.chat = async (req, res) => {
     try {
         let { text, conversationId, messages } = req.body;
-        const user = req.user;
+        const fullUser = await User.findById(req.user.id);
+        if (!fullUser) return res.status(401).json({ success: false, message: 'مستخدم غير موجود' });
 
         // Extract JSON messages if it came as FormData
         if (typeof messages === 'string') {
@@ -98,7 +100,7 @@ exports.chat = async (req, res) => {
         }
 
         // Pass to processAdminChat
-        const reply = await processAdminChat(messages, user, fileBuffer, fileMimeType);
+        const reply = await processAdminChat(messages, fullUser, fileBuffer, fileMimeType);
 
         // Push model message
         conv.messages.push({ role: 'model', text: reply });
