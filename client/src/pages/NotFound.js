@@ -189,7 +189,7 @@ function NotFound() {
         <div className="nf-content">
           <div className="nf-character">🤷‍♀️</div>
           <h1 className="nf-error-code">404</h1>
-          <h2 className="nf-title">إنت تاهت ولا إيه يا قمر؟ 😂</h2>
+          <h2 className="nf-title">إنت توهتي ولا إيه يا قمر؟ 😂</h2>
           <p className="nf-desc">
             استني بس... المكان ده مش موجود في السنتر عندنا! <br />
             الظاهر إنك دخلتي غرفة غلط، مفيش ميك أب هنا ولا مساج ولا تصوير. الداتا بيز بتدور ومش لاقية حاجة.
