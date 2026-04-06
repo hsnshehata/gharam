@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Container, Row, Col, Card, Alert, Button, Form, Modal, Table, Badge, Spinner } from 'react-bootstrap';
 import axios from 'axios';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCheck, faQrcode, faGift, faCoins, faBolt, faRotateRight, faWallet, faMoneyBillWave, faArrowDown, faHistory } from '@fortawesome/free-solid-svg-icons';
+import { faCheck, faQrcode, faGift, faCoins, faBolt, faRotateRight, faWallet, faMoneyBillWave, faArrowDown, faHistory, faUserShield } from '@fortawesome/free-solid-svg-icons';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useToast } from '../components/ToastProvider';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
@@ -35,37 +35,49 @@ function EmployeeDashboard({ user }) {
   const [isLoadingScan, setIsLoadingScan] = useState(false);
   const [advancesMonth, setAdvancesMonth] = useState(new Date().toISOString().slice(0, 7));
   const [weeklySeries, setWeeklySeries] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  const [impersonatedUserId, setImpersonatedUserId] = useState(null);
   const qrCodeScanner = useRef(null);
   const { showToast } = useToast();
 
+  const isAdmin = user?.role === 'admin';
+  const activeUserId = impersonatedUserId || user?._id || user?.id;
+  const asUserParam = impersonatedUserId ? `&asUser=${impersonatedUserId}` : '';
+  const asUserParamFirst = impersonatedUserId ? `?asUser=${impersonatedUserId}` : '';
+  const activeUserName = impersonatedUserId
+    ? (allUsers.find(u => (u._id || u.id) === impersonatedUserId)?.username || 'موظف')
+    : user?.username;
+
   const fetchPointsSummary = useCallback(async () => {
-    const pointsRes = await axios.get(`/api/users/points/summary`, {
+    const pointsRes = await axios.get(`/api/users/points/summary${asUserParamFirst}`, {
       headers: { 'x-auth-token': localStorage.getItem('token') }
     });
     setPointsSummary(pointsRes.data);
     return pointsRes.data;
-  }, []);
+  }, [asUserParamFirst]);
 
   const fetchPendingGifts = useCallback(async () => {
-    const res = await axios.get('/api/users/gifts/pending', {
+    const res = await axios.get(`/api/users/gifts/pending${asUserParamFirst}`, {
       headers: { 'x-auth-token': localStorage.getItem('token') }
     });
     setPendingGifts(res.data?.gifts || []);
-  }, []);
+  }, [asUserParamFirst]);
 
   const fetchTodayGifts = useCallback(async () => {
-    const res = await axios.get('/api/users/gifts/today', {
+    const res = await axios.get(`/api/users/gifts/today${asUserParamFirst}`, {
       headers: { 'x-auth-token': localStorage.getItem('token') }
     });
     setTodayGifts(res.data?.gifts || []);
-  }, []);
+  }, [asUserParamFirst]);
 
   const fetchExecutedByDate = useCallback(async (dateStr) => {
-    const res = await axios.get(`/api/users/executed-services?date=${dateStr}`, {
+    const sep = asUserParam ? '&' : '';
+    const extra = impersonatedUserId ? `${sep}asUser=${impersonatedUserId}` : '';
+    const res = await axios.get(`/api/users/executed-services?date=${dateStr}${extra}`, {
       headers: { 'x-auth-token': localStorage.getItem('token') }
     });
     return res.data?.services || [];
-  }, []);
+  }, [asUserParam, impersonatedUserId]);
 
   const fetchAllData = useCallback(async () => {
     setLoadingData(true);
@@ -110,6 +122,15 @@ function EmployeeDashboard({ user }) {
   useEffect(() => {
     fetchAllData();
   }, [fetchAllData]);
+
+  // Load users list for admin impersonation
+  useEffect(() => {
+    if (isAdmin) {
+      axios.get('/api/users', { headers: { 'x-auth-token': localStorage.getItem('token') } })
+        .then(res => setAllUsers(res.data || []))
+        .catch(err => console.error('Failed to load users list:', err));
+    }
+  }, [isAdmin]);
 
   const handleReceiptSearch = useCallback(async (searchValue) => {
     const normalized = (searchValue ?? '').toString().trim();
@@ -214,7 +235,7 @@ function EmployeeDashboard({ user }) {
   };
 
   const handleExecuteService = async (serviceId, type, recordId) => {
-    const employeeId = user?._id || user?.id;
+    const employeeId = activeUserId;
     if (!employeeId) return showToast('حساب الموظف غير محدد', 'danger');
     try {
       const endpoint = type === 'booking' 
@@ -455,6 +476,53 @@ function EmployeeDashboard({ user }) {
       {/* 1. Hero & Profile Section */}
       <div className="hero-banner mb-4">
         <Container style={{ position: 'relative', zIndex: 1 }}>
+
+          {/* Admin Employee Selector */}
+          {isAdmin && (
+            <div className="mb-4 p-3 rounded-4" style={{
+              background: 'linear-gradient(135deg, rgba(139,92,246,0.15), rgba(99,102,241,0.15))',
+              border: '1px solid rgba(139,92,246,0.3)',
+              backdropFilter: 'blur(10px)'
+            }}>
+              <div className="d-flex align-items-center gap-3 flex-wrap">
+                <div className="d-flex align-items-center gap-2">
+                  <FontAwesomeIcon icon={faUserShield} style={{ color: '#8b5cf6', fontSize: '1.3rem' }} />
+                  <span className="fw-bold" style={{ color: '#8b5cf6' }}>وضع الأدمن — معاينة لوحة الموظف:</span>
+                </div>
+                <Form.Select
+                  value={impersonatedUserId || ''}
+                  onChange={(e) => setImpersonatedUserId(e.target.value || null)}
+                  style={{
+                    maxWidth: '300px',
+                    background: 'var(--dash-surface)',
+                    color: 'var(--dash-text)',
+                    borderColor: 'rgba(139,92,246,0.4)',
+                    borderRadius: '12px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  <option value="">— حسابي (الأدمن) —</option>
+                  {allUsers.filter(u => u._id !== user?._id && u._id !== user?.id).map(u => (
+                    <option key={u._id || u.id} value={u._id || u.id}>
+                      {u.username} ({u.role === 'admin' ? 'مدير' : u.role === 'supervisor' ? 'مشرف' : u.role === 'hallSupervisor' ? 'مشرف صالة' : 'موظف'})
+                    </option>
+                  ))}
+                </Form.Select>
+                {impersonatedUserId && (
+                  <Button
+                    variant="outline-light"
+                    size="sm"
+                    className="btn-modern"
+                    onClick={() => setImpersonatedUserId(null)}
+                    style={{ borderColor: 'rgba(139,92,246,0.4)', color: '#8b5cf6' }}
+                  >
+                    العودة لحسابي
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
           <Row className="align-items-center text-center text-md-start">
             <Col md={3} className="mb-4 mb-md-0 text-center">
               <div 
@@ -467,7 +535,7 @@ function EmployeeDashboard({ user }) {
             </Col>
             
             <Col md={9} className="mb-4 mb-md-0">
-              <h2 className="fw-bold mb-3">مرحباً {user?.username} 🚀</h2>
+              <h2 className="fw-bold mb-3">مرحباً {activeUserName} 🚀{impersonatedUserId && <Badge bg="warning" text="dark" className="ms-2 fs-6">وضع المعاينة</Badge>}</h2>
               
               <Row className="mb-4">
                 <Col lg={8} xl={6}>
