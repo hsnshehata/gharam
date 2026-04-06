@@ -78,10 +78,10 @@ exports.chat = async (req, res) => {
         let isNew = false;
         
         if (conversationId) {
-            conv = await AdminConversation.findOne({ _id: conversationId, userId: user.id });
+            conv = await AdminConversation.findOne({ _id: conversationId, userId: req.user.id });
             if (!conv) return res.status(404).json({ success: false, message: 'المحادثة غير موجودة' });
         } else {
-            conv = new AdminConversation({ userId: user.id, messages: [] });
+            conv = new AdminConversation({ userId: req.user.id, messages: [] });
             isNew = true;
         }
 
