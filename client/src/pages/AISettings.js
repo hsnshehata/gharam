@@ -816,6 +816,9 @@ const styles = {
     slider: { flex: 1, height: 6, appearance: 'none', background: '#e0e0e0', borderRadius: 3, outline: 'none', cursor: 'pointer', accentColor: '#1fb6a6' },
     sliderValueDisplay: { display: 'flex', alignItems: 'baseline', gap: 6, justifyContent: 'center', marginTop: 8 },
     sliderValue: { fontSize: 32, fontWeight: 800, color: '#1fb6a6' },
+
+    // Prompt Textarea
+    promptTextarea: { flex: 1, border: 'none', outline: 'none', resize: 'none', padding: '24px', fontSize: 16, lineHeight: '28px', fontFamily: "'Tajawal', sans-serif", background: 'transparent', color: '#fff', direction: 'rtl', width: '100%', height: '100%', minHeight: '250px' }
 };
 
 // ============================================================
@@ -901,9 +904,22 @@ function AdminPromptTab() {
                 </div>
             </div>
 
-            <div style={{ position: 'relative', minHeight: 250, backgroundColor: '#1e1e1e', borderRadius: '0 0 16px 16px', overflow: 'hidden', marginBottom: 20 }}>
+            <div style={{ position: 'relative', flex: 1, display: 'flex', minHeight: 400, backgroundColor: '#1e1e1e', borderRadius: '0 0 16px 16px', overflow: 'hidden', marginBottom: 24 }}>
                 <textarea
-                    style={styles.promptTextarea}
+                    style={{
+                        flex: 1,
+                        border: 'none',
+                        outline: 'none',
+                        resize: 'none',
+                        padding: '24px',
+                        fontSize: 16,
+                        lineHeight: '28px',
+                        fontFamily: "'Tajawal', sans-serif",
+                        background: 'transparent',
+                        color: '#fff',
+                        direction: 'rtl',
+                        width: '100%'
+                    }}
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     placeholder="اكتب تعليمات مساعد الإدارة هنا..."
