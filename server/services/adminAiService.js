@@ -7,6 +7,15 @@ const DEFAULT_ADMIN_PROMPT = `أنت مساعد ذكي للمديرين والم
 دائماً اعتمد على الأدوات المتاحة لجلب أحدث البيانات.
 وكن احترافياً في عرض الجداول والبيانات.`;
 
+const MODEL_CANDIDATES = [
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-preview-04-17',
+    'gemini-2.0-flash-lite',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-pro',
+];
+
 const isToday = (dateStr) => {
     const d = new Date(dateStr);
     const today = new Date();
@@ -276,49 +285,80 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
         });
     }
 
-    let modelFeatures = {
-        model: 'gemini-1.5-flash',
-        systemInstruction: systemPrompt,
-        tools: adminTools
-    };
-
-    const model = genAI.getGenerativeModel(modelFeatures, { apiVersion: "v1beta" });
-    const chat = model.startChat({ history: cleanHistory });
     const localFunctions = createFunctions(user);
 
-    let result = await chat.sendMessage(userMessageContent);
-    let calls = result.response.functionCalls();
+    let replyText = null;
+    let lastError = null;
 
-    if (calls && calls.length > 0) {
-        for (const call of calls) {
-            const funcName = call.name;
-            const args = call.args;
-            if (localFunctions[funcName]) {
-                const apiResponse = await localFunctions[funcName](args);
-                result = await chat.sendMessage([{
-                    functionResponse: {
-                        name: funcName,
-                        response: apiResponse
+    for (const modelName of MODEL_CANDIDATES) {
+        try {
+            let modelFeatures = {
+                model: modelName,
+                systemInstruction: systemPrompt,
+                tools: adminTools
+            };
+
+            const model = genAI.getGenerativeModel(modelFeatures); // remove { apiVersion: "v1beta" } since new versions might not need it, or we rely on SDK default
+            const chat = model.startChat({ history: cleanHistory });
+
+            let result = await chat.sendMessage(userMessageContent);
+            let calls = result.response.functionCalls();
+
+            if (calls && calls.length > 0) {
+                for (const call of calls) {
+                    const funcName = call.name;
+                    const args = call.args;
+                    if (localFunctions[funcName]) {
+                        const apiResponse = await localFunctions[funcName](args);
+                        result = await chat.sendMessage([{
+                            functionResponse: {
+                                name: funcName,
+                                response: apiResponse
+                            }
+                        }]);
                     }
-                }]);
+                }
+                calls = result.response.functionCalls();
             }
+
+            replyText = result.response.text();
+            break; // Success!
+
+        } catch (err) {
+            console.warn(`[AdminAI] Model ${modelName} failed. Reason: ${err.message}. Trying next model...`);
+            lastError = err;
         }
-        calls = result.response.functionCalls();
     }
 
-    return result.response.text();
+    if (!replyText) {
+        console.error('[AdminAI] All models failed in fallback chain.', lastError);
+        throw new Error(lastError ? lastError.message : 'جميع نماذج الذكاء الاصطناعي غير متاحة حالياً.');
+    }
+
+    return replyText;
 };
 
 const generateChatTitle = async (firstMessage) => {
     try {
         if (!process.env.GEMINI_API_KEY) return "محادثة جديدة";
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-8b" }); // Or any small model
-        const prompt = `أنت مساعد يقوم بتوليد عناوين للمحادثات.
+        let result = null;
+        
+        for (const modelName of MODEL_CANDIDATES) {
+            try {
+                const model = genAI.getGenerativeModel({ model: modelName });
+                const prompt = `أنت مساعد يقوم بتوليد عناوين للمحادثات.
 اكتب عنوان قصير جداً (3 كلمات كحد أقصى) يعبر عن محتوى هذه الرسالة من مدير نظام. لا تضع نقطة في النهاية ولا تضف أي عبارات أخرى.
 الرسالة: "${firstMessage}"`;
-        const result = await model.generateContent(prompt);
-        return result.response.text().trim().replace(/['"]+/g, '');
+                result = await model.generateContent(prompt);
+                break;
+            } catch(e) {
+                // Try next
+            }
+        }
+        
+        if (result) return result.response.text().trim().replace(/['"]+/g, '');
+        return "محادثة جديدة";
     } catch (err) {
         return "محادثة جديدة";
     }
