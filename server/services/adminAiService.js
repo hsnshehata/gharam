@@ -1,5 +1,10 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const store = require('./dataStore');
+const User = require('../models/User');
+const Booking = require('../models/Booking');
+const InstantService = require('../models/InstantService');
+const Expense = require('../models/Expense');
+const Advance = require('../models/Advance');
+const Deduction = require('../models/Deduction');
 const SystemSetting = require('../models/SystemSetting');
 
 const DEFAULT_ADMIN_PROMPT = `أنت مساعد ذكي للمديرين والمشرفين في "غرام سلطان بيوتي سنتر".
@@ -81,9 +86,9 @@ const adminTools = [
 const createFunctions = (user) => ({
     get_employees_overview: async () => {
         try {
-            const employees = store.users.map(u => {
-                const isSupervisor = user.role === 'supervisor';
-                if (isSupervisor) {
+            const usersDB = await User.find({}).lean();
+            const employees = usersDB.map(u => {
+                if (user.role === 'supervisor') {
                     return { id: u._id, username: u.username, role: u.role, points: u.points || 0, isManager: u.isManager };
                 }
                 return {
@@ -98,47 +103,34 @@ const createFunctions = (user) => ({
     },
     query_operations: async ({ startDate, endDate, employeeName }) => {
         try {
-            let start = new Date(startDate);
-            start.setHours(0, 0, 0, 0);
-            let end = new Date(endDate);
-            end.setHours(23, 59, 59, 999);
+            let start = new Date(startDate); start.setHours(0, 0, 0, 0);
+            let end = new Date(endDate); end.setHours(23, 59, 59, 999);
 
-            let empId = null;
+            let empIds = [];
             if (employeeName) {
-                const emp = store.users.find(u => u.username.includes(employeeName));
-                if (emp) empId = emp._id.toString();
+                const emps = await User.find({ username: { $regex: employeeName, $options: 'i' } });
+                if (emps.length > 0) empIds = emps.map(e => e._id);
                 else return { message: `لم يتم العثور على موظف باسم ${employeeName}` };
             }
 
-            const bookings = store.bookings.filter(b => {
-                const bd = new Date(b.eventDate);
-                let match = bd >= start && bd <= end;
-                if (match && empId) {
-                    match = b.executedServices?.some(s => s.employee?.toString() === empId);
-                }
-                return match;
-            }).map(b => ({
+            const bQuery = { eventDate: { $gte: start, $lte: end } };
+            if (empIds.length > 0) bQuery['executedServices.employee'] = { $in: empIds };
+            const bookingsDB = await Booking.find(bQuery).populate('executedServices.employee', 'username').lean();
+
+            const bookings = bookingsDB.map(b => ({
                 id: b.receiptNumber, client: b.clientName, date: b.eventDate.toISOString().split('T')[0],
                 total: b.total, remaining: b.remaining,
-                executed: b.executedServices?.map(ex => {
-                    const eName = store.users.find(u => u._id.toString() === ex.employee?.toString())?.username || 'غير معروف';
-                    return { serviceName: ex.name, employee: eName };
-                })
+                executed: b.executedServices?.map(ex => ({ serviceName: ex.name, employee: ex.employee?.username || 'غير معروف' }))
             }));
 
-            const instant = store.instantServices.filter(i => {
-                const idt = new Date(i.date);
-                let match = idt >= start && idt <= end;
-                if (match && empId) match = i.employee?._id?.toString() === empId || i.employee?.toString() === empId;
-                return match;
-            }).map(i => {
-                let eName = 'غير منطبق';
-                if (i.employee) {
-                    const eId = i.employee._id || i.employee;
-                    eName = store.users.find(u => u._id.toString() === eId?.toString())?.username || 'غير معروف';
-                }
-                return { name: i.packageName || i.serviceName, employee: eName, date: i.date.toISOString().split('T')[0], total: i.total };
-            });
+            const iQuery = { date: { $gte: start, $lte: end } };
+            if (empIds.length > 0) iQuery['employee'] = { $in: empIds };
+            const instantDB = await InstantService.find(iQuery).populate('employee', 'username').lean();
+
+            const instant = instantDB.map(i => ({
+                name: i.packageName || i.serviceName, employee: i.employee?.username || 'غير منطبق',
+                date: i.date.toISOString().split('T')[0], total: i.total
+            }));
 
             return { bookings, instant_services: instant };
         } catch (err) {
@@ -156,42 +148,32 @@ const createFunctions = (user) => ({
             let start = new Date(startDate); start.setHours(0, 0, 0, 0);
             let end = new Date(endDate); end.setHours(23, 59, 59, 999);
 
-            let empId = null;
+            let empIds = [];
             if (employeeName) {
-                const emp = store.users.find(u => u.username.includes(employeeName));
-                if (emp) empId = emp._id.toString();
+                const emps = await User.find({ username: { $regex: employeeName, $options: 'i' } });
+                if (emps.length > 0) empIds = emps.map(e => e._id);
+                else return { message: `لم يتم العثور على موظف باسم ${employeeName}` };
             }
 
-            let filteredExpenses = store.expenses.filter(e => {
-                const d = new Date(e.date);
-                return d >= start && d <= end;
-            }).map(e => ({ item: e.item, amount: e.amount, date: e.date.toISOString().split('T')[0] }));
-
-            let filteredAdvances = store.advances.filter(a => {
-                const d = new Date(a.date);
-                let match = d >= start && d <= end;
-                if (match && empId) match = a.userId?._id?.toString() === empId || a.userId?.toString() === empId;
-                return match;
-            }).map(a => {
-                const uid = a.userId?._id || a.userId;
-                const eName = store.users.find(u => u._id.toString() === uid?.toString())?.username || 'غير معروف';
-                return { employee: eName, amount: a.amount, reason: a.reason, date: a.date.toISOString().split('T')[0] };
-            });
-
-            let filteredDeductions = store.deductions.filter(d => {
-                const dt = new Date(d.date);
-                let match = dt >= start && dt <= end;
-                if (match && empId) match = d.userId?._id?.toString() === empId || d.userId?.toString() === empId;
-                return match;
-            }).map(d => {
-                const uid = d.userId?._id || d.userId;
-                const eName = store.users.find(u => u._id.toString() === uid?.toString())?.username || 'غير معروف';
-                return { employee: eName, amount: d.amount, reason: d.reason, date: d.date.toISOString().split('T')[0] };
-            });
-
-            if (employeeName && empId) {
-                filteredExpenses = [];
+            let filteredExpenses = [];
+            if (empIds.length === 0) {
+                const exps = await Expense.find({ date: { $gte: start, $lte: end } }).lean();
+                filteredExpenses = exps.map(e => ({ item: e.item, amount: e.amount, date: e.date.toISOString().split('T')[0] }));
             }
+
+            const advQuery = { date: { $gte: start, $lte: end } };
+            if (empIds.length > 0) advQuery['userId'] = { $in: empIds };
+            const advs = await Advance.find(advQuery).populate('userId', 'username').lean();
+            const filteredAdvances = advs.map(a => ({
+                employee: a.userId?.username || 'غير معروف', amount: a.amount, reason: a.reason, date: a.date.toISOString().split('T')[0]
+            }));
+
+            const dedQuery = { date: { $gte: start, $lte: end } };
+            if (empIds.length > 0) dedQuery['userId'] = { $in: empIds };
+            const deds = await Deduction.find(dedQuery).populate('userId', 'username').lean();
+            const filteredDeductions = deds.map(d => ({
+                employee: d.userId?.username || 'غير معروف', amount: d.amount, reason: d.reason, date: d.date.toISOString().split('T')[0]
+            }));
 
             return { expenses: filteredExpenses, advances: filteredAdvances, deductions: filteredDeductions };
         } catch (err) {
@@ -209,29 +191,38 @@ const createFunctions = (user) => ({
             let start = new Date(startDate); start.setHours(0, 0, 0, 0);
             let end = new Date(endDate); end.setHours(23, 59, 59, 999);
 
-            const revBookings = store.bookings
-                .filter(b => b.remaining <= 0 && new Date(b.eventDate) >= start && new Date(b.eventDate) <= end)
-                .reduce((a, b) => a + b.total, 0);
+            const revBookings = await Booking.aggregate([
+                { $match: { remaining: { $lte: 0 }, eventDate: { $gte: start, $lte: end } } },
+                { $group: { _id: null, total: { $sum: "$total" } } }
+            ]);
 
-            const revInstant = store.instantServices
-                .filter(i => new Date(i.date) >= start && new Date(i.date) <= end)
-                .reduce((a, b) => a + b.total, 0);
+            const revInstant = await InstantService.aggregate([
+                { $match: { date: { $gte: start, $lte: end } } },
+                { $group: { _id: null, total: { $sum: "$total" } } }
+            ]);
 
-            const expTotal = store.expenses
-                .filter(e => new Date(e.date) >= start && new Date(e.date) <= end)
-                .reduce((a, b) => a + b.amount, 0);
+            const expTotal = await Expense.aggregate([
+                { $match: { date: { $gte: start, $lte: end } } },
+                { $group: { _id: null, total: { $sum: "$amount" } } }
+            ]);
 
-            const advTotal = store.advances
-                .filter(e => new Date(e.date) >= start && new Date(e.date) <= end)
-                .reduce((a, b) => a + b.amount, 0);
+            const advTotal = await Advance.aggregate([
+                { $match: { date: { $gte: start, $lte: end } } },
+                { $group: { _id: null, total: { $sum: "$amount" } } }
+            ]);
 
-            const netRevenue = (revBookings + revInstant) - expTotal;
+            const revB = revBookings[0]?.total || 0;
+            const revI = revInstant[0]?.total || 0;
+            const expT = expTotal[0]?.total || 0;
+            const advT = advTotal[0]?.total || 0;
+
+            const netRevenue = (revB + revI) - expT;
 
             return {
-                summary: `إجمالي الإيرادات من الحجوزات المكتملة: ${revBookings} ج | إيرادات الخدمات السريعة: ${revInstant} ج | إجمالي المصروفات: ${expTotal} ج | إجمالي السلف: ${advTotal} ج | صافي الربح: ${netRevenue} ج`,
+                summary: `إجمالي الإيرادات من الحجوزات المكتملة: ${revB} ج | إيرادات الخدمات السريعة: ${revI} ج | إجمالي المصروفات: ${expT} ج | إجمالي السلف: ${advT} ج | صافي الربح: ${netRevenue} ج`,
                 data: {
-                    totalRevenue: revBookings + revInstant,
-                    totalExpenses: expTotal,
+                    totalRevenue: revB + revI,
+                    totalExpenses: expT,
                     netRevenue: netRevenue
                 }
             };
@@ -302,26 +293,35 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
             const chat = model.startChat({ history: cleanHistory });
 
             let result = await chat.sendMessage(userMessageContent);
-            let calls = result.response.functionCalls();
+            let response = result.response;
+            let callCount = 0;
 
-            if (calls && calls.length > 0) {
-                for (const call of calls) {
+            while (response.functionCalls()?.length && callCount < 5) {
+                const functionCalls = response.functionCalls();
+                const functionResponses = [];
+
+                for (const call of functionCalls) {
                     const funcName = call.name;
                     const args = call.args;
                     if (localFunctions[funcName]) {
                         const apiResponse = await localFunctions[funcName](args);
-                        result = await chat.sendMessage([{
+                        functionResponses.push({
                             functionResponse: {
                                 name: funcName,
                                 response: apiResponse
                             }
-                        }]);
+                        });
                     }
                 }
-                calls = result.response.functionCalls();
+
+                if (functionResponses.length > 0) {
+                    result = await chat.sendMessage(functionResponses);
+                    response = result.response;
+                }
+                callCount++;
             }
 
-            replyText = result.response.text();
+            replyText = response.text();
             break; // Success!
 
         } catch (err) {
