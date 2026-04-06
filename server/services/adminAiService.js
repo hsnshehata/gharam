@@ -5,6 +5,9 @@ const InstantService = require('../models/InstantService');
 const Expense = require('../models/Expense');
 const Advance = require('../models/Advance');
 const Deduction = require('../models/Deduction');
+const Package = require('../models/Package');
+const Service = require('../models/Service');
+const ActivityLog = require('../models/ActivityLog');
 const SystemSetting = require('../models/SystemSetting');
 
 const DEFAULT_ADMIN_PROMPT = `أنت مساعد ذكي للمديرين والمشرفين في "غرام سلطان بيوتي سنتر".
@@ -34,42 +37,38 @@ const adminTools = [
         functionDeclarations: [
             {
                 name: "get_employees_overview",
-                description: "يجلب قائمة بجميع الموظفين المسجلين في النظام، بما في ذلك بيانات مهمة مثل: نوع الموظف، والنقاط التشغيلية، والراتب المتبقي (إن كان للمدير صلاحية). لا يتطلب أي معاملات.",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {},
-                    required: []
-                }
+                description: "يجلب قائمة بجميع الموظفين المسجلين في النظام مع النقاط التشغيلية الإجمالية والرواتب. لا يتطلب أي معاملات.",
+                parameters: { type: "OBJECT", properties: {}, required: [] }
             },
             {
                 name: "query_operations",
-                description: "يستعلم عن العمليات المنفذة (حجوزات، خدمات سريعة) في نطاق تاريخي معين أو لموظف معين بناءً على اسمه. يُرجع تفاصيل الخدمات التي تم تنفيذها.",
+                description: "يستعلم عن العمليات المنفذة (حجوزات عرائس + خدمات سريعة) في نطاق تاريخي. يرجع عدد الحجوزات والخدمات مع تفاصيلها.",
                 parameters: {
                     type: "OBJECT",
                     properties: {
                         startDate: { type: "STRING", description: "تاريخ البداية (YYYY-MM-DD)." },
                         endDate: { type: "STRING", description: "تاريخ النهاية (YYYY-MM-DD)." },
-                        employeeName: { type: "STRING", description: "اسم الموظف ككلمة بحث (اختياري)." }
+                        employeeName: { type: "STRING", description: "اسم الموظف للفلترة (اختياري)." }
                     },
                     required: ["startDate", "endDate"]
                 }
             },
             {
                 name: "query_financials_and_expenses",
-                description: "يستعلم عن الحسابات المالية (المصروفات، السلف الطارئة، الخصومات) في نطاق زمني محدد.",
+                description: "يستعلم عن المصروفات والسلف الطارئة والخصومات في نطاق زمني.",
                 parameters: {
                     type: "OBJECT",
                     properties: {
                         startDate: { type: "STRING", description: "تاريخ البداية (YYYY-MM-DD)." },
                         endDate: { type: "STRING", description: "تاريخ النهاية (YYYY-MM-DD)." },
-                        employeeName: { type: "STRING", description: "اسم الموظف أو المستفيد (اختياري)." }
+                        employeeName: { type: "STRING", description: "اسم الموظف (اختياري)." }
                     },
                     required: ["startDate", "endDate"]
                 }
             },
             {
                 name: "get_financial_report",
-                description: "يقوم بجلب الإيرادات الإجمالية، المصروفات، السلف، وإجمالي الأرباح في نطاق زمني للحصول على تقرير مالي كامل.",
+                description: "تقرير مالي شامل: إيرادات الحجوزات المكتملة + الخدمات السريعة - المصروفات = صافي الربح.",
                 parameters: {
                     type: "OBJECT",
                     properties: {
@@ -77,6 +76,44 @@ const adminTools = [
                         endDate: { type: "STRING", description: "تاريخ النهاية (YYYY-MM-DD)." }
                     },
                     required: ["startDate", "endDate"]
+                }
+            },
+            {
+                name: "get_packages_and_services",
+                description: "يجلب جميع باقات التجميل والتصوير وخدماتها مع الأسعار وحالة التفعيل. لا يتطلب أي معاملات.",
+                parameters: { type: "OBJECT", properties: {}, required: [] }
+            },
+            {
+                name: "search_booking",
+                description: "يبحث عن حجز معين برقم الإيصال أو رقم تليفون أو اسم العميلة. يرجع كل بيانات الحجز بالتفصيل.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        query: { type: "STRING", description: "رقم الإيصال أو رقم تليفون أو اسم العميلة." }
+                    },
+                    required: ["query"]
+                }
+            },
+            {
+                name: "get_activity_log",
+                description: "يجلب سجل النشاط والعمليات الأخيرة (إنشاء/تعديل/حذف حجوزات وخدمات ومصروفات) مع اسم الموظف المنفذ.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        limit: { type: "NUMBER", description: "عدد السجلات المطلوب (اختياري، الافتراضي 20)." }
+                    },
+                    required: []
+                }
+            },
+            {
+                name: "get_client_details",
+                description: "يجلب كل حجوزات عميلة معينة (بالاسم أو الهاتف) مع كل التفاصيل والمبالغ والسجل الكامل.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        query: { type: "STRING", description: "اسم العميلة أو رقم تليفونها." }
+                    },
+                    required: ["query"]
                 }
             }
         ]
@@ -86,19 +123,22 @@ const adminTools = [
 const createFunctions = (user) => ({
     get_employees_overview: async () => {
         try {
-            const usersDB = await User.find({}).lean();
+            const usersDB = await User.find({}).select('-password').lean();
             const employees = usersDB.map(u => {
-                if (user.role === 'supervisor') {
-                    return { id: u._id, username: u.username, role: u.role, points: u.points || 0, isManager: u.isManager };
+                const totalPoints = Array.isArray(u.points)
+                    ? u.points.reduce((sum, p) => sum + (p.amount || 0), 0)
+                    : 0;
+                const base = { id: u._id, username: u.username, role: u.role, totalPoints };
+                if (user.role !== 'supervisor') {
+                    base.monthlySalary = u.monthlySalary || 0;
+                    base.remainingSalary = u.remainingSalary || 0;
                 }
-                return {
-                    id: u._id, username: u.username, role: u.role, isManager: u.isManager,
-                    points: u.points || 0, baseSalary: u.baseSalary || 0, remainingSalary: u.remainingSalary || 0
-                };
+                return base;
             });
             return { employees };
         } catch (err) {
-            return { error: "فشل في جلب الموظفين" };
+            console.error('[AdminAI] get_employees_overview error:', err.message);
+            return { error: "فشل في جلب الموظفين: " + err.message };
         }
     },
     query_operations: async ({ startDate, endDate, employeeName }) => {
@@ -108,40 +148,65 @@ const createFunctions = (user) => ({
 
             let empIds = [];
             if (employeeName) {
-                const emps = await User.find({ username: { $regex: employeeName, $options: 'i' } });
+                const emps = await User.find({ username: { $regex: employeeName, $options: 'i' } }).lean();
                 if (emps.length > 0) empIds = emps.map(e => e._id);
                 else return { message: `لم يتم العثور على موظف باسم ${employeeName}` };
             }
 
+            // Bookings: field is eventDate, services are in packageServices, executedBy is the employee
             const bQuery = { eventDate: { $gte: start, $lte: end } };
-            if (empIds.length > 0) bQuery['executedServices.employee'] = { $in: empIds };
-            const bookingsDB = await Booking.find(bQuery).populate('executedServices.employee', 'username').lean();
+            if (empIds.length > 0) bQuery['packageServices.executedBy'] = { $in: empIds };
+            const bookingsDB = await Booking.find(bQuery)
+                .populate('packageServices.executedBy', 'username')
+                .populate('package', 'name')
+                .lean();
 
             const bookings = bookingsDB.map(b => ({
-                id: b.receiptNumber, client: b.clientName, date: b.eventDate.toISOString().split('T')[0],
-                total: b.total, remaining: b.remaining,
-                executed: b.executedServices?.map(ex => ({ serviceName: ex.name, employee: ex.employee?.username || 'غير معروف' }))
+                receiptNumber: b.receiptNumber,
+                client: b.clientName,
+                phone: b.clientPhone,
+                eventDate: b.eventDate?.toISOString().split('T')[0],
+                total: b.total,
+                remaining: b.remaining,
+                packageName: b.package?.name || 'غير محدد',
+                services: (b.packageServices || []).map(s => ({
+                    name: s.name,
+                    executed: s.executed,
+                    executedBy: s.executedBy?.username || null
+                }))
             }));
 
-            const iQuery = { date: { $gte: start, $lte: end } };
-            if (empIds.length > 0) iQuery['employee'] = { $in: empIds };
-            const instantDB = await InstantService.find(iQuery).populate('employee', 'username').lean();
+            // InstantServices: field is createdAt, employee is employeeId
+            const iQuery = { createdAt: { $gte: start, $lte: end } };
+            if (empIds.length > 0) iQuery['employeeId'] = { $in: empIds };
+            const instantDB = await InstantService.find(iQuery)
+                .populate('employeeId', 'username')
+                .lean();
 
             const instant = instantDB.map(i => ({
-                name: i.packageName || i.serviceName, employee: i.employee?.username || 'غير منطبق',
-                date: i.date.toISOString().split('T')[0], total: i.total
+                receiptNumber: i.receiptNumber,
+                services: (i.services || []).map(s => s.name).join(', '),
+                employee: i.employeeId?.username || 'غير محدد',
+                date: i.createdAt?.toISOString().split('T')[0],
+                total: i.total
             }));
 
-            return { bookings, instant_services: instant };
+            return {
+                bookingsCount: bookings.length,
+                instantCount: instant.length,
+                bookings,
+                instant_services: instant
+            };
         } catch (err) {
-            return { error: "فشل في جلب العمليات" };
+            console.error('[AdminAI] query_operations error:', err.message);
+            return { error: "فشل في جلب العمليات: " + err.message };
         }
     },
     query_financials_and_expenses: async ({ startDate, endDate, employeeName }) => {
         try {
             if (user.role === 'supervisor') {
                 if (!isToday(startDate) || !isToday(endDate)) {
-                    return { error: "عذراً، بصفتك (مشرف)، لديك صلاحية للاستعلام عن التقارير المالية لليوم الحالي فقط. لا يمكنك جلب بيانات لتاريخ ماضي وتذكر أن ترد على المستخدم بأدب بهذا العذر المحدد." };
+                    return { error: "عذراً، بصفتك (مشرف)، لديك صلاحية للاستعلام عن التقارير المالية لليوم الحالي فقط." };
                 }
             }
 
@@ -150,34 +215,46 @@ const createFunctions = (user) => ({
 
             let empIds = [];
             if (employeeName) {
-                const emps = await User.find({ username: { $regex: employeeName, $options: 'i' } });
+                const emps = await User.find({ username: { $regex: employeeName, $options: 'i' } }).lean();
                 if (emps.length > 0) empIds = emps.map(e => e._id);
                 else return { message: `لم يتم العثور على موظف باسم ${employeeName}` };
             }
 
+            // Expenses: field is createdAt, description is details
             let filteredExpenses = [];
             if (empIds.length === 0) {
-                const exps = await Expense.find({ date: { $gte: start, $lte: end } }).lean();
-                filteredExpenses = exps.map(e => ({ item: e.item, amount: e.amount, date: e.date.toISOString().split('T')[0] }));
+                const exps = await Expense.find({ createdAt: { $gte: start, $lte: end } }).lean();
+                filteredExpenses = exps.map(e => ({
+                    details: e.details, amount: e.amount,
+                    date: e.createdAt?.toISOString().split('T')[0]
+                }));
             }
 
-            const advQuery = { date: { $gte: start, $lte: end } };
+            // Advances: field is createdAt, no reason field
+            const advQuery = { createdAt: { $gte: start, $lte: end } };
             if (empIds.length > 0) advQuery['userId'] = { $in: empIds };
             const advs = await Advance.find(advQuery).populate('userId', 'username').lean();
             const filteredAdvances = advs.map(a => ({
-                employee: a.userId?.username || 'غير معروف', amount: a.amount, reason: a.reason, date: a.date.toISOString().split('T')[0]
+                employee: a.userId?.username || 'غير معروف',
+                amount: a.amount,
+                date: a.createdAt?.toISOString().split('T')[0]
             }));
 
-            const dedQuery = { date: { $gte: start, $lte: end } };
+            // Deductions: field is createdAt
+            const dedQuery = { createdAt: { $gte: start, $lte: end } };
             if (empIds.length > 0) dedQuery['userId'] = { $in: empIds };
             const deds = await Deduction.find(dedQuery).populate('userId', 'username').lean();
             const filteredDeductions = deds.map(d => ({
-                employee: d.userId?.username || 'غير معروف', amount: d.amount, reason: d.reason, date: d.date.toISOString().split('T')[0]
+                employee: d.userId?.username || 'غير معروف',
+                amount: d.amount,
+                reason: d.reason || '',
+                date: d.createdAt?.toISOString().split('T')[0]
             }));
 
             return { expenses: filteredExpenses, advances: filteredAdvances, deductions: filteredDeductions };
         } catch (err) {
-            return { error: "فشل في جلب المصروفات والسلف" };
+            console.error('[AdminAI] query_financials error:', err.message);
+            return { error: "فشل في جلب المصروفات والسلف: " + err.message };
         }
     },
     get_financial_report: async ({ startDate, endDate }) => {
@@ -191,23 +268,27 @@ const createFunctions = (user) => ({
             let start = new Date(startDate); start.setHours(0, 0, 0, 0);
             let end = new Date(endDate); end.setHours(23, 59, 59, 999);
 
+            // Bookings revenue: uses eventDate
             const revBookings = await Booking.aggregate([
                 { $match: { remaining: { $lte: 0 }, eventDate: { $gte: start, $lte: end } } },
                 { $group: { _id: null, total: { $sum: "$total" } } }
             ]);
 
+            // Instant revenue: uses createdAt
             const revInstant = await InstantService.aggregate([
-                { $match: { date: { $gte: start, $lte: end } } },
+                { $match: { createdAt: { $gte: start, $lte: end } } },
                 { $group: { _id: null, total: { $sum: "$total" } } }
             ]);
 
+            // Expenses: uses createdAt
             const expTotal = await Expense.aggregate([
-                { $match: { date: { $gte: start, $lte: end } } },
+                { $match: { createdAt: { $gte: start, $lte: end } } },
                 { $group: { _id: null, total: { $sum: "$amount" } } }
             ]);
 
+            // Advances: uses createdAt
             const advTotal = await Advance.aggregate([
-                { $match: { date: { $gte: start, $lte: end } } },
+                { $match: { createdAt: { $gte: start, $lte: end } } },
                 { $group: { _id: null, total: { $sum: "$amount" } } }
             ]);
 
@@ -215,19 +296,151 @@ const createFunctions = (user) => ({
             const revI = revInstant[0]?.total || 0;
             const expT = expTotal[0]?.total || 0;
             const advT = advTotal[0]?.total || 0;
-
             const netRevenue = (revB + revI) - expT;
 
             return {
-                summary: `إجمالي الإيرادات من الحجوزات المكتملة: ${revB} ج | إيرادات الخدمات السريعة: ${revI} ج | إجمالي المصروفات: ${expT} ج | إجمالي السلف: ${advT} ج | صافي الربح: ${netRevenue} ج`,
-                data: {
-                    totalRevenue: revB + revI,
-                    totalExpenses: expT,
-                    netRevenue: netRevenue
-                }
+                summary: `إيرادات حجوزات مكتملة: ${revB} ج | إيرادات خدمات سريعة: ${revI} ج | مصروفات: ${expT} ج | سلف: ${advT} ج | صافي: ${netRevenue} ج`,
+                data: { totalRevenue: revB + revI, totalExpenses: expT, totalAdvances: advT, netRevenue }
             };
         } catch (err) {
-            return { error: "فشل حساب التقرير المالي" };
+            console.error('[AdminAI] get_financial_report error:', err.message);
+            return { error: "فشل حساب التقرير المالي: " + err.message };
+        }
+    },
+    get_packages_and_services: async () => {
+        try {
+            const packages = await Package.find({}).lean();
+            const services = await Service.find({}).populate('packageId', 'name').lean();
+            return {
+                packages: packages.map(p => ({
+                    name: p.name, price: p.price, type: p.type,
+                    isActive: p.isActive, showInPrices: p.showInPrices
+                })),
+                services: services.map(s => ({
+                    name: s.name, price: s.price, type: s.type,
+                    packageName: s.packageId?.name || null,
+                    isActive: s.isActive, showInPrices: s.showInPrices
+                }))
+            };
+        } catch (err) {
+            console.error('[AdminAI] get_packages_and_services error:', err.message);
+            return { error: "فشل في جلب الباقات والخدمات: " + err.message };
+        }
+    },
+    search_booking: async ({ query }) => {
+        try {
+            const searchQuery = {
+                $or: [
+                    { receiptNumber: query },
+                    { clientPhone: { $regex: query, $options: 'i' } },
+                    { clientName: { $regex: query, $options: 'i' } }
+                ]
+            };
+            const results = await Booking.find(searchQuery)
+                .populate('package', 'name price')
+                .populate('packageServices.executedBy', 'username')
+                .populate('createdBy', 'username')
+                .sort({ createdAt: -1 })
+                .limit(10)
+                .lean();
+
+            if (results.length === 0) return { message: `لم يتم العثور على حجوزات تطابق "${query}"` };
+
+            return {
+                count: results.length,
+                bookings: results.map(b => ({
+                    receiptNumber: b.receiptNumber,
+                    clientName: b.clientName,
+                    clientPhone: b.clientPhone,
+                    city: b.city,
+                    eventDate: b.eventDate?.toISOString().split('T')[0],
+                    packageName: b.package?.name || 'غير محدد',
+                    total: b.total,
+                    deposit: b.deposit,
+                    remaining: b.remaining,
+                    paymentMethod: b.paymentMethod,
+                    installments: (b.installments || []).map(i => ({
+                        amount: i.amount, date: i.date?.toISOString().split('T')[0], method: i.paymentMethod
+                    })),
+                    services: (b.packageServices || []).map(s => ({
+                        name: s.name, price: s.price, executed: s.executed,
+                        executedBy: s.executedBy?.username || null
+                    })),
+                    hairStraightening: b.hairStraightening ? { price: b.hairStraighteningPrice, executed: b.hairStraighteningExecuted } : null,
+                    hairDye: b.hairDye ? { price: b.hairDyePrice, executed: b.hairDyeExecuted } : null,
+                    createdBy: b.createdBy?.username || 'غير معروف',
+                    createdAt: b.createdAt?.toISOString().split('T')[0],
+                    updates: (b.updates || []).map(u => ({
+                        date: u.date?.toISOString().split('T')[0],
+                        changes: JSON.stringify(u.changes)
+                    }))
+                }))
+            };
+        } catch (err) {
+            console.error('[AdminAI] search_booking error:', err.message);
+            return { error: "فشل في البحث عن الحجز: " + err.message };
+        }
+    },
+    get_activity_log: async ({ limit } = {}) => {
+        try {
+            const count = Math.min(limit || 20, 50);
+            const logs = await ActivityLog.find({})
+                .populate('performedBy', 'username')
+                .sort({ createdAt: -1 })
+                .limit(count)
+                .lean();
+            return {
+                logs: logs.map(l => ({
+                    action: l.action,
+                    entityType: l.entityType,
+                    details: l.details,
+                    amount: l.amount,
+                    paymentMethod: l.paymentMethod,
+                    performedBy: l.performedBy?.username || 'غير معروف',
+                    date: l.createdAt?.toISOString().replace('T', ' ').slice(0, 16)
+                }))
+            };
+        } catch (err) {
+            console.error('[AdminAI] get_activity_log error:', err.message);
+            return { error: "فشل في جلب سجل النشاط: " + err.message };
+        }
+    },
+    get_client_details: async ({ query }) => {
+        try {
+            const searchQuery = {
+                $or: [
+                    { clientPhone: { $regex: query, $options: 'i' } },
+                    { clientName: { $regex: query, $options: 'i' } }
+                ]
+            };
+            const bookings = await Booking.find(searchQuery)
+                .populate('package', 'name')
+                .sort({ eventDate: -1 })
+                .lean();
+
+            if (bookings.length === 0) return { message: `لم يتم العثور على عميلة باسم أو رقم "${query}"` };
+
+            const totalSpent = bookings.reduce((s, b) => s + b.total, 0);
+            const totalRemaining = bookings.reduce((s, b) => s + b.remaining, 0);
+
+            return {
+                clientName: bookings[0].clientName,
+                clientPhone: bookings[0].clientPhone,
+                totalBookings: bookings.length,
+                totalSpent,
+                totalRemaining,
+                bookings: bookings.map(b => ({
+                    receiptNumber: b.receiptNumber,
+                    eventDate: b.eventDate?.toISOString().split('T')[0],
+                    packageName: b.package?.name || 'غير محدد',
+                    total: b.total,
+                    remaining: b.remaining,
+                    deposit: b.deposit
+                }))
+            };
+        } catch (err) {
+            console.error('[AdminAI] get_client_details error:', err.message);
+            return { error: "فشل في جلب بيانات العميلة: " + err.message };
         }
     }
 });
@@ -235,6 +448,16 @@ const createFunctions = (user) => ({
 const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType = null) => {
     const setting = await SystemSetting.findOne({ key: 'admin_ai_system_prompt' });
     let systemPrompt = setting?.value || DEFAULT_ADMIN_PROMPT;
+
+    // Inject current date/time so the AI always knows "today"
+    const now = new Date();
+    const cairoOffset = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Cairo' }));
+    const todayStr = cairoOffset.toISOString().split('T')[0]; // YYYY-MM-DD
+    const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    const dayName = dayNames[cairoOffset.getDay()];
+    const timeStr = cairoOffset.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+
+    systemPrompt += `\n\nمعلومات الوقت الحالي: اليوم هو ${dayName} ${todayStr} والساعة الآن ${timeStr} بتوقيت القاهرة. عندما يسأل المستخدم عن "اليوم" أو "انهاردة"، استخدم التاريخ ${todayStr}. لا تسأل المستخدم أبداً عن التاريخ الحالي.`;
 
     if (user.role === 'supervisor') {
         systemPrompt += `\n\nتنويه هام: المستخدم الحالي هو 'مشرف' وليس مديراً، واسمه "${user.username}". خاطبه باسمه بشكل ودود. يجب عليك إعلامه بلطف أن صلاحياته تمنعه من رؤية تقارير أي يوم آخر سوى اليوم الحالي وأنه غير مصرح له برؤية رواتب أو خصومات زملائه.`;
