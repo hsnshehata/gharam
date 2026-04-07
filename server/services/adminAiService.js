@@ -11,9 +11,13 @@ const ActivityLog = require('../models/ActivityLog');
 const SystemSetting = require('../models/SystemSetting');
 
 const DEFAULT_ADMIN_PROMPT = `أنت مساعد ذكي للمديرين والمشرفين في "غرام سلطان بيوتي سنتر".
-مهمتك مساعدة الإدارة في الرد على جميع الأسئلة المتعلقة بقواعد البيانات والتقارير المالية والعمليات. 
-دائماً اعتمد على الأدوات المتاحة لجلب أحدث البيانات.
-وكن احترافياً في عرض الجداول والبيانات.`;
+مهمتك مساعدة الإدارة في الرد على جميع الأسئلة المتعلقة بقواعد البيانات والتقارير المالية والعمليات بدقة. 
+دائماً اعتمد على الأدوات المتاحة لجلب أحدث البيانات، ولا تخمن أبداً.
+تعليمات هامة جداً:
+1. اقرأ التوجيه من المستخدم بتأني ومراجعة. الطلبات قد تحتوي على مهام مركبة تتطلب دمج معلومات مختلفة (مثلاً: بحث عن حجز + جلب سجل تعديلاته).
+2. لديك القدرة على استدعاء الأداة المناسبة، وإذا اكتشفت نقص في المعلومات، قم باستدعاء أداة أخرى أو نفس الأداة مدخلات مختلفة قبل بناء الرد النهائي للمستخدم (Multi-step Tool Usage).
+3. استعرض ما حصلت عليه من الأدوات، وحلله جيداً للتأكد من أنه يشمل إجابة كاملة للمستخدم، ثم صغ إجابتك.
+4. كن احترافياً، استعمل جداول ملخصة (Markdown Tables) وقوائم لتسهيل القراءة على الإدارة.`;
 
 const MODEL_CANDIDATES = [
     'gemini-2.5-flash',
@@ -85,22 +89,29 @@ const adminTools = [
             },
             {
                 name: "search_booking",
-                description: "يبحث عن حجز معين برقم الإيصال أو رقم تليفون أو اسم العميلة. يرجع كل بيانات الحجز بالتفصيل.",
+                description: "يبحث عن الحجوزات برقم الإيصال أو رقم تليفون أو اسم العميلة أو الفلترة بنوع الخدمة وتواريخ محددة. يرجع كل بيانات الحجز. مفيد جداً للبحث والفلترة.",
                 parameters: {
                     type: "OBJECT",
                     properties: {
-                        query: { type: "STRING", description: "رقم الإيصال أو رقم تليفون أو اسم العميلة." }
+                        query: { type: "STRING", description: "مؤشر بحث عن رقم الإيصال أو رقم تليفون أو اسم العميلة (اختياري)." },
+                        serviceName: { type: "STRING", description: "اسم خدمة للبحث عنها داخله (مثل: تصوير، فرد، صبغة، ميكاب) (اختياري)." },
+                        startDate: { type: "STRING", description: "تاريخ البداية للحجز (YYYY-MM-DD)." },
+                        endDate: { type: "STRING", description: "تاريخ النهاية للحجز (YYYY-MM-DD)." }
                     },
-                    required: ["query"]
+                    required: []
                 }
             },
             {
                 name: "get_activity_log",
-                description: "يجلب سجل النشاط والعمليات الأخيرة (إنشاء/تعديل/حذف حجوزات وخدمات ومصروفات) مع اسم الموظف المنفذ.",
+                description: "يجلب سجل النشاط والعمليات (إنشاء/تعديل/حذف حجوزات وخدمات ومصروفات) مع اسم الموظف المنفذ وتفاصيل التغييرات. يمكن الفلترة بالتاريخ ونوع الكيان.",
                 parameters: {
                     type: "OBJECT",
                     properties: {
-                        limit: { type: "NUMBER", description: "عدد السجلات المطلوب (اختياري، الافتراضي 20)." }
+                        startDate: { type: "STRING", description: "تاريخ البداية (YYYY-MM-DD)." },
+                        endDate: { type: "STRING", description: "تاريخ النهاية (YYYY-MM-DD)." },
+                        entityType: { type: "STRING", description: "نوع الكيان (مثلاً: Booking, InstantService, Expense) (اختياري)." },
+                        employeeName: { type: "STRING", description: "اسم الموظف لتتبع عملياته (اختياري)." },
+                        limit: { type: "NUMBER", description: "عدد السجلات (الافتراضي 30)." }
                     },
                     required: []
                 }
@@ -155,9 +166,18 @@ const createFunctions = (user) => ({
 
             // Bookings: field is eventDate, services are in packageServices, executedBy is the employee
             const bQuery = { eventDate: { $gte: start, $lte: end } };
-            if (empIds.length > 0) bQuery['packageServices.executedBy'] = { $in: empIds };
+            if (empIds.length > 0) {
+                bQuery.$or = [
+                    { 'packageServices.executedBy': { $in: empIds } },
+                    { 'hairStraighteningExecutedBy': { $in: empIds } },
+                    { 'hairDyeExecutedBy': { $in: empIds } }
+                ];
+            }
             const bookingsDB = await Booking.find(bQuery)
                 .populate('packageServices.executedBy', 'username')
+                .populate('hairStraighteningExecutedBy', 'username')
+                .populate('hairDyeExecutedBy', 'username')
+                .populate('extraServices', 'name')
                 .populate('package', 'name')
                 .lean();
 
@@ -169,11 +189,14 @@ const createFunctions = (user) => ({
                 total: b.total,
                 remaining: b.remaining,
                 packageName: b.package?.name || 'غير محدد',
+                extraServices: (b.extraServices || []).map(s => s.name).join('، '),
                 services: (b.packageServices || []).map(s => ({
                     name: s.name,
                     executed: s.executed,
                     executedBy: s.executedBy?.username || null
-                }))
+                })),
+                hairStraightening: b.hairStraightening ? { executed: b.hairStraighteningExecuted, executedBy: b.hairStraighteningExecutedBy?.username || null } : null,
+                hairDye: b.hairDye ? { executed: b.hairDyeExecuted, executedBy: b.hairDyeExecutedBy?.username || null } : null
             }));
 
             // InstantServices: field is createdAt, employee is employeeId
@@ -355,53 +378,73 @@ const createFunctions = (user) => ({
             return { error: "فشل في جلب الباقات والخدمات: " + err.message };
         }
     },
-    search_booking: async ({ query }) => {
+    search_booking: async ({ query, serviceName, startDate, endDate }) => {
         try {
-            const searchQuery = {
-                $or: [
+            const searchQuery = {};
+            if (query) {
+                searchQuery.$or = [
                     { receiptNumber: query },
                     { clientPhone: { $regex: query, $options: 'i' } },
                     { clientName: { $regex: query, $options: 'i' } }
-                ]
-            };
-            const results = await Booking.find(searchQuery)
+                ];
+            }
+            if (startDate || endDate) {
+                searchQuery.eventDate = {};
+                if (startDate) {
+                    let start = new Date(startDate); start.setHours(0, 0, 0, 0);
+                    searchQuery.eventDate.$gte = start;
+                }
+                if (endDate) {
+                    let end = new Date(endDate); end.setHours(23, 59, 59, 999);
+                    searchQuery.eventDate.$lte = end;
+                }
+            }
+
+            const resultsDb = await Booking.find(searchQuery)
                 .populate('package', 'name price')
                 .populate('packageServices.executedBy', 'username')
                 .populate('createdBy', 'username')
-                .sort({ createdAt: -1 })
-                .limit(10)
+                .populate('extraServices', 'name')
+                .sort({ eventDate: -1 })
+                .limit(50)
                 .lean();
 
-            if (results.length === 0) return { message: `لم يتم العثور على حجوزات تطابق "${query}"` };
+            let results = resultsDb;
+
+            if (serviceName) {
+                const serviceRegex = new RegExp(serviceName, 'i');
+                results = results.filter(b => {
+                    if (b.package?.name?.match(serviceRegex)) return true;
+                    if (b.packageServices?.some(s => s.name?.match(serviceRegex))) return true;
+                    if (b.extraServices?.some(s => s.name?.match(serviceRegex))) return true;
+                    if (serviceName.includes('فرد') && b.hairStraightening) return true;
+                    if (serviceName.includes('صبغة') && b.hairDye) return true;
+                    if (serviceName.includes('بروتين') && b.hairStraightening) return true;
+                    return false;
+                });
+            }
+
+            if (results.length === 0) return { message: `لم يتم العثور على حجوزات تطابق المعايير.` };
 
             return {
                 count: results.length,
-                bookings: results.map(b => ({
+                bookings: results.slice(0, 20).map(b => ({
                     receiptNumber: b.receiptNumber,
                     clientName: b.clientName,
                     clientPhone: b.clientPhone,
-                    city: b.city,
                     eventDate: b.eventDate?.toISOString().split('T')[0],
                     packageName: b.package?.name || 'غير محدد',
                     total: b.total,
                     deposit: b.deposit,
                     remaining: b.remaining,
                     paymentMethod: b.paymentMethod,
-                    installments: (b.installments || []).map(i => ({
-                        amount: i.amount, date: i.date?.toISOString().split('T')[0], method: i.paymentMethod
-                    })),
-                    services: (b.packageServices || []).map(s => ({
-                        name: s.name, price: s.price, executed: s.executed,
-                        executedBy: s.executedBy?.username || null
-                    })),
-                    hairStraightening: b.hairStraightening ? { price: b.hairStraighteningPrice, executed: b.hairStraighteningExecuted } : null,
-                    hairDye: b.hairDye ? { price: b.hairDyePrice, executed: b.hairDyeExecuted } : null,
+                    services: (b.packageServices || []).map(s => s.name).join('، '),
+                    extraServices: (b.extraServices || []).map(s => s.name).join('، '),
+                    hairStraightening: b.hairStraightening ? { price: b.hairStraighteningPrice } : null,
+                    hairDye: b.hairDye ? { price: b.hairDyePrice } : null,
                     createdBy: b.createdBy?.username || 'غير معروف',
                     createdAt: b.createdAt?.toISOString().split('T')[0],
-                    updates: (b.updates || []).map(u => ({
-                        date: u.date?.toISOString().split('T')[0],
-                        changes: JSON.stringify(u.changes)
-                    }))
+                    updatesCount: b.updates?.length || 0
                 }))
             };
         } catch (err) {
@@ -409,22 +452,48 @@ const createFunctions = (user) => ({
             return { error: "فشل في البحث عن الحجز: " + err.message };
         }
     },
-    get_activity_log: async ({ limit } = {}) => {
+    get_activity_log: async ({ startDate, endDate, entityType, employeeName, limit }) => {
         try {
-            const count = Math.min(limit || 20, 50);
-            const logs = await ActivityLog.find({})
+            const count = Math.min(limit || 30, 100);
+            const query = {};
+            
+            if (startDate || endDate) {
+                query.createdAt = {};
+                if (startDate) {
+                    let start = new Date(startDate); start.setHours(0, 0, 0, 0);
+                    query.createdAt.$gte = start;
+                }
+                if (endDate) {
+                    let end = new Date(endDate); end.setHours(23, 59, 59, 999);
+                    query.createdAt.$lte = end;
+                }
+            }
+            if (entityType) {
+                query.entityType = { $regex: entityType, $options: 'i' };
+            }
+            if (employeeName) {
+                const emps = await User.find({ username: { $regex: employeeName, $options: 'i' } }).lean();
+                if (emps.length > 0) {
+                    query.performedBy = { $in: emps.map(e => e._id) };
+                } else {
+                    return { message: `لم يتم العثور على موظف باسم ${employeeName}` };
+                }
+            }
+
+            const logs = await ActivityLog.find(query)
                 .populate('performedBy', 'username')
                 .sort({ createdAt: -1 })
                 .limit(count)
                 .lean();
+
             return {
+                count: logs.length,
                 logs: logs.map(l => ({
                     action: l.action,
                     entityType: l.entityType,
                     details: l.details,
-                    amount: l.amount,
-                    paymentMethod: l.paymentMethod,
-                    performedBy: l.performedBy?.username || 'غير معروف',
+                    amount: l.amount || null,
+                    employee: l.performedBy?.username || 'غير معروف',
                     date: l.createdAt?.toISOString().replace('T', ' ').slice(0, 16)
                 }))
             };
@@ -443,6 +512,7 @@ const createFunctions = (user) => ({
             };
             const bookings = await Booking.find(searchQuery)
                 .populate('package', 'name')
+                .populate('extraServices', 'name')
                 .sort({ eventDate: -1 })
                 .lean();
 
@@ -461,6 +531,9 @@ const createFunctions = (user) => ({
                     receiptNumber: b.receiptNumber,
                     eventDate: b.eventDate?.toISOString().split('T')[0],
                     packageName: b.package?.name || 'غير محدد',
+                    extraServices: (b.extraServices || []).map(s => s.name).join('، '),
+                    hasHairStraightening: b.hairStraightening ? true : false,
+                    hasHairDye: b.hairDye ? true : false,
                     total: b.total,
                     remaining: b.remaining,
                     deposit: b.deposit
