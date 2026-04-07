@@ -525,8 +525,15 @@ const verifyWebhook = (req, res) => {
     }
 };
 
+const processedWebhookEvents = new Set();
+
 const handleWebhook = async (req, res) => {
     try {
+        // Send OK response early to stop Facebook from retrying
+        // But doing so might mean we don't catch actual errors correctly in FB Dashboard
+        // However, Facebook standard practice is to send 200 immediately, then process asynchronously.
+        // It's safer to just deduplicate in memory because we need the session to work.
+        
         // Check if bot is enabled
         const botEnabledSetting = await SystemSetting.findOne({ key: 'ai_bot_enabled' });
         const botEnabled = botEnabledSetting ? botEnabledSetting.value : true;
@@ -537,6 +544,21 @@ const handleWebhook = async (req, res) => {
                 // Handling messaging events (Messages, Edits, Attachments)
                 if (entry.messaging) {
                     for (const webhook_event of entry.messaging) {
+                        // Deduplication check
+                        const eventId = webhook_event.message?.mid || webhook_event.message_edit?.mid || null;
+                        if (eventId) {
+                            if (processedWebhookEvents.has(eventId)) continue;
+                            processedWebhookEvents.add(eventId);
+                            if (processedWebhookEvents.size > 2000) {
+                                processedWebhookEvents.delete(processedWebhookEvents.values().next().value);
+                            }
+                        }
+
+                        // Ignore echo messages (messages sent by the page itself)
+                        if (webhook_event.message && webhook_event.message.is_echo) {
+                            continue;
+                        }
+
                         const sender_psid = webhook_event.sender.id;
                         let messageText = null;
                         let fileBuffer = null;
