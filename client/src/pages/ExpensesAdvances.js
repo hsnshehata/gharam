@@ -7,7 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faEye, faTrash, faPlus } from '@fortawesome/free-solid-svg-icons';
 
 function ExpensesAdvances({ user }) {
-  const [formData, setFormData] = useState({ type: 'expense', details: '', amount: 0, userId: '' });
+  const [formData, setFormData] = useState({ type: 'expense', details: '', amount: 0, userId: '', paymentMethod: 'cash' });
   const [items, setItems] = useState([]);
   const [users, setUsers] = useState([]);
   const [message, setMessage] = useState('');
@@ -203,7 +203,7 @@ function ExpensesAdvances({ user }) {
         setMessage(`تم إضافة ${typeLabel} بنجاح`);
       }
       revalidateAll();
-      setFormData({ type: 'expense', details: '', amount: 0, userId: '' });
+      setFormData({ type: 'expense', details: '', amount: 0, userId: '', paymentMethod: 'cash' });
       setEditItem(null);
     } catch (err) {
       console.error('Submit error:', err.response?.data || err.message);
@@ -220,7 +220,8 @@ function ExpensesAdvances({ user }) {
       type: item.type || (item.details ? 'expense' : 'advance'),
       details: item.details || '',
       amount: item.amount || 0,
-      userId: item.userId?._id?.toString() || ''
+      userId: item.userId?._id?.toString() || '',
+      paymentMethod: item.paymentMethod || 'cash'
     });
     setShowCreateModal(true);
   };
@@ -335,7 +336,7 @@ function ExpensesAdvances({ user }) {
                 <Form.Control
                   as="select"
                   value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value, details: '', userId: '' })}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value, details: '', userId: '', paymentMethod: 'cash' })}
                 >
                   <option value="expense">مصروف</option>
                   <option value="advance">سلفة</option>
@@ -438,12 +439,27 @@ function ExpensesAdvances({ user }) {
                   </Col>
                 </>
             )}
+            <Col md={12} className="mt-3">
+              <Form.Group>
+                <Form.Label>طريقة الدفع</Form.Label>
+                <Form.Control
+                  as="select"
+                  value={formData.paymentMethod || 'cash'}
+                  onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
+                >
+                  <option value="cash">كاش</option>
+                  <option value="vodafone">فودافون كاش</option>
+                  <option value="visa">فيزا</option>
+                  <option value="instapay">انستاباي</option>
+                </Form.Control>
+              </Form.Group>
+            </Col>
             <Col md={12}>
               <Button type="submit" className="mt-3" disabled={submitLoading}>
                 {submitLoading ? 'جارٍ الحفظ...' : editItem ? 'تعديل' : 'حفظ'}
               </Button>
               <Button variant="secondary" className="mt-3 ms-2" onClick={() => {
-                setFormData({ type: 'expense', details: '', amount: 0, userId: '' });
+                setFormData({ type: 'expense', details: '', amount: 0, userId: '', paymentMethod: 'cash' });
                 setEditItem(null);
                 setShowCreateModal(false);
               }}>
@@ -479,7 +495,7 @@ function ExpensesAdvances({ user }) {
                 <Button variant="primary" className="me-2" onClick={() => handleShowDetails(item)}>
                   <FontAwesomeIcon icon={faEye} />
                 </Button>
-                {user?.role === 'admin' && (
+                {['admin', 'supervisor'].includes(user?.role) && (
                   <Button variant="danger" onClick={() => { setDeleteItem(item); setShowDeleteModal(true); }}>
                     <FontAwesomeIcon icon={faTrash} />
                   </Button>
