@@ -98,6 +98,17 @@ const processAiChat = async (messages, fileBuffer = null, fileMimeType = null, f
     const setting = await SystemSetting.findOne({ key: 'ai_system_prompt' });
     let systemPromptArr = [setting?.value || DEFAULT_PROMPT];
 
+    const currentDate = new Date();
+    const dayName = currentDate.toLocaleDateString('ar-EG', { weekday: 'long' });
+    const formattedDate = currentDate.toISOString().split('T')[0];
+    const formattedTime = currentDate.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    systemPromptArr.push(`معلومات هامة لك كذكاء اصطناعي لصالون التجميل:
+- اليوم هو: ${dayName} الموافق ${formattedDate}
+- الوقت الحالي: ${formattedTime}
+- هام جداً بخصوص التواريخ: إذا سأل العميل عن تاريخ أو طلب حجزاً بتاريخ ولا يتضمن السنة (مثال 15 مارس أو 15/3)، افترض دائماً أنه يقصد العام الحالي ${currentDate.getFullYear()}. ولكن إذا كان هذا التاريخ قد مضى بالفعل بالنسبة لتاريخ اليوم، فافترض فوراً وبشكل مؤكد أنه يقصد نفس التاريخ ولكن في العام القادم ${currentDate.getFullYear() + 1}.
+- عندما تقوم باستخدام أي أداة تتطلب تاريخ (YYYY-MM-DD)، يجب عليك تطبيق هذه القاعدة وإرسال التاريخ كاملاً بالصيغة الصحيحة.`);
+
     // Force strict URL formatting so the frontend can parse buttons consistently across all pages
     systemPromptArr.push(`IMPORTANT URL RULE:
 When sharing links to the website pages (like prices, gallery, massage), YOU MUST provide the full absolute URL starting with https://. 
