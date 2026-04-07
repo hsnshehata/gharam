@@ -20,11 +20,11 @@ const DEFAULT_ADMIN_PROMPT = `أنت مساعد ذكي للمديرين والم
 4. كن احترافياً، استعمل جداول ملخصة (Markdown Tables) وقوائم لتسهيل القراءة على الإدارة.`;
 
 const MODEL_CANDIDATES = [
+    'gemini-3-flash-preview',
     'gemini-2.5-flash',
-    'gemini-1.5-flash-latest',
-    'gemini-1.5-flash',
-    'gemini-1.5-pro-latest',
-    'gemini-1.5-pro'
+    'gemini-2.5-pro',
+    'gemini-2.5-flash-lite',
+    'gemini-3.1-pro-preview'
 ];
 
 const isToday = (dateStr) => {
@@ -71,7 +71,7 @@ const adminTools = [
             },
             {
                 name: "get_financial_report",
-                description: "تقرير مالي شامل: إيرادات الحجوزات المكتملة + الخدمات السريعة - المصروفات = صافي الربح.",
+                description: "تقرير مالي شامل ويعرض توزيع الأموال على قنوات الدفع (كاش، فودافون كاش، انستاباي، فيزا) وصافي الربح.",
                 parameters: {
                     type: "OBJECT",
                     properties: {
@@ -339,14 +339,19 @@ const createFunctions = (user) => ({
             let start = new Date(startDate); start.setHours(0, 0, 0, 0);
             let end = new Date(endDate); end.setHours(23, 59, 59, 999);
 
+            const paymentBreakdown = { cash: 0, vodafone: 0, visa: 0, instapay: 0 };
+            const toNumber = (v) => Number(v) || 0;
+
             // === Revenue from NEW bookings created in this period ===
             // Revenue = deposit - sum(installments) = only the INITIAL deposit that was paid
             const newBookings = await Booking.find({ createdAt: { $gte: start, $lte: end } }).lean();
             let depositRevenue = 0;
             for (const b of newBookings) {
-                const installmentsSum = (b.installments || []).reduce((s, i) => s + (Number(i.amount) || 0), 0);
-                const initialDeposit = (Number(b.deposit) || 0) - installmentsSum;
-                depositRevenue += Math.max(0, initialDeposit);
+                const installmentsSum = (b.installments || []).reduce((s, i) => s + (toNumber(i.amount)), 0);
+                const initialDeposit = (toNumber(b.deposit)) - installmentsSum;
+                const finalDeposit = Math.max(0, initialDeposit);
+                depositRevenue += finalDeposit;
+                paymentBreakdown[b.paymentMethod || 'cash'] = (paymentBreakdown[b.paymentMethod || 'cash'] || 0) + finalDeposit;
             }
 
             // === Revenue from INSTALLMENTS paid in this period (from any booking) ===
@@ -358,7 +363,9 @@ const createFunctions = (user) => ({
                 for (const inst of (b.installments || [])) {
                     const instDate = new Date(inst.date);
                     if (instDate >= start && instDate <= end) {
-                        installmentRevenue += Number(inst.amount) || 0;
+                        const amt = toNumber(inst.amount);
+                        installmentRevenue += amt;
+                        paymentBreakdown[inst.paymentMethod || 'cash'] = (paymentBreakdown[inst.paymentMethod || 'cash'] || 0) + amt;
                     }
                 }
             }
@@ -366,31 +373,37 @@ const createFunctions = (user) => ({
             const totalBookingRevenue = depositRevenue + installmentRevenue;
 
             // === Revenue from instant services in this period ===
-            const instantRevenue = await InstantService.aggregate([
-                { $match: { createdAt: { $gte: start, $lte: end } } },
-                { $group: { _id: null, total: { $sum: "$total" } } }
-            ]);
-            const revI = instantRevenue[0]?.total || 0;
+            const instantServices = await InstantService.find({ createdAt: { $gte: start, $lte: end } }).lean();
+            let revI = 0;
+            for (const is of instantServices) {
+                const amt = toNumber(is.total);
+                revI += amt;
+                paymentBreakdown[is.paymentMethod || 'cash'] = (paymentBreakdown[is.paymentMethod || 'cash'] || 0) + amt;
+            }
 
             // === Expenses ===
-            const expResult = await Expense.aggregate([
-                { $match: { createdAt: { $gte: start, $lte: end } } },
-                { $group: { _id: null, total: { $sum: "$amount" } } }
-            ]);
-            const expT = expResult[0]?.total || 0;
+            const expenses = await Expense.find({ createdAt: { $gte: start, $lte: end } }).lean();
+            let expT = 0;
+            for (const e of expenses) {
+                const amt = toNumber(e.amount);
+                expT += amt;
+                paymentBreakdown[e.paymentMethod || 'cash'] = (paymentBreakdown[e.paymentMethod || 'cash'] || 0) - amt;
+            }
 
             // === Advances ===
-            const advResult = await Advance.aggregate([
-                { $match: { createdAt: { $gte: start, $lte: end } } },
-                { $group: { _id: null, total: { $sum: "$amount" } } }
-            ]);
-            const advT = advResult[0]?.total || 0;
+            const advances = await Advance.find({ createdAt: { $gte: start, $lte: end } }).lean();
+            let advT = 0;
+            for (const a of advances) {
+                const amt = toNumber(a.amount);
+                advT += amt;
+                paymentBreakdown[a.paymentMethod || 'cash'] = (paymentBreakdown[a.paymentMethod || 'cash'] || 0) - amt;
+            }
 
             const totalIncome = totalBookingRevenue + revI;
             const net = totalIncome - expT - advT;
 
             return {
-                summary: `عربون حجوزات جديدة: ${depositRevenue} ج | أقساط مدفوعة: ${installmentRevenue} ج | خدمات سريعة: ${revI} ج | إجمالي الدخل: ${totalIncome} ج | مصروفات: ${expT} ج | سلف: ${advT} ج | صافي: ${net} ج`,
+                summary: `عربون حجوزات جديدة: ${depositRevenue} ج | أقساط مدفوعة: ${installmentRevenue} ج | خدمات سريعة: ${revI} ج | إجمالي الدخل: ${totalIncome} ج | مصروفات: ${expT} ج | سلف: ${advT} ج | صافي: ${net} ج | كاش: ${paymentBreakdown.cash} ج | فودافون: ${paymentBreakdown.vodafone} ج | فيزا: ${paymentBreakdown.visa} ج | انستاباي: ${paymentBreakdown.instapay} ج`,
                 data: {
                     newBookingDeposits: depositRevenue,
                     installmentsPaid: installmentRevenue,
@@ -398,7 +411,8 @@ const createFunctions = (user) => ({
                     totalIncome,
                     totalExpenses: expT,
                     totalAdvances: advT,
-                    net
+                    net,
+                    paymentBreakdown
                 }
             };
         } catch (err) {
