@@ -529,17 +529,14 @@ const processedWebhookEvents = new Set();
 
 const handleWebhook = async (req, res) => {
     try {
-        // Send OK response early to stop Facebook from retrying
-        // But doing so might mean we don't catch actual errors correctly in FB Dashboard
-        // However, Facebook standard practice is to send 200 immediately, then process asynchronously.
-        // It's safer to just deduplicate in memory because we need the session to work.
-        
-        // Check if bot is enabled
-        const botEnabledSetting = await SystemSetting.findOne({ key: 'ai_bot_enabled' });
-        const botEnabled = botEnabledSetting ? botEnabledSetting.value : true;
-
         const body = req.body;
         if (body.object === 'page') {
+            // Acknowledge receipt immediately to prevent Facebook from retrying and causing duplicate AI replies
+            res.status(200).send('EVENT_RECEIVED');
+
+            // Check if bot is enabled
+            const botEnabledSetting = await SystemSetting.findOne({ key: 'ai_bot_enabled' });
+            const botEnabled = botEnabledSetting ? botEnabledSetting.value : true;
             for (const entry of body.entry) {
                 // Handling messaging events (Messages, Edits, Attachments)
                 if (entry.messaging) {
@@ -682,7 +679,6 @@ const handleWebhook = async (req, res) => {
                     }
                 }
             }
-            res.status(200).send('EVENT_RECEIVED');
         } else {
             res.sendStatus(404);
         }
