@@ -126,6 +126,51 @@ const adminTools = [
                     },
                     required: ["query"]
                 }
+            },
+            {
+                name: "evaluate_employee_performance",
+                description: "تقييم أداء الموظفين وإيجاد الأفضل بحساب العائد الخاص بهم عبر تحديد فترة زمنية.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        startDate: { type: "STRING", description: "تاريخ البداية (YYYY-MM-DD)." },
+                        endDate: { type: "STRING", description: "تاريخ النهاية (YYYY-MM-DD)." }
+                    },
+                    required: ["startDate", "endDate"]
+                }
+            },
+            {
+                name: "detect_anomalies",
+                description: "يكتشف الأخطاء أو التجاوزات مثل ديون العملاء لحجوزات منتهية، السلف العالية للموظفين، والخدمات المرتجعة الكثيرة.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        daysLimit: { type: "NUMBER", description: "آخر X عدد من الأيام للبحث (افتراضي 30)." }
+                    },
+                    required: []
+                }
+            },
+            {
+                name: "get_past_clients",
+                description: "يجلب قائمة بالعميلات السابقات لإعادة استهدافهن مرة أخرى بناء أوقات حجوزاتهم.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        monthsAgo: { type: "NUMBER", description: "البحث عن العملاء الذين حجزوا منذ عدد أشهر معينة (مثلا 6)." }
+                    },
+                    required: ["monthsAgo"]
+                }
+            },
+            {
+                name: "predictive_scheduling",
+                description: "يعرض حجم وتفاصيل الحجوزات القادمة في يوم محدد مع الموظفين المتاحين لاقتراح التوزيع العادل للشغل.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        targetDate: { type: "STRING", description: "تاريخ اليوم المطلوب (YYYY-MM-DD)." }
+                    },
+                    required: ["targetDate"]
+                }
             }
         ]
     }
@@ -542,6 +587,184 @@ const createFunctions = (user) => ({
         } catch (err) {
             console.error('[AdminAI] get_client_details error:', err.message);
             return { error: "فشل في جلب بيانات العميلة: " + err.message };
+        }
+    },
+    evaluate_employee_performance: async ({ startDate, endDate }) => {
+        try {
+            let start = new Date(startDate); start.setHours(0, 0, 0, 0);
+            let end = new Date(endDate); end.setHours(23, 59, 59, 999);
+            const users = await User.find({ role: { $in: ['employee', 'supervisor', 'admin'] } }).lean();
+            
+            const results = await Promise.all(users.map(async u => {
+                const bCount = await Booking.countDocuments({ 
+                    eventDate: { $gte: start, $lte: end },
+                    $or: [
+                        { 'packageServices.executedBy': u._id },
+                        { 'hairStraighteningExecutedBy': u._id },
+                        { 'hairDyeExecutedBy': u._id }
+                    ]
+                });
+                
+                const iResult = await InstantService.aggregate([
+                    { $match: { employeeId: u._id, createdAt: { $gte: start, $lte: end } } },
+                    { $group: { _id: null, total: { $sum: "$total" }, count: { $sum: 1 } } }
+                ]);
+                const instantRevenue = iResult[0]?.total || 0;
+                const instantCount = iResult[0]?.count || 0;
+                
+                const advResult = await Advance.aggregate([
+                    { $match: { userId: u._id, createdAt: { $gte: start, $lte: end } } },
+                    { $group: { _id: null, total: { $sum: "$amount" } } }
+                ]);
+                const advTotal = advResult[0]?.total || 0;
+                
+                const dedResult = await Deduction.aggregate([
+                    { $match: { userId: u._id, createdAt: { $gte: start, $lte: end } } },
+                    { $group: { _id: null, total: { $sum: "$amount" } } }
+                ]);
+                const dedTotal = dedResult[0]?.total || 0;
+                
+                return {
+                    name: u.username,
+                    role: u.role,
+                    bookingsParticipated: bCount,
+                    instantServicesCount: instantCount,
+                    instantServicesRevenue: instantRevenue,
+                    advancesTaken: advTotal,
+                    deductions: dedTotal,
+                    monthlySalary: u.monthlySalary || 0
+                };
+            }));
+            return { employeesPerformance: results };
+        } catch (err) {
+            console.error('[AdminAI] evaluate_employee_performance error:', err.message);
+            return { error: "فشل التقييم: " + err.message };
+        }
+    },
+    detect_anomalies: async ({ daysLimit = 30 }) => {
+        try {
+            let limitDate = new Date();
+            limitDate.setDate(limitDate.getDate() - daysLimit);
+            let today = new Date(); today.setHours(0,0,0,0);
+            
+            const debts = await Booking.find({
+                eventDate: { $gte: limitDate, $lt: today },
+                remaining: { $gt: 0 }
+            }).select('receiptNumber clientName clientPhone remaining eventDate total').lean();
+            
+            const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            const users = await User.find({}).lean();
+            const advancesIssues = [];
+            for (const u of users) {
+                if (!u.monthlySalary) continue;
+                const advSum = await Advance.aggregate([
+                    { $match: { userId: u._id, createdAt: { $gte: currentMonthStart } } },
+                    { $group: { _id: null, total: { $sum: "$amount" } } }
+                ]);
+                const totalAdv = advSum[0]?.total || 0;
+                if (totalAdv > (u.monthlySalary * 0.4)) {
+                    advancesIssues.push({ name: u.username, salary: u.monthlySalary, totalAdvances: totalAdv });
+                }
+            }
+            
+            const returns = await Booking.find({
+                createdAt: { $gte: limitDate },
+                returnedServices: { $exists: true, $not: { $size: 0 } }
+            }).select('receiptNumber clientName returnedServices createdAt').populate('returnedServices', 'name').lean();
+            
+            return {
+                debtsCount: debts.length,
+                debts: debts.map(d => ({ ...d, eventDate: d.eventDate?.toISOString().split('T')[0] })),
+                highAdvancesCount: advancesIssues.length,
+                highAdvances: advancesIssues,
+                returnedServicesCount: returns.length,
+                returns: returns.map(r => ({ receiptNumber: r.receiptNumber, clientName: r.clientName, services: r.returnedServices.map(s => s.name).join('، ') }))
+            };
+        } catch (err) {
+            console.error('[AdminAI] detect_anomalies error:', err.message);
+            return { error: "فشل التدقيق: " + err.message };
+        }
+    },
+    get_past_clients: async ({ monthsAgo }) => {
+        try {
+            let start = new Date();
+            start.setMonth(start.getMonth() - monthsAgo);
+            start.setHours(0,0,0,0);
+            
+            let end = new Date(start);
+            end.setMonth(end.getMonth() + 1);
+            
+            const pastBookings = await Booking.find({
+                eventDate: { $gte: start, $lte: end }
+            }).populate('package', 'name').populate('extraServices', 'name').select('clientName clientPhone eventDate package extraServices').lean();
+            
+            const uniqueClients = [];
+            const seenPhones = new Set();
+            for (const b of pastBookings) {
+                if (!seenPhones.has(b.clientPhone)) {
+                    seenPhones.add(b.clientPhone);
+                    uniqueClients.push({
+                        name: b.clientName,
+                        phone: b.clientPhone,
+                        date: b.eventDate?.toISOString().split('T')[0],
+                        package: b.package?.name,
+                        extraServices: (b.extraServices || []).map(s => s.name).join('، ')
+                    });
+                }
+            }
+            return {
+                targetPeriodFilter: { from: start.toISOString().split('T')[0], to: end.toISOString().split('T')[0] },
+                clientsFound: uniqueClients.length,
+                clients: uniqueClients
+            };
+        } catch (err) {
+            console.error('[AdminAI] get_past_clients error:', err.message);
+            return { error: "فشل استخراج العميلات: " + err.message };
+        }
+    },
+    predictive_scheduling: async ({ targetDate }) => {
+        try {
+            let start = new Date(targetDate); start.setHours(0, 0, 0, 0);
+            let end = new Date(targetDate); end.setHours(23, 59, 59, 999);
+            
+            const bookings = await Booking.find({ eventDate: { $gte: start, $lte: end } })
+                .populate('package', 'name').populate('extraServices', 'name').lean();
+                
+            const activeStaff = await User.find({ role: { $in: ['employee', 'supervisor'] } }).select('username role').lean();
+            
+            const summary = {
+                bridesCount: 0,
+                hairDyeCount: 0,
+                hairStraighteningCount: 0,
+                otherPackages: 0,
+                bookingsDetails: []
+            };
+            
+            for (const b of bookings) {
+                if (b.package?.name?.includes('عروس')) summary.bridesCount++;
+                else summary.otherPackages++;
+                
+                if (b.hairDye) summary.hairDyeCount++;
+                if (b.hairStraightening) summary.hairStraighteningCount++;
+                
+                summary.bookingsDetails.push({
+                    client: b.clientName,
+                    package: b.package?.name,
+                    hasHairDye: !!b.hairDye,
+                    hasHairStraightening: !!b.hairStraightening,
+                    extraServices: (b.extraServices || []).map(s=>s.name).join('، ')
+                });
+            }
+            
+            return {
+                targetDate,
+                workloadSummary: summary,
+                availableStaffCount: activeStaff.length,
+                staff: activeStaff.map(s => s.username)
+            };
+        } catch (err) {
+            console.error('[AdminAI] predictive_scheduling error:', err.message);
+            return { error: "فشل جلب الجدولة: " + err.message };
         }
     }
 });
