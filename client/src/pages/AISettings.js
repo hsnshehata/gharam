@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Spinner } from 'react-bootstrap';
 import axios from 'axios';
 import { API_BASE } from '../utils/apiBase';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const TABS = [
     { id: 'prompt', label: 'تعليمات البوت', icon: '📝' },
@@ -832,6 +834,7 @@ function AdminPromptTab() {
     const [error, setError] = useState('');
     const [allConvs, setAllConvs] = useState([]);
     const [showConvs, setShowConvs] = useState(false);
+    const [selectedAdminConv, setSelectedAdminConv] = useState(null);
     
     useEffect(() => {
         const fetchData = async () => {
@@ -937,28 +940,57 @@ function AdminPromptTab() {
                         </button>
                     </div>
                     {showConvs && (
-                        <div style={{ overflowX: 'auto' }}>
-                            <table className="table table-hover" style={{ textAlign: 'right', direction: 'rtl' }}>
-                                <thead style={{ background: '#f8f9fa' }}>
-                                    <tr>
-                                        <th>العنوان</th>
-                                        <th>المستخدم</th>
-                                        <th>آخر تحديث</th>
-                                        <th>عدد الرسائل</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {allConvs.map(c => (
-                                        <tr key={c._id}>
-                                            <td style={{ fontWeight: 600 }}>{c.title}</td>
-                                            <td>{c.userId?.username} <span style={{ fontSize: 11, color: '#888' }}>({c.userId?.role})</span></td>
-                                            <td style={{ direction: 'ltr', textAlign: 'right' }}>{new Date(c.lastActivity).toLocaleString('ar-EG')}</td>
-                                            <td>{c.messages?.length || 0} رسالة</td>
-                                        </tr>
+                        selectedAdminConv ? (
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid #eee' }}>
+                                    <div>
+                                        <h5 style={{ margin: 0, fontWeight: 700, color: '#0f2736' }}>{selectedAdminConv.title}</h5>
+                                        <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
+                                            بواسطة: {selectedAdminConv.userId?.username} ({selectedAdminConv.userId?.role})
+                                        </div>
+                                    </div>
+                                    <button style={{ ...styles.toolBtn, backgroundColor: '#fdfbf9', color: '#e74c3c', borderColor: '#e74c3c' }} onClick={() => setSelectedAdminConv(null)}>
+                                        🔙 العودة للسجل
+                                    </button>
+                                </div>
+                                <div style={{ maxHeight: '500px', overflowY: 'auto', padding: 12, display: 'flex', flexDirection: 'column', gap: 12, backgroundColor: '#f8f9fa', borderRadius: 12 }}>
+                                    {(selectedAdminConv.messages || []).map((msg, idx) => (
+                                        <div key={idx} style={{ ...(msg.role === 'user' ? styles.convMsgUser : styles.convMsgBot), padding: '14px 18px', borderRadius: 12, lineHeight: 1.7, maxWidth: '100%' }}>
+                                            <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6, color: msg.role === 'user' ? '#1fb6a6' : '#8e44ad' }}>
+                                                {msg.role === 'user' ? '👤 المشرف / الآدمن' : '🤖 مساعد الإدارة'}
+                                                {msg.timestamp && <span style={{ fontSize: 10, color: '#bbb', fontWeight: 400, marginRight: 8 }}>{new Date(msg.timestamp).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}</span>}
+                                            </div>
+                                            <div style={{ fontSize: 14, color: '#333', whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflow: 'hidden' }}>
+                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
+                                            </div>
+                                        </div>
                                     ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div style={{ overflowX: 'auto' }}>
+                                <table className="table table-hover" style={{ textAlign: 'right', direction: 'rtl' }}>
+                                    <thead style={{ background: '#f8f9fa' }}>
+                                        <tr>
+                                            <th>العنوان</th>
+                                            <th>المستخدم</th>
+                                            <th>آخر تحديث</th>
+                                            <th>عدد الرسائل</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {allConvs.map(c => (
+                                            <tr key={c._id} onClick={() => setSelectedAdminConv(c)} style={{ cursor: 'pointer', transition: 'background 0.2s' }}>
+                                                <td style={{ fontWeight: 600, color: '#028090' }}>{c.title}</td>
+                                                <td>{c.userId?.username} <span style={{ fontSize: 11, color: '#888' }}>({c.userId?.role})</span></td>
+                                                <td style={{ direction: 'ltr', textAlign: 'right' }}>{new Date(c.lastActivity).toLocaleString('ar-EG')}</td>
+                                                <td>{c.messages?.length || 0} رسالة</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )
                     )}
                 </div>
             )}

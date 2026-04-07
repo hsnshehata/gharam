@@ -87,6 +87,8 @@ function AppContent() {
     }
   }, [authLoading, user, location.pathname, navigate]);
 
+  const isPublicPage = ['/landing', '/prices', '/massage-chair', '/gallery'].some(p => location.pathname.toLowerCase().replace(/\/+$/, '').endsWith(p));
+
   return (
     <ToastProvider>
       <div className="App">
@@ -99,7 +101,7 @@ function AppContent() {
           </div>
         ) : (
           <>
-            {user && !['/landing', '/prices', '/massage-chair', '/gallery'].some(p => location.pathname.toLowerCase().replace(/\/+$/, '').endsWith(p)) && <Navbar user={user} setUser={setUser} />}
+            {user && !isPublicPage && <Navbar user={user} setUser={setUser} />}
             <Routes>
               <Route path="/login" element={<Login setUser={setUser} />} />
               <Route path="/landing" element={<Landing />} />
@@ -165,7 +167,7 @@ function AppContent() {
               <Route path="/" element={<Navigate to={getHomePath(user)} replace />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
-            <AdminAIChat user={user} />
+            {!isPublicPage && <AdminAIChat user={user} />}
           </>
         )}
       </div>

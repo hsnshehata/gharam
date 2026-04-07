@@ -895,28 +895,88 @@ function EmployeeDashboard({ user }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {(pointsData.type === 'booking' ? pointsData.data.packageServices : pointsData.data.services)?.map((srv, index) => {
-                      const serviceId = typeof srv._id === 'object' && srv._id._id ? srv._id._id.toString() : (srv._id ? srv._id.toString() : `service-${index}`);
-                      return (
-                        <tr key={serviceId}>
-                          <td className="fw-bold">{srv.name || 'غير معروف'}</td>
-                          <td className="text-center">{srv.price ? `${srv.price} جنيه` : 'غير معروف'}</td>
-                          <td className="text-center">
-                            {srv.executed ? (
-                              <Badge bg="success" className="p-2"><FontAwesomeIcon icon={faCheck} className="me-1"/> مستلمة بواسطة {srv.executedBy?.username || ''}</Badge>
-                            ) : (
-                              <Button
-                                variant="primary"
-                                className="btn-modern py-1 px-3"
-                                onClick={() => handleExecuteService(serviceId, pointsData.type, pointsData.data._id)}
-                              >
-                                استلام النقاط
-                              </Button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                    {(() => {
+                      if (!pointsData || !pointsData.data) return null;
+                      let svcs = [];
+                      if (pointsData.type === 'instant') {
+                        svcs = pointsData.data.services || [];
+                      } else {
+                        const b = pointsData.data;
+                        if (b.packageServices) svcs.push(...b.packageServices);
+                        
+                        if (b.extraServices && Array.isArray(b.extraServices)) {
+                          b.extraServices.forEach(ex => {
+                            const exId = ex._id ? (ex._id._id ? ex._id._id.toString() : ex._id.toString()) : ex.toString();
+                            const exists = svcs.find(s => {
+                              const sId = s._id ? (s._id._id ? s._id._id.toString() : s._id.toString()) : s.toString();
+                              return sId === exId;
+                            });
+                            if (!exists) {
+                              svcs.push({
+                                _id: exId,
+                                name: ex.name || 'خدمة إضافية',
+                                price: ex.price || 0,
+                                executed: false,
+                                executedBy: null
+                              });
+                            }
+                          });
+                        }
+                        
+                        if (b.hairStraightening) {
+                          svcs.push({
+                            _id: 'hairStraightening',
+                            name: 'فرد الشعر',
+                            price: b.hairStraighteningPrice || 0,
+                            executed: b.hairStraighteningExecuted,
+                            executedBy: typeof b.hairStraighteningExecutedBy === 'object' ? b.hairStraighteningExecutedBy : { username: '' }
+                          });
+                        }
+                        if (b.hairDye) {
+                          svcs.push({
+                            _id: 'hairDye',
+                            name: 'صبغة الشعر',
+                            price: b.hairDyePrice || 0,
+                            executed: b.hairDyeExecuted,
+                            executedBy: typeof b.hairDyeExecutedBy === 'object' ? b.hairDyeExecutedBy : { username: '' }
+                          });
+                        }
+                        if (b.photographyPackage) {
+                          const photoPrice = typeof b.photographyPackage === 'object' ? b.photographyPackage.price : 0;
+                          const photoName = typeof b.photographyPackage === 'object' && b.photographyPackage.name ? b.photographyPackage.name : 'باكدج التصوير';
+                          svcs.push({
+                            _id: 'photography',
+                            name: `تصوير (${photoName})`,
+                            price: photoPrice,
+                            executed: b.photographyExecuted,
+                            executedBy: typeof b.photographyExecutedBy === 'object' ? b.photographyExecutedBy : { username: '' }
+                          });
+                        }
+                      }
+
+                      return svcs.map((srv, index) => {
+                        const serviceId = typeof srv._id === 'object' && srv._id._id ? srv._id._id.toString() : (srv._id ? srv._id.toString() : `service-${index}`);
+                        return (
+                          <tr key={serviceId}>
+                            <td className="fw-bold">{srv.name || 'غير معروف'}</td>
+                            <td className="text-center">{srv.price ? `${srv.price} جنيه` : 'غير معروف'}</td>
+                            <td className="text-center">
+                              {srv.executed ? (
+                                <Badge bg="success" className="p-2"><FontAwesomeIcon icon={faCheck} className="me-1"/> مستلمة بواسطة {srv.executedBy?.username || 'زميل'}</Badge>
+                              ) : (
+                                <Button
+                                  variant="primary"
+                                  className="btn-modern py-1 px-3"
+                                  onClick={() => handleExecuteService(serviceId, pointsData.type, pointsData.data._id)}
+                                >
+                                  استلام النقاط
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
                   </tbody>
                 </Table>
               </div>

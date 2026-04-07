@@ -293,6 +293,58 @@ function HallSupervision() {
     );
   };
 
+  const renderPhotographyRow = (booking) => {
+    const key = `booking-${normalizeId(booking._id)}-photography`;
+    const photoPrice = typeof booking.photographyPackage === 'object' ? booking.photographyPackage.price : 0;
+    const photoName = typeof booking.photographyPackage === 'object' && booking.photographyPackage.name ? booking.photographyPackage.name : 'التصوير';
+    return (
+      <tr key={`photo-${normalizeId(booking._id)}`}>
+        <td>تصوير ({photoName})</td>
+        <td>{photoPrice || 0} ج</td>
+        <td>
+          {booking.photographyExecuted ? (
+            <Badge bg="success">تم بواسطة {executedByName(booking.photographyExecutedBy)}</Badge>
+          ) : (
+            <Badge bg="secondary">لم يتم</Badge>
+          )}
+        </td>
+        <td>
+          <Form.Select
+            value={assignments[key] || ''}
+            onChange={(e) => handleAssignChange(key, e.target.value)}
+            disabled={booking.photographyExecuted}
+            className="assign-select"
+          >
+            <option value="">اختر الموظف</option>
+            {employeeOptions.map(emp => (
+              <option key={emp._id} value={emp._id}>{emp.username}</option>
+            ))}
+          </Form.Select>
+        </td>
+        <td className="text-center d-flex gap-1 flex-wrap justify-content-center action-cell">
+          {!booking.photographyExecuted ? (
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => handleAssign('booking', booking._id, 'photography')}
+              disabled={!assignments[key]}
+            >
+              تكليف
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline-danger"
+              onClick={() => handleReset('booking', booking._id, 'photography')}
+            >
+              سحب التكليف
+            </Button>
+          )}
+        </td>
+      </tr>
+    );
+  };
+
   const renderHairRow = (booking) => {
     const key = `booking-${normalizeId(booking._id)}-hairStraightening`;
     return (
@@ -593,8 +645,18 @@ function HallSupervision() {
                         </thead>
                         <tbody>
                           {booking.packageServices?.map((srv, srvIdx) => renderServiceRow(booking, srv, srvIdx))}
-                          {renderHairRow(booking)}
+                          
+                          {/* Render missing extra services for backwards compatibility */}
+                          {booking.extraServices?.map((ex, exIdx) => {
+                             const exId = normalizeId(ex);
+                             const exists = booking.packageServices?.some(s => normalizeId(s._id) === exId);
+                             if (exists) return null;
+                             return renderServiceRow(booking, { _id: exId, name: ex.name || 'خدمة إضافية', price: ex.price || 0, executed: false, executedBy: null }, `ex-${exIdx}`);
+                          })}
+                          
+                          {booking.hairStraightening && renderHairRow(booking)}
                           {booking.hairDye && renderHairDyeRow(booking)}
+                          {booking.photographyPackage && renderPhotographyRow(booking)}
                         </tbody>
                       </Table>
                     </Card.Body>

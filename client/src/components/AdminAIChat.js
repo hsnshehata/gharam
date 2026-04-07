@@ -219,7 +219,7 @@ function AdminAIChat({ user }) {
     );
   };
 
-  if (!user || (user.role !== 'admin' && user.role !== 'supervisor')) return null;
+  if (!user || (user.role !== 'admin' && user.role !== 'supervisor' && user.role !== 'hallSupervisor')) return null;
 
   return (
     <>
