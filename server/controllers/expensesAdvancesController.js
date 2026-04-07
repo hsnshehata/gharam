@@ -240,8 +240,8 @@ exports.updateExpenseAdvance = async (req, res) => {
 exports.deleteExpenseAdvance = async (req, res) => {
   const { type } = req.query;
 
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ msg: 'غير مصرح لك بالحذف، هذه الصلاحية للمدير فقط' });
+  if (req.user.role !== 'admin' && req.user.role !== 'supervisor') {
+    return res.status(403).json({ msg: 'غير مصرح لك بالحذف، هذه الصلاحية للمدير والمشرف فقط' });
   }
 
   try {
