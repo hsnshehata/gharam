@@ -21,11 +21,10 @@ const DEFAULT_ADMIN_PROMPT = `أنت مساعد ذكي للمديرين والم
 
 const MODEL_CANDIDATES = [
     'gemini-2.5-flash',
-    'gemini-2.5-flash-preview-04-17',
-    'gemini-2.0-flash-lite',
-    'gemini-2.0-flash',
+    'gemini-1.5-flash-latest',
     'gemini-1.5-flash',
-    'gemini-pro',
+    'gemini-1.5-pro-latest',
+    'gemini-1.5-pro'
 ];
 
 const isToday = (dateStr) => {
@@ -436,13 +435,20 @@ const createFunctions = (user) => ({
             if (startDate || endDate) {
                 searchQuery.eventDate = {};
                 if (startDate) {
-                    let start = new Date(startDate); start.setHours(0, 0, 0, 0);
-                    searchQuery.eventDate.$gte = start;
+                    let start = new Date(startDate); 
+                    if (!isNaN(start.getTime())) {
+                        start.setHours(0, 0, 0, 0);
+                        searchQuery.eventDate.$gte = start;
+                    }
                 }
                 if (endDate) {
-                    let end = new Date(endDate); end.setHours(23, 59, 59, 999);
-                    searchQuery.eventDate.$lte = end;
+                    let end = new Date(endDate); 
+                    if (!isNaN(end.getTime())) {
+                        end.setHours(23, 59, 59, 999);
+                        searchQuery.eventDate.$lte = end;
+                    }
                 }
+                if (Object.keys(searchQuery.eventDate).length === 0) delete searchQuery.eventDate;
             }
 
             const resultsDb = await Booking.find(searchQuery)
@@ -505,13 +511,20 @@ const createFunctions = (user) => ({
             if (startDate || endDate) {
                 query.createdAt = {};
                 if (startDate) {
-                    let start = new Date(startDate); start.setHours(0, 0, 0, 0);
-                    query.createdAt.$gte = start;
+                    let start = new Date(startDate);
+                    if (!isNaN(start.getTime())) {
+                        start.setHours(0, 0, 0, 0);
+                        query.createdAt.$gte = start;
+                    }
                 }
                 if (endDate) {
-                    let end = new Date(endDate); end.setHours(23, 59, 59, 999);
-                    query.createdAt.$lte = end;
+                    let end = new Date(endDate);
+                    if (!isNaN(end.getTime())) {
+                        end.setHours(23, 59, 59, 999);
+                        query.createdAt.$lte = end;
+                    }
                 }
+                if (Object.keys(query.createdAt).length === 0) delete query.createdAt;
             }
             if (entityType) {
                 query.entityType = { $regex: entityType, $options: 'i' };
@@ -591,8 +604,18 @@ const createFunctions = (user) => ({
     },
     evaluate_employee_performance: async ({ startDate, endDate }) => {
         try {
-            let start = new Date(startDate); start.setHours(0, 0, 0, 0);
-            let end = new Date(endDate); end.setHours(23, 59, 59, 999);
+            let start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0);
+            let end = new Date(); end.setHours(23, 59, 59, 999);
+            
+            if (startDate) {
+                const s = new Date(startDate);
+                if (!isNaN(s.getTime())) { s.setHours(0,0,0,0); start = s; }
+            }
+            if (endDate) {
+                const e = new Date(endDate);
+                if (!isNaN(e.getTime())) { e.setHours(23,59,59,999); end = e; }
+            }
+            
             const users = await User.find({ role: { $in: ['employee', 'supervisor', 'admin'] } }).lean();
             
             const results = await Promise.all(users.map(async u => {
@@ -643,8 +666,9 @@ const createFunctions = (user) => ({
     },
     detect_anomalies: async ({ daysLimit = 30 }) => {
         try {
+            const days = parseInt(daysLimit) || 30;
             let limitDate = new Date();
-            limitDate.setDate(limitDate.getDate() - daysLimit);
+            limitDate.setDate(limitDate.getDate() - days);
             let today = new Date(); today.setHours(0,0,0,0);
             
             const debts = await Booking.find({
@@ -687,8 +711,9 @@ const createFunctions = (user) => ({
     },
     get_past_clients: async ({ monthsAgo }) => {
         try {
+            const m = parseInt(monthsAgo) || 6;
             let start = new Date();
-            start.setMonth(start.getMonth() - monthsAgo);
+            start.setMonth(start.getMonth() - m);
             start.setHours(0,0,0,0);
             
             let end = new Date(start);
@@ -724,8 +749,14 @@ const createFunctions = (user) => ({
     },
     predictive_scheduling: async ({ targetDate }) => {
         try {
-            let start = new Date(targetDate); start.setHours(0, 0, 0, 0);
-            let end = new Date(targetDate); end.setHours(23, 59, 59, 999);
+            let start = new Date();
+            if (targetDate) {
+                const td = new Date(targetDate);
+                if (!isNaN(td.getTime())) { start = td; }
+            }
+            start.setHours(0, 0, 0, 0);
+            let end = new Date(start); 
+            end.setHours(23, 59, 59, 999);
             
             const bookings = await Booking.find({ eventDate: { $gte: start, $lte: end } })
                 .populate('package', 'name').populate('extraServices', 'name').lean();
