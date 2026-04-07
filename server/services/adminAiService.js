@@ -20,12 +20,12 @@ const DEFAULT_ADMIN_PROMPT = `أنت مساعد ذكي للمديرين والم
 4. كن احترافياً، استعمل جداول ملخصة (Markdown Tables) وقوائم لتسهيل القراءة على الإدارة.`;
 
 const MODEL_CANDIDATES = [
-    'gemini-3-flash-preview',
-    'gemini-3.1-flash-lite-preview',
-    'gemini-2.5-flash',
+    'gemini-3.1-pro-preview',
     'gemini-2.5-pro',
+    'gemini-2.5-flash',
+    'gemini-3.1-flash-lite-preview',
     'gemini-2.5-flash-lite',
-    'gemini-3.1-pro-preview'
+    'gemini-3-flash-preview'
 ];
 
 const isToday = (dateStr) => {
@@ -454,14 +454,14 @@ const createFunctions = (user) => ({
             if (startDate || endDate) {
                 searchQuery.eventDate = {};
                 if (startDate) {
-                    let start = new Date(startDate); 
+                    let start = new Date(startDate);
                     if (!isNaN(start.getTime())) {
                         start.setHours(0, 0, 0, 0);
                         searchQuery.eventDate.$gte = start;
                     }
                 }
                 if (endDate) {
-                    let end = new Date(endDate); 
+                    let end = new Date(endDate);
                     if (!isNaN(end.getTime())) {
                         end.setHours(23, 59, 59, 999);
                         searchQuery.eventDate.$lte = end;
@@ -534,7 +534,7 @@ const createFunctions = (user) => ({
         try {
             const count = Math.min(limit || 30, 100);
             const query = {};
-            
+
             if (startDate || endDate) {
                 query.createdAt = {};
                 if (startDate) {
@@ -637,20 +637,20 @@ const createFunctions = (user) => ({
         try {
             let start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0);
             let end = new Date(); end.setHours(23, 59, 59, 999);
-            
+
             if (startDate) {
                 const s = new Date(startDate);
-                if (!isNaN(s.getTime())) { s.setHours(0,0,0,0); start = s; }
+                if (!isNaN(s.getTime())) { s.setHours(0, 0, 0, 0); start = s; }
             }
             if (endDate) {
                 const e = new Date(endDate);
-                if (!isNaN(e.getTime())) { e.setHours(23,59,59,999); end = e; }
+                if (!isNaN(e.getTime())) { e.setHours(23, 59, 59, 999); end = e; }
             }
-            
+
             const users = await User.find({ role: { $in: ['employee', 'supervisor', 'admin'] } }).lean();
-            
+
             const results = await Promise.all(users.map(async u => {
-                const bCount = await Booking.countDocuments({ 
+                const bCount = await Booking.countDocuments({
                     eventDate: { $gte: start, $lte: end },
                     $or: [
                         { 'packageServices.executedBy': u._id },
@@ -658,26 +658,26 @@ const createFunctions = (user) => ({
                         { 'hairDyeExecutedBy': u._id }
                     ]
                 });
-                
+
                 const iResult = await InstantService.aggregate([
                     { $match: { employeeId: u._id, createdAt: { $gte: start, $lte: end } } },
                     { $group: { _id: null, total: { $sum: "$total" }, count: { $sum: 1 } } }
                 ]);
                 const instantRevenue = iResult[0]?.total || 0;
                 const instantCount = iResult[0]?.count || 0;
-                
+
                 const advResult = await Advance.aggregate([
                     { $match: { userId: u._id, createdAt: { $gte: start, $lte: end } } },
                     { $group: { _id: null, total: { $sum: "$amount" } } }
                 ]);
                 const advTotal = advResult[0]?.total || 0;
-                
+
                 const dedResult = await Deduction.aggregate([
                     { $match: { userId: u._id, createdAt: { $gte: start, $lte: end } } },
                     { $group: { _id: null, total: { $sum: "$amount" } } }
                 ]);
                 const dedTotal = dedResult[0]?.total || 0;
-                
+
                 return {
                     name: u.username,
                     role: u.role,
@@ -689,12 +689,12 @@ const createFunctions = (user) => ({
                     monthlySalary: u.monthlySalary || 0
                 };
             }));
-            
+
             const activeResults = results.filter(u => u.bookingsParticipated > 0 || u.instantServicesCount > 0 || u.advancesTaken > 0 || u.deductions > 0);
-            return { 
+            return {
                 totalEmployees: results.length,
                 activeEmployeesCount: activeResults.length,
-                employeesPerformance: activeResults.slice(0, 20) 
+                employeesPerformance: activeResults.slice(0, 20)
             };
         } catch (err) {
             console.error('[AdminAI] evaluate_employee_performance error:', err.message);
@@ -706,13 +706,13 @@ const createFunctions = (user) => ({
             const days = parseInt(daysLimit) || 30;
             let limitDate = new Date();
             limitDate.setDate(limitDate.getDate() - days);
-            let today = new Date(); today.setHours(0,0,0,0);
-            
+            let today = new Date(); today.setHours(0, 0, 0, 0);
+
             const debts = await Booking.find({
                 eventDate: { $gte: limitDate, $lt: today },
                 remaining: { $gt: 0 }
             }).select('receiptNumber clientName clientPhone remaining eventDate total').lean();
-            
+
             const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
             const users = await User.find({}).lean();
             const advancesIssues = [];
@@ -727,12 +727,12 @@ const createFunctions = (user) => ({
                     advancesIssues.push({ name: u.username, salary: u.monthlySalary, totalAdvances: totalAdv });
                 }
             }
-            
+
             const returns = await Booking.find({
                 createdAt: { $gte: limitDate },
                 returnedServices: { $exists: true, $not: { $size: 0 } }
             }).select('receiptNumber clientName returnedServices createdAt').populate('returnedServices', 'name').lean();
-            
+
             return {
                 debtsCount: debts.length,
                 debts: debts.slice(0, 15).map(d => ({ ...d, eventDate: d.eventDate?.toISOString().split('T')[0] })),
@@ -751,15 +751,15 @@ const createFunctions = (user) => ({
             const m = parseInt(monthsAgo) || 6;
             let start = new Date();
             start.setMonth(start.getMonth() - m);
-            start.setHours(0,0,0,0);
-            
+            start.setHours(0, 0, 0, 0);
+
             let end = new Date(start);
             end.setMonth(end.getMonth() + 1);
-            
+
             const pastBookings = await Booking.find({
                 eventDate: { $gte: start, $lte: end }
             }).populate('package', 'name').populate('extraServices', 'name').select('clientName clientPhone eventDate package extraServices').lean();
-            
+
             const uniqueClients = [];
             const seenPhones = new Set();
             for (const b of pastBookings) {
@@ -793,14 +793,14 @@ const createFunctions = (user) => ({
                 if (!isNaN(td.getTime())) { start = td; }
             }
             start.setHours(0, 0, 0, 0);
-            let end = new Date(start); 
+            let end = new Date(start);
             end.setHours(23, 59, 59, 999);
-            
+
             const bookings = await Booking.find({ eventDate: { $gte: start, $lte: end } })
                 .populate('package', 'name').populate('photographyPackage', 'name').populate('hennaPackage', 'name').populate('extraServices', 'name').lean();
-                
+
             const activeStaff = await User.find({ role: { $in: ['employee', 'supervisor'] } }).select('username role').lean();
-            
+
             const summary = {
                 bridesCount: 0,
                 hairDyeCount: 0,
@@ -809,15 +809,15 @@ const createFunctions = (user) => ({
                 otherPackages: 0,
                 bookingsDetails: []
             };
-            
+
             for (const b of bookings) {
                 if (b.package?.name?.includes('عروس')) summary.bridesCount++;
                 else summary.otherPackages++;
-                
+
                 if (b.hairDye) summary.hairDyeCount++;
                 if (b.hairStraightening) summary.hairStraighteningCount++;
                 if (b.photographyPackage) summary.photographyCount++;
-                
+
                 summary.bookingsDetails.push({
                     client: b.clientName,
                     package: b.package?.name,
@@ -825,10 +825,10 @@ const createFunctions = (user) => ({
                     hennaPackage: b.hennaPackage?.name || null,
                     hasHairDye: !!b.hairDye,
                     hasHairStraightening: !!b.hairStraightening,
-                    extraServices: (b.extraServices || []).map(s=>s.name).join('، ')
+                    extraServices: (b.extraServices || []).map(s => s.name).join('، ')
                 });
             }
-            
+
             return {
                 targetDate,
                 workloadSummary: summary,
@@ -973,7 +973,7 @@ const generateChatTitle = async (firstMessage) => {
         if (!process.env.GEMINI_API_KEY) return "محادثة جديدة";
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         let result = null;
-        
+
         for (const modelName of MODEL_CANDIDATES) {
             try {
                 const model = genAI.getGenerativeModel({ model: modelName });
@@ -982,11 +982,11 @@ const generateChatTitle = async (firstMessage) => {
 الرسالة: "${firstMessage}"`;
                 result = await model.generateContent(prompt);
                 break;
-            } catch(e) {
+            } catch (e) {
                 // Try next
             }
         }
-        
+
         if (result) return result.response.text().trim().replace(/['"]+/g, '');
         return "محادثة جديدة";
     } catch (err) {
