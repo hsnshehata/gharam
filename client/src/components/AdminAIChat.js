@@ -267,8 +267,21 @@ function AdminAIChat({ user }) {
           <div style={styles.chatBody}>
             {messages.map((msg, idx) => (
               <div key={idx} style={msg.role === 'user' ? styles.msgUserWrap : styles.msgModelWrap}>
-                <div style={msg.role === 'user' ? styles.msgUser : styles.msgModel}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
+                <div style={msg.role === 'user' ? styles.msgUser : { ...styles.msgModel, overflowX: 'auto' }}>
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      table: ({node, ...props}) => (
+                        <div style={{ maxWidth: '100%', overflowX: 'auto', margin: '10px 0', borderRadius: '6px', border: '1px solid #e0e0e0', WebkitOverflowScrolling: 'touch' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'right' }} {...props} />
+                        </div>
+                      ),
+                      th: ({node, ...props}) => <th style={{ padding: '8px', backgroundColor: '#f8f9fa', borderBottom: '2px solid #028090', borderLeft: '1px solid #e0e0e0', whiteSpace: 'nowrap' }} {...props} />,
+                      td: ({node, ...props}) => <td style={{ padding: '8px', borderBottom: '1px solid #e0e0e0', borderLeft: '1px solid #e0e0e0', whiteSpace: 'nowrap' }} {...props} />
+                    }}
+                  >
+                    {msg.text}
+                  </ReactMarkdown>
                   {msg.role === 'model' && msg.audioParts && msg.audioParts.length > 0 && (
                       <VoiceResponse parts={msg.audioParts} />
                   )}
