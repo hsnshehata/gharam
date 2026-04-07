@@ -223,6 +223,8 @@ const createFunctions = (user) => ({
                 .populate('hairDyeExecutedBy', 'username')
                 .populate('extraServices', 'name')
                 .populate('package', 'name')
+                .populate('photographyPackage', 'name')
+                .populate('hennaPackage', 'name')
                 .lean();
 
             const bookings = bookingsDB.map(b => ({
@@ -233,6 +235,8 @@ const createFunctions = (user) => ({
                 total: b.total,
                 remaining: b.remaining,
                 packageName: b.package?.name || 'غير محدد',
+                photographyPackage: b.photographyPackage?.name || null,
+                hennaPackage: b.hennaPackage?.name || null,
                 extraServices: (b.extraServices || []).map(s => s.name).join('، '),
                 services: (b.packageServices || []).map(s => ({
                     name: s.name,
@@ -452,7 +456,9 @@ const createFunctions = (user) => ({
             }
 
             const resultsDb = await Booking.find(searchQuery)
-                .populate('package', 'name price')
+                .populate('package', 'name price type')
+                .populate('photographyPackage', 'name price')
+                .populate('hennaPackage', 'name price')
                 .populate('packageServices.executedBy', 'username')
                 .populate('createdBy', 'username')
                 .populate('extraServices', 'name')
@@ -471,6 +477,10 @@ const createFunctions = (user) => ({
                     if (serviceName.includes('فرد') && b.hairStraightening) return true;
                     if (serviceName.includes('صبغة') && b.hairDye) return true;
                     if (serviceName.includes('بروتين') && b.hairStraightening) return true;
+                    if (serviceName.includes('تصوير') && b.photographyPackage) return true;
+                    if (serviceName.includes('حنة') && b.hennaPackage) return true;
+                    if (b.photographyPackage?.name?.match(serviceRegex)) return true;
+                    if (b.hennaPackage?.name?.match(serviceRegex)) return true;
                     return false;
                 });
             }
@@ -485,6 +495,8 @@ const createFunctions = (user) => ({
                     clientPhone: b.clientPhone,
                     eventDate: b.eventDate?.toISOString().split('T')[0],
                     packageName: b.package?.name || 'غير محدد',
+                    photographyPackage: b.photographyPackage?.name || null,
+                    hennaPackage: b.hennaPackage?.name || null,
                     total: b.total,
                     deposit: b.deposit,
                     remaining: b.remaining,
@@ -570,6 +582,8 @@ const createFunctions = (user) => ({
             };
             const bookings = await Booking.find(searchQuery)
                 .populate('package', 'name')
+                .populate('photographyPackage', 'name')
+                .populate('hennaPackage', 'name')
                 .populate('extraServices', 'name')
                 .sort({ eventDate: -1 })
                 .lean();
@@ -589,6 +603,8 @@ const createFunctions = (user) => ({
                     receiptNumber: b.receiptNumber,
                     eventDate: b.eventDate?.toISOString().split('T')[0],
                     packageName: b.package?.name || 'غير محدد',
+                    photographyPackage: b.photographyPackage?.name || null,
+                    hennaPackage: b.hennaPackage?.name || null,
                     extraServices: (b.extraServices || []).map(s => s.name).join('، '),
                     hasHairStraightening: b.hairStraightening ? true : false,
                     hasHairDye: b.hairDye ? true : false,
@@ -766,7 +782,7 @@ const createFunctions = (user) => ({
             end.setHours(23, 59, 59, 999);
             
             const bookings = await Booking.find({ eventDate: { $gte: start, $lte: end } })
-                .populate('package', 'name').populate('extraServices', 'name').lean();
+                .populate('package', 'name').populate('photographyPackage', 'name').populate('hennaPackage', 'name').populate('extraServices', 'name').lean();
                 
             const activeStaff = await User.find({ role: { $in: ['employee', 'supervisor'] } }).select('username role').lean();
             
@@ -774,6 +790,7 @@ const createFunctions = (user) => ({
                 bridesCount: 0,
                 hairDyeCount: 0,
                 hairStraighteningCount: 0,
+                photographyCount: 0,
                 otherPackages: 0,
                 bookingsDetails: []
             };
@@ -784,10 +801,13 @@ const createFunctions = (user) => ({
                 
                 if (b.hairDye) summary.hairDyeCount++;
                 if (b.hairStraightening) summary.hairStraighteningCount++;
+                if (b.photographyPackage) summary.photographyCount++;
                 
                 summary.bookingsDetails.push({
                     client: b.clientName,
                     package: b.package?.name,
+                    photographyPackage: b.photographyPackage?.name || null,
+                    hennaPackage: b.hennaPackage?.name || null,
                     hasHairDye: !!b.hairDye,
                     hasHairStraightening: !!b.hairStraightening,
                     extraServices: (b.extraServices || []).map(s=>s.name).join('، ')
