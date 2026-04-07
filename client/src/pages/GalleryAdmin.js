@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Card, Button, Form, Alert, Spinner, Badge, Tab, Tabs } from 'react-bootstrap';
-import { Trash, EyeSlash, Eye } from 'react-bootstrap-icons';
 import axios from 'axios';
 
 function GalleryAdmin() {
@@ -231,7 +230,7 @@ function GalleryAdmin() {
 													onClick={() => handleToggle(item)}
 													className="d-flex align-items-center gap-1"
 												>
-													{item.isActive ? <><EyeSlash size={14}/> إخفاء</> : <><Eye size={14}/> تفعيل</>}
+													{item.isActive ? <>🙈 إخفاء</> : <>👁️ تفعيل</>}
 												</Button>
 												<Button
 													variant="danger"
@@ -240,7 +239,7 @@ function GalleryAdmin() {
 													onClick={() => handleDeleteMedia(item._id)}
 													className="d-flex align-items-center gap-1"
 												>
-													<Trash size={14}/> حذف
+													🗑️ حذف
 												</Button>
 											</div>
 										</Card.Body>
@@ -293,7 +292,7 @@ function GalleryAdmin() {
 													onClick={() => handleTogglePost(post)}
 													className="d-flex align-items-center gap-1"
 												>
-													{post.isActive !== false ? <><EyeSlash size={14}/> إخفاء</> : <><Eye size={14}/> الإظهار بالموقع</>}
+													{post.isActive !== false ? <>🙈 إخفاء</> : <>👁️ الإظهار بالموقع</>}
 												</Button>
 												<Button
 													variant="danger"
@@ -302,7 +301,7 @@ function GalleryAdmin() {
 													onClick={() => handleDeletePost(post._id)}
 													className="d-flex align-items-center gap-1"
 												>
-													<Trash size={14}/> حذف
+													🗑️ حذف
 												</Button>
 											</div>
 										</Card.Body>
