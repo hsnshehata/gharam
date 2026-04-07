@@ -658,7 +658,13 @@ const createFunctions = (user) => ({
                     monthlySalary: u.monthlySalary || 0
                 };
             }));
-            return { employeesPerformance: results };
+            
+            const activeResults = results.filter(u => u.bookingsParticipated > 0 || u.instantServicesCount > 0 || u.advancesTaken > 0 || u.deductions > 0);
+            return { 
+                totalEmployees: results.length,
+                activeEmployeesCount: activeResults.length,
+                employeesPerformance: activeResults.slice(0, 20) 
+            };
         } catch (err) {
             console.error('[AdminAI] evaluate_employee_performance error:', err.message);
             return { error: "فشل التقييم: " + err.message };
@@ -698,11 +704,11 @@ const createFunctions = (user) => ({
             
             return {
                 debtsCount: debts.length,
-                debts: debts.map(d => ({ ...d, eventDate: d.eventDate?.toISOString().split('T')[0] })),
+                debts: debts.slice(0, 15).map(d => ({ ...d, eventDate: d.eventDate?.toISOString().split('T')[0] })),
                 highAdvancesCount: advancesIssues.length,
-                highAdvances: advancesIssues,
+                highAdvances: advancesIssues.slice(0, 15),
                 returnedServicesCount: returns.length,
-                returns: returns.map(r => ({ receiptNumber: r.receiptNumber, clientName: r.clientName, services: r.returnedServices.map(s => s.name).join('، ') }))
+                returns: returns.slice(0, 15).map(r => ({ receiptNumber: r.receiptNumber, clientName: r.clientName, services: r.returnedServices.map(s => s.name).join('، ') }))
             };
         } catch (err) {
             console.error('[AdminAI] detect_anomalies error:', err.message);
@@ -740,7 +746,8 @@ const createFunctions = (user) => ({
             return {
                 targetPeriodFilter: { from: start.toISOString().split('T')[0], to: end.toISOString().split('T')[0] },
                 clientsFound: uniqueClients.length,
-                clients: uniqueClients
+                clients: uniqueClients.slice(0, 15),
+                systemMessage: uniqueClients.length > 15 ? `تم جلب أول 15 عميلة من أصل ${uniqueClients.length} لتوفير مساحة الذاكرة، أخبر المديرة بذلك.` : ``
             };
         } catch (err) {
             console.error('[AdminAI] get_past_clients error:', err.message);
