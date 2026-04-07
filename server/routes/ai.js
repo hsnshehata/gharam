@@ -115,22 +115,14 @@ router.post('/chat', upload.single('audio'), async (req, res) => {
             activeChatRequests.add(sessionId);
         }
 
-        try {
-            // Check if bot is enabled
-            const botEnabledSetting = await SystemSetting.findOne({ key: 'ai_bot_enabled' });
+        // Check if bot is enabled
+        const botEnabledSetting = await SystemSetting.findOne({ key: 'ai_bot_enabled' });
         if (botEnabledSetting && botEnabledSetting.value === false) {
             return res.status(503).json({ 
                 success: false, 
                 message: 'البوت متوقف حالياً. يرجى المحاولة لاحقاً.' 
             });
         }
-
-        let { messages, sessionId } = req.body;
-        // If coming from FormData, parse JSON strings
-        if (typeof messages === 'string') {
-            try { messages = JSON.parse(messages); } catch (e) { }
-        }
-        if (typeof sessionId === 'string' && !sessionId.trim()) sessionId = undefined;
 
         if (!messages || !messages.length) return res.status(400).json({ message: 'Missing messages' });
 
@@ -214,6 +206,10 @@ router.post('/chat', upload.single('audio'), async (req, res) => {
     } catch (err) {
         console.error('Request error:', err);
         res.status(500).json({ message: 'خطأ داخلي في الخادم' });
+    } finally {
+        if (req.body && req.body.sessionId) {
+            activeChatRequests.delete(req.body.sessionId);
+        }
     }
 });
 
