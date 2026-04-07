@@ -96,12 +96,28 @@ router.post('/settings', authenticate, async (req, res) => {
 });
 
 // ============ CHAT ============
+const activeChatRequests = new Set();
 
 // POST /api/ai/chat
 router.post('/chat', upload.single('audio'), async (req, res) => {
     try {
-        // Check if bot is enabled
-        const botEnabledSetting = await SystemSetting.findOne({ key: 'ai_bot_enabled' });
+        let { messages, sessionId } = req.body;
+        // If coming from FormData, parse JSON strings
+        if (typeof messages === 'string') {
+            try { messages = JSON.parse(messages); } catch (e) { }
+        }
+        if (typeof sessionId === 'string' && !sessionId.trim()) sessionId = undefined;
+
+        if (sessionId) {
+            if (activeChatRequests.has(sessionId)) {
+                return res.status(429).json({ success: false, message: 'Processing previous request...' });
+            }
+            activeChatRequests.add(sessionId);
+        }
+
+        try {
+            // Check if bot is enabled
+            const botEnabledSetting = await SystemSetting.findOne({ key: 'ai_bot_enabled' });
         if (botEnabledSetting && botEnabledSetting.value === false) {
             return res.status(503).json({ 
                 success: false, 
