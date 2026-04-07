@@ -331,7 +331,7 @@ function AdminAIChat({ user }) {
 const styles = {
   fabBtn: { position: 'fixed', bottom: 24, right: 24, backgroundColor: '#0f2736', border: '2px solid #028090', borderRadius: 30, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 10, color: '#fff', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,0.3)', zIndex: 9999, transition: 'all 0.3s ease' },
   fabText: { fontWeight: 700, fontSize: 16 },
-  chatWindow: { position: 'fixed', bottom: 90, right: 24, width: 380, height: 600, maxHeight: '80vh', backgroundColor: '#ffffff', borderRadius: 20, boxShadow: '0 12px 40px rgba(0,0,0,0.25)', zIndex: 9999, display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid #e0e0e0', direction: 'rtl' },
+  chatWindow: { position: 'fixed', bottom: 90, right: 24, width: 380, height: 600, maxWidth: 'calc(100vw - 48px)', maxHeight: '80vh', backgroundColor: '#ffffff', borderRadius: 20, boxShadow: '0 12px 40px rgba(0,0,0,0.25)', zIndex: 9999, display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid #e0e0e0', direction: 'rtl' },
   chatHeader: { backgroundColor: '#0f2736', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#fff', borderBottom: '3px solid #028090', zIndex: 10 },
   headerLeft: { display: 'flex', alignItems: 'center', gap: 12 },
   menuBtn: { background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer', padding: 0 },
