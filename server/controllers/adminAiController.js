@@ -85,18 +85,22 @@ exports.chat = async (req, res) => {
             isNew = true;
         }
 
+        // Set default text for audio messages before saving to DB to avoid validation errors
+        if (!text) {
+            if (messages && Array.isArray(messages) && messages.length > 0) {
+                text = messages[messages.length - 1].text || "رسالة صوتية";
+            } else {
+                text = "رسالة صوتية";
+            }
+        }
+
         // Push user message
         conv.messages.push({ role: 'user', text });
         conv.lastActivity = Date.now();
         await conv.save();
 
-        // If we didn't receive full messages state from frontend, use local length-limited fallback
         if (!messages || !Array.isArray(messages)) {
             messages = conv.messages;
-            if (!text) text = "رسالة صوتية"; // default if only audio
-        } else {
-            // we have messages from frontend
-            if (!text) text = messages[messages.length - 1].text || "رسالة صوتية";
         }
 
         // Pass to processAdminChat
