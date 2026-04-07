@@ -37,7 +37,7 @@ const store = {
 };
 
 // Populate paths used across controllers
-const BOOKING_POPULATE = 'package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy hairStraighteningExecutedBy hairDyeExecutedBy packageServices.executedBy';
+const BOOKING_POPULATE = 'package hennaPackage photographyPackage returnedServices extraServices packageServices._id installments.employeeId updates.employeeId createdBy hairStraighteningExecutedBy hairDyeExecutedBy photographyExecutedBy packageServices.executedBy';
 const INSTANT_POPULATE = [
   { path: 'employeeId', select: 'username' },
   { path: 'services.executedBy', select: 'username' }

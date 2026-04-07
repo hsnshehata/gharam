@@ -6,7 +6,7 @@ const SystemSetting = require('../models/SystemSetting');
 const { DEFAULT_ADMIN_PROMPT } = require('../services/adminAiService');
 
 const isAdminOrSupervisor = (req, res, next) => {
-    if (req.user.role !== 'admin' && req.user.role !== 'supervisor') {
+    if (req.user.role !== 'admin' && req.user.role !== 'supervisor' && req.user.role !== 'hallSupervisor') {
         return res.status(403).json({ success: false, message: 'Forbidden' });
     }
     next();

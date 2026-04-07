@@ -305,10 +305,36 @@ const updateMediaVisibility = async (req, res) => {
 	}
 };
 
-// إرجاع آخر 20 بوست للـ Frontend
+const deleteMediaGalleryItem = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const media = await MediaGallery.findByIdAndDelete(id);
+		
+		if (!media) {
+			return res.status(404).json({
+				success: false,
+				message: 'العنصر غير موجود'
+			});
+		}
+
+		return res.status(200).json({
+			success: true,
+			message: 'تم الحذف النهائي بنجاح'
+		});
+	} catch (error) {
+		console.error('خطأ في الحذف النهائي للميديا:', error);
+		return res.status(500).json({
+			success: false,
+			message: 'خطأ في الحذف',
+			error: error.message
+		});
+	}
+};
+
+// إرجاع آخر 20 بوست للـ Frontend (فقط الظاهرة)
 const getFacebookFeed = async (req, res) => {
 	try {
-		const posts = await FacebookPost.find()
+		const posts = await FacebookPost.find({ isActive: { $ne: false } })
 			.sort({ createdTime: -1 })
 			.limit(20)
 			.lean();
@@ -408,6 +434,76 @@ const getMediaGalleryStats = async (req, res) => {
 // Manual sync endpoint (للتحديث اليدوي)
 const manualSyncPosts = async (req, res) => {
 	return syncFacebookPosts(req, res);
+};
+
+// ============= تحديثات الإدارة للبوستات =================
+
+const getAdminFacebookPosts = async (req, res) => {
+	try {
+		const { limit = 200, skip = 0 } = req.query;
+		const posts = await FacebookPost.find()
+			.sort({ createdTime: -1 })
+			.limit(parseInt(limit, 10))
+			.skip(parseInt(skip, 10))
+			.lean();
+
+		const total = await FacebookPost.countDocuments();
+
+		return res.status(200).json({
+			success: true,
+			data: posts,
+			count: posts.length,
+			total
+		});
+	} catch (error) {
+		console.error('خطأ في جلب بوستات الادمن:', error);
+		return res.status(500).json({
+			success: false,
+			message: 'خطأ في جلب البوستات',
+			error: error.message
+		});
+	}
+};
+
+const updateFacebookPostVisibility = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { isActive } = req.body;
+		if (typeof isActive !== 'boolean') {
+			return res.status(400).json({ success: false, message: 'القيمة غير صحيحة' });
+		}
+
+		const post = await FacebookPost.findByIdAndUpdate(
+			id,
+			{ $set: { isActive } },
+			{ new: true }
+		);
+
+		if (!post) {
+			return res.status(404).json({ success: false, message: 'البوست غير موجود' });
+		}
+
+		return res.status(200).json({ success: true, data: post });
+	} catch (error) {
+		console.error('خطأ في تحديث حالة البوست:', error);
+		return res.status(500).json({ success: false, message: 'خطأ في تحديث الحالة', error: error.message });
+	}
+};
+
+const deleteFacebookPost = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const post = await FacebookPost.findByIdAndDelete(id);
+		
+		if (!post) {
+			return res.status(404).json({ success: false, message: 'البوست غير موجود' });
+		}
+
+		return res.status(200).json({ success: true, message: 'تم حذف البوست بنجاح' });
+	} catch (error) {
+		console.error('خطأ في حذف البوست:', error);
+		return res.status(500).json({ success: false, message: 'خطأ في الحذف', error: error.message });
+	}
 };
 
 // ====== Facebook Messenger Webhook ======
@@ -629,6 +725,10 @@ module.exports = {
 	manualSyncPosts,
 	getAdminMediaGallery,
 	updateMediaVisibility,
+	deleteMediaGalleryItem,
+	getAdminFacebookPosts,
+	updateFacebookPostVisibility,
+	deleteFacebookPost,
     verifyWebhook,
     handleWebhook,
     forceSubscribePage
