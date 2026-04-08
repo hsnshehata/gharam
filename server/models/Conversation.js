@@ -12,7 +12,7 @@ const conversationSchema = new mongoose.Schema({
   senderName: { type: String, default: 'زائر' },
   senderId: { type: String, default: '' },
   messages: [messageSchema],
-  lastActivity: { type: Date, default: Date.now, index: true },
+  lastActivity: { type: Date, default: Date.now },
   metadata: {
     userAgent: { type: String, default: '' },
     ip: { type: String, default: '' }
