@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
+const auth = require('../middleware/authenticate');
 const telegramController = require('../controllers/telegramController');
 
 // Only allow admin or supervisor, or whatever is needed (we can restrict to admin here)
