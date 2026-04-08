@@ -10,6 +10,7 @@ const TABS = [
     { id: 'admin_prompt', label: 'مساعد الإدارة', icon: '🧠' },
     { id: 'conversations', label: 'سجل المحادثات', icon: '💬' },
     { id: 'settings', label: 'الإعدادات', icon: '⚙️' },
+    { id: 'telegram', label: 'تليجرام', icon: '🤖' },
 ];
 
 const SOURCE_LABELS = {
@@ -76,6 +77,7 @@ function AISettings() {
                 {activeTab === 'admin_prompt' && <AdminPromptTab />}
                 {activeTab === 'conversations' && <ConversationsTab />}
                 {activeTab === 'settings' && <SettingsTab />}
+                {activeTab === 'telegram' && <TelegramTab />}
             </div>
         </div>
     );
@@ -946,7 +948,7 @@ function AdminPromptTab() {
                                     <div>
                                         <h5 style={{ margin: 0, fontWeight: 700, color: '#0f2736' }}>{selectedAdminConv.title}</h5>
                                         <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
-                                            بواسطة: {selectedAdminConv.userId?.username} ({selectedAdminConv.userId?.role})
+                                            بواسطة: {selectedAdminConv.userId?.username || 'مدير تليجرام'} ({selectedAdminConv.userId?.role || 'غير معروف'})
                                         </div>
                                     </div>
                                     <button style={{ ...styles.toolBtn, backgroundColor: '#fdfbf9', color: '#e74c3c', borderColor: '#e74c3c' }} onClick={() => setSelectedAdminConv(null)}>
@@ -982,7 +984,7 @@ function AdminPromptTab() {
                                         {allConvs.map(c => (
                                             <tr key={c._id} onClick={() => setSelectedAdminConv(c)} style={{ cursor: 'pointer', transition: 'background 0.2s' }}>
                                                 <td style={{ fontWeight: 600, color: '#028090' }}>{c.title}</td>
-                                                <td>{c.userId?.username} <span style={{ fontSize: 11, color: '#888' }}>({c.userId?.role})</span></td>
+                                                <td>{c.userId?.username || 'مدير تليجرام'} <span style={{ fontSize: 11, color: '#888' }}>({c.userId?.role || 'غير معروف'})</span></td>
                                                 <td style={{ direction: 'ltr', textAlign: 'right' }}>{new Date(c.lastActivity).toLocaleString('ar-EG')}</td>
                                                 <td>{c.messages?.length || 0} رسالة</td>
                                             </tr>
@@ -994,6 +996,152 @@ function AdminPromptTab() {
                     )}
                 </div>
             )}
+        </div>
+    );
+}
+
+// ============================================================
+//  TAB 4: TELEGRAM ACCOUNTS
+// ============================================================
+function TelegramTab() {
+    const [accounts, setAccounts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [formData, setFormData] = useState({ telegramId: '', name: '', role: 'supervisor' });
+    const [adding, setAdding] = useState(false);
+    const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
+
+    const fetchAccounts = async () => {
+        setLoading(true);
+        try {
+            const res = await axios.get(`${API_BASE}/api/telegram`, {
+                headers: { 'x-auth-token': localStorage.getItem('token') }
+            });
+            if (res.data.success) setAccounts(res.data.accounts);
+        } catch (err) {
+            setError('تعذر جلب الحسابات המربوطة.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchAccounts();
+    }, []);
+
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleAdd = async (e) => {
+        e.preventDefault();
+        setMessage(''); setError(''); setAdding(true);
+        try {
+            const res = await axios.post(`${API_BASE}/api/telegram`, formData, {
+                headers: { 'x-auth-token': localStorage.getItem('token') }
+            });
+            if (res.data.success) {
+                setMessage(res.data.message);
+                setAccounts([res.data.account, ...accounts]);
+                setFormData({ telegramId: '', name: '', role: 'supervisor' });
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || 'حدث خطأ أثناء الإضافة');
+        } finally {
+            setAdding(false);
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm('هل أنت متأكد من إلغاء ربط هذا الحساب؟ لن يتمكن من استخدام البوت مجددا.')) return;
+        try {
+            const res = await axios.delete(`${API_BASE}/api/telegram/${id}`, {
+                headers: { 'x-auth-token': localStorage.getItem('token') }
+            });
+            if (res.data.success) {
+                setAccounts(accounts.filter(a => a._id !== id));
+                setMessage('تم إلغاء الربط بنجاح.');
+            }
+        } catch (err) {
+            setError('خطأ أثناء الحذف');
+        }
+    };
+
+    return (
+        <div style={styles.settingsPage}>
+            <div style={{ borderBottom: '3px solid #0088cc', marginBottom: 20, paddingBottom: 16 }}>
+                <h3 style={{ margin: 0, color: '#0f2736', fontWeight: 800 }}>🤖 ربط مساعد الإدارة بـ Telegram</h3>
+                <p style={{ margin: '8px 0 0', color: '#666', fontSize: 13 }}>لإضافة حساب، اجعل الشخص يراسل البوت أولاً ليحصل على <strong>معرف التليجرام الخاص به</strong>، ثم قم بإضافته هنا وإعطائه الصلاحية.</p>
+            </div>
+
+            {message && <div style={styles.successToast}><span>✅</span> {message}</div>}
+            {error && <div style={styles.errorToast}><span>❌</span> {error}</div>}
+
+            <div style={styles.settingCard}>
+                <h5 style={{ fontWeight: 800, marginBottom: 16, color: '#333' }}>➕ إضافة حساب جديد</h5>
+                <form onSubmit={handleAdd} style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                    <div style={{ flex: '1 1 180px' }}>
+                        <label style={{ fontSize: 13, fontWeight: 700, color: '#555', marginBottom: 6, display: 'block' }}>معرف التليجرام (ID)</label>
+                        <input type="text" name="telegramId" required value={formData.telegramId} onChange={handleChange} style={{ width: '100%', padding: '10px 14px', border: '2px solid #e6dfd4', borderRadius: 10, outline: 'none', fontFamily: 'inherit', fontSize: 14 }} placeholder="مثال: 123456789" />
+                    </div>
+                    <div style={{ flex: '1 1 180px' }}>
+                        <label style={{ fontSize: 13, fontWeight: 700, color: '#555', marginBottom: 6, display: 'block' }}>اسم الشخص</label>
+                        <input type="text" name="name" required value={formData.name} onChange={handleChange} style={{ width: '100%', padding: '10px 14px', border: '2px solid #e6dfd4', borderRadius: 10, outline: 'none', fontFamily: 'inherit', fontSize: 14 }} placeholder="مثال: أستاذ علي" />
+                    </div>
+                    <div style={{ flex: '1 1 120px' }}>
+                        <label style={{ fontSize: 13, fontWeight: 700, color: '#555', marginBottom: 6, display: 'block' }}>الصلاحية</label>
+                        <select name="role" value={formData.role} onChange={handleChange} style={{ width: '100%', padding: '10px 14px', border: '2px solid #e6dfd4', borderRadius: 10, outline: 'none', fontFamily: 'inherit', fontSize: 14, background: '#fff' }}>
+                            <option value="supervisor">مشرف</option>
+                            <option value="admin">مدير</option>
+                        </select>
+                    </div>
+                    <button type="submit" disabled={adding} style={{ ...styles.saveBtn, padding: '10px 24px', backgroundColor: '#0088cc', border: 'none', borderRadius: 10, color: '#fff', fontWeight: 'bold', height: 44, display: 'flex', alignItems: 'center', boxShadow: '0 4px 12px rgba(0, 136, 204, 0.3)' }}>
+                        {adding ? 'يتم الربط...' : 'ربط الحساب'}
+                    </button>
+                </form>
+            </div>
+
+            <div style={{ ...styles.settingCard, marginTop: 24 }}>
+                <h5 style={{ fontWeight: 800, marginBottom: 16, color: '#333' }}>📋 الحسابات المربوطة حالياً ({accounts.length})</h5>
+                {loading ? (
+                    <div style={{ textAlign: 'center', padding: 20 }}><Spinner animation="border" size="sm" style={{ color: '#0088cc' }} /></div>
+                ) : accounts.length === 0 ? (
+                    <div style={{ color: '#888', textAlign: 'center', padding: 30, background: '#f8f9fa', borderRadius: 12, border: '1px dashed #ddd' }}>لا توجد أي حسابات تليجرام مربوطة بالنظام حتى الآن.<br/>يُرجى إدخال معرف التليجرام الخاص بالمشرفين أو المديرين ليتمكن المساعد الذكي من الرد عليهم عبر التليجرام.</div>
+                ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                        <table className="table table-hover" style={{ textAlign: 'right', direction: 'rtl', margin: 0 }}>
+                            <thead style={{ background: '#f8f9fa' }}>
+                                <tr>
+                                    <th style={{ color: '#555', borderBottom: 'none' }}>الاسم</th>
+                                    <th style={{ color: '#555', borderBottom: 'none' }}>معرف التليجرام</th>
+                                    <th style={{ color: '#555', borderBottom: 'none' }}>الصلاحية</th>
+                                    <th style={{ color: '#555', borderBottom: 'none' }}>تاريخ الربط</th>
+                                    <th style={{ color: '#555', borderBottom: 'none' }}>إجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {accounts.map(acc => (
+                                    <tr key={acc._id} style={{ borderBottom: '1px solid #f1f2f6' }}>
+                                        <td style={{ fontWeight: 700, color: '#1d130d', verticalAlign: 'middle' }}>{acc.name}</td>
+                                        <td style={{ direction: 'ltr', textAlign: 'right', verticalAlign: 'middle' }}><code style={{ background: '#f8f9fa', padding: '4px 8px', borderRadius: 6, color: '#e83e8c' }}>{acc.telegramId}</code></td>
+                                        <td style={{ verticalAlign: 'middle' }}>
+                                            <span style={{ padding: '4px 10px', borderRadius: 8, fontSize: 12, background: acc.role === 'admin' ? '#e2d9f3' : '#d4edda', color: acc.role === 'admin' ? '#6f42c1' : '#155724', fontWeight: 'bold' }}>
+                                                {acc.role === 'admin' ? 'مدير' : 'مشرف'}
+                                            </span>
+                                        </td>
+                                        <td style={{ fontSize: 13, color: '#777', verticalAlign: 'middle' }}>{new Date(acc.createdAt).toLocaleDateString('ar-EG')}</td>
+                                        <td style={{ verticalAlign: 'middle' }}>
+                                            <button onClick={() => handleDelete(acc._id)} style={{ background: 'rgba(220, 53, 69, 0.1)', border: 'none', color: '#dc3545', cursor: 'pointer', fontSize: 14, padding: '6px 12px', borderRadius: 8, fontWeight: 'bold', transition: '0.2s', display: 'inline-flex', alignItems: 'center', gap: 6 }} title="إلغاء الربط">
+                                                <span>إلغاء</span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
