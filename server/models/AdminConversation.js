@@ -7,7 +7,8 @@ const messageSchema = new mongoose.Schema({
 }, { _id: false });
 
 const adminConversationSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true }, // Made optional
+    telegramAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'TelegramAccount', index: true },
     title: { type: String, default: 'محادثة جديدة' },
     messages: [messageSchema],
     lastActivity: { type: Date, default: Date.now, index: true }
