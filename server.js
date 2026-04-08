@@ -6,6 +6,7 @@ const path = require('path');
 const rateLimit = require('express-rate-limit');
 const cron = require('node-cron');
 const { startSalaryResetScheduler } = require('./server/services/salaryResetService');
+const { initTelegramBot } = require('./server/services/telegramBot');
 
 dotenv.config();
 
@@ -42,6 +43,7 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('MongoDB connected');
     startSalaryResetScheduler();
+    initTelegramBot();
   })
   .catch(err => console.log('MongoDB connection error:', err));
 
@@ -61,6 +63,7 @@ app.use('/api/public/facebook', require('./server/routes/facebook'));
 app.use('/api/facebook', require('./server/routes/facebookAdmin'));
 app.use('/api/ai', require('./server/routes/ai'));
 app.use('/api/admin-ai', require('./server/routes/adminAi'));
+app.use('/api/telegram', require('./server/routes/telegramRoutes'));
 console.log('Routes registered successfully');
 
 // Facebook Cron Job: تحديث البوستات كل 30 دقيقة
