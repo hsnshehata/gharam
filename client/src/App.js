@@ -21,6 +21,8 @@ import GalleryAdmin from './pages/GalleryAdmin';
 import AISettings from './pages/AISettings';
 import PointsAdmin from './pages/PointsAdmin';
 import NotFound from './pages/NotFound';
+import AfrakoushToolViewer from './pages/AfrakoushToolViewer';
+import AfrakoushToolsRegistry from './pages/AfrakoushToolsRegistry';
 import Navbar from './components/Navbar';
 import AdminAIChat from './components/AdminAIChat';
 import { ToastProvider } from './components/ToastProvider';
@@ -111,7 +113,7 @@ function AppContent() {
     }
   }, [authLoading, user, location.pathname, navigate]);
 
-  const isPublicPage = ['/landing', '/prices', '/massage-chair', '/gallery'].some(p => location.pathname.toLowerCase().replace(/\/+$/, '').endsWith(p));
+  const isPublicPage = ['/landing', '/prices', '/massage-chair', '/gallery'].some(p => location.pathname.toLowerCase().replace(/\/+$/, '').endsWith(p)) || location.pathname.toLowerCase().startsWith('/p/afrakoush/');
 
   return (
     <ToastProvider>
@@ -187,6 +189,16 @@ function AppContent() {
               <Route
                 path="/employee-dashboard"
                 element={user ? <EmployeeDashboard user={user} /> : <Navigate to="/login" />}
+              />
+              {/* Afrakoush Dynamic Routes */}
+              <Route path="/p/afrakoush/:name" element={<AfrakoushToolViewer isPublic={true} />} />
+              <Route
+                path="/admin/afrakoush/:name"
+                element={user ? <AfrakoushToolViewer isPublic={false} /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/admin/afrakoush-registry"
+                element={user && user.role === 'admin' ? <AfrakoushToolsRegistry /> : <Navigate to="/login" />}
               />
               <Route path="/" element={<Navigate to={getHomePath(user)} replace />} />
               <Route path="*" element={<NotFound />} />

@@ -61,6 +61,8 @@ function Navbar({ user, setUser }) {
               <NavDropdown title="المحتوى" id="content-nav-dropdown">
                 <NavDropdown.Item as={Link} to="/gallery-admin" onClick={closeMenu}>المعرض</NavDropdown.Item>
                 <NavDropdown.Item as={Link} to="/ai-settings" onClick={closeMenu}>الذكاء الاصطناعي</NavDropdown.Item>
+                <NavDropdown.Divider />
+                <NavDropdown.Item as={Link} to="/admin/afrakoush-registry" onClick={closeMenu}>أدوات عفركوش (الجديد)</NavDropdown.Item>
               </NavDropdown>
               <Nav.Link as={Link} to="/users" onClick={closeMenu}>الموظفين</Nav.Link>
               <Nav.Link as={Link} to="/reports" onClick={closeMenu}>التقارير</Nav.Link>
