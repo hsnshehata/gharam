@@ -9,6 +9,7 @@ const Package = require('../models/Package');
 const Service = require('../models/Service');
 const ActivityLog = require('../models/ActivityLog');
 const SystemSetting = require('../models/SystemSetting');
+const AdminConversation = require('../models/AdminConversation');
 
 const DEFAULT_ADMIN_PROMPT = `أنت مساعد ذكي للمديرين والمشرفين في "غرام سلطان بيوتي سنتر".
 مهمتك مساعدة الإدارة في الرد على جميع الأسئلة المتعلقة بقواعد البيانات والتقارير المالية والعمليات بدقة. 
@@ -170,6 +171,20 @@ const adminTools = [
                         targetDate: { type: "STRING", description: "تاريخ اليوم المطلوب (YYYY-MM-DD)." }
                     },
                     required: ["targetDate"]
+                }
+            },
+            {
+                name: "search_admin_conversations",
+                description: "تبحث في أرشيف المحادثات. مسموح لمدير النظام البحث في محادثات المشرفين، وللمشرفين البحث في محادثاتهم الشخصية فقط.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        query: { type: "STRING", description: "كلمة مفتاحية للبحث داخل المحادثة أو عنوانها (اختياري)." },
+                        username: { type: "STRING", description: "اسم المستخدم أو المشرف للبحث في محادثاته (اختياري للمشرف وتطبق صلاحيته تلقائياً)." },
+                        startDate: { type: "STRING", description: "تاريخ البداية (YYYY-MM-DD) اختياري." },
+                        endDate: { type: "STRING", description: "تاريخ النهاية (YYYY-MM-DD) اختياري." }
+                    },
+                    required: []
                 }
             }
         ]
@@ -844,6 +859,64 @@ const createFunctions = (user) => ({
             console.error('[AdminAI] predictive_scheduling error:', err.message);
             return { error: "فشل جلب الجدولة: " + err.message };
         }
+    },
+    search_admin_conversations: async ({ query, username, startDate, endDate }) => {
+        try {
+            const searchQuery = {};
+            if (user.role !== 'admin') {
+                searchQuery.userId = user._id; // enforce logic natively
+            } else if (username) {
+                const targetUsers = await User.find({ username: { $regex: username, $options: 'i' } }).lean();
+                if (targetUsers.length > 0) {
+                    searchQuery.userId = { $in: targetUsers.map(u => u._id) };
+                } else {
+                    return { message: `لم يتم العثور على مستخدم باسم ${username}` };
+                }
+            }
+
+            if (startDate || endDate) {
+                searchQuery.createdAt = {};
+                if (startDate) {
+                    let start = new Date(startDate);
+                    if (!isNaN(start.getTime())) { start.setHours(0, 0, 0, 0); searchQuery.createdAt.$gte = start; }
+                }
+                if (endDate) {
+                    let end = new Date(endDate);
+                    if (!isNaN(end.getTime())) { end.setHours(23, 59, 59, 999); searchQuery.createdAt.$lte = end; }
+                }
+                if (Object.keys(searchQuery.createdAt).length === 0) delete searchQuery.createdAt;
+            }
+
+            if (query) {
+                searchQuery.$or = [
+                    { title: { $regex: query, $options: 'i' } },
+                    { 'messages.text': { $regex: query, $options: 'i' } }
+                ];
+            }
+
+            const convos = await AdminConversation.find(searchQuery)
+                .populate('userId', 'username role')
+                .sort({ lastActivity: -1 })
+                .limit(5)
+                .lean();
+
+            if (convos.length === 0) return { message: "لم يتم العثور على محادثات تطابق معايير البحث." };
+
+            return {
+                count: convos.length,
+                conversations: convos.map(c => ({
+                    title: c.title,
+                    user: c.userId?.username || 'المدير العام',
+                    role: c.userId?.role || 'admin',
+                    lastActivity: c.lastActivity?.toISOString().replace('T', ' ').slice(0, 16),
+                    messagesCount: c.messages?.length || 0,
+                    preview: c.messages?.length ? c.messages.map(m => `[${m.role === 'user' ? 'المستخدم' : 'الذكاء'}]: ${m.text}`).join('\\n').slice(0, 800) + '...' : 'لا توجد رسائل مسجلة'
+                }))
+            };
+        } catch (err) {
+            console.error('[AdminAI] search_admin_conversations error:', err.message);
+            return { error: "فشل استرجاع المحادثات: " + err.message };
+        }
     }
 });
 
@@ -864,7 +937,7 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
     if (user.role === 'supervisor') {
         systemPrompt += `\n\nتنويه: المستخدم الحالي هو 'مشرف'، واسمه "${user.username}". خاطبه باسمه بشكل ودود ومحترم. أجب على أسئلته وطلباته بشكل طبيعي تماماً بناءً على البيانات التي تستردها من الأدوات. لا تذكر أو تشر أبداً تحت أي ظرف إلى كلمات مثل "صلاحيات"، "قيود"، "ممنوع"، أو أن هناك معلومات محجوبة عنه. إذا أرجعت الأدوات رسالة تفيد بعدم وجود بيانات، أخبره ببساطة أنه لا توجد بيانات أو إيرادات متاحة للإستعلام المطلوب بدون أي تفسيرات.`;
     } else {
-        systemPrompt += `\n\nتنويه: المستخدم الحالي هو مدير النظام واسمه "${user.username}". خاطبه باسمه.`;
+        systemPrompt += `\n\nتنويه: المستخدم الحالي هو مدير النظام (Admin) واسمه "${user.username}". لديك صلاحية مطلقة لمراجعة والبحث في محادثات المشرفين الآخرين وأرشيف الذكاء الاصطناعي الخاص بهم بغرض المراقبة. استخدم أداة search_admin_conversations متى طلب منك ذلك ونظم النتائج بأسلوب احترافي.`;
     }
 
     if (!process.env.GEMINI_API_KEY) throw new Error("Missing Gemini API Key");
