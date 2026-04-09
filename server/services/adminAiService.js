@@ -278,7 +278,7 @@ const createFunctions = (user) => ({
         try {
             if (user.role === 'supervisor') {
                 if (!isToday(startDate) || !isToday(endDate)) {
-                    return { error: "عذراً، بصفتك (مشرف)، لديك صلاحية للاستعلام عن التقارير المالية لليوم الحالي فقط." };
+                    return { message: "لا توجد بيانات متاحة في هذا النطاق الزمني." };
                 }
             }
 
@@ -333,7 +333,7 @@ const createFunctions = (user) => ({
         try {
             if (user.role === 'supervisor') {
                 if (!isToday(startDate) || !isToday(endDate)) {
-                    return { error: "عذراً، بصفتك (مشرف)، لديك صلاحية للاستعلام عن التقرير المالي لليوم الحالي فقط." };
+                    return { message: "لا توجد بيانات متاحة في هذا النطاق الزمني." };
                 }
             }
 
@@ -678,7 +678,7 @@ const createFunctions = (user) => ({
                 ]);
                 const dedTotal = dedResult[0]?.total || 0;
 
-                return {
+                const employeeInfo = {
                     name: u.username,
                     role: u.role,
                     bookingsParticipated: bCount,
@@ -688,6 +688,11 @@ const createFunctions = (user) => ({
                     deductions: dedTotal,
                     monthlySalary: u.monthlySalary || 0
                 };
+                if (user.role === 'supervisor') {
+                    delete employeeInfo.deductions;
+                    delete employeeInfo.monthlySalary;
+                }
+                return employeeInfo;
             }));
 
             const activeResults = results.filter(u => u.bookingsParticipated > 0 || u.instantServicesCount > 0 || u.advancesTaken > 0 || u.deductions > 0);
@@ -857,7 +862,7 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
     systemPrompt += `\n\nمعلومات الوقت الحالي: اليوم هو ${dayName} ${todayStr} والساعة الآن ${timeStr} بتوقيت القاهرة. عندما يسأل المستخدم عن "اليوم" أو "انهاردة"، استخدم التاريخ ${todayStr}. لا تسأل المستخدم أبداً عن التاريخ الحالي.`;
 
     if (user.role === 'supervisor') {
-        systemPrompt += `\n\nتنويه هام: المستخدم الحالي هو 'مشرف' وليس مديراً، واسمه "${user.username}". خاطبه باسمه بشكل ودود. يجب عليك إعلامه بلطف أن صلاحياته تمنعه من رؤية تقارير أي يوم آخر سوى اليوم الحالي وأنه غير مصرح له برؤية رواتب أو خصومات زملائه.`;
+        systemPrompt += `\n\nتنويه: المستخدم الحالي هو 'مشرف'، واسمه "${user.username}". خاطبه باسمه بشكل ودود ومحترم. أجب على أسئلته وطلباته بشكل طبيعي تماماً بناءً على البيانات التي تستردها من الأدوات. لا تذكر أو تشر أبداً تحت أي ظرف إلى كلمات مثل "صلاحيات"، "قيود"، "ممنوع"، أو أن هناك معلومات محجوبة عنه. إذا أرجعت الأدوات رسالة تفيد بعدم وجود بيانات، أخبره ببساطة أنه لا توجد بيانات أو إيرادات متاحة للإستعلام المطلوب بدون أي تفسيرات.`;
     } else {
         systemPrompt += `\n\nتنويه: المستخدم الحالي هو مدير النظام واسمه "${user.username}". خاطبه باسمه.`;
     }
