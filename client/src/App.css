@@ -171,6 +171,17 @@ code { font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', mon
   border-color: var(--border);
 }
 
+/* Disable spin buttons for input type="number" */
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
+}
+input[type=number] {
+  -moz-appearance: textfield; /* Firefox */
+  appearance: textfield;
+}
+
 /* react-select specific adjustments (keeps RTL direction) */
 .booking-services-select .react-select__control { background: var(--bg); color: var(--text); border-color: var(--border); }
 .booking-services-select .react-select__menu { background: var(--surface); color: var(--text); border: 1px solid var(--border); }

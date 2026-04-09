@@ -46,6 +46,30 @@ function AppContent() {
   const location = useLocation();
 
   React.useEffect(() => {
+    // Disable ArrowUp and ArrowDown for number inputs globally to prevent accidental changes during scroll
+    const handleNumberInputScroll = (e) => {
+      if (document.activeElement && document.activeElement.type === 'number') {
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+          e.preventDefault();
+        }
+      }
+    };
+    const handleWheel = (e) => {
+      if (document.activeElement && document.activeElement.type === 'number') {
+        document.activeElement.blur();
+      }
+    };
+
+    window.addEventListener('keydown', handleNumberInputScroll);
+    window.addEventListener('wheel', handleWheel);
+
+    return () => {
+      window.removeEventListener('keydown', handleNumberInputScroll);
+      window.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
+
+  React.useEffect(() => {
     const loadUser = async () => {
       const token = localStorage.getItem('token');
       if (!token) {
