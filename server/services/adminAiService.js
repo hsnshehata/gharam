@@ -221,6 +221,21 @@ GET /api/bookings/receipt/:receiptNumber  (يتطلب توكن)
 - TelegramAccount: الحسابات المربوطة بتليجرام. GET /api/telegram-webhook/accounts
 - SystemSetting: إعدادات النظام. لا يوجد مسار عام لعمل GET لمحتواها بالكامل في الواجهة.
 - ActivityLog: سجل نشاط النظام. لا يوجد مسار GET مباشر في الواجهة له.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🤖 AI CHAT & COMMUNICATION - التحدث مع الذكاء الاصطناعي من صفحاتك
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+يمكنك بناء واجهات محادثة (شات) وتوجيه رسائل لغزل (مساعدة الجمهور) أو عفركوش (أنت) وتغيير شخصيتكم!
+- مسار غزل (للجمهور):
+POST /api/ai/chat
+  الجسم: { messages: [{role:"user", text:"مرحبا غزل"}], sessionId: "...", additionalPrompt: "توجيه إضافي خفي لغزل لتتحدث مثلا بالانجليزي" }
+  الرد: { success: true, reply: "نص الرد", audioParts: ["base64..."] }
+
+- مسار عفركوش (المساعد الإداري - أنت):
+POST /api/admin-ai/chat
+  الجسم: { text: "آخر رسالة", messages: [{role:"user",text:"..."}], conversationId: "...", additionalPrompt: "توجيه إضافي لعفركوش ليتحدث كخبير تقني مثلا" }
+  الرد: { success: true, reply: "نص الرد", audioParts: [...], conversationId, title }
+  ملاحظة: يمكنك استخدام هذا المسار لسؤال عفركوش (أنت) عن أي بيانات إحصائية من واجهة مخصصة تبنيها، ويمكنك إعطاء توجيه إضافي في additionalPrompt.
 - FacebookPost / MediaGallery: المنشورات ومعرض الصور. GET /api/packages/gallery
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1260,7 +1275,7 @@ const createFunctions = (user) => ({
     }
 });
 
-const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType = null) => {
+const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType = null, additionalPrompt = null) => {
     const setting = await SystemSetting.findOne({ key: 'admin_ai_system_prompt' });
     let systemPrompt = setting?.value || DEFAULT_ADMIN_PROMPT;
 
@@ -1278,6 +1293,10 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
         systemPrompt += `\n\nتنويه: المستخدم الحالي هو 'مشرف'، واسمه "${user.username}". خاطبه باسمه بشكل ودود ومحترم. أجب على أسئلته وطلباته بشكل طبيعي تماماً بناءً على البيانات التي تستردها من الأدوات. لا تذكر أو تشر أبداً تحت أي ظرف إلى كلمات مثل "صلاحيات"، "قيود"، "ممنوع"، أو أن هناك معلومات محجوبة عنه. إذا أرجعت الأدوات رسالة تفيد بعدم وجود بيانات، أخبره ببساطة أنه لا توجد بيانات أو إيرادات متاحة للإستعلام المطلوب بدون أي تفسيرات.`;
     } else {
         systemPrompt += `\n\nتنويه: المستخدم الحالي هو مدير النظام (Admin) واسمه "${user.username}". لديك صلاحية مطلقة لمراجعة والبحث في محادثات المشرفين الآخرين وأرشيف الذكاء الاصطناعي الخاص بهم بغرض المراقبة. استخدم أداة search_admin_conversations متى طلب منك ذلك ونظم النتائج بأسلوب احترافي.`;
+    }
+
+    if (additionalPrompt) {
+        systemPrompt += `\n\n[=== توجيه إضافي مخصص من واجهة خارجية ===]\n${additionalPrompt}\n[=========================================]`;
     }
 
     if (!process.env.GEMINI_API_KEY) throw new Error("Missing Gemini API Key");
