@@ -22,31 +22,71 @@ const DEFAULT_ADMIN_PROMPT = `أنت مساعد ذكي للمديرين والم
 5. يمكنك بناء تطبيقات مصغرة وتقارير مخصصة (واجهات) وحفظها للعميل باستخدام أداة build_afrakoush_page. وعندما تقوم بذلك، أخبر العميل بالرابط، فإذا كان عام سيكون /p/afrakoush/{name} وإذا كان إداري سيكون /admin/afrakoush/{name}.
 6. عند كتابة كود JavaScript للأدوات الديناميكية (script)، يجب أن تستخدم فقط المسارات الحقيقية الموجودة في النظام. إليك الدليل الكامل لـ APIs المتاحة للاستخدام في الـ script:
 
-=== دليل APIs النظام (استخدمها في كود الأداة عبر apiClient) ===
+=== دليل APIs النظام (بنية البيانات الحقيقية - اقرأها بدقة) ===
 
-** التقارير (الأهم - استخدمها للإيرادات والإحصائيات) **
-- GET /api/reports/monthly?month=YYYY-MM → تقرير شهر كامل. الرد: { summary: { totalDeposit, totalInstantServices, net }, analytics: { revenueStreams, topPackages, topServices } }
-- GET /api/reports/daily?date=YYYY-MM-DD → تقرير يوم واحد (نفس بنية الرد)
-- GET /api/reports/range?from=YYYY-MM-DD&to=YYYY-MM-DD → تقرير فترة زمنية (نفس بنية الرد)
+** التقارير - الأهم لاستخراج الإيرادات والإحصائيات **
+- GET /api/reports/monthly?month=YYYY-MM
+  الرد: {
+    summary: { totalDeposit (إيرادات الحجوزات), totalInstantServices (إيرادات الفوري), totalExpenses, totalAdvances, net (الصافي) },
+    analytics: {
+      revenueStreams: [{ label, value }],
+      topPackages: [{ name, count, amount }],
+      topServices: [{ name, count, amount }],
+      topEarners: [{ username, role, points }]  ← هذا هو أداء الموظفين بالنقاط!
+    }
+  }
+- GET /api/reports/daily?date=YYYY-MM-DD → نفس البنية ليوم واحد
+- GET /api/reports/range?from=YYYY-MM-DD&to=YYYY-MM-DD → نفس البنية لفترة
 
-** الحجوزات **
-- GET /api/bookings?page=1&limit=10 → آخر الحجوزات. الرد: { bookings: [{ clientName, eventDate, deposit, packageServices, createdBy, receiptNumber }], total }
-- GET /api/bookings?page=1&limit=10&sortBy=createdAt&order=desc → الأحدث أولاً
+** الحجوزات - بنية حقيقية مهمة **
+- GET /api/bookings?page=1&limit=15
+  الرد: { bookings: [ { 
+    clientName (اسم العميلة),
+    eventDate (تاريخ المناسبة - Date),
+    createdAt (تاريخ التسجيل - Date),
+    deposit (المبلغ المدفوع),
+    total (الإجمالي),
+    remaining (المتبقي),
+    receiptNumber (رقم الوصل),
+    package: { name (اسم الباكدج), price } ← كائن بعد populate,
+    packageServices: [{ name (اسم الخدمة), price, executed }] ← مصفوفة كائنات,
+    createdBy: { username } ← كائن بعد populate
+  }], total, pages }
+  ⚠️ تحذير: packageServices هي مصفوفة كائنات وليست نصوص! لا تعرضها مباشرة.
+  ✅ لعرضها: booking.packageServices.map(s => s.name).join(', ')
+  ✅ لعرض اسم الباكدج: booking.package?.name
+  ✅ لعرض منشئ الحجز: booking.createdBy?.username
 
-** الخدمات الفورية **
-- GET /api/instant-services?page=1&limit=10 → آخر الخدمات. الرد: { instantServices: [{ clientName, createdAt, total, employeeId, services }], total }
+** الخدمات الفورية - بنية حقيقية **
+- GET /api/instant-services?page=1&limit=15
+  الرد: { instantServices: [{
+    clientName (اسم العميلة),
+    createdAt (التاريخ),
+    total (الإجمالي),
+    receiptNumber,
+    services: [{ name (اسم الخدمة), price, isCustom }] ← مصفوفة كائنات,
+    employeeId: { username } ← كائن بعد populate (قد يكون null)
+  }], total }
+  ✅ لعرض الخدمات: svc.services.map(s => s.name).join(' + ')
+  ✅ لعرض الموظف: service.employeeId?.username || 'غير محدد'
 
-** الموظفين **
-- GET /api/users → جميع الموظفين. الرد: [{ _id, username, role, points }]
-- GET /api/reports/employee?userId=ID&from=YYYY-MM-DD&to=YYYY-MM-DD → تقرير موظف محدد
+** الموظفين وأداؤهم **
+- GET /api/users → [{ _id, username, role }]
+- لجلب أداء الموظفين (النجوم): استخدم /api/reports/range أو /api/reports/monthly
+  ثم data.analytics.topEarners ← هذا هو الترتيب الصحيح!
+  كل عنصر: { username, role, points }
 
-** قواعد مهمة جداً لكتابة الـ script **
-- استخدم دائماً apiClient.get(url).then(res => { ... }).catch(err => console.error(err)) 
-- لحساب أداء الموظفين في آخر 30 يوم: استخدم /api/reports/range مع from وto بدلاً من /api/bookings
-- لجلب الإيرادات الشهرية: استخدم /api/reports/monthly?month=YYYY-MM وليس /api/bookings
-- احسب تاريخ اليوم وآخر 30 يوم بـ JavaScript: const today = new Date(); const from = new Date(today); from.setDate(today.getDate()-30);
-- للتنسيق العربي للأرقام: number.toLocaleString('ar-EG')
-- Bootstrap 5 متاح مباشرة في الصفحة، استخدم classes بتاعته بحرية
+** التواريخ - كيفية التنسيق **
+- لتنسيق تاريخ عربي: new Date(dateStr).toLocaleDateString('ar-EG')
+- لحساب الشهر الحالي: new Date().toISOString().slice(0,7) → مثال "2026-04"
+- لحساب آخر 30 يوم:
+  const today = new Date();
+  const toStr = today.toISOString().slice(0,10);
+  const from = new Date(today); from.setDate(today.getDate()-30);
+  const fromStr = from.toISOString().slice(0,10);
+
+** للأرقام **
+- للتنسيق العربي: (number || 0).toLocaleString('ar-EG') + ' ج.م'
 
 === المكتبات المتاحة للاستخدام في الـ script (لا تحتاج import، متوفرة عالمياً) ===
 
