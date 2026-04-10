@@ -10,7 +10,6 @@ function AfrakoushToolViewer({ isPublic }) {
   const [error, setError] = useState(null);
   const [pageData, setPageData] = useState(null);
   const containerRef = useRef(null);
-  const navigate = useNavigate();
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -54,6 +53,7 @@ function AfrakoushToolViewer({ isPublic }) {
 
       // 3. Execute script in a constrained local scope
       try {
+        // eslint-disable-next-line no-new-func
         const executeTool = new Function('apiClient', 'container', 'showToast', `
           try {
             ${pageData.script}
