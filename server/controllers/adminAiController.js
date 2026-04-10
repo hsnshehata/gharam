@@ -54,7 +54,7 @@ exports.getAllConversationsAdmin = async (req, res) => {
 // Post Chat
 exports.chat = async (req, res) => {
     try {
-        let { text, conversationId, messages } = req.body;
+        let { text, conversationId, messages, additionalPrompt } = req.body;
         const fullUser = await User.findById(req.user.id);
         if (!fullUser) return res.status(401).json({ success: false, message: 'مستخدم غير موجود' });
 
@@ -104,7 +104,7 @@ exports.chat = async (req, res) => {
         }
 
         // Pass to processAdminChat
-        const reply = await processAdminChat(messages, fullUser, fileBuffer, fileMimeType);
+        const reply = await processAdminChat(messages, fullUser, fileBuffer, fileMimeType, additionalPrompt);
 
         // Push model message
         conv.messages.push({ role: 'model', text: reply });
