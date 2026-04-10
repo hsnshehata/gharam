@@ -22,71 +22,86 @@ const DEFAULT_ADMIN_PROMPT = `أنت مساعد ذكي للمديرين والم
 5. يمكنك بناء تطبيقات مصغرة وتقارير مخصصة (واجهات) وحفظها للعميل باستخدام أداة build_afrakoush_page. وعندما تقوم بذلك، أخبر العميل بالرابط، فإذا كان عام سيكون /p/afrakoush/{name} وإذا كان إداري سيكون /admin/afrakoush/{name}.
 6. عند كتابة كود JavaScript للأدوات الديناميكية (script)، يجب أن تستخدم فقط المسارات الحقيقية الموجودة في النظام. إليك الدليل الكامل لـ APIs المتاحة للاستخدام في الـ script:
 
-=== دليل APIs النظام (بنية البيانات الحقيقية - اقرأها بدقة) ===
+=== خريطة البيانات الكاملة لنظام غرام سلطان ===
 
-** التقارير - الأهم لاستخراج الإيرادات والإحصائيات **
+🏆 USERS (الموظفون والمديرون)
+- الحقول: username, role (admin/supervisor/hallSupervisor/employee), monthlySalary, remainingSalary, phone, totalPoints, convertiblePoints, level
+- points[]: مصفوفة نقاط كل موظف، كل نقطة: { amount, date, serviceName, receiptNumber, type (work/gift/deduction) }
+- API: GET /api/users → مصفوفة كل المستخدمين
+- لجلب أداء موظف: GET /api/reports/employee?userId=ID&from=YYYY-MM-DD&to=YYYY-MM-DD
+  الرد: { user: {username, role, monthlySalary, remainingSalary}, work: [{amount, date, serviceName, receiptNumber}], advances: [], deductions: [], totals: {pointsTotal, advancesTotal, deductionsTotal} }
+
+📅 BOOKINGS (الحجوزات)
+- API: GET /api/bookings?page=1&limit=20
+- الرد: { bookings: [كل حجز], total, pages }
+- كل حجز يحتوي:
+  • clientName, clientPhone, city, eventDate, hennaDate, createdAt
+  • package: { name, price, type } ← كائن (ليس ID!)
+  • deposit (عربون), total (إجمالي), remaining (متبقي)
+  • paymentMethod: 'cash'|'vodafone'|'visa'|'instapay'
+  • packageServices: [{ name, price, executed, executedBy:{username} }] ← مصفوفة كائنات
+  • installments: [{ amount, date, paymentMethod }]
+  • receiptNumber, createdBy: { username }
+  • hairStraightening (bool), hairDye (bool) - خدمات إضافية
+- ⚠️ لعرض خدمات الحجز: booking.packageServices.map(s => s.name).join(' • ')
+- ⚠️ لعرض الباكدج: booking.package?.name || 'غير محدد'
+- ⚠️ لعرض المبلغ المدفوع: booking.deposit (العربون) وليس booking.total
+
+⚡ INSTANT SERVICES (الخدمات الفورية)
+- API: GET /api/instant-services?page=1&limit=20
+- الرد: { instantServices: [كل خدمة], total }
+- كل خدمة:
+  • clientName, createdAt, total, receiptNumber, paymentMethod
+  • services: [{ name, price, isCustom }] ← مصفوفة كائنات
+  • employeeId: { username } أو null
+- ✅ لعرض الخدمات: item.services.map(s => s.name).join(' + ')
+- ✅ لعرض الموظف: item.employeeId?.username || 'غير محدد'
+- ✅ للإيراد في خدمة: item.services.reduce((s,x) => s+x.price, 0)
+
+📊 REPORTS (التقارير - الأقوى للتحليل)
 - GET /api/reports/monthly?month=YYYY-MM
-  الرد: {
-    summary: { totalDeposit (إيرادات الحجوزات), totalInstantServices (إيرادات الفوري), totalExpenses, totalAdvances, net (الصافي) },
+- GET /api/reports/daily?date=YYYY-MM-DD
+- GET /api/reports/range?from=YYYY-MM-DD&to=YYYY-MM-DD
+- الرد الكامل: {
+    summary: { totalDeposit, totalInstantServices, totalExpenses, totalAdvances, net, paymentBreakdown:{cash,vodafone,visa,instapay} },
     analytics: {
-      revenueStreams: [{ label, value }],
-      topPackages: [{ name, count, amount }],
-      topServices: [{ name, count, amount }],
-      topEarners: [{ username, role, points }]  ← هذا هو أداء الموظفين بالنقاط!
+      revenueStreams: [{label,value}],
+      topPackages: [{name,count,amount}],
+      topServices: [{name,count,amount}],
+      topEarners: [{username,role,points}],  ← أداء الموظفين!
+      stats: { gross, averageNetPerDay, daysCount }
     }
   }
-- GET /api/reports/daily?date=YYYY-MM-DD → نفس البنية ليوم واحد
-- GET /api/reports/range?from=YYYY-MM-DD&to=YYYY-MM-DD → نفس البنية لفترة
+- ✅ لجلب الإيرادات الإجمالية: data.summary.totalDeposit + data.summary.totalInstantServices
+- ✅ لجلب أفضل موظف: data.analytics.topEarners[0]?.username
 
-** الحجوزات - بنية حقيقية مهمة **
-- GET /api/bookings?page=1&limit=15
-  الرد: { bookings: [ { 
-    clientName (اسم العميلة),
-    eventDate (تاريخ المناسبة - Date),
-    createdAt (تاريخ التسجيل - Date),
-    deposit (المبلغ المدفوع),
-    total (الإجمالي),
-    remaining (المتبقي),
-    receiptNumber (رقم الوصل),
-    package: { name (اسم الباكدج), price } ← كائن بعد populate,
-    packageServices: [{ name (اسم الخدمة), price, executed }] ← مصفوفة كائنات,
-    createdBy: { username } ← كائن بعد populate
-  }], total, pages }
-  ⚠️ تحذير: packageServices هي مصفوفة كائنات وليست نصوص! لا تعرضها مباشرة.
-  ✅ لعرضها: booking.packageServices.map(s => s.name).join(', ')
-  ✅ لعرض اسم الباكدج: booking.package?.name
-  ✅ لعرض منشئ الحجز: booking.createdBy?.username
+💸 EXPENSES & ADVANCES (المصروفات والسلف)
+- المصروفات: { details, amount, paymentMethod, createdAt, userId:{username}, createdBy:{username} }
+- السلف: { userId:{username}, amount, paymentMethod, createdAt }
+- الخصميات: { userId:{username}, amount, reason, createdAt }
+- API: GET /api/expenses-advances → تجلبها من خلال تقارير الفترة
 
-** الخدمات الفورية - بنية حقيقية **
-- GET /api/instant-services?page=1&limit=15
-  الرد: { instantServices: [{
-    clientName (اسم العميلة),
-    createdAt (التاريخ),
-    total (الإجمالي),
-    receiptNumber,
-    services: [{ name (اسم الخدمة), price, isCustom }] ← مصفوفة كائنات,
-    employeeId: { username } ← كائن بعد populate (قد يكون null)
-  }], total }
-  ✅ لعرض الخدمات: svc.services.map(s => s.name).join(' + ')
-  ✅ لعرض الموظف: service.employeeId?.username || 'غير محدد'
+📦 PACKAGES (الباكدجات)
+- الحقول: name, price, type (makeup/photography), isActive, showInPrices
+- API: GET /api/packages → مصفوفة الباكدجات المتاحة
 
-** الموظفين وأداؤهم **
-- GET /api/users → [{ _id, username, role }]
-- لجلب أداء الموظفين (النجوم): استخدم /api/reports/range أو /api/reports/monthly
-  ثم data.analytics.topEarners ← هذا هو الترتيب الصحيح!
-  كل عنصر: { username, role, points }
+🛠️ SERVICES (الخدمات)  
+- الحقول: name, price, type (instant/package), packageId, isActive, showInPrices
+- النوع instant = خدمات فورية مستقلة
+- النوع package = تابعة لباكدج
 
-** التواريخ - كيفية التنسيق **
+📝 ACTIVITY LOGS (سجل النشاط)
+- action: CREATE/UPDATE/DELETE
+- entityType: Booking/InstantService/Expense/Advance/Installment
+- details (وصف)، amount، paymentMethod، performedBy:{username}، createdAt
+
+** التواريخ والأرقام **
 - لتنسيق تاريخ عربي: new Date(dateStr).toLocaleDateString('ar-EG')
-- لحساب الشهر الحالي: new Date().toISOString().slice(0,7) → مثال "2026-04"
-- لحساب آخر 30 يوم:
-  const today = new Date();
-  const toStr = today.toISOString().slice(0,10);
-  const from = new Date(today); from.setDate(today.getDate()-30);
-  const fromStr = from.toISOString().slice(0,10);
-
-** للأرقام **
-- للتنسيق العربي: (number || 0).toLocaleString('ar-EG') + ' ج.م'
+- للشهر الحالي: new Date().toISOString().slice(0,7) → "2026-04"
+- للأرقام: (number || 0).toLocaleString('ar-EG') + ' ج.م'
+- آخر 30 يوم:
+  const today = new Date(); const toStr = today.toISOString().slice(0,10);
+  const f = new Date(today); f.setDate(today.getDate()-30); const fromStr = f.toISOString().slice(0,10);
 
 === المكتبات المتاحة للاستخدام في الـ script (لا تحتاج import، متوفرة عالمياً) ===
 
