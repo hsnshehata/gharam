@@ -34,16 +34,16 @@ const safeArray = (v) => Array.isArray(v) ? v : [];
 GET /api/dashboard/summary?date=YYYY-MM-DD
   الرد (كائن واحد، ليس مصفوفة):
   { bookingCount, totalDeposit, instantServiceCount, totalInstantServices,
-    totalExpenses, totalAdvances, net, topCollector,
+    totalExpenses, totalAdvances, net, topCollector, hairStraighteningCount,
     paymentBreakdown: {cash, vodafone, visa, instapay} }
 
 GET /api/dashboard/operations?date=YYYY-MM-DD
-  الرد: مصفوفة مباشرة [] (ليست { operations: [] }!)
-  كل عنصر: { type (نص عربي), details, amount, time, addedBy, paymentMethod }
-  ✅ الاستخدام الصحيح:
-    apiClient.get('/api/dashboard/operations?date=...')
-    .then(res => { const ops = safeArray(res.data).slice(0,5); })
-  ⚠️ المصفوفة ترجع مباشرة في res.data وليس في res.data.operations!
+  الرد: مصفوفة مباشرة []  (ليست { operations:[] }!)
+  كل عنصر: { _id, type(نص عربي: 'إضافة حجز'|'إضافة خدمة فورية'|'إضافة مصروف'|'إضافة سلفة'|'قسط/دفعة'|'تعديل...'|'حذف...'),
+    actionType, details, amount, time(ليس createdAt!), addedBy, paymentMethod, isLog(bool) }
+  ✅ الاستخدام: const ops = safeArray(res.data);
+  ✅ للتوقيت: op.time (ليس op.createdAt)
+  ⚠️ المصفوفة ترجع مباشرة في res.data
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📈 REPORTS - التقارير المالية الشاملة
@@ -51,20 +51,35 @@ GET /api/dashboard/operations?date=YYYY-MM-DD
 GET /api/reports/monthly?month=YYYY-MM
 GET /api/reports/daily?date=YYYY-MM-DD
 GET /api/reports/range?from=YYYY-MM-DD&to=YYYY-MM-DD
-  الرد (كل الثلاثة نفس البنية):
-  { summary: { totalDeposit, totalInstantServices, totalExpenses, totalAdvances, net,
+  الرد الكامل الموثق:
+  {
+    summary: { totalDeposit, totalPredefinedInstant, totalCustomInstant, totalInstantServices,
+               totalExpenses, totalAdvances, net,
                paymentBreakdown:{cash,vodafone,visa,instapay} },
-    analytics: { revenueStreams:[{label,value}], topPackages:[{name,count,amount}],
-                 topServices:[{name,count,amount}], topEarners:[{username,role,points}],
-                 stats:{gross, averageNetPerDay, daysCount} } }
-  ✅ إيرادات اليوم: data.summary.totalDeposit + data.summary.totalInstantServices
+    operations: [{type,details,amount,createdAt,createdBy,paymentMethod}],  ← موجودة فقط في /daily!
+    analytics: {
+      revenueStreams: [{label('حجوزات وأقساط'|'شغل فوري'|'خدمات خاصة'), value}],
+      outflows: [{label('مصروفات'|'سلف'), value}],
+      topPackages: [{name,count,amount}],
+      topServices: [{name,count,amount}],
+      topEarners: [{username,role,points}],  ← مرتبة تنازلياً بالنقاط (أقصى 5)
+      packageMix: {makeup:Number, photography:Number},
+      stats: {gross, expenseRatio, averageNetPerDay, daysCount},
+      dailyRevenue: [{date:'YYYY-MM-DD',total}]  ← متاحة في monthly و range فقط!
+    }
+  }
+  ✅ إيرادات الإجمالية: data.summary.totalDeposit + data.summary.totalInstantServices
   ✅ أداء الموظفين: safeArray(data.analytics?.topEarners)
-  ⚠️ لا يوجد data.operations في تقارير reports! للعمليات استخدم /api/dashboard/operations
+  ✅ رسم خطي آخر 7 أيام: استخدم /api/reports/range ثم data.analytics.dailyRevenue
+  ✅ عمليات اليوم من reports: data.operations (موجود في /daily فقط، type يكون: 'booking'|'installment'|'instantService'|'expense'|'advance')
+  ⚠️ للعمليات بالعربي والأسرع: استخدم /api/dashboard/operations
 
 GET /api/reports/employee?userId=ID&from=YYYY-MM-DD&to=YYYY-MM-DD
-  الرد: { user:{username,role,monthlySalary,remainingSalary},
-           work:[{amount,date,serviceName,receiptNumber}],
-           advances:[{amount,date}], deductions:[{amount,date,reason}],
+  الرد: { user:{id,username,role,monthlySalary,remainingSalary},
+           range:{from,to},
+           work:[{amount,date,serviceName,bookingReceipt,bookingId,instantServiceId}],
+           advances:[{amount,createdAt,paymentMethod,createdBy:{username}}],
+           deductions:[{amount,createdAt,reason,createdBy:{username}}],
            totals:{pointsTotal,advancesTotal,deductionsTotal} }
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -74,11 +89,12 @@ GET /api/bookings?page=1&limit=20
   الرد: { bookings:[...], total, pages }  ← ليست مصفوفة مباشرة!
   كل حجز: { clientName, clientPhone, eventDate, createdAt,
     package:{name,price,type}, deposit, total, remaining, receiptNumber,
-    packageServices:[{name,price,executed}], createdBy:{username},
-    paymentMethod, hairStraightening(bool), hairDye(bool) }
+    packageServices:[{name,price,executed}], installments:[{amount,date}], createdBy:{username},
+    paymentMethod, hairStraightening(bool), hairDye(bool), photographyPackage(obj/id) }
   ✅ الخدمات: safeArray(b.packageServices).map(s=>s.name).join(' • ')
   ✅ الباكدج: b.package?.name || 'غير محدد'
-  ✅ المبلغ المدفوع فعلاً: b.deposit (وليس b.total!)
+  ✅ المبلغ المدفوع فعلاً: b.total - b.remaining
+  ✅ لمعرفة لو فيه فرد/صبغة/تصوير إضافي: تحقق من b.hairStraightening, b.hairDye, b.photographyPackage
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⚡ INSTANT SERVICES - الخدمات الفورية
@@ -91,21 +107,44 @@ GET /api/instant-services?page=1&limit=20
   ✅ الموظف: item.employeeId?.username || 'غير محدد'
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-👤 USERS - الموظفون
+👤 USERS - الموظفون ونظام النقاط
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 GET /api/users
-  الرد: مصفوفة مباشرة []  ← ليست { users:[] }!
-  كل موظف: { _id, username, role, monthlySalary, remainingSalary, totalPoints, level }
+  الرد: مصفوفة مباشرة []  (ليست { users:[] }!)
+  كل موظف: { _id, username, role, monthlySalary, remainingSalary, totalPoints, convertiblePoints, level }
   ✅ الاستخدام: const users = safeArray(res.data);
 
+GET /api/users/ranking?filter=month
+  filter يمكن: 'month'(default) | 'today' | 'all'
+  الرد: مصفوفة مرتبة [] ← كل موظف فيها: { _id, username, role, level, totalPoints, periodPoints, rank, bestMonthKey, allTimePoints, totalServices }
+  ✅ هذا هو الأمثل لعرض لوحة ترتيب الموظفين!
+
+GET /api/users/points/summary (للموظف نفسه)
+  الرد: { totalPoints, level, convertiblePoints, remainingSalary, monthlySalary,
+    weeklyBreakdown:[{label,total,booking,instant}], topServices:{week:[],month:[],all:[]},
+    rank, teamSize, monthlyRank, monthlyPoints, progress:{current,target,percent} }
+
+GET /api/users/executed-services?date=YYYY-MM-DD
+  الرد: { services:[{source('booking'|'instant'),receiptNumber,serviceName,clientName,points,executedAt}] }
+
+🔑 نظام النقاط (مهم للفهم):
+- الموظف يكسب نقاط = 15% من سعر كل خدمة ينفذها
+- 1000 نقطة = عملة كفاءة (efficiencyCoin) قيمتها حسب مستواه
+- المستويات (levels 1-10) تُحسب من totalPoints التراكمية
+- topEarners في التقارير = مجموع نقاط العمل في الفترة (ليس الإجمالي التراكمي)
+- الأدوار: admin (مدير) > supervisor (مشرف) > hallSupervisor (مشرف قاعة) > employee (موظف)
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💸 EXPENSES & ADVANCES - المصروفات والسلف
+💸 EXPENSES & ADVANCES - المصروفات والسلف والخصميات
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 GET /api/expenses-advances?page=1&limit=50
-  الرد: { items:[...], total, pages }  ← ليست مصفوفة مباشرة!
-  كل عنصر: { type('expense'|'advance'|'deduction'), details, amount,
+  الرد: { items:[...], total, pages }  (ليست مصفوفة مباشرة!)
+  items دمج مجموعة ثلاث مصفوفات مرتبة بالتاريخ:
+  كل عنصر: { _id, type('expense'|'advance'|'deduction'), details, amount,
     createdAt, paymentMethod, userId:{username}, createdBy:{username} }
+  ⚠️ الخصم (deduction) يستخدم details بدل reason!
   ✅ الاستخدام: const items = safeArray(res.data?.items);
+
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📦 PACKAGES & SERVICES - الباكدجات والخدمات
@@ -120,14 +159,88 @@ GET /api/packages/services → مصفوفة مباشرة []
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 GET /api/today-work?date=YYYY-MM-DD
   الرد: { makeupBookings:[], hairStraighteningBookings:[], hairDyeBookings:[], photographyBookings:[] }
-  (الحجوزات المفروض تنفيذها اليوم، ليس الحجوزات المسجلة اليوم)
+  ⚠️ هذه حجوزات مجدولة للتنفيذ اليوم (بتاريخ المناسبة) وليس الحجوزات المسجلة اليوم!
+  ✅ جملة عدد الحجوزات اليومية للتنفيذ: مجموع طول المصفوفات الأربعة
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚫 مسارات غير موجودة - لا تستخدمها أبداً
+📋 BOOKING MODEL - بيانات الحجوز الكاملة
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+كل حجز يحتوي:
+  { clientName, clientPhone, city, eventDate, hennaDate, createdAt, receiptNumber,
+    package:{name,price,type},         ← الباكدج الأساسي
+    hennaPackage:{name,price},          ← باكدج الحناء (ممكن null)
+    photographyPackage:{name,price},    ← باكدج التصوير (ممكن null)
+    deposit(عربون), total, remaining, paymentMethod,
+    packageServices:[{name,price,executed,executedBy:{username},executedAt}],
+    installments:[{amount,date,paymentMethod,employeeId:{username}}],
+    hairStraightening(bool), hairStraighteningPrice, hairStraighteningExecuted,
+    hairDye(bool), hairDyePrice, hairDyeExecuted,
+    photographyExecuted(bool),
+    createdBy:{username} }
+  ✅ الباكدج: b.package?.name
+  ✅ التصوير: b.photographyPackage?.name || 'لا يوجد'
+  ✅ الحناء: b.hennaPackage?.name || 'لا يوجد'
+  ✅ المبلغ المدفوع: b.deposit + safeArray(b.installments).reduce((s,i)=>s+i.amount,0)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🛠️ EXECUTE SERVICES - تكليف وسحب مهام الموظفين (من إشراف الصالة)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+لتسجيل أن موظف قام بتنفيذ خدمة (أو سحبها منه):
+POST /api/bookings/execute-service/:recordId/:serviceId
+POST /api/instant-services/execute-service/:recordId/:serviceId
+POST /api/bookings/reset-service/:recordId/:serviceId
+  الجسم (للتكليف فقط): { employeeId }
+  ⚠️ لقائمة Bookings: الـ serviceId إما 'hairStraightening' أو 'hairDye' أو 'photography' أو _id الخاص بالخدمة من packageServices.
+  ⚠️ لقائمة InstantServices: الـ serviceId هو الـ _id من مصفوفة services الداخلي.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔍 RECEIPT SEARCH - بحث برقم الوصل
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GET /api/public/receipt/:receiptNumber  (بدون توكن)
+  الرد: { booking: {...} أو null, instantService: {...} أو null }
+  مفيد للبحث عن وصل قد يكون حجز أو خدمة فورية
+GET /api/bookings/receipt/:receiptNumber  (يتطلب توكن)
+  الرد: { booking: {...} }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 نصائح البناء الصح
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- لملخص مالي سريع لليوم: /api/dashboard/summary ← الأسرع
+- لعمليات اليوم: /api/dashboard/operations ← مصفوفة مباشرة بالعربي
+- لرسم بياني آخر 7 أيام: /api/reports/range ثم analytics.dailyRevenue[]
+- لتوزيع طرق الدفع: التقارير summary.paymentBreakdown
+- لأفضل الموظفين: التقارير analytics.topEarners[]
+- لإيرادات مفصلة (حجوزات/فوري/مخصص): summary.totalDeposit, totalPredefinedInstant, totalCustomInstant
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚙️ SYSTEM & META MODELS - نماذج الإدارة والنظام
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- AfrakoushPage: الأدوات والصفحات الديناميكية اللي بتنشئها. GET /api/afrakoush-pages/ (لكل الأدوات)
+- AdminConversation: محادثات المديرين والمشرفين معاك. GET /api/admin-ai/conversations
+- Conversation: محادثات الجمهور وصفحة الفيسبوك مع بوت الذكاء الاصطناعي. مسار الإحصائيات: GET /api/ai/conversations
+- TelegramAccount: الحسابات المربوطة بتليجرام. GET /api/telegram-webhook/accounts
+- SystemSetting: إعدادات النظام. لا يوجد مسار عام لعمل GET لمحتواها بالكامل في الواجهة.
+- ActivityLog: سجل نشاط النظام. لا يوجد مسار GET مباشر في الواجهة له.
+- FacebookPost / MediaGallery: المنشورات ومعرض الصور. GET /api/packages/gallery
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚫 مسارات غير موجودة - لا تخترعها أبداً
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ❌ /api/activity-logs  (غير موجود)
 ❌ /api/services  (غير موجود، استخدم /api/packages/services)
 ❌ /api/packages  (غير كامل، استخدم /api/packages/packages)
+❌ /api/bookings/stats  (غير موجود)
+❌ /api/users/leaderboard  (غير موجود، استخدم /api/reports/range ثم analytics.topEarners)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎁 POINTS & COINS - إدارة النقاط والعملات للموظفين
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+- تحويل النقاط لعملات: POST /api/users/convert-points (يستدعيه الموظف)
+- استبدال العملات بفلوس: POST /api/users/redeem-coins  الجسم: { count }
+- إرسال هدية لموظف: POST /api/users/gift  الجسم: { userId, amount, note }
+- إرسال هدية للكل: POST /api/users/gift/bulk  الجسم: { amount, note }
+- خصم نقاط من موظف: POST /api/users/deduct  الجسم: { userId, amount, reason }
+- ملخص أداء الموظف الحسابي: GET /api/users/points/summary
 
 ** التواريخ والأرقام **
 - لتنسيق تاريخ: new Date(d).toLocaleDateString('ar-EG')
@@ -135,6 +248,12 @@ GET /api/today-work?date=YYYY-MM-DD
 - اليوم كـ string: new Date().toISOString().slice(0,10)
 - للأرقام: (number||0).toLocaleString('ar-EG') + ' ج.م'
 - آخر 30 يوم: const t=new Date(); const toStr=t.toISOString().slice(0,10); const f=new Date(t); f.setDate(t.getDate()-30); const fromStr=f.toISOString().slice(0,10);
+
+=== أسرار الـ Sandbox (متغيرات متاحة عالمياً لك في الكود) ===
+1️⃣ \`container\`: متغير يشير حصرياً لصفحتك. 
+   ⚠️ بدلاً من \`document.getElementById\` الذي قد يُحدث تداخلاً مع الموقع الأساسي، استخدم دائماً: \`container.querySelector('#id')\`
+2️⃣ \`showToast(message, variant)\`: دالة جاهزة لإظهار إشعارات للمستخدم ('success', 'danger', 'warning'). مثال: \`showToast("تم الحفظ بنجاح", "success")\`
+3️⃣ \`apiClient\`: تستخدم لعمل الطلبات \`apiClient.get(...)\` وهي جاهزة ومضاف لها التوكن.
 
 === المكتبات المتاحة للاستخدام في الـ script (لا تحتاج import، متوفرة عالمياً) ===
 
