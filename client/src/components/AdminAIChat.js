@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
-import { Spinner } from 'react-bootstrap';
+import { Spinner, Modal, Button } from 'react-bootstrap';
 import { API_BASE } from '../utils/apiBase';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -8,6 +8,7 @@ import remarkGfm from 'remark-gfm';
 function AdminAIChat({ user }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   
   const [conversations, setConversations] = useState([]);
   const [currentId, setCurrentId] = useState(null);
@@ -239,6 +240,7 @@ function AdminAIChat({ user }) {
               </div>
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
+              <button style={styles.newChatHeaderBtn} onClick={() => setShowInfo(true)} title="دليل عفركوش">❕</button>
               <button style={styles.newChatHeaderBtn} onClick={() => { setCurrentId(null); setIsSidebarOpen(false); }} title="محادثة جديدة">➕</button>
               <button style={styles.closeBtn} onClick={() => setIsOpen(false)}>×</button>
             </div>
@@ -324,6 +326,63 @@ function AdminAIChat({ user }) {
           </div>
         </div>
       )}
+
+      {/* نافذة التعليمات */}
+      <Modal show={showInfo} onHide={() => setShowInfo(false)} centered size="lg" dir="rtl" className="admin-ai-info-modal">
+        <Modal.Header style={{ borderBottom: '2px solid #028090', backgroundColor: '#0f2736', color: '#fff', direction: 'rtl', display: 'flex', justifyContent: 'space-between' }}>
+            <Modal.Title style={{ fontWeight: 'bold', margin: 0 }}>🧠 دليل المساعد الإداري الذكي</Modal.Title>
+            <button onClick={() => setShowInfo(false)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', cursor: 'pointer', outline: 'none' }}>×</button>
+        </Modal.Header>
+        <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto', backgroundColor: '#f8f9fa' }}>
+            <p style={{ fontSize: '15px', lineHeight: '1.6' }}><strong>المساعد الإداري الذكي</strong> هو عقلك المدبر في النظام. متصل بنبض قواعد البيانات وواجهات المركز ليمنحك تحكم كامل وعميق في كل تفصيلة، سواء عبر التحليل السريع، استخراج التقارير، أو بناء أدوات جديدة فورياً.</p>
+            
+            <hr />
+
+            <h5 style={{ color: '#028090', fontWeight: 'bold' }}>أبرز أدوات المساعد 🛠️</h5>
+            <div style={{ marginBottom: '15px', fontSize: '15px', lineHeight: '1.6' }}>
+                <p style={{ marginBottom: '8px' }}><strong>1. استخراج وتحليل البيانات:</strong> يمكنه قراءة آلاف السجلات، مقارنة الإيرادات، وتلخيص العمليات اليومية (حجوزات، سلف، مصروفات) في ثوانٍ معدودة.</p>
+                <p><strong>2. العفريت المبرمج (عفركوش) 🧞‍♂️:</strong> أداة سحرية مدمجة وقوية جداً. "عفركوش" يمنح المساعد قدرة خرافية على كتابة أكواد برمجية حية لبناء <strong>صفحات وأدوات ولوحات تحكم ديناميكية تفاعلية</strong> وتخزينها في النظام لتستخدمها وقتما تشاء.</p>
+            </div>
+            
+            <hr />
+            
+            <h5 style={{ color: '#028090', fontWeight: 'bold' }}>الصلاحيات 🔐</h5>
+            <ul style={{ fontSize: '15px', lineHeight: '1.6' }}>
+                <li style={{ marginBottom: '8px' }}><strong>المدير (Admin):</strong> صلاحيات مطلقة لسؤال المساعد عن الإيرادات التفصيلية والمصاريف السرية، واستخدام "عفركوش" لبناء وتعديل لوحات للمراقبين والمديرين (مثل: manager-hub).</li>
+                <li><strong>المشرف (Supervisor):</strong> صلاحيات جلب بيانات العمليات اليومية، الحجوزات، وأداء الموظفين، ولكن لا يمكنه الوصول للمعلومات الحساسة المخصصة للإدارة العليا.</li>
+            </ul>
+
+            <hr />
+
+            <h5 style={{ color: '#028090', fontWeight: 'bold' }}>كيف تتحدث مع مساعدك؟ (أمثلة) ✨</h5>
+            <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0', marginBottom: '10px' }}>
+                <strong style={{ color: '#e84118' }}>لتفعيل عفركوش (للمديرين):</strong><br />
+                <span style={{ color: '#555', fontSize: '14px' }}>"يا عفركوش، ابنيلي صفحة manager-hub تعرض إيرادات اليوم في 3 كروت ملونة، وتحتها جدول فيه أفضل 3 موظفين لهذا الشهر."</span>
+            </div>
+            <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0', marginBottom: '10px' }}>
+                <strong style={{ color: '#0097e6' }}>للتحليل والتقارير المالية (للمشرفين والمديرين):</strong><br />
+                <span style={{ color: '#555', fontSize: '14px' }}>"هاتلي تقرير مفصل عن إجمالي مصاريف وسلف اليوم وقارنها بإجمالي العربون المدفوع."</span>
+            </div>
+            <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
+                <strong style={{ color: '#44bd32' }}>لإدارة العمليات:</strong><br />
+                <span style={{ color: '#555', fontSize: '14px' }}>"عاوز جدول يوضح الحجوزات اللي من المقرر تنفيذها بكرا مع اسم الباكدج والمبلغ الإجمالي."</span>
+            </div>
+
+            <hr />
+            <h5 style={{ color: '#028090', fontWeight: 'bold' }}>نصائح هامة 💡</h5>
+            <ul style={{ fontSize: '14px', lineHeight: '1.6', color: '#444' }}>
+                <li>تحدث معه كأنه بشري. كن دقيقاً واذكر التواريخ المطلوبة إذا لزم الأمر.</li>
+                <li>عندما تطلب منه بناء صفحة، لا تتردد في تحديد ألوان معينة وتفاصيل دقيقة في التصميم.</li>
+                <li>استخدم علامة المايك 🎤 للتسجيل الصوتي وسيقوم بتحليل كلامك وتنفيذه فوراً.</li>
+                <li>لتصفية ذهن المساعد لطلب جديد كلياً بعيداً عن السياق الحالي، اضغط على <strong>زر ➕ (محادثة جديدة)</strong>.</li>
+            </ul>
+        </Modal.Body>
+        <Modal.Footer style={{ backgroundColor: '#f8f9fa', borderTop: '1px solid #e0e0e0', justifyContent: 'flex-start' }}>
+            <Button variant="secondary" onClick={() => setShowInfo(false)} style={{ backgroundColor: '#028090', border: 'none', fontWeight: 'bold', padding: '8px 24px' }}>
+                علم، انطلق يا مساعدنا الذكي! 🚀
+            </Button>
+        </Modal.Footer>
+      </Modal>
     </>
   );
 }
