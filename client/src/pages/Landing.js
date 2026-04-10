@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import axios from 'axios';
 import { googleReviews } from '../data/googleReviews';
 import { API_BASE } from '../utils/apiBase';
@@ -240,6 +240,7 @@ function Landing() {
 	});
 	const [reviewsLoading, setReviewsLoading] = useState(false);
 	const [reviewsError, setReviewsError] = useState('');
+	const afrakoushSpaceRef = useRef(null);
 
 	// palette is now a constant defined at module level
 	const availabilityBadge = availability ? availabilityCopy[availability.status] : null;
@@ -605,6 +606,38 @@ function Landing() {
 			isMounted = false;
 		};
 	}, [fallbackReviews]);
+
+	useEffect(() => {
+		const fetchDynamicSpace = async () => {
+			try {
+				const res = await axios.get(`${API_BASE}/api/afrakoush/landing-dynamic-space`);
+				if (res.data && afrakoushSpaceRef.current) {
+					// 1. Inject HTML
+					afrakoushSpaceRef.current.innerHTML = res.data.html || '';
+					
+					// 2. Execute script
+					if (res.data.script && res.data.script.trim() !== '') {
+						try {
+							const executeTool = new Function('apiClient', 'container', `
+								try {
+									${res.data.script}
+								} catch(e) {
+									console.error("Afrakoush dynamic script error:", e);
+								}
+							`);
+							executeTool(axios.create(), afrakoushSpaceRef.current);
+						} catch (e) {
+							console.error("Failed to parse Afrakoush script:", e);
+						}
+					}
+				}
+			} catch (err) {
+				// Silently ignore if not found or no tool exists yet
+				console.log("No dynamic space content found or error fetching it.");
+			}
+		};
+		fetchDynamicSpace();
+	}, []);
 
 
 	const css = `
@@ -1015,6 +1048,8 @@ function Landing() {
 
 
 			<div className="container">
+				{/* المساحة الخاصة بعفركوش، بيبني ويعدل فيها مباشرة */}
+				<div id="afrakoush-dynamic-space" ref={afrakoushSpaceRef}></div>
 
 			{facebookFeed.length > 0 && (
 					<section className="fb-section reveal" id="facebook-feed">
