@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
+import { Modal, Button } from 'react-bootstrap';
 import { API_BASE } from '../utils/apiBase';
 
 const BOT_IMAGE = "https://i.ibb.co/7JJScM0Q/zain-ai.png";
@@ -20,6 +21,7 @@ export default function AIChatPopup({ onClose }) {
     ]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showInfo, setShowInfo] = useState(false);
     const [historyLoading, setHistoryLoading] = useState(true);
     const [isRecording, setIsRecording] = useState(false);
     const mediaRecorderRef = useRef(null);
@@ -236,7 +238,10 @@ export default function AIChatPopup({ onClose }) {
                             <div style={styles.headerSubText}>تواصل فوري • ذكاء اصطناعي</div>
                         </div>
                     </div>
-                    <button style={styles.closeBtn} onClick={onClose} aria-label="Close">✕</button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button style={styles.infoBtn} onClick={() => setShowInfo(true)} aria-label="Info">❓</button>
+                        <button style={styles.closeBtn} onClick={onClose} aria-label="Close">✕</button>
+                    </div>
                 </div>
 
                 {/* Chat Area */}
@@ -342,6 +347,45 @@ export default function AIChatPopup({ onClose }) {
                     </div>
                 </form>
             </div>
+
+            {/* نافذة دليل غزل */}
+            <Modal show={showInfo} onHide={() => setShowInfo(false)} centered dir="rtl" className="ghazal-info-modal">
+                <Modal.Header style={{ backgroundColor: '#1fb6a6', color: '#fff', borderBottom: 'none' }}>
+                    <Modal.Title style={{ fontWeight: 'bold', margin: 0, fontSize: '1.2rem' }}>🌸 دليلك للحديث مع غزل</Modal.Title>
+                    <button onClick={() => setShowInfo(false)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', cursor: 'pointer', outline: 'none', position: 'absolute', left: '15px' }}>×</button>
+                </Modal.Header>
+                <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto', backgroundColor: '#fdfbf9', color: '#2d3436' }}>
+                    <p style={{ fontSize: '15px', lineHeight: '1.6', fontWeight: 'bold', color: '#168a7d' }}>
+                        مرحباً بكِ في غرام سلطان بيوتي سنتر! 💖<br />
+                        <span style={{ fontWeight: 'normal', color: '#555' }}><strong>غزل</strong> هي مساعدة خدمة العملاء الذكية الخاصة بالسنتر، تم تصميمها للرد على كافة استفساراتك فوراً وعلى طوال أيام الأسبوع.</span>
+                    </p>
+                    
+                    <hr style={{ borderColor: '#e1e2e6' }} />
+
+                    <h6 style={{ color: '#1fb6a6', fontWeight: 'bold' }}>✨ ما يمكن لـ "غزل" فعله من أجلك:</h6>
+                    <ul style={{ fontSize: '14.5px', lineHeight: '1.7', paddingRight: '20px', color: '#444' }}>
+                        <li><strong>استعراض الأسعار والخدمات:</strong> الاستفسار عن باكدجات الميك أب (سبيشيال، أورجنال، خطوبة)، وأسعار فرد وعلاج الشعر (البروتين والفيلر).</li>
+                        <li><strong>سياسات المركز:</strong> الاستفسار عن مواعيد العمل (9 ص لـ 9 م)، سياسة المرافقين، ومواعيد تجهيزات الزفاف قبل المناسبة.</li>
+                        <li><strong>معلومات الأقسام:</strong> الاستفسار عن جلسات التقشير، تنظيف البشرة (الهارد والسوفت)، وجلسات الديتوكس، وأسعار التصوير.</li>
+                        <li><strong>إدارة الحجوزات:</strong> المساعدة في معرفة حالة الحجز وتفاصيله بمجرد إعطائها (رقم الوصل أو رقم الهاتف).</li>
+                    </ul>
+
+                    <hr style={{ borderColor: '#e1e2e6' }} />
+
+                    <h6 style={{ color: '#1fb6a6', fontWeight: 'bold' }}>💡 نصائح لتجربة أسرع:</h6>
+                    <ul style={{ fontSize: '14.5px', lineHeight: '1.7', paddingRight: '20px', color: '#444' }}>
+                        <li>اسألي غزل بشكل مباشر (مثال: <span style={{ color: '#e84118' }}>"بكام باكدج الميك أب السبيشيال؟"</span> أو <span style={{ color: '#e84118' }}>"إيه أسعار تنظيف البشرة؟"</span>).</li>
+                        <li>يمكنك <strong>تسجيل استفسارك صوتياً</strong> بالضغط على علامة المايك 🎤، وستقوم غزل بالرد عليكِ صوتياً أيضاً!</li>
+                        <li>لتأكيد الحجوزات أو تغيير المواعيد، يتم عبر الواتساب أو الرقم الأرضي.</li>
+                    </ul>
+
+                </Modal.Body>
+                <Modal.Footer style={{ backgroundColor: '#fdfbf9', borderTop: '1px solid #e1e2e6', justifyContent: 'center' }}>
+                    <Button variant="primary" onClick={() => setShowInfo(false)} style={{ backgroundColor: '#1fb6a6', border: 'none', fontWeight: 'bold', padding: '8px 24px', borderRadius: '20px' }}>
+                        تحدثي مع غزل الآن
+                    </Button>
+                </Modal.Footer>
+            </Modal>
 
             <style>{`
                 @keyframes floatIn { 
@@ -464,6 +508,21 @@ const styles = {
         fontSize: '0.75rem',
         color: 'rgba(255,255,255,0.85)',
         marginTop: '2px'
+    },
+    infoBtn: {
+        background: 'rgba(255,255,255,0.15)',
+        border: 'none',
+        color: '#fff',
+        fontSize: '1rem',
+        cursor: 'pointer',
+        width: '32px',
+        height: '32px',
+        borderRadius: '10px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: 'all 0.2s',
+        backdropFilter: 'blur(5px)'
     },
     closeBtn: {
         background: 'rgba(255,255,255,0.15)',
