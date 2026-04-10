@@ -948,7 +948,7 @@ function AdminPromptTab() {
                                     <div>
                                         <h5 style={{ margin: 0, fontWeight: 700, color: '#0f2736' }}>{selectedAdminConv.title}</h5>
                                         <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>
-                                            بواسطة: {selectedAdminConv.userId?.username || 'مدير تليجرام'} ({selectedAdminConv.userId?.role || 'غير معروف'})
+                                            بواسطة: {selectedAdminConv.userId?.username || selectedAdminConv.telegramAccountId?.name || 'مدير تليجرام'} ({selectedAdminConv.userId?.role || selectedAdminConv.telegramAccountId?.role || 'غير معروف'})
                                         </div>
                                     </div>
                                     <button style={{ ...styles.toolBtn, backgroundColor: '#fdfbf9', color: '#e74c3c', borderColor: '#e74c3c' }} onClick={() => setSelectedAdminConv(null)}>
@@ -984,7 +984,7 @@ function AdminPromptTab() {
                                         {allConvs.map(c => (
                                             <tr key={c._id} onClick={() => setSelectedAdminConv(c)} style={{ cursor: 'pointer', transition: 'background 0.2s' }}>
                                                 <td style={{ fontWeight: 600, color: '#028090' }}>{c.title}</td>
-                                                <td>{c.userId?.username || 'مدير تليجرام'} <span style={{ fontSize: 11, color: '#888' }}>({c.userId?.role || 'غير معروف'})</span></td>
+                                                <td>{c.userId?.username || c.telegramAccountId?.name || 'مدير تليجرام'} <span style={{ fontSize: 11, color: '#888' }}>({c.userId?.role || c.telegramAccountId?.role || 'غير معروف'})</span></td>
                                                 <td style={{ direction: 'ltr', textAlign: 'right' }}>{new Date(c.lastActivity).toLocaleString('ar-EG')}</td>
                                                 <td>{c.messages?.length || 0} رسالة</td>
                                             </tr>
