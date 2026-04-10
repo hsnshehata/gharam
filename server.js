@@ -3,113 +3,52 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
-const rateLimit = require('express-rate-limit');
-const cron = require('node-cron');
-const { startSalaryResetScheduler } = require('./server/services/salaryResetService');
-const { initTelegramBot } = require('./server/services/telegramBot');
+const { startSalaryResetScheduler } = require('./services/salaryResetService');
 
 dotenv.config();
 
-// Fail fast when required env vars are absent
-const requiredEnv = ['MONGO_URI', 'JWT_SECRET'];
-const missingEnv = requiredEnv.filter((name) => !process.env[name]);
-if (missingEnv.length) {
-  console.error(`Missing required environment variables: ${missingEnv.join(', ')}`);
-  process.exit(1);
-}
-
 const app = express();
-// Render sits behind a proxy; trust it for correct IP handling
-app.set('trust proxy', 1);
-
-// Middleware
 app.use(cors());
-app.use(express.json());
-const rateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 300,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: { msg: 'Too many requests, please try again later.' }
-});
-app.use('/api', rateLimiter);
-app.use((req, res, next) => {
-  console.log(`Received request: ${req.method} ${req.path}`);
-  next();
-});
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+const { warmUp: warmUpDataStore } = require('./services/dataStore');
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
+  .then(async () => {
     console.log('MongoDB connected');
     startSalaryResetScheduler();
-    initTelegramBot();
+    // Warm up the in-memory data store for instant reads
+    await warmUpDataStore();
   })
-  .catch(err => console.log('MongoDB connection error:', err));
+  .catch(err => console.log(err));
 
 // Routes
-console.log('Registering routes...');
-app.use('/api/auth', require('./server/routes/auth'));
-app.use('/api/users', require('./server/routes/users'));
-app.use('/api/packages', require('./server/routes/packages'));
-app.use('/api/bookings', require('./server/routes/bookings'));
-app.use('/api/instant-services', require('./server/routes/instantServices'));
-app.use('/api/expenses-advances', require('./server/routes/expensesAdvances'));
-app.use('/api/reports', require('./server/routes/reports'));
-app.use('/api/dashboard', require('./server/routes/dashboard'));
-app.use('/api/today-work', require('./server/routes/todayWork'));
-app.use('/api/public', require('./server/routes/public'));
-app.use('/api/public/facebook', require('./server/routes/facebook'));
-app.use('/api/facebook', require('./server/routes/facebookAdmin'));
-app.use('/api/ai', require('./server/routes/ai'));
-app.use('/api/admin-ai', require('./server/routes/adminAi'));
-app.use('/api/telegram', require('./server/routes/telegramRoutes'));
-console.log('Routes registered successfully');
-
-// Facebook Cron Job: تحديث البوستات كل 30 دقيقة
-const { syncFacebookPosts } = require('./server/controllers/facebookController');
-cron.schedule('*/30 * * * *', async () => {
-	console.log('[CRON] جاري تحديث بوستات Facebook...');
-	try {
-		const fakeReq = {};
-		const fakeRes = {
-			status: (code) => ({
-				json: (data) => {
-					console.log(`[CRON] Facebook Sync Result: ${data.message}`);
-				}
-			})
-		};
-		await syncFacebookPosts(fakeReq, fakeRes);
-	} catch (error) {
-		console.error('[CRON] خطأ في تحديث Facebook:', error);
-	}
-});
-console.log('[CRON] Facebook sync scheduled (every 30 minutes)');
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/packages', require('./routes/packages'));
+app.use('/api/public/facebook', require('./routes/facebook'));
+app.use('/api/facebook', require('./routes/facebookAdmin'));
+app.use('/api/bookings', require('./routes/bookings'));
+app.use('/api/dashboard', require('./routes/dashboard'));
+app.use('/api/expenses-advances', require('./routes/expensesAdvances'));
+app.use('/api/instant-services', require('./routes/instantServices'));
+app.use('/api/reports', require('./routes/reports'));
+app.use('/api/today-work', require('./routes/todayWork'));
+app.use('/api/public', require('./routes/public'));
+app.use('/api/sync', require('./routes/sync'));
+app.use('/api/ai', require('./routes/ai'));
+app.use('/api/admin-ai', require('./routes/adminAi'));
+app.use('/api/afrakoush', require('./routes/afrakoushRoutes'));
 
 // Serve React app
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'client/build')));
-  console.log('Serving static files from client/build');
-  // Express 5 uses path-to-regexp v8 which errors on string "*"; regex avoids that.
-  app.get(/.*/, (req, res) => {
-    console.log(`Serving index.html for path: ${req.path}`);
-    res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+  app.use(express.static(path.join(__dirname, '../client/build')));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/build', 'index.html'));
   });
 }
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-  const status = err.status || err.statusCode || 500;
-  const errorId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const safeMessage = status >= 500 ? 'Server error' : err.message;
-  console.error(`[${errorId}] ${req.method} ${req.originalUrl} -> ${status}: ${err.message}`);
-  if (err.stack) console.error(err.stack);
-  const payload = { msg: safeMessage, errorId };
-  if (process.env.NODE_ENV !== 'production') {
-    payload.error = err.message;
-  }
-  res.status(status).json(payload);
-});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
