@@ -41,9 +41,9 @@ function AfrakoushToolViewer({ isPublic }) {
   }, [name, isPublic]);
 
   useEffect(() => {
-    if (pageData && pageData.html && pageData.script && containerRef.current) {
+    if (pageData && containerRef.current) {
       // 1. Inject HTML
-      containerRef.current.innerHTML = pageData.html;
+      containerRef.current.innerHTML = pageData.html || '';
 
       // 2. Setup apiClient with auth token for the tool to use safely
       const token = localStorage.getItem('token');
@@ -52,21 +52,23 @@ function AfrakoushToolViewer({ isPublic }) {
       });
 
       // 3. Execute script in a constrained local scope
-      try {
-        // eslint-disable-next-line no-new-func
-        const executeTool = new Function('apiClient', 'container', 'showToast', `
-          try {
-            ${pageData.script}
-          } catch(e) {
-            console.error("Afrakoush tool execution error:", e);
-            showToast("حدث خطأ داخل كود الأداة", "danger");
-          }
-        `);
-        
-        executeTool(apiClient, containerRef.current, showToast);
-      } catch (e) {
-        console.error("Failed to parse Afrakoush script:", e);
-        setError('تعذر تشغيل كود الأداة بسبب خطأ في بناء الجملة (Syntax).');
+      if (pageData.script && pageData.script.trim() !== '') {
+        try {
+          // eslint-disable-next-line no-new-func
+          const executeTool = new Function('apiClient', 'container', 'showToast', `
+            try {
+              ${pageData.script}
+            } catch(e) {
+              console.error("Afrakoush tool execution error:", e);
+              showToast("حدث خطأ داخل كود الأداة", "danger");
+            }
+          `);
+          
+          executeTool(apiClient, containerRef.current, showToast);
+        } catch (e) {
+          console.error("Failed to parse Afrakoush script:", e);
+          setError('تعذر تشغيل كود الأداة بسبب خطأ في بناء الجملة (Syntax).');
+        }
       }
     }
   }, [pageData, showToast]);
