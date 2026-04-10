@@ -95,9 +95,13 @@ const chatFunctions = {
  * @param {Boolean} formatForMessenger - If true, restricts markdown asterisks and limits length slightly.
  * @returns {Promise<String>} The generated response text
  */
-const processAiChat = async (messages, fileBuffer = null, fileMimeType = null, formatForMessenger = false) => {
+const processAiChat = async (messages, fileBuffer = null, fileMimeType = null, formatForMessenger = false, additionalPrompt = null) => {
     const setting = await SystemSetting.findOne({ key: 'ai_system_prompt' });
     let systemPromptArr = [setting?.value || DEFAULT_PROMPT];
+
+    if (additionalPrompt) {
+        systemPromptArr.push(`\n[=== توجيه إضافي متزامن من تطبيق خارجي ===]\n${additionalPrompt}\n[=========================================]\n`);
+    }
 
     const currentDate = new Date();
     const dayName = currentDate.toLocaleDateString('ar-EG', { weekday: 'long' });
