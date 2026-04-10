@@ -101,7 +101,7 @@ const activeChatRequests = new Set();
 // POST /api/ai/chat
 router.post('/chat', upload.single('audio'), async (req, res) => {
     try {
-        let { messages, sessionId } = req.body;
+        let { messages, sessionId, additionalPrompt } = req.body;
         // If coming from FormData, parse JSON strings
         if (typeof messages === 'string') {
             try { messages = JSON.parse(messages); } catch (e) { }
@@ -158,7 +158,7 @@ router.post('/chat', upload.single('audio'), async (req, res) => {
 
         let reply;
         try {
-            reply = await processAiChat(fullMessages, fileBuffer, fileMimeType, false);
+            reply = await processAiChat(fullMessages, fileBuffer, fileMimeType, false, additionalPrompt);
         } catch (genErr) {
             console.error('Gemini error:', genErr);
             return res.status(500).json({ message: genErr.message || 'خطأ في التواصل مع الذكاء الاصطناعي' });
