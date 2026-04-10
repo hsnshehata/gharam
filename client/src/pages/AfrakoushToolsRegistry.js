@@ -18,7 +18,7 @@ function AfrakoushToolsRegistry() {
       const res = await axios.get('/api/afrakoush', {
         headers: { 'x-auth-token': localStorage.getItem('token') }
       });
-      setTools(res.data);
+      setTools(Array.isArray(res.data) ? res.data : []);
       setError('');
     } catch (err) {
       if (err.response?.status === 403) {
