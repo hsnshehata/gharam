@@ -9,18 +9,18 @@ function AdminAIChat({ user }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
-  
+
   const [conversations, setConversations] = useState([]);
   const [currentId, setCurrentId] = useState(null);
   const [messages, setMessages] = useState([]);
-  
+
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
 
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
-  
+
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -36,7 +36,7 @@ function AdminAIChat({ user }) {
 
   useEffect(() => {
     if (!user) return;
-    
+
     if (currentId) {
       loadConversation(currentId);
     } else {
@@ -84,38 +84,38 @@ function AdminAIChat({ user }) {
       });
       setConversations(prev => prev.filter(c => c._id !== id));
       if (currentId === id) setCurrentId(null);
-    } catch (err) {}
+    } catch (err) { }
   };
 
   const startRecording = async () => {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mediaRecorder = new MediaRecorder(stream);
-        mediaRecorderRef.current = mediaRecorder;
-        audioChunksRef.current = [];
-        
-        mediaRecorder.ondataavailable = (e) => {
-            if (e.data.size > 0) audioChunksRef.current.push(e.data);
-        };
-        
-        mediaRecorder.onstop = () => {
-            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-            handleSend(null, audioBlob);
-            stream.getTracks().forEach(track => track.stop());
-        };
-        
-        mediaRecorder.start();
-        setIsRecording(true);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        handleSend(null, audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
     } catch (err) {
-        alert("يرجى السماح بالوصول إلى المايكروفون للتسجيل.");
+      alert("يرجى السماح بالوصول إلى المايكروفون للتسجيل.");
     }
   };
 
   const stopRecording = () => {
-      if (mediaRecorderRef.current && isRecording) {
-          mediaRecorderRef.current.stop();
-          setIsRecording(false);
-      }
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
   };
 
   const handleSend = async (e, voiceBlob = null) => {
@@ -136,22 +136,22 @@ function AdminAIChat({ user }) {
 
       let res;
       if (voiceBlob) {
-          const formData = new FormData();
-          formData.append('audio', voiceBlob, 'voice.webm');
-          formData.append('messages', JSON.stringify(cleanMessages));
-          if (currentId) formData.append('conversationId', currentId);
-          res = await axios.post(`${API_BASE}/api/admin-ai/chat`, formData, {
-              headers: { 
-                  'x-auth-token': localStorage.getItem('token'),
-                  'Content-Type': 'multipart/form-data' 
-              }
-          });
+        const formData = new FormData();
+        formData.append('audio', voiceBlob, 'voice.webm');
+        formData.append('messages', JSON.stringify(cleanMessages));
+        if (currentId) formData.append('conversationId', currentId);
+        res = await axios.post(`${API_BASE}/api/admin-ai/chat`, formData, {
+          headers: {
+            'x-auth-token': localStorage.getItem('token'),
+            'Content-Type': 'multipart/form-data'
+          }
+        });
       } else {
-          const payload = { messages: cleanMessages, text: txt };
-          if (currentId) payload.conversationId = currentId;
-          res = await axios.post(`${API_BASE}/api/admin-ai/chat`, payload, {
-              headers: { 'x-auth-token': localStorage.getItem('token') }
-          });
+        const payload = { messages: cleanMessages, text: txt };
+        if (currentId) payload.conversationId = currentId;
+        res = await axios.post(`${API_BASE}/api/admin-ai/chat`, payload, {
+          headers: { 'x-auth-token': localStorage.getItem('token') }
+        });
       }
 
       if (res.data.success) {
@@ -185,38 +185,38 @@ function AdminAIChat({ user }) {
     const audioRef = useRef(new Audio());
 
     const playNext = useCallback((index) => {
-        if (index < parts.length) {
-            audioRef.current.src = parts[index];
-            audioRef.current.play().catch(e => console.error(e));
-            setCurrentIndex(index);
-            setPlaying(true);
-        } else {
-            setPlaying(false);
-            setCurrentIndex(0);
-        }
+      if (index < parts.length) {
+        audioRef.current.src = parts[index];
+        audioRef.current.play().catch(e => console.error(e));
+        setCurrentIndex(index);
+        setPlaying(true);
+      } else {
+        setPlaying(false);
+        setCurrentIndex(0);
+      }
     }, [parts]);
 
     useEffect(() => {
-        const handleEnded = () => playNext(currentIndex + 1);
-        const audio = audioRef.current;
-        audio.addEventListener('ended', handleEnded);
-        return () => audio.removeEventListener('ended', handleEnded);
+      const handleEnded = () => playNext(currentIndex + 1);
+      const audio = audioRef.current;
+      audio.addEventListener('ended', handleEnded);
+      return () => audio.removeEventListener('ended', handleEnded);
     }, [currentIndex, playNext]);
 
     return (
-        <button type="button" onClick={() => playing ? (audioRef.current.pause(), setPlaying(false)) : playNext(0)} style={styles.voicePlayBtn}>
-            {playing ? (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                    <rect x="6" y="4" width="4" height="16" />
-                    <rect x="14" y="4" width="4" height="16" />
-                </svg>
-            ) : (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M8 5v14l11-7z" />
-                </svg>
-            )}
-            <span>{playing ? "إيقاف" : "استماع"}</span>
-        </button>
+      <button type="button" onClick={() => playing ? (audioRef.current.pause(), setPlaying(false)) : playNext(0)} style={styles.voicePlayBtn}>
+        {playing ? (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="4" width="4" height="16" />
+            <rect x="14" y="4" width="4" height="16" />
+          </svg>
+        ) : (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        )}
+        <span>{playing ? "إيقاف" : "استماع"}</span>
+      </button>
     );
   };
 
@@ -270,22 +270,22 @@ function AdminAIChat({ user }) {
             {messages.map((msg, idx) => (
               <div key={idx} style={msg.role === 'user' ? styles.msgUserWrap : styles.msgModelWrap}>
                 <div style={msg.role === 'user' ? styles.msgUser : { ...styles.msgModel, overflowX: 'auto' }}>
-                  <ReactMarkdown 
+                  <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
-                      table: ({node, ...props}) => (
+                      table: ({ node, ...props }) => (
                         <div style={{ maxWidth: '100%', overflowX: 'auto', margin: '10px 0', borderRadius: '6px', border: '1px solid #e0e0e0', WebkitOverflowScrolling: 'touch' }}>
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'right' }} {...props} />
                         </div>
                       ),
-                      th: ({node, ...props}) => <th style={{ padding: '8px', backgroundColor: '#f8f9fa', borderBottom: '2px solid #028090', borderLeft: '1px solid #e0e0e0', whiteSpace: 'nowrap' }} {...props} />,
-                      td: ({node, ...props}) => <td style={{ padding: '8px', borderBottom: '1px solid #e0e0e0', borderLeft: '1px solid #e0e0e0', whiteSpace: 'nowrap' }} {...props} />
+                      th: ({ node, ...props }) => <th style={{ padding: '8px', backgroundColor: '#f8f9fa', borderBottom: '2px solid #028090', borderLeft: '1px solid #e0e0e0', whiteSpace: 'nowrap' }} {...props} />,
+                      td: ({ node, ...props }) => <td style={{ padding: '8px', borderBottom: '1px solid #e0e0e0', borderLeft: '1px solid #e0e0e0', whiteSpace: 'nowrap' }} {...props} />
                     }}
                   >
                     {msg.text}
                   </ReactMarkdown>
                   {msg.role === 'model' && msg.audioParts && msg.audioParts.length > 0 && (
-                      <VoiceResponse parts={msg.audioParts} />
+                    <VoiceResponse parts={msg.audioParts} />
                   )}
                 </div>
               </div>
@@ -302,13 +302,13 @@ function AdminAIChat({ user }) {
           </div>
 
           <div style={styles.chatFooter}>
-            <button 
-                onClick={isRecording ? stopRecording : startRecording} 
-                className={`voice-btn ${isRecording ? 'recording' : ''}`}
-                style={{ ...styles.micBtn, backgroundColor: isRecording ? '#ff4757' : '#f1f2f6', color: isRecording ? '#fff' : '#2d3436' }}
-                disabled={loading}
+            <button
+              onClick={isRecording ? stopRecording : startRecording}
+              className={`voice-btn ${isRecording ? 'recording' : ''}`}
+              style={{ ...styles.micBtn, backgroundColor: isRecording ? '#ff4757' : '#f1f2f6', color: isRecording ? '#fff' : '#2d3436' }}
+              disabled={loading}
             >
-                {isRecording ? "⬛" : "🎤"}
+              {isRecording ? "⬛" : "🎤"}
             </button>
             <textarea
               ref={inputRef}
@@ -328,59 +328,56 @@ function AdminAIChat({ user }) {
       )}
 
       {/* نافذة التعليمات */}
-      <Modal show={showInfo} onHide={() => setShowInfo(false)} centered size="lg" dir="rtl" className="admin-ai-info-modal">
+      <Modal show={showInfo} onHide={() => setShowInfo(false)} centered size="lg" dir="rtl" className="afrakoush-info-modal">
         <Modal.Header style={{ borderBottom: '2px solid #028090', backgroundColor: '#0f2736', color: '#fff', direction: 'rtl', display: 'flex', justifyContent: 'space-between' }}>
-            <Modal.Title style={{ fontWeight: 'bold', margin: 0 }}>🧠 دليل المساعد الإداري الذكي</Modal.Title>
-            <button onClick={() => setShowInfo(false)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', cursor: 'pointer', outline: 'none' }}>×</button>
+          <Modal.Title style={{ fontWeight: 'bold', margin: 0 }}>🧠 المساعد الذكي "عفركوش"</Modal.Title>
+          <button onClick={() => setShowInfo(false)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', cursor: 'pointer', outline: 'none' }}>×</button>
         </Modal.Header>
         <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto', backgroundColor: '#f8f9fa' }}>
-            <p style={{ fontSize: '15px', lineHeight: '1.6' }}><strong>المساعد الإداري الذكي</strong> هو عقلك المدبر في النظام. متصل بنبض قواعد البيانات وواجهات المركز ليمنحك تحكم كامل وعميق في كل تفصيلة، سواء عبر التحليل السريع، استخراج التقارير، أو بناء أدوات جديدة فورياً.</p>
-            
-            <hr />
+          <h5 style={{ color: '#028090', fontWeight: 'bold' }}>ما هو عفركوش؟</h5>
+          <p style={{ fontSize: '15px', lineHeight: '1.6' }}>عفركوش ليس مجرد روبوت محادثة، بل هو <strong>مهندس ذكاء اصطناعي وأداة إدارية ذكية</strong> متصلة مباشرة بقواعد البيانات وواجهات النظام. قادر على قراءة البيانات المعقدة، تحليلها، واستخراج التقارير، بل وبناء <strong>برامج وصفحات ولوحات تحكم ديناميكية تفاعلية</strong> خصيصاً لك!</p>
 
-            <h5 style={{ color: '#028090', fontWeight: 'bold' }}>أبرز أدوات المساعد 🛠️</h5>
-            <div style={{ marginBottom: '15px', fontSize: '15px', lineHeight: '1.6' }}>
-                <p style={{ marginBottom: '8px' }}><strong>1. استخراج وتحليل البيانات:</strong> يمكنه قراءة آلاف السجلات، مقارنة الإيرادات، وتلخيص العمليات اليومية (حجوزات، سلف، مصروفات) في ثوانٍ معدودة.</p>
-                <p><strong>2. العفريت المبرمج (عفركوش) 🧞‍♂️:</strong> أداة سحرية مدمجة وقوية جداً. "عفركوش" يمنح المساعد قدرة خرافية على كتابة أكواد برمجية حية لبناء <strong>صفحات وأدوات ولوحات تحكم ديناميكية تفاعلية</strong> وتخزينها في النظام لتستخدمها وقتما تشاء.</p>
-            </div>
-            
-            <hr />
-            
-            <h5 style={{ color: '#028090', fontWeight: 'bold' }}>الصلاحيات 🔐</h5>
-            <ul style={{ fontSize: '15px', lineHeight: '1.6' }}>
-                <li style={{ marginBottom: '8px' }}><strong>المدير (Admin):</strong> صلاحيات مطلقة لسؤال المساعد عن الإيرادات التفصيلية والمصاريف السرية، واستخدام "عفركوش" لبناء وتعديل لوحات للمراقبين والمديرين (مثل: manager-hub).</li>
-                <li><strong>المشرف (Supervisor):</strong> صلاحيات جلب بيانات العمليات اليومية، الحجوزات، وأداء الموظفين، ولكن لا يمكنه الوصول للمعلومات الحساسة المخصصة للإدارة العليا.</li>
-            </ul>
+          <hr />
 
-            <hr />
+          <h5 style={{ color: '#028090', fontWeight: 'bold' }}>الصلاحيات 🔐</h5>
+          <ul style={{ fontSize: '15px', lineHeight: '1.6' }}>
+            <li style={{ marginBottom: '8px' }}><strong>المدير (Admin):</strong> يملك صلاحيات مطلقة لسؤال عفركوش عن الإيرادات التفصيلية، المبيعات، ومطالبته ببناء وتعديل لوحات تحكم ديناميكية للمراقبين والمديرين (مثل: manager-hub, gharam-insights).</li>
+            <li><strong>المشرف (Supervisor):</strong> يملك صلاحيات جلب بيانات العمليات اليومية، الحجوزات، وأداء الموظفين، ولكن لا يمكنه الوصول للمصاريف السرية أو إنشاء واجهات النظام العامة والإدارية المغلقة.</li>
+          </ul>
 
-            <h5 style={{ color: '#028090', fontWeight: 'bold' }}>كيف تتحدث مع مساعدك؟ (أمثلة) ✨</h5>
-            <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0', marginBottom: '10px' }}>
-                <strong style={{ color: '#e84118' }}>لتفعيل عفركوش (للمديرين):</strong><br />
-                <span style={{ color: '#555', fontSize: '14px' }}>"يا عفركوش، ابنيلي صفحة manager-hub تعرض إيرادات اليوم في 3 كروت ملونة، وتحتها جدول فيه أفضل 3 موظفين لهذا الشهر."</span>
-            </div>
-            <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0', marginBottom: '10px' }}>
-                <strong style={{ color: '#0097e6' }}>للتحليل والتقارير المالية (للمشرفين والمديرين):</strong><br />
-                <span style={{ color: '#555', fontSize: '14px' }}>"هاتلي تقرير مفصل عن إجمالي مصاريف وسلف اليوم وقارنها بإجمالي العربون المدفوع."</span>
-            </div>
-            <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
-                <strong style={{ color: '#44bd32' }}>لإدارة العمليات:</strong><br />
-                <span style={{ color: '#555', fontSize: '14px' }}>"عاوز جدول يوضح الحجوزات اللي من المقرر تنفيذها بكرا مع اسم الباكدج والمبلغ الإجمالي."</span>
-            </div>
+          <hr />
 
-            <hr />
-            <h5 style={{ color: '#028090', fontWeight: 'bold' }}>نصائح هامة 💡</h5>
-            <ul style={{ fontSize: '14px', lineHeight: '1.6', color: '#444' }}>
-                <li>تحدث معه كأنه بشري. كن دقيقاً واذكر التواريخ المطلوبة إذا لزم الأمر.</li>
-                <li>عندما تطلب منه بناء صفحة، لا تتردد في تحديد ألوان معينة وتفاصيل دقيقة في التصميم.</li>
-                <li>استخدم علامة المايك 🎤 للتسجيل الصوتي وسيقوم بتحليل كلامك وتنفيذه فوراً.</li>
-                <li>لتصفية ذهن المساعد لطلب جديد كلياً بعيداً عن السياق الحالي، اضغط على <strong>زر ➕ (محادثة جديدة)</strong>.</li>
-            </ul>
+          <h5 style={{ color: '#028090', fontWeight: 'bold' }}>أمثلة سحرية لما يمكنك طلبه ✨</h5>
+          <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0', marginBottom: '10px' }}>
+            <strong style={{ color: '#e84118' }}>للمديرين لبناء اللوحات الإدارية:</strong><br />
+            <span style={{ color: '#555', fontSize: '14px' }}>"يا عفركوش، ابنيلي صفحة manager-hub تعرض إيرادات اليوم في 3 كروت ملونة، وتحتها جدول فيه أفضل 3 موظفين لهذا الشهر."</span>
+          </div>
+          <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0', marginBottom: '10px' }}>
+            <strong style={{ color: '#8e44ad' }}>للمديرين لتعديل الصفحة الرئيسية من الخارج (Landing Page):</strong><br />
+            <span style={{ color: '#555', fontSize: '14px' }}>"في مساحة اللاند بيج (landing-dynamic-space)، ضيفلي بانر لعرض جديد وفيه زرار واتساب.. ومتمسحش الحاجات اللي مكتوبة هناك قبل كدا!"</span>
+          </div>
+          <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0', marginBottom: '10px' }}>
+            <strong style={{ color: '#0097e6' }}>للمشرفين والمديرين للتقارير السريعة:</strong><br />
+            <span style={{ color: '#555', fontSize: '14px' }}>"هاتلي تقرير مفصل عن إجمالي مصاريف وسلف اليوم وقارنها بإجمالي العربون المدفوع."</span>
+          </div>
+          <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
+            <strong style={{ color: '#44bd32' }}>لإدارة العمليات:</strong><br />
+            <span style={{ color: '#555', fontSize: '14px' }}>"عاوز جدول يوضح الحجوزات اللي من المقرر تنفيذها بكرا مع اسم الباكدج والمبلغ الإجمالي."</span>
+          </div>
+
+          <hr />
+          <h5 style={{ color: '#028090', fontWeight: 'bold' }}>نصائح هامة 💡</h5>
+          <ul style={{ fontSize: '14px', lineHeight: '1.6', color: '#444' }}>
+            <li>كن دقيقاً في طلبك واذكر التواريخ المطلوبة إذا لزم الأمر، ولا تتردد في طلب تصميمات وألوان محددة في اللوحات.</li>
+            <li>يمكنك دائماً الاعتماد عليه لتحليل الجداول الطويلة وعمل ملخص سريع لها.</li>
+            <li>لتسجيل رسالة صوتية اضغط على علامة المايك 🎤 وتحدث، ثم سيتلقاها عفركوش ويجيبك صوتياً.</li>
+            <li>لتصفية ذهن عفركوش لطلب جديد كلياً، اضغط على <strong>زر الإضافة ➕ لبدء محادثة جديدة</strong>.</li>
+          </ul>
         </Modal.Body>
         <Modal.Footer style={{ backgroundColor: '#f8f9fa', borderTop: '1px solid #e0e0e0', justifyContent: 'flex-start' }}>
-            <Button variant="secondary" onClick={() => setShowInfo(false)} style={{ backgroundColor: '#028090', border: 'none', fontWeight: 'bold', padding: '8px 24px' }}>
-                علم، انطلق يا مساعدنا الذكي! 🚀
-            </Button>
+          <Button variant="secondary" onClick={() => setShowInfo(false)} style={{ backgroundColor: '#028090', border: 'none', fontWeight: 'bold', padding: '8px 24px' }}>
+            علم، انطلق يا عفركوش! 🚀
+          </Button>
         </Modal.Footer>
       </Modal>
     </>
@@ -398,7 +395,7 @@ const styles = {
   headerSub: { fontSize: 11, color: '#8ac4ca' },
   closeBtn: { background: 'transparent', border: 'none', color: '#fff', fontSize: 26, cursor: 'pointer', lineHeight: 1 },
   newChatHeaderBtn: { background: 'transparent', border: 'none', color: '#1fb6a6', fontSize: 20, cursor: 'pointer', lineHeight: 1 },
-  
+
   sidebarOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 20, opacity: 0, pointerEvents: 'none', transition: 'all 0.3s' },
   sidebarOverlayOpen: { opacity: 1, pointerEvents: 'auto' },
   sidebar: { position: 'absolute', top: 0, right: -280, width: 280, height: '100%', backgroundColor: '#1a1a2e', zIndex: 30, transition: 'right 0.3s ease', display: 'flex', flexDirection: 'column' },
@@ -421,7 +418,7 @@ const styles = {
   micBtn: { width: 44, height: 44, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.3s', fontSize: 18, border: '1px solid #ccc' },
   inputArea: { flex: 1, border: '1px solid #ccc', borderRadius: 14, padding: '10px 14px', resize: 'none', backgroundColor: '#f1f2f6', color: '#2d3436', outline: 'none', fontFamily: 'inherit', maxHeight: 100 },
   sendBtn: { backgroundColor: '#028090', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 16px', fontWeight: 700, cursor: 'pointer', height: 44 },
-  voicePlayBtn: { marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', border: '1px solid #e0e0e0', borderRadius: 20, background: '#f8f9fa', color: '#028090', fontSize: 12, cursor: 'pointer', fontWeight: 600, transition: '0.2s'}
+  voicePlayBtn: { marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', border: '1px solid #e0e0e0', borderRadius: 20, background: '#f8f9fa', color: '#028090', fontSize: 12, cursor: 'pointer', fontWeight: 600, transition: '0.2s' }
 };
 
 export default AdminAIChat;
