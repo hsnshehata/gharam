@@ -96,6 +96,14 @@ GET /api/bookings?page=1&limit=20
   ✅ المبلغ المدفوع فعلاً: b.total - b.remaining
   ✅ لمعرفة لو فيه فرد/صبغة/تصوير إضافي: تحقق من b.hairStraightening, b.hairDye, b.photographyPackage
 
+➕ لإضافة حجز جديد (POST /api/bookings):
+  الجسم المفصل: { 
+    clientName, clientPhone, city, eventDate, deposit, paymentMethod,
+    packageId, hennaPackageId, photographyPackageId, returnedServices:[ids], extraServices:[ids],
+    hairStraightening(bool), hairStraighteningPrice, hairStraighteningDate,
+    hairDye(bool), hairDyePrice, hairDyeDate, hennaDate
+  }
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⚡ INSTANT SERVICES - الخدمات الفورية
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -105,6 +113,9 @@ GET /api/instant-services?page=1&limit=20
     services:[{name,price,isCustom}], employeeId:{username} أو null }
   ✅ الخدمات: safeArray(item.services).map(s=>s.name).join(' + ')
   ✅ الموظف: item.employeeId?.username || 'غير محدد'
+
+➕ لإضافة خدمة فورية (POST /api/instant-services):
+  الجسم: { employeeId(اختياري), services: [مصفوفة IDs الخدمات], customServices: [{name, price}], paymentMethod }
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 👤 USERS - الموظفون ونظام النقاط
@@ -144,6 +155,11 @@ GET /api/expenses-advances?page=1&limit=50
     createdAt, paymentMethod, userId:{username}, createdBy:{username} }
   ⚠️ الخصم (deduction) يستخدم details بدل reason!
   ✅ الاستخدام: const items = safeArray(res.data?.items);
+
+➕ لإضافة (POST /api/expenses-advances):
+  - مصروف: { type: 'expense', details, amount, paymentMethod }
+  - سلفة: { type: 'advance', userId, amount, paymentMethod }
+  - خصم: { type: 'deduction', userId, amount, details } // details = السبب
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
