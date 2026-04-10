@@ -943,7 +943,13 @@ const createFunctions = (user) => ({
             const AfrakoushPage = require('../models/AfrakoushPage');
             const page = await AfrakoushPage.findOneAndUpdate(
                 { name },
-                { title, html, script, allowedRole: role, createdBy: user._id },
+                { 
+                  title: title || 'صفحة بدون عنوان', 
+                  html: html || '<div class="p-5 text-center">لا يوجد محتوى</div>', 
+                  script: script || '', 
+                  allowedRole: role, 
+                  createdBy: user._id 
+                },
                 { new: true, upsert: true }
             );
             return {
