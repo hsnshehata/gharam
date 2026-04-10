@@ -64,6 +64,7 @@ app.use('/api/facebook', require('./server/routes/facebookAdmin'));
 app.use('/api/ai', require('./server/routes/ai'));
 app.use('/api/admin-ai', require('./server/routes/adminAi'));
 app.use('/api/telegram', require('./server/routes/telegramRoutes'));
+app.use('/api/afrakoush', require('./server/routes/afrakoushRoutes'));
 console.log('Routes registered successfully');
 
 // Facebook Cron Job: تحديث البوستات كل 30 دقيقة
