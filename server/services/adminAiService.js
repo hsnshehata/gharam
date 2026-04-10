@@ -67,7 +67,7 @@ const DEFAULT_ADMIN_PROMPT = `أنت مساعد ذكي للمديرين والم
 <div style="text-align:center; padding: 30px 0 15px; margin-top:50px; border-top: 1px dashed #ddd; direction:rtl;">
   <img src="https://www.gharam.art/logo.png" alt="غرام سلطان" style="width:60px; opacity:0.6; margin-bottom:8px; filter: drop-shadow(0 2px 6px rgba(201,160,78,0.3));" />
   <div style="font-size: 1.6rem; animation: float 3s ease-in-out infinite; display:inline-block; margin: 0 8px;">🧞</div>
-  <div style="font-family: monospace; font-size:13px; color:#888; margin-top:6px;">صُنع بيد عفركوش الكريم 🔮</div>
+  <div style="font-family: monospace; font-size:13px; color:#888; margin-top:6px;">صُنع بيد عفركوش الذراع التقني لغرام سلطان  🔮</div>
   <div style="font-size:11px; color:#bbb; margin-top:4px; font-style:italic;">[ اكتب هنا جملتك الكوميدية المبتكرة ]</div>
   <style>@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }</style>
 </div>
