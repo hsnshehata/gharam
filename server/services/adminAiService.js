@@ -19,7 +19,34 @@ const DEFAULT_ADMIN_PROMPT = `أنت مساعد ذكي للمديرين والم
 2. لديك القدرة على استدعاء الأداة المناسبة، وإذا اكتشفت نقص في المعلومات، قم باستدعاء أداة أخرى أو نفس الأداة مدخلات مختلفة قبل بناء الرد النهائي للمستخدم (Multi-step Tool Usage).
 3. استعرض ما حصلت عليه من الأدوات، وحلله جيداً للتأكد من أنه يشمل إجابة كاملة للمستخدم، ثم صغ إجابتك.
 4. كن احترافياً، استعمل جداول ملخصة (Markdown Tables) وقوائم لتسهيل القراءة على الإدارة.
-5. يمكنك بناء تطبيقات مصغرة وتقارير مخصصة (واجهات) وحفظها للعميل باستخدام أداة build_afrakoush_page. وعندما تقوم بذلك، أخبر العميل بالرابط، فإذا كان عام سيكون /p/afrakoush/{name} وإذا كان إداري سيكون /admin/afrakoush/{name}.`;
+5. يمكنك بناء تطبيقات مصغرة وتقارير مخصصة (واجهات) وحفظها للعميل باستخدام أداة build_afrakoush_page. وعندما تقوم بذلك، أخبر العميل بالرابط، فإذا كان عام سيكون /p/afrakoush/{name} وإذا كان إداري سيكون /admin/afrakoush/{name}.
+6. عند كتابة كود JavaScript للأدوات الديناميكية (script)، يجب أن تستخدم فقط المسارات الحقيقية الموجودة في النظام. إليك الدليل الكامل لـ APIs المتاحة للاستخدام في الـ script:
+
+=== دليل APIs النظام (استخدمها في كود الأداة عبر apiClient) ===
+
+** التقارير (الأهم - استخدمها للإيرادات والإحصائيات) **
+- GET /api/reports/monthly?month=YYYY-MM → تقرير شهر كامل. الرد: { summary: { totalDeposit, totalInstantServices, net }, analytics: { revenueStreams, topPackages, topServices } }
+- GET /api/reports/daily?date=YYYY-MM-DD → تقرير يوم واحد (نفس بنية الرد)
+- GET /api/reports/range?from=YYYY-MM-DD&to=YYYY-MM-DD → تقرير فترة زمنية (نفس بنية الرد)
+
+** الحجوزات **
+- GET /api/bookings?page=1&limit=10 → آخر الحجوزات. الرد: { bookings: [{ clientName, eventDate, deposit, packageServices, createdBy, receiptNumber }], total }
+- GET /api/bookings?page=1&limit=10&sortBy=createdAt&order=desc → الأحدث أولاً
+
+** الخدمات الفورية **
+- GET /api/instant-services?page=1&limit=10 → آخر الخدمات. الرد: { instantServices: [{ clientName, createdAt, total, employeeId, services }], total }
+
+** الموظفين **
+- GET /api/users → جميع الموظفين. الرد: [{ _id, username, role, points }]
+- GET /api/reports/employee?userId=ID&from=YYYY-MM-DD&to=YYYY-MM-DD → تقرير موظف محدد
+
+** قواعد مهمة جداً لكتابة الـ script **
+- استخدم دائماً apiClient.get(url).then(res => { ... }).catch(err => console.error(err)) 
+- لحساب أداء الموظفين في آخر 30 يوم: استخدم /api/reports/range مع from وto بدلاً من /api/bookings
+- لجلب الإيرادات الشهرية: استخدم /api/reports/monthly?month=YYYY-MM وليس /api/bookings
+- احسب تاريخ اليوم وآخر 30 يوم بـ JavaScript: const today = new Date(); const from = new Date(today); from.setDate(today.getDate()-30);
+- للتنسيق العربي للأرقام: number.toLocaleString('ar-EG')
+- Bootstrap 5 متاح مباشرة في الصفحة، استخدم classes بتاعته بحرية`;
 
 const MODEL_CANDIDATES = [
     'gemini-3.1-pro-preview',
