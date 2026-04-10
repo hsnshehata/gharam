@@ -236,6 +236,15 @@ POST /api/admin-ai/chat
   الجسم: { text: "آخر رسالة", messages: [{role:"user",text:"..."}], conversationId: "...", additionalPrompt: "توجيه إضافي لعفركوش ليتحدث كخبير تقني مثلا" }
   الرد: { success: true, reply: "نص الرد", audioParts: [...], conversationId, title }
   ملاحظة: يمكنك استخدام هذا المسار لسؤال عفركوش (أنت) عن أي بيانات إحصائية من واجهة مخصصة تبنيها، ويمكنك إعطاء توجيه إضافي في additionalPrompt.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 المساحة الديناميكية في الصفحة الرئيسية (Landing Page)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+هناك مساحة حية (Dynamic Container) مخصصة لك داخل الـ Landing Page واسمها "landing-dynamic-space".
+الجمهور يرى محتوى هذه المساحة وتتفاعل معهم مباشرة! تستطيع إضافة أزرار، عروض خاصة، إعلانات، أو أي تصميم تريده.
+⚠️ تنبيه هام لمنع ضياع الكود: قبل تعديل المساحة الديناميكية أو إضافة شيء لها، يجب عليك دائماً وحتماً أن تقوم باستدعاء أداة get_afrakoush_page باسم "landing-dynamic-space" أولاً لتقرأ الكود الحالي الموجود بداخلها.
+بعد أن تقرأه، ادمج إضافاتك الجديدة أو تعديلاتك مع الكود الحالي الذي قرأته، ثم قم باستدعاء أداة build_afrakoush_page لصلاحية public للحفظ.
+إذا طلب منك المدير "حذف محتوى مساحة اللاند بيج بالكامل" فقط قم ببنائها بكود html فارغ.
 - FacebookPost / MediaGallery: المنشورات ومعرض الصور. GET /api/packages/gallery
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -511,6 +520,17 @@ const adminTools = [
                         allowedRole: { type: "STRING", description: "الصلاحية המسموحة: admin, supervisor, employee, أو public. الفتراضي هو supervisor." }
                     },
                     required: ["name", "title", "html", "script"]
+                }
+            },
+            {
+                name: "get_afrakoush_page",
+                description: "يجلب كود HTML و JavaScript الخاص بصفحة عفركوش معينة تم بناؤها مسبقاً، لقراءته والتعديل عليه بدون مسحه بالخطأ. استخدمها قبل إضافة أو تعديل في مساحة مثل landing-dynamic-space.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        name: { type: "STRING", description: "الاسم المختصر للأداة أو المساحة (مثال: landing-dynamic-space)." }
+                    },
+                    required: ["name"]
                 }
             }
         ]
@@ -1271,6 +1291,26 @@ const createFunctions = (user) => ({
         } catch (err) {
             console.error('[AdminAI] build_afrakoush_page error:', err.message);
             return { error: "فشل بناء الأداة: " + err.message };
+        }
+    },
+    get_afrakoush_page: async ({ name }) => {
+        try {
+            const AfrakoushPage = require('../models/AfrakoushPage');
+            const page = await AfrakoushPage.findOne({ name }).lean();
+            if(!page) {
+                return { success: false, message: "هذه المساحة أو الأداة ليس لها كود محفوظ بعد (مساحة فارغة)." };
+            }
+            return {
+                success: true,
+                title: page.title,
+                html: page.html,
+                script: page.script,
+                allowedRole: page.allowedRole,
+                status: page.status
+            };
+        } catch (err) {
+            console.error('[AdminAI] get_afrakoush_page error:', err.message);
+            return { error: "فشل استرداد الكود: " + err.message };
         }
     }
 });
