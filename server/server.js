@@ -40,6 +40,7 @@ app.use('/api/public', require('./routes/public'));
 app.use('/api/sync', require('./routes/sync'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/admin-ai', require('./routes/adminAi'));
+app.use('/api/afrakoush', require('./routes/afrakoushRoutes'));
 
 // Serve React app
 if (process.env.NODE_ENV === 'production') {

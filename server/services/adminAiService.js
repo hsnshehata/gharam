@@ -18,7 +18,8 @@ const DEFAULT_ADMIN_PROMPT = `أنت مساعد ذكي للمديرين والم
 1. اقرأ التوجيه من المستخدم بتأني ومراجعة. الطلبات قد تحتوي على مهام مركبة تتطلب دمج معلومات مختلفة (مثلاً: بحث عن حجز + جلب سجل تعديلاته).
 2. لديك القدرة على استدعاء الأداة المناسبة، وإذا اكتشفت نقص في المعلومات، قم باستدعاء أداة أخرى أو نفس الأداة مدخلات مختلفة قبل بناء الرد النهائي للمستخدم (Multi-step Tool Usage).
 3. استعرض ما حصلت عليه من الأدوات، وحلله جيداً للتأكد من أنه يشمل إجابة كاملة للمستخدم، ثم صغ إجابتك.
-4. كن احترافياً، استعمل جداول ملخصة (Markdown Tables) وقوائم لتسهيل القراءة على الإدارة.`;
+4. كن احترافياً، استعمل جداول ملخصة (Markdown Tables) وقوائم لتسهيل القراءة على الإدارة.
+5. يمكنك بناء تطبيقات مصغرة وتقارير مخصصة (واجهات) وحفظها للعميل باستخدام أداة build_afrakoush_page. وعندما تقوم بذلك، أخبر العميل بالرابط، فإذا كان عام سيكون /p/afrakoush/{name} وإذا كان إداري سيكون /admin/afrakoush/{name}.`;
 
 const MODEL_CANDIDATES = [
     'gemini-3.1-pro-preview',
@@ -185,6 +186,21 @@ const adminTools = [
                         endDate: { type: "STRING", description: "تاريخ النهاية (YYYY-MM-DD) اختياري." }
                     },
                     required: []
+                }
+            },
+            {
+                name: "build_afrakoush_page",
+                description: "يبني أو يعدل صفحة واجهة مستخدم (HTML + JS) تعرض بيانات وأدوات مخصصة ويخزنها كأداة ديناميكية.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        name: { type: "STRING", description: "اسم مختصر للرابط بالانجليزية (مثال: yearly-report) يعبر عن الأداة." },
+                        title: { type: "STRING", description: "اسم الصفحة بالعربية." },
+                        html: { type: "STRING", description: "تصميم الواجهة باستخدام Bootstrap 5. ضع فقط محتوى الصفحة بدون <html> أو <body>." },
+                        script: { type: "STRING", description: "كود جافاسكريبت نقي (Vanilla JS) يستخدم كائن apiClient (المجهز بـ axios) والـ container لجلب البيانات والتفاعل. مثلا: apiClient.get('/api/bookings').then..." },
+                        allowedRole: { type: "STRING", description: "الصلاحية המسموحة: admin, supervisor, employee, أو public. الفتراضي هو supervisor." }
+                    },
+                    required: ["name", "title", "html", "script"]
                 }
             }
         ]
@@ -916,6 +932,29 @@ const createFunctions = (user) => ({
         } catch (err) {
             console.error('[AdminAI] search_admin_conversations error:', err.message);
             return { error: "فشل استرجاع المحادثات: " + err.message };
+        }
+    },
+    build_afrakoush_page: async ({ name, title, html, script, allowedRole }) => {
+        try {
+            if (user.role !== 'admin') {
+                return { error: "صلاحية بناء الأدوات مخصصة للمدير (Admin) فقط." };
+            }
+            const role = allowedRole || 'supervisor';
+            const AfrakoushPage = require('../models/AfrakoushPage');
+            const page = await AfrakoushPage.findOneAndUpdate(
+                { name },
+                { title, html, script, allowedRole: role, createdBy: user._id },
+                { new: true, upsert: true }
+            );
+            return {
+                success: true,
+                message: "تم حفظ الصفحة بنجاح والتخزين.",
+                public_url: role === 'public' ? `/p/afrakoush/${name}` : `غير متاح عام للإدارة فقط`,
+                admin_url: `/admin/afrakoush/${name}`
+            };
+        } catch (err) {
+            console.error('[AdminAI] build_afrakoush_page error:', err.message);
+            return { error: "فشل بناء الأداة: " + err.message };
         }
     }
 });
