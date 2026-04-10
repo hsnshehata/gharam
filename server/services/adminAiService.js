@@ -50,17 +50,45 @@ const DEFAULT_ADMIN_PROMPT = `أنت مساعد ذكي للمديرين والم
 
 === المكتبات المتاحة للاستخدام في الـ script (لا تحتاج import، متوفرة عالمياً) ===
 
-** Chart.js (للرسوم البيانية) **
-- متاحة عبر CDN، أضف في الـ html: <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-- لرسم مخطط: new Chart(document.getElementById('myChart'), { type: 'bar'|'line'|'doughnut'|'pie', data: { labels: [], datasets: [{ label: '', data: [], backgroundColor: [] }] }, options: {} })
-- استخدم canvas في الـ html: <canvas id="myChart" width="400" height="200"></canvas>
-- مثال على ألوان جميلة: ['#0d6efd','#20c997','#fd7e14','#dc3545','#6f42c1','#ffc107']
+** Chart.js (للرسوم البيانية) - قاعدة مهمة جداً **
+- ⚠️ لا تضع <script src="..."> في الـ html لأن innerHTML لا ينفذ script tags أبداً!
+- بدلاً من ذلك، حمّل المكتبة ديناميكياً من الـ script بهذا النمط الإلزامي:
 
-** FontAwesome (أيقونات) **
-- متاحة عبر CDN، أضف في الـ html: <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-- استخدم: <i class="fas fa-chart-bar"></i> أو <i class="fas fa-users"></i> أو <i class="fas fa-money-bill-wave"></i>
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
 
-** تنبيه: لا تستخدم import أو require في الـ script، استخدم CDN في الـ html **
+// ثم استخدمها هكذا:
+loadScript('https://cdn.jsdelivr.net/npm/chart.js').then(() => {
+  new Chart(document.getElementById('myChart'), {
+    type: 'doughnut', // أو bar أو line أو pie
+    data: { labels: [], datasets: [{ data: [], backgroundColor: ['#0d6efd','#20c997','#fd7e14'] }] }
+  });
+});
+
+- ضع <canvas id="myChart"></canvas> في الـ html
+- ألوان مقترحة: ['#0d6efd','#20c997','#fd7e14','#dc3545','#6f42c1','#ffc107']
+
+** FontAwesome (أيقونات) - نفس القاعدة **
+- ⚠️ لا تضع <link> في الـ html، بل حمّل الـ CSS ديناميكياً من الـ script:
+
+function loadCSS(href) {
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = href;
+  document.head.appendChild(link);
+}
+loadCSS('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css');
+
+- بعدها استخدم مباشرة في الـ html: <i class="fas fa-chart-bar"></i>
+
+** القاعدة الذهبية: كل <script> و<link> خارجية تحملها من الـ JavaScript script بالدوال السابقة **
 
 === توقيع عفركوش الإلزامي في كل صفحة ===
 في نهاية كل html تبنيه، يجب إضافة توقيع عفركوش بشكل إلزامي. ابتكر في كل مرة جملة كوميدية جديدة وفريدة من خيالك (غير ثابتة!) تعبر عن روح العفريت الذي بنى هذه الصفحة. أمثلة على الأسلوب (لا تكررها): "رحت جيت ولقيت البيانات مش نامة"، "فركت المصباح وطلعت تقرير"، "عفاريت الكود كانت معايا الليلة". لا تقل نفس الجملة مرتين!
@@ -999,12 +1027,12 @@ const createFunctions = (user) => ({
             const AfrakoushPage = require('../models/AfrakoushPage');
             const page = await AfrakoushPage.findOneAndUpdate(
                 { name },
-                { 
-                  title: title || 'صفحة بدون عنوان', 
-                  html: html || '<div class="p-5 text-center">لا يوجد محتوى</div>', 
-                  script: script || '', 
-                  allowedRole: role, 
-                  createdBy: user._id 
+                {
+                    title: title || 'صفحة بدون عنوان',
+                    html: html || '<div class="p-5 text-center">لا يوجد محتوى</div>',
+                    script: script || '',
+                    allowedRole: role,
+                    createdBy: user._id
                 },
                 { new: true, upsert: true }
             );
