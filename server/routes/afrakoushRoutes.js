@@ -8,6 +8,22 @@ const User = require('../models/User');
 const roleLevels = { public: 0, employee: 1, supervisor: 2, admin: 3 };
 const getUserLevel = (role) => roleLevels[role] || 1;
 
+// Admin ONLY: Get all pages for registry
+router.get('/', authenticate, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('role');
+        if (user.role !== 'admin') {
+            return res.status(403).json({ message: 'غير مصرح لك' });
+        }
+        
+        const pages = await AfrakoushPage.find().sort({ createdAt: -1 });
+        res.json(pages);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
 // Get a specific page by name
 router.get('/:name', async (req, res) => {
     try {
@@ -50,22 +66,6 @@ router.get('/:name', async (req, res) => {
         res.json(page);
     } catch (err) {
         console.error('Error fetching afrakoush page:', err);
-        res.status(500).send('Server Error');
-    }
-});
-
-// Admin ONLY: Get all pages for registry
-router.get('/', authenticate, async (req, res) => {
-    try {
-        const user = await User.findById(req.user.id).select('role');
-        if (user.role !== 'admin') {
-            return res.status(403).json({ message: 'غير مصرح لك' });
-        }
-        
-        const pages = await AfrakoushPage.find().sort({ createdAt: -1 });
-        res.json(pages);
-    } catch (err) {
-        console.error(err);
         res.status(500).send('Server Error');
     }
 });
