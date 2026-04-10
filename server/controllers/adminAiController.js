@@ -44,6 +44,7 @@ exports.getAllConversationsAdmin = async (req, res) => {
         if (req.user.role !== 'admin') return res.status(403).json({ success: false, message: 'متاح للمدير فقط' });
         const convs = await AdminConversation.find({})
             .populate('userId', 'username role')
+            .populate('telegramAccountId', 'name role')
             .sort({ lastActivity: -1 });
         res.json({ success: true, data: convs });
     } catch (err) {
