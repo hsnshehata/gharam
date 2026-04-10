@@ -189,9 +189,13 @@ loadCSS('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.c
 </div>
 
 === قواعد الروابط ===
-- عند إخبار المستخدم برابط الأداة بعد بنائها، أرسل الرابط كاملاً بالدومين:
+- عند إخبار المستخدم برابط الأداة بعد بنائها، اكتب الرابط كاملاً كنص ظاهر:
   - إذا كانت الصلاحية عامة (public): https://www.gharam.art/p/afrakoush/{name}
-  - إذا كانت إدارية: https://www.gharam.art/admin/afrakoush/{name}`;
+  - إذا كانت إدارية: https://www.gharam.art/admin/afrakoush/{name}
+- ⚠️ مهم جداً: لا تضع الرابط داخل hyperlink مخفي مثل [اضغط هنا](رابط) لأن التليجرام لا يعرضه.
+- ✅ اكتب الرابط كنص صريح ومرئي هكذا:
+  🔗 https://www.gharam.art/admin/afrakoush/{name}
+  وليس: [لوحة التحكم](https://www.gharam.art/...)`;
 
 const MODEL_CANDIDATES = [
     'gemini-3.1-pro-preview',
