@@ -35,18 +35,26 @@ const ReceiptPrint = ({ data, type }) => {
           .receipt-content, .receipt-content * {
             color: #000 !important;
           }
-          .receipt-content th, .receipt-content td {
+          .receipt-content th, .receipt-content td,
+          .receipt-content .table thead th,
+          .receipt-content .table th,
+          .receipt-content .table td,
+          .receipt-content thead th {
             color: #000 !important;
             background-color: #fff !important;
+            background: #fff !important;
           }
           @media print {
-            @page { size: 75mm auto; margin: 0; }
+            @page { size: 90mm auto; margin: 0; }
             body { margin: 0; padding: 0; width: 75mm; }
             /* اخفي كل حاجة وقت الطباعة إلا الوصل النشط */
             body * { visibility: hidden !important; }
             .receipt-content.print-active, .receipt-content.print-active * { visibility: visible !important; color: #000 !important; }
-            .receipt-content.print-active { position: absolute; left: 0; top: 0; width: 75mm; margin: 0 auto; padding: 3mm; font-size: 15px; text-align: center; }
-            .receipt-content.print-active th, .receipt-content.print-active td { color: #000 !important; background-color: #fff !important; }
+            .receipt-content.print-active { position: absolute; left: 0; top: 0; width: 75mm; margin: 0 auto; padding: 10mm 3mm 5mm 3mm; font-size: 15px; text-align: center; }
+            .receipt-content.print-active th,
+            .receipt-content.print-active td,
+            .receipt-content.print-active .table thead th,
+            .receipt-content.print-active thead th { color: #000 !important; background-color: #fff !important; background: #fff !important; }
             .qr-code { margin: 5mm auto; }
             table { width: 100%; border-collapse: collapse; }
             th, td { border: 1px solid #000; padding: 2mm; }
