@@ -13,9 +13,9 @@ const MODEL_CANDIDATES = [
     'gemini-3.1-flash-lite-preview',
     'gemini-2.5-flash',
     'gemini-2.5-flash-lite',
+    'gemini-3-flash-preview',
     'gemini-3.1-pro-preview',
-    'gemini-2.5-pro',
-    'gemini-3-flash-preview'
+    'gemini-2.5-pro'
 ];
 
 const tools = [
@@ -155,7 +155,9 @@ Keep your answers relatively concise, as users read this on a messenger app.`);
         throw new Error('Gemini API key not configured on server');
     }
 
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    // Build API keys list: primary + optional backup (from different project for separate quota)
+    const apiKeys = [process.env.GEMINI_API_KEY];
+    if (process.env.GEMINI_API_KEY_2) apiKeys.push(process.env.GEMINI_API_KEY_2);
 
     let cleanHistory = [];
     let prefixText = "";
@@ -202,53 +204,65 @@ Keep your answers relatively concise, as users read this on a messenger app.`);
     let reply = null;
     let lastError = null;
 
-    for (const modelName of MODEL_CANDIDATES) {
-        try {
-            const model = genAI.getGenerativeModel({
-                model: modelName,
-                tools: tools,
-                systemInstruction: finalSystemPrompt
-            });
+    // Try each API key, then each model within that key
+    for (let keyIdx = 0; keyIdx < apiKeys.length; keyIdx++) {
+        const currentKey = apiKeys[keyIdx];
+        const keyLabel = keyIdx === 0 ? 'Primary' : 'Backup';
+        const genAI = new GoogleGenerativeAI(currentKey);
 
-            const chat = model.startChat({ history: cleanHistory });
-            let result = await chat.sendMessage(userMessageParts);
-            let response = result.response;
-
-            let callCount = 0;
-            while (response.functionCalls()?.length && callCount < 5) {
-                const functionCalls = response.functionCalls();
-                const functionResponses = [];
-
-                for (const call of functionCalls) {
-                    const functionName = call.name;
-                    const args = call.args;
-                    if (chatFunctions[functionName]) {
-                        const data = await chatFunctions[functionName](args);
-                        functionResponses.push({
-                            functionResponse: {
-                                name: functionName,
-                                response: { content: data }
-                            }
-                        });
-                    }
-                }
-
-                if (functionResponses.length > 0) {
-                    result = await chat.sendMessage(functionResponses);
-                    response = result.response;
-                }
-                callCount++;
-            }
-
-            reply = response.text();
-            console.log(`[AI] Success with model: ${modelName}`);
-            break;
-        } catch (modelErr) {
-            lastError = modelErr;
-            console.log(`[AI] Model ${modelName} failed: ${modelErr.message?.slice(0, 100)}`);
-            if (modelErr.status === 400 || modelErr.status === 403) break; // Break for auth or bad request
-
+        if (keyIdx > 0) {
+            console.log(`[AI] 🔄 Switching to ${keyLabel} API key...`);
         }
+
+        for (const modelName of MODEL_CANDIDATES) {
+            try {
+                const model = genAI.getGenerativeModel({
+                    model: modelName,
+                    tools: tools,
+                    systemInstruction: finalSystemPrompt
+                });
+
+                const chat = model.startChat({ history: cleanHistory });
+                let result = await chat.sendMessage(userMessageParts);
+                let response = result.response;
+
+                let callCount = 0;
+                while (response.functionCalls()?.length && callCount < 5) {
+                    const functionCalls = response.functionCalls();
+                    const functionResponses = [];
+
+                    for (const call of functionCalls) {
+                        const functionName = call.name;
+                        const args = call.args;
+                        if (chatFunctions[functionName]) {
+                            const data = await chatFunctions[functionName](args);
+                            functionResponses.push({
+                                functionResponse: {
+                                    name: functionName,
+                                    response: { content: data }
+                                }
+                            });
+                        }
+                    }
+
+                    if (functionResponses.length > 0) {
+                        result = await chat.sendMessage(functionResponses);
+                        response = result.response;
+                    }
+                    callCount++;
+                }
+
+                reply = response.text();
+                console.log(`[AI] ✅ Success with model: ${modelName} (${keyLabel} key)`);
+                break;
+            } catch (modelErr) {
+                lastError = modelErr;
+                console.log(`[AI] ❌ Model ${modelName} failed (${keyLabel} key): ${modelErr.message?.slice(0, 100)}`);
+                if (modelErr.status === 400 || modelErr.status === 403) break; // Break for auth or bad request
+            }
+        }
+
+        if (reply !== null) break; // Got a response, stop trying keys
     }
 
     if (reply === null) {
