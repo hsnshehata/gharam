@@ -499,8 +499,9 @@ function AdminAIChat({ user }) {
             100% { transform: translateY(0px) scale(1); filter: drop-shadow(0 0 10px rgba(2, 128, 144, 0.4)); }
           }
           @keyframes fadeInStatus {
-            0% { opacity: 0; transform: translateY(4px); }
-            100% { opacity: 1; transform: translateY(0); }
+            0% { opacity: 0; transform: translateY(6px); filter: blur(2px); }
+            60% { opacity: 0.7; filter: blur(0); }
+            100% { opacity: 1; transform: translateY(0); filter: blur(0); }
           }
           .afrakoush-magic-fab {
             position: fixed;
@@ -656,7 +657,7 @@ function AdminAIChat({ user }) {
               <div style={styles.msgModelWrap}>
                 <div style={{ ...styles.msgModel, display: 'flex', alignItems: 'center', gap: 8, minWidth: 180 }}>
                   <Spinner animation="border" size="sm" style={{ color: '#028090', borderWidth: '2px', flexShrink: 0 }} />
-                  <span key={toolStatus || 'default'} style={{ fontSize: 12, color: '#555', animation: 'fadeInStatus 0.4s ease' }}>
+                  <span key={toolStatus || 'default'} style={{ fontSize: 12, color: '#555', animation: 'fadeInStatus 0.6s ease-out' }}>
                     {toolStatus || '🧠 يُحلل الطلب ويفكر...'}
                   </span>
                 </div>
