@@ -6,6 +6,16 @@ import { faQrcode, faSearch } from '@fortawesome/free-solid-svg-icons';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useToast } from '../components/ToastProvider';
 
+const formatDate = (dateString) => {
+  if (!dateString) return 'غير متوفر';
+  const d = new Date(dateString);
+  if (isNaN(d)) return 'غير متوفر';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 function HallSupervision() {
   const [bookings, setBookings] = useState({
     makeupBookings: [],
@@ -510,7 +520,7 @@ function HallSupervision() {
                   })()}
                 </p>
                 <p>رقم الوصل: {searchResult.data.receiptNumber}</p>
-                <p>تاريخ المناسبة: {searchResult.data.eventDate ? new Date(searchResult.data.eventDate).toLocaleDateString() : 'غير متوفر'}</p>
+                <p>تاريخ المناسبة: {searchResult.data.eventDate ? formatDate(searchResult.data.eventDate) : 'غير متوفر'}</p>
                 <Table striped bordered hover size="sm" responsive>
                   <thead>
                     <tr>
@@ -531,7 +541,7 @@ function HallSupervision() {
             ) : (
               <>
                 <p>رقم الوصل: {searchResult.data.receiptNumber}</p>
-                <p>تاريخ الخدمة: {searchResult.data.createdAt ? new Date(searchResult.data.createdAt).toLocaleDateString() : 'غير متوفر'}</p>
+                <p>تاريخ الخدمة: {searchResult.data.createdAt ? formatDate(searchResult.data.createdAt) : 'غير متوفر'}</p>
                 <Table striped bordered hover size="sm" responsive>
                   <thead>
                     <tr>
@@ -631,7 +641,7 @@ function HallSupervision() {
                         <span className="text-muted">رقم الوصل: {booking.receiptNumber}</span>
                       </Card.Title>
                       <Card.Text className="mb-2">
-                        تاريخ المناسبة: {booking.eventDate ? new Date(booking.eventDate).toLocaleDateString() : 'غير متوفر'}
+                        تاريخ المناسبة: {booking.eventDate ? formatDate(booking.eventDate) : 'غير متوفر'}
                       </Card.Text>
                       <Table striped bordered hover size="sm" responsive>
                         <thead>

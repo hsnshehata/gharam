@@ -6,10 +6,21 @@ import Select from 'react-select';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faPrint, faEdit, faEye, faDollarSign, faTrash } from '@fortawesome/free-solid-svg-icons';
 import ReceiptPrint, { printReceiptElement } from '../pages/ReceiptPrint';
+import DateInput from '../components/DateInput';
 import { Link } from 'react-router-dom';
 import { useToast } from '../components/ToastProvider';
 import { getRecentEntries, saveRecentEntry } from '../utils/recentEntries';
 
+
+const formatDate = (dateString) => {
+  if (!dateString) return 'غير متوفر';
+  const d = new Date(dateString);
+  if (isNaN(d)) return 'غير متوفر';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return day + '/' + month + '/' + year;
+};
 function Dashboard({ user }) {
   const [summary, setSummary] = useState({
     bookingCount: 0,
@@ -396,8 +407,14 @@ function Dashboard({ user }) {
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     if (bookingSubmitting) return;
+    // Clean any partial date values before submitting
+    const cleanDate = (v) => (v && v.startsWith('__partial__')) ? '' : v;
     const submitData = {
       ...bookingFormData,
+      eventDate: cleanDate(bookingFormData.eventDate),
+      hennaDate: cleanDate(bookingFormData.hennaDate),
+      hairStraighteningDate: cleanDate(bookingFormData.hairStraighteningDate),
+      hairDyeDate: cleanDate(bookingFormData.hairDyeDate),
       deposit: Number(bookingFormData.deposit) || 0,
       hairStraighteningPrice: bookingFormData.hairStraightening === 'yes' ? Number(bookingFormData.hairStraighteningPrice) || 0 : 0,
       hairDyePrice: bookingFormData.hairDye === 'yes' ? Number(bookingFormData.hairDyePrice) || 0 : 0,
@@ -891,7 +908,7 @@ function Dashboard({ user }) {
                 </Card.Title>
                 <Card.Text>
                   رقم الهاتف: {booking.clientPhone}<br />
-                  تاريخ الصبغة: {booking.hairDyeDate ? new Date(booking.hairDyeDate).toLocaleDateString() : 'غير متوفر'}<br />
+                  تاريخ الصبغة: {booking.hairDyeDate ? formatDate(booking.hairDyeDate) : 'غير متوفر'}<br />
                   المدفوع: {booking.deposit} جنيه<br />
                   المتبقي: {booking.remaining} جنيه
                 </Card.Text>
@@ -1072,7 +1089,7 @@ function Dashboard({ user }) {
 
       <Card className="mb-4">
         <Card.Body>
-          <Card.Title>ملخص اليوم ({new Date(date).toLocaleDateString()})</Card.Title>
+          <Card.Title>ملخص اليوم ({formatDate(date)})</Card.Title>
           <Card.Text>
             إجمالي العربون: {summary.totalDeposit} جنيه<br />
             إجمالي الخدمات الفورية: {summary.totalInstantServices} جنيه<br />
@@ -1157,8 +1174,7 @@ function Dashboard({ user }) {
               <Col md={6}>
                 <Form.Group>
                   <Form.Label>تاريخ المناسبة</Form.Label>
-                  <Form.Control
-                    type="date"
+                  <DateInput
                     value={bookingFormData.eventDate}
                     onChange={(e) => setBookingFormData({ ...bookingFormData, eventDate: e.target.value })}
                     required
@@ -1200,8 +1216,7 @@ function Dashboard({ user }) {
                 <Col md={6}>
                   <Form.Group>
                     <Form.Label>تاريخ الحنة</Form.Label>
-                    <Form.Control
-                      type="date"
+                    <DateInput
                       value={bookingFormData.hennaDate}
                       onChange={(e) => setBookingFormData({ ...bookingFormData, hennaDate: e.target.value })}
                       required
@@ -1254,8 +1269,7 @@ function Dashboard({ user }) {
                   <Col md={6}>
                     <Form.Group>
                       <Form.Label>تاريخ فرد الشعر</Form.Label>
-                      <Form.Control
-                        type="date"
+                      <DateInput
                         value={bookingFormData.hairStraighteningDate}
                         onChange={(e) => setBookingFormData({ ...bookingFormData, hairStraighteningDate: e.target.value })}
                         required
@@ -1294,8 +1308,7 @@ function Dashboard({ user }) {
                   <Col md={6}>
                     <Form.Group>
                       <Form.Label>تاريخ الصبغة</Form.Label>
-                      <Form.Control
-                        type="date"
+                      <DateInput
                         value={bookingFormData.hairDyeDate}
                         onChange={(e) => setBookingFormData({ ...bookingFormData, hairDyeDate: e.target.value })}
                         required
@@ -1379,7 +1392,7 @@ function Dashboard({ user }) {
                       {editBooking.installments.map((inst, index) => (
                         <tr key={index}>
                           <td>{inst.amount} جنيه</td>
-                          <td>{new Date(inst.date).toLocaleDateString()}</td>
+                          <td>{formatDate(inst.date)}</td>
                           <td>{inst.employeeId?.username || 'غير معروف'}</td>
                         </tr>
                       ))}
@@ -1784,8 +1797,8 @@ function Dashboard({ user }) {
               <p>اسم العميل: {currentDetails.clientName}</p>
               <p>رقم الهاتف: {currentDetails.clientPhone}</p>
               <p>المدينة: {currentDetails.city || 'غير متوفر'}</p>
-              <p>تاريخ المناسبة: {new Date(currentDetails.eventDate).toLocaleDateString()}</p>
-              {currentDetails.hennaDate && <p>تاريخ الحنة: {new Date(currentDetails.hennaDate).toLocaleDateString()}</p>}
+              <p>تاريخ المناسبة: {formatDate(currentDetails.eventDate)}</p>
+              {currentDetails.hennaDate && <p>تاريخ الحنة: {formatDate(currentDetails.hennaDate)}</p>}
               <p>الباكدج: {currentDetails.package?.name || 'غير محدد'}</p>
               {currentDetails.hennaPackage && <p>باكدج حنة: {currentDetails.hennaPackage.name}</p>}
               {currentDetails.photographyPackage && <p>باكدج تصوير: {currentDetails.photographyPackage.name}</p>}
@@ -1799,14 +1812,14 @@ function Dashboard({ user }) {
                 <>
                   <p>فرد شعر: نعم</p>
                   <p>سعر فرد الشعر: {currentDetails.hairStraighteningPrice} جنيه</p>
-                  <p>تاريخ فرد الشعر: {new Date(currentDetails.hairStraighteningDate).toLocaleDateString()}</p>
+                  <p>تاريخ فرد الشعر: {formatDate(currentDetails.hairStraighteningDate)}</p>
                 </>
               )}
               {currentDetails.hairDye && (
                 <>
                   <p>صبغة شعر: نعم</p>
                   <p>سعر الصبغة: {currentDetails.hairDyePrice} جنيه</p>
-                  <p>تاريخ الصبغة: {currentDetails.hairDyeDate ? new Date(currentDetails.hairDyeDate).toLocaleDateString() : 'غير متوفر'}</p>
+                  <p>تاريخ الصبغة: {currentDetails.hairDyeDate ? formatDate(currentDetails.hairDyeDate) : 'غير متوفر'}</p>
                 </>
               )}
               <p>الإجمالي: {currentDetails.total} جنيه</p>
@@ -1829,7 +1842,7 @@ function Dashboard({ user }) {
                       {currentDetails.installments.map((inst, index) => (
                         <tr key={index}>
                           <td>{inst.amount} جنيه</td>
-                          <td>{new Date(inst.date).toLocaleDateString()}</td>
+                          <td>{formatDate(inst.date)}</td>
                           <td>{inst.paymentMethod || 'كاش'}</td>
                           <td>{inst.employeeId?.username || 'غير معروف'}</td>
                           {user?.role === 'admin' && (
@@ -1862,7 +1875,7 @@ function Dashboard({ user }) {
                     <tbody>
                       {currentDetails.updates.map((update, index) => (
                         <tr key={index}>
-                          <td>{new Date(update.date).toLocaleDateString()}</td>
+                          <td>{formatDate(update.date)}</td>
                           <td>{renderUpdateChanges(update.changes)}</td>
                           <td>{update.employeeId?.username || 'غير معروف'}</td>
                         </tr>

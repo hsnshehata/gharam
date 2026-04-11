@@ -26,7 +26,7 @@ const OG_IMAGE_WIDTH = '1200';
 const OG_IMAGE_HEIGHT = '630';
 const TWITTER_SITE = '@gharamsoltan';
 const PRICES_URL = 'https://gharam.art/prices';
-const MASSAGE_CHAIR_URL = 'https://gharam.art/massage-chair';
+const MASSAGE_CHAIR_URL = 'https://gharam.art/massage-chair'
 
 const INSTAGRAM_SVG = (
 	<path
@@ -614,7 +614,7 @@ function Landing() {
 				if (res.data && afrakoushSpaceRef.current) {
 					// 1. Inject HTML
 					afrakoushSpaceRef.current.innerHTML = res.data.html || '';
-					
+
 					// 2. Execute script
 					if (res.data.script && res.data.script.trim() !== '') {
 						try {
@@ -974,84 +974,84 @@ function Landing() {
 		<div className="landing-page" dir="rtl">
 			<style>{css}</style>
 			<section className="hero reveal">
-					<img
-						className="hero-bg"
-						src="/banner-b.png"
-						alt="غرام سلطان تجهز عروسة في صالون بيوتي سنتر"
-						loading="eager"
-					/>
-					{/* Gradient overlay */}
-					<div className="hero-overlay" />
-					{/* Floating gold particles */}
-					<div className="hero-particles" aria-hidden>
-						{Array.from({ length: 12 }).map((_, i) => (
-							<span
-								key={i}
-								className="hero-particle"
-								style={{
-									top: `${10 + Math.random() * 80}%`,
-									left: `${Math.random() * 60}%`,
-									animationDelay: `${i * 0.7}s`,
-									animationDuration: `${6 + Math.random() * 6}s`,
-									width: `${3 + Math.random() * 4}px`,
-									height: `${3 + Math.random() * 4}px`,
-								}}
-							/>
-						))}
+				<img
+					className="hero-bg"
+					src="/banner-b.png"
+					alt="غرام سلطان تجهز عروسة في صالون بيوتي سنتر"
+					loading="eager"
+				/>
+				{/* Gradient overlay */}
+				<div className="hero-overlay" />
+				{/* Floating gold particles */}
+				<div className="hero-particles" aria-hidden>
+					{Array.from({ length: 12 }).map((_, i) => (
+						<span
+							key={i}
+							className="hero-particle"
+							style={{
+								top: `${10 + Math.random() * 80}%`,
+								left: `${Math.random() * 60}%`,
+								animationDelay: `${i * 0.7}s`,
+								animationDuration: `${6 + Math.random() * 6}s`,
+								width: `${3 + Math.random() * 4}px`,
+								height: `${3 + Math.random() * 4}px`,
+							}}
+						/>
+					))}
+				</div>
+				{/* Hero content */}
+				<div className="hero-content">
+					<img className="hero-logo" src="/logo.png" alt="شعار غرام سلطان" />
+					<div className="hero-tag">
+						<span>✨</span>
+						<span>خبيرة التجميل الأولى في كفر الشيخ</span>
 					</div>
-					{/* Hero content */}
-					<div className="hero-content">
-						<img className="hero-logo" src="/logo.png" alt="شعار غرام سلطان" />
-						<div className="hero-tag">
-							<span>✨</span>
-							<span>خبيرة التجميل الأولى في كفر الشيخ</span>
-						</div>
-						<h1 style={{ color: '#fff', margin: '0', textShadow: '0 2px 20px rgba(0,0,0,0.3)' }}>
-							إطلالة ساحرة مع<br />
-							<span style={{ color: '#c9a04e' }}>غرام سلطان</span>
-						</h1>
-						<p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '1.05rem', maxWidth: '420px' }}>
-							أحدث صيحات الميكب والتصوير الاحترافي بلمسة تجمع الخبرة والابتكار.
-							ليلة العمر تستاهل الأفضل.
-						</p>
-						<div className="cta-row" style={{ gap: '12px' }}>
-							<button
-								className="btn"
-								onClick={() => window.location.href = '/prices'}
-								style={{
-									background: 'linear-gradient(135deg, #1a3a2a, #2a5a3a)',
-									color: '#fff',
-									padding: '14px 28px',
-									fontSize: '15px',
-									fontWeight: 800,
-									borderRadius: '14px',
-									border: '1px solid rgba(201,160,78,0.3)',
-									boxShadow: '0 8px 24px rgba(26,58,42,0.4)'
-								}}
-							>
-								💸 أسعار الخدمات
-							</button>
-							<button
-								className="btn btn-primary"
-								onClick={() => window.open(WHATSAPP_LINK, '_blank')}
-								style={{
-									padding: '14px 28px',
-									fontSize: '15px',
-									fontWeight: 700,
-								}}
-							>
-								<WhatsAppIcon size={18} /> احجزي الآن
-							</button>
-						</div>
+					<h1 style={{ color: '#fff', margin: '0', textShadow: '0 2px 20px rgba(0,0,0,0.3)' }}>
+						إطلالة ساحرة مع<br />
+						<span style={{ color: '#c9a04e' }}>غرام سلطان</span>
+					</h1>
+					<p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '1.05rem', maxWidth: '420px' }}>
+						أحدث صيحات الميكب والتصوير الاحترافي بلمسة تجمع الخبرة والابتكار.
+						ليلة العمر تستاهل الأفضل.
+					</p>
+					<div className="cta-row" style={{ gap: '12px' }}>
+						<button
+							className="btn"
+							onClick={() => window.location.href = '/prices'}
+							style={{
+								background: 'linear-gradient(135deg, #1a3a2a, #2a5a3a)',
+								color: '#fff',
+								padding: '14px 28px',
+								fontSize: '15px',
+								fontWeight: 800,
+								borderRadius: '14px',
+								border: '1px solid rgba(201,160,78,0.3)',
+								boxShadow: '0 8px 24px rgba(26,58,42,0.4)'
+							}}
+						>
+							💸 أسعار الخدمات
+						</button>
+						<button
+							className="btn btn-primary"
+							onClick={() => window.open(WHATSAPP_LINK, '_blank')}
+							style={{
+								padding: '14px 28px',
+								fontSize: '15px',
+								fontWeight: 700,
+							}}
+						>
+							<WhatsAppIcon size={18} /> احجزي الآن
+						</button>
 					</div>
-				</section>
+				</div>
+			</section>
 
 
 			<div className="container">
 				{/* المساحة الخاصة بعفركوش، بيبني ويعدل فيها مباشرة */}
 				<div id="afrakoush-dynamic-space" ref={afrakoushSpaceRef}></div>
 
-			{facebookFeed.length > 0 && (
+				{facebookFeed.length > 0 && (
 					<section className="fb-section reveal" id="facebook-feed">
 						<h2 style={{ marginTop: 0, marginBottom: 6 }}>آخر أعمالنا</h2>
 						<p style={{ color: 'var(--muted)', margin: '0 0 20px' }}>أحدث لوكات العرايس والجلسات من صفحتنا على فيسبوك</p>

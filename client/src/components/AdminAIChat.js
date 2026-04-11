@@ -695,24 +695,24 @@ function AdminAIChat({ user }) {
                 disabled={loading}
               >
                 {isRecording ? "⬛" : "🎙️"}
-            </button>
-            <textarea
-              className="afrakoush-chat-input"
-              ref={inputRef}
-              style={styles.inputArea}
-              placeholder={isRecording ? "جاري التسجيل..." : "اسأل هنا..."}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={isRecording}
-              rows={1}
-            />
-            <button style={{ ...styles.sendBtn, opacity: !input.trim() || loading || isRecording ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', padding: 0 }} onClick={handleSend} disabled={!input.trim() || loading || isRecording} title="إرسال">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'rotate(-45deg)', marginLeft: '-2px', marginTop: '2px' }}>
-                <line x1="22" y1="2" x2="11" y2="13"></line>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-              </svg>
-            </button>
+              </button>
+              <textarea
+                className="afrakoush-chat-input"
+                ref={inputRef}
+                style={styles.inputArea}
+                placeholder={isRecording ? "جاري التسجيل..." : "اسأل هنا..."}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                disabled={isRecording}
+                rows={1}
+              />
+              <button style={{ ...styles.sendBtn, opacity: !input.trim() || loading || isRecording ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', padding: 0 }} onClick={handleSend} disabled={!input.trim() || loading || isRecording} title="إرسال">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'rotate(-45deg)', marginLeft: '-2px', marginTop: '2px' }}>
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
             </div>
           </div>
         </div>

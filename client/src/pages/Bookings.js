@@ -4,10 +4,21 @@ import { Container, Row, Col, Card, Button, Form, Modal, Pagination, Table } fro
 import axios from 'axios';
 import Select from 'react-select';
 import ReceiptPrint, { printReceiptElement } from './ReceiptPrint';
+import DateInput from '../components/DateInput';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPrint, faEdit, faEye, faDollarSign, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { useToast } from '../components/ToastProvider';
 
+
+const formatDate = (dateString) => {
+  if (!dateString) return 'غير متوفر';
+  const d = new Date(dateString);
+  if (isNaN(d)) return 'غير متوفر';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return day + '/' + month + '/' + year;
+};
 function Bookings({ user }) {
   const [formData, setFormData] = useState({
     packageId: '', hennaPackageId: '', photographyPackageId: '', returnedServices: [],
@@ -275,12 +286,14 @@ function Bookings({ user }) {
     if (!editItem || editSubmitting) return;
     setEditSubmitting(true);
     setShowEditModal(false);
+    // Clean any partial date values before submitting
+    const cleanDate = (v) => (v && v.startsWith('__partial__')) ? '' : v;
     const submitData = {
       clientName: formData.clientName,
       clientPhone: formData.clientPhone,
       city: formData.city,
-      eventDate: formData.eventDate,
-      hennaDate: formData.hennaDate,
+      eventDate: cleanDate(formData.eventDate),
+      hennaDate: cleanDate(formData.hennaDate),
       deposit: parseFloat(formData.deposit) || 0,
       packageId: formData.packageId,
       hennaPackageId: formData.hennaPackageId,
@@ -289,10 +302,10 @@ function Bookings({ user }) {
       returnedServices: formData.returnedServices.map(s => s.value),
       hairStraightening: formData.hairStraightening === 'yes',
       hairStraighteningPrice: parseFloat(formData.hairStraighteningPrice) || 0,
-      hairStraighteningDate: formData.hairStraighteningDate || '',
+      hairStraighteningDate: cleanDate(formData.hairStraighteningDate) || '',
       hairDye: formData.hairDye === 'yes',
       hairDyePrice: parseFloat(formData.hairDyePrice) || 0,
-      hairDyeDate: formData.hairDyeDate || ''
+      hairDyeDate: cleanDate(formData.hairDyeDate) || ''
     };
     try {
       const res = await axios.put(`/api/bookings/${editItem._id}`, submitData, {
@@ -474,7 +487,7 @@ function Bookings({ user }) {
                   )}
                 </Card.Title>
                 <Card.Text>
-                  تاريخ المناسبة: {new Date(booking.eventDate).toLocaleDateString()}<br />
+                  تاريخ المناسبة: {formatDate(booking.eventDate)}<br />
                   العربون: {booking.deposit} جنيه<br />
                   المتبقي: {booking.remaining} جنيه
                 </Card.Text>
@@ -533,8 +546,7 @@ function Bookings({ user }) {
               <Col md={6}>
                 <Form.Group>
                   <Form.Label>تاريخ المناسبة</Form.Label>
-                  <Form.Control
-                    type="date"
+                  <DateInput
                     value={formData.eventDate}
                     onChange={(e) => setFormData({ ...formData, eventDate: e.target.value })}
                     required
@@ -560,8 +572,7 @@ function Bookings({ user }) {
                 <Col md={6}>
                   <Form.Group>
                     <Form.Label>تاريخ الحنة</Form.Label>
-                    <Form.Control
-                      type="date"
+                    <DateInput
                       value={formData.hennaDate}
                       onChange={(e) => setFormData({ ...formData, hennaDate: e.target.value })}
                       required
@@ -646,8 +657,7 @@ function Bookings({ user }) {
                   <Col md={6}>
                     <Form.Group>
                       <Form.Label>تاريخ فرد الشعر</Form.Label>
-                      <Form.Control
-                        type="date"
+                      <DateInput
                         value={formData.hairStraighteningDate}
                         onChange={(e) => setFormData({ ...formData, hairStraighteningDate: e.target.value })}
                         required
@@ -686,8 +696,7 @@ function Bookings({ user }) {
                   <Col md={6}>
                     <Form.Group>
                       <Form.Label>تاريخ الصبغة</Form.Label>
-                      <Form.Control
-                        type="date"
+                      <DateInput
                         value={formData.hairDyeDate}
                         onChange={(e) => setFormData({ ...formData, hairDyeDate: e.target.value })}
                         required
@@ -755,7 +764,7 @@ function Bookings({ user }) {
                       {editItem.installments.map((inst, index) => (
                         <tr key={index}>
                           <td>{inst.amount} جنيه</td>
-                          <td>{new Date(inst.date).toLocaleDateString()}</td>
+                          <td>{formatDate(inst.date)}</td>
                           <td>{inst.employeeId?.username || 'غير معروف'}</td>
                         </tr>
                       ))}
@@ -843,8 +852,8 @@ function Bookings({ user }) {
               <p>اسم العميل: {currentDetails.clientName}</p>
               <p>رقم الهاتف: {currentDetails.clientPhone}</p>
               <p>المدينة: {currentDetails.city || 'غير متوفر'}</p>
-              <p>تاريخ المناسبة: {new Date(currentDetails.eventDate).toLocaleDateString()}</p>
-              {currentDetails.hennaDate && <p>تاريخ الحنة: {new Date(currentDetails.hennaDate).toLocaleDateString()}</p>}
+              <p>تاريخ المناسبة: {formatDate(currentDetails.eventDate)}</p>
+              {currentDetails.hennaDate && <p>تاريخ الحنة: {formatDate(currentDetails.hennaDate)}</p>}
               <p>الباكدج: {currentDetails.package.name}</p>
               {currentDetails.hennaPackage && <p>باكدج حنة: {currentDetails.hennaPackage.name}</p>}
               {currentDetails.photographyPackage && <p>باكدج تصوير: {currentDetails.photographyPackage.name}</p>}
@@ -858,14 +867,14 @@ function Bookings({ user }) {
                 <>
                   <p>فرد شعر: نعم</p>
                   <p>سعر فرد الشعر: {currentDetails.hairStraighteningPrice} جنيه</p>
-                  <p>تاريخ فرد الشعر: {new Date(currentDetails.hairStraighteningDate).toLocaleDateString()}</p>
+                  <p>تاريخ فرد الشعر: {formatDate(currentDetails.hairStraighteningDate)}</p>
                 </>
               )}
               {currentDetails.hairDye && (
                 <>
                   <p>صبغة شعر: نعم</p>
                   <p>سعر الصبغة: {currentDetails.hairDyePrice} جنيه</p>
-                  <p>تاريخ الصبغة: {currentDetails.hairDyeDate ? new Date(currentDetails.hairDyeDate).toLocaleDateString() : 'غير متوفر'}</p>
+                  <p>تاريخ الصبغة: {currentDetails.hairDyeDate ? formatDate(currentDetails.hairDyeDate) : 'غير متوفر'}</p>
                 </>
               )}
               <p>الإجمالي: {currentDetails.total} جنيه</p>
@@ -888,7 +897,7 @@ function Bookings({ user }) {
                       {currentDetails.installments.map((inst, index) => (
                         <tr key={index}>
                           <td>{inst.amount} جنيه</td>
-                          <td>{new Date(inst.date).toLocaleDateString()}</td>
+                          <td>{formatDate(inst.date)}</td>
                           <td>{inst.paymentMethod || 'كاش'}</td>
                           <td>{inst.employeeId?.username || 'غير معروف'}</td>
                           {user?.role === 'admin' && (
@@ -921,7 +930,7 @@ function Bookings({ user }) {
                     <tbody>
                       {currentDetails.updates.map((update, index) => (
                         <tr key={index}>
-                          <td>{new Date(update.date).toLocaleDateString()}</td>
+                          <td>{formatDate(update.date)}</td>
                           <td>
                               {update?.changes?.created
                                 ? 'إنشاء الحجز'
