@@ -11,7 +11,8 @@ const ActivityLog = require('../models/ActivityLog');
 const SystemSetting = require('../models/SystemSetting');
 const AdminConversation = require('../models/AdminConversation');
 
-const DEFAULT_ADMIN_PROMPT = `أنت مساعد ذكي للمديرين والمشرفين في "غرام سلطان بيوتي سنتر".
+const DEFAULT_ADMIN_PROMPT = `أنت "المساعد الذكي" للمديرين والمشرفين في "غرام سلطان بيوتي سنتر".
+هويتك: أنت المساعد الذكي للإدارة، يمكن للمستخدم مناداتك بأي اسم يحبه. لا تقل أبداً أنك "عفركوش" — عفركوش هو مجرد أداة تقنية (build_afrakoush_page) تستخدمها أنت لبناء الصفحات والواجهات، وعندما تستخدمها أخبر المستخدم أنك استعنت بأداة "عفركوش الذراع التقني" لتنفيذ طلبه.
 مهمتك مساعدة الإدارة في الرد على جميع الأسئلة المتعلقة بقواعد البيانات والتقارير المالية والعمليات بدقة. 
 دائماً اعتمد على الأدوات المتاحة لجلب أحدث البيانات، ولا تخمن أبداً.
 تعليمات هامة جداً:
@@ -19,7 +20,7 @@ const DEFAULT_ADMIN_PROMPT = `أنت مساعد ذكي للمديرين والم
 2. لديك القدرة على استدعاء الأداة المناسبة، وإذا اكتشفت نقص في المعلومات، قم باستدعاء أداة أخرى أو نفس الأداة مدخلات مختلفة قبل بناء الرد النهائي للمستخدم (Multi-step Tool Usage).
 3. استعرض ما حصلت عليه من الأدوات، وحلله جيداً للتأكد من أنه يشمل إجابة كاملة للمستخدم، ثم صغ إجابتك.
 4. كن احترافياً، استعمل جداول ملخصة (Markdown Tables) وقوائم لتسهيل القراءة على الإدارة.
-5. يمكنك بناء تطبيقات مصغرة وتقارير مخصصة (واجهات) وحفظها للعميل باستخدام أداة build_afrakoush_page. وعندما تقوم بذلك، أخبر العميل بالرابط، فإذا كان عام سيكون /p/afrakoush/{name} وإذا كان إداري سيكون /admin/afrakoush/{name}.
+5. يمكنك بناء تطبيقات مصغرة وتقارير مخصصة (واجهات) وحفظها للعميل باستخدام أداة build_afrakoush_page. الاداة دي اسمها عفركوش الذراع التقني لغرام سلطان وعندما تقوم بذلك، أخبر العميل بالرابط، فإذا كان عام سيكون /p/afrakoush/{name} وإذا كان إداري سيكون /admin/afrakoush/{name}.
 6. عند كتابة كود JavaScript للأدوات الديناميكية (script)، يجب أن تستخدم فقط المسارات الحقيقية الموجودة في النظام. إليك الدليل الكامل لـ APIs المتاحة للاستخدام في الـ script:
 
 === 🗺️ خريطة APIs الكاملة لنظام غرام سلطان (هذه هي المسارات الحقيقية فقط - لا تخترع غيرها) ===
@@ -241,17 +242,17 @@ GET /api/bookings/receipt/:receiptNumber  (يتطلب توكن)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🤖 AI CHAT & COMMUNICATION - التحدث مع الذكاء الاصطناعي من صفحاتك
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-يمكنك بناء واجهات محادثة (شات) وتوجيه رسائل لغزل (مساعدة الجمهور) أو عفركوش (أنت) وتغيير شخصيتكم!
+يمكنك بناء واجهات محادثة (شات) وتوجيه رسائل لغزل (مساعدة الجمهور) أو المساعد (أنت) وتغيير شخصيتكم!
 - مسار غزل (للجمهور):
 POST /api/ai/chat
   الجسم: { messages: [{role:"user", text:"مرحبا غزل"}], sessionId: "...", additionalPrompt: "توجيه إضافي خفي لغزل لتتحدث مثلا بالانجليزي" }
   الرد: { success: true, reply: "نص الرد", audioParts: ["base64..."] }
 
-- مسار عفركوش (المساعد الإداري - أنت):
+- مسار المساعد (المساعد الإداري - أنت):
 POST /api/admin-ai/chat
-  الجسم: { text: "آخر رسالة", messages: [{role:"user",text:"..."}], conversationId: "...", additionalPrompt: "توجيه إضافي لعفركوش ليتحدث كخبير تقني مثلا" }
+  الجسم: { text: "آخر رسالة", messages: [{role:"user",text:"..."}], conversationId: "...", additionalPrompt: "توجيه إضافي للمساعد ليتحدث كخبير تقني مثلا" }
   الرد: { success: true, reply: "نص الرد", audioParts: [...], conversationId, title }
-  ملاحظة: يمكنك استخدام هذا المسار لسؤال عفركوش (أنت) عن أي بيانات إحصائية من واجهة مخصصة تبنيها، ويمكنك إعطاء توجيه إضافي في additionalPrompt.
+  ملاحظة: يمكنك استخدام هذا المسار لسؤال المساعد (أنت) عن أي بيانات إحصائية من واجهة مخصصة تبنيها، ويمكنك إعطاء توجيه إضافي في additionalPrompt.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🚀 المساحة الديناميكية في الصفحة الرئيسية وواجهات الجمهور (Public Pages)
@@ -261,7 +262,7 @@ POST /api/admin-ai/chat
 
 🔐 **قانون أمني صارم جداً جداً لجلب البيانات في أي صفحة للجمهور:**
 بما أن الجمهور يدخل المساحات العامة بدون تسجيل دخول (بدون Token)، **لا تقم أبداً بكتابة كود JavaScript (fetch أو apiClient أو axios) يجلب بيانات من مسارات الـ API المحمية (مثل /api/packages أو التقرير وغيره) داخل الصفحة العامة لأن ذلك سيؤدي لظهور خطأ 401 Unauthorized.**
-✅ **الحل الوحيد والصحيح:** قم أنت كـ "عفركوش" باستدعاء الأدوات المتاحة لك (مثل get_packages_and_services) للحصول على البيانات في "عقلك/سياقك" أولاً، ثم قم بـ "تضمين البيانات حرفياً" (Hardcoding) داخل كود الـ JavaScript أو الـ HTML الذي ستقوم ببنائه للصفحة.
+✅ **الحل الوحيد والصحيح:** قم أنت كـ "المساعد الاداري" باستدعاء الأدوات المتاحة لك (مثل get_packages_and_services) للحصول على البيانات في "عقلك/سياقك" أولاً، ثم قم بـ "تضمين البيانات حرفياً" (Hardcoding) داخل كود الـ JavaScript أو الـ HTML الذي ستقوم ببنائه للصفحة.
 مثال صحيح 100%: \`const servicesData = [{"name": "فرد", "price": 500}]; // قمت بجلبها مسبقاً من الأداة وكتبتها لك هنا\` 
 استخدم هذه الطريقة دائماً لعرض البيانات المحمية بأمان للجمهور!
 
@@ -383,12 +384,12 @@ loadCSS('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.c
   وليس: [لوحة التحكم](https://www.gharam.art/...)`;
 
 const MODEL_CANDIDATES = [
-    'gemini-3.1-pro-preview',
-    'gemini-2.5-pro',
     'gemini-2.5-flash',
+    'gemini-2.5-pro',
+    'gemini-3-flash-preview',
+    'gemini-3.1-pro-preview',
     'gemini-3.1-flash-lite-preview',
-    'gemini-2.5-flash-lite',
-    'gemini-3-flash-preview'
+    'gemini-2.5-flash-lite'
 ];
 
 const isToday = (dateStr) => {
@@ -1357,7 +1358,7 @@ const createFunctions = (user) => ({
     }
 });
 
-const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType = null, additionalPrompt = null) => {
+const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType = null, additionalPrompt = null, onToolCall = null) => {
     const setting = await SystemSetting.findOne({ key: 'admin_ai_system_prompt' });
     let systemPrompt = setting?.value || DEFAULT_ADMIN_PROMPT;
 
@@ -1382,7 +1383,10 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
     }
 
     if (!process.env.GEMINI_API_KEY) throw new Error("Missing Gemini API Key");
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+    // Build API keys list: primary + optional backup (from different project for separate quota)
+    const apiKeys = [process.env.GEMINI_API_KEY];
+    if (process.env.GEMINI_API_KEY_2) apiKeys.push(process.env.GEMINI_API_KEY_2);
 
     // Build proper alternating history: user, model, user, model...
     // Gemini requires the first message to be 'user' and roles must alternate.
@@ -1430,58 +1434,95 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
     let replyText = null;
     let lastError = null;
 
-    for (const modelName of MODEL_CANDIDATES) {
-        try {
-            let modelFeatures = {
-                model: modelName,
-                systemInstruction: systemPrompt,
-                tools: adminTools
-            };
+    // Try each API key, then each model within that key
+    for (let keyIdx = 0; keyIdx < apiKeys.length; keyIdx++) {
+        const currentKey = apiKeys[keyIdx];
+        const keyLabel = keyIdx === 0 ? 'Primary' : 'Backup';
+        const genAI = new GoogleGenerativeAI(currentKey);
 
-            const model = genAI.getGenerativeModel(modelFeatures); // remove { apiVersion: "v1beta" } since new versions might not need it, or we rely on SDK default
-            const chat = model.startChat({ history: cleanHistory });
-
-            let result = await chat.sendMessage(userMessageContent);
-            let response = result.response;
-            let callCount = 0;
-
-            while (response.functionCalls()?.length && callCount < 5) {
-                const functionCalls = response.functionCalls();
-                const functionResponses = [];
-
-                for (const call of functionCalls) {
-                    const funcName = call.name;
-                    const args = call.args;
-                    if (localFunctions[funcName]) {
-                        const apiResponse = await localFunctions[funcName](args);
-                        functionResponses.push({
-                            functionResponse: {
-                                name: funcName,
-                                response: apiResponse
-                            }
-                        });
-                    }
-                }
-
-                if (functionResponses.length > 0) {
-                    result = await chat.sendMessage(functionResponses);
-                    response = result.response;
-                }
-                callCount++;
-            }
-
-            replyText = response.text();
-            break; // Success!
-
-        } catch (err) {
-            console.warn(`[AdminAI] Model ${modelName} failed. Reason: ${err.message}. Trying next model...`);
-            lastError = err;
+        if (keyIdx > 0) {
+            console.log(`[AdminAI] 🔄 Switching to ${keyLabel} API key...`);
         }
+
+        for (const modelName of MODEL_CANDIDATES) {
+            try {
+                console.log(`[AdminAI] Trying model: ${modelName} (${keyLabel} key)...`);
+                let modelFeatures = {
+                    model: modelName,
+                    systemInstruction: systemPrompt,
+                    tools: adminTools
+                };
+
+                const model = genAI.getGenerativeModel(modelFeatures);
+                const chat = model.startChat({ history: cleanHistory });
+
+                // Notify: thinking started
+                if (onToolCall) {
+                    try { onToolCall({ type: 'thinking', tool: '_thinking', model: modelName }); } catch (e) { }
+                }
+
+                let result = await chat.sendMessage(userMessageContent);
+                let response = result.response;
+                let callCount = 0;
+
+                while (response.functionCalls()?.length && callCount < 5) {
+                    const functionCalls = response.functionCalls();
+                    const functionResponses = [];
+
+                    for (const call of functionCalls) {
+                        const funcName = call.name;
+                        const args = call.args;
+
+                        // Notify: tool is being called
+                        if (onToolCall) {
+                            try { onToolCall({ type: 'tool_start', tool: funcName, args: Object.keys(args || {}) }); } catch (e) { }
+                        }
+
+                        if (localFunctions[funcName]) {
+                            const apiResponse = await localFunctions[funcName](args);
+                            functionResponses.push({
+                                functionResponse: {
+                                    name: funcName,
+                                    response: apiResponse
+                                }
+                            });
+
+                            // Notify: tool completed
+                            if (onToolCall) {
+                                try { onToolCall({ type: 'tool_done', tool: funcName }); } catch (e) { }
+                            }
+                        }
+                    }
+
+                    if (functionResponses.length > 0) {
+                        // Notify: sending data back to AI
+                        if (onToolCall) {
+                            try { onToolCall({ type: 'analyzing', tool: '_analyzing' }); } catch (e) { }
+                        }
+                        result = await chat.sendMessage(functionResponses);
+                        response = result.response;
+                    }
+                    callCount++;
+                }
+
+                replyText = response.text();
+                if (replyText) {
+                    console.log(`[AdminAI] ✅ Success with model: ${modelName} (${keyLabel} key)`);
+                }
+                break; // Success!
+
+            } catch (err) {
+                console.warn(`[AdminAI] ❌ Model ${modelName} failed (${keyLabel} key). Status: ${err.status || 'N/A'}. Reason: ${err.message?.slice(0, 200)}`);
+                lastError = err;
+            }
+        }
+
+        if (replyText) break; // Got a response, stop trying keys
     }
 
     if (!replyText) {
-        console.error('[AdminAI] All models failed in fallback chain.', lastError);
-        throw new Error(lastError ? lastError.message : 'جميع نماذج الذكاء الاصطناعي غير متاحة حالياً.');
+        console.error('[AdminAI] All models failed with all API keys.', lastError?.message || lastError);
+        throw new Error(lastError?.message || 'جميع نماذج الذكاء الاصطناعي غير متاحة حالياً.');
     }
 
     return replyText;
@@ -1490,20 +1531,27 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
 const generateChatTitle = async (firstMessage) => {
     try {
         if (!process.env.GEMINI_API_KEY) return "محادثة جديدة";
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+        const apiKeys = [process.env.GEMINI_API_KEY];
+        if (process.env.GEMINI_API_KEY_2) apiKeys.push(process.env.GEMINI_API_KEY_2);
+
         let result = null;
 
-        for (const modelName of MODEL_CANDIDATES) {
-            try {
-                const model = genAI.getGenerativeModel({ model: modelName });
-                const prompt = `أنت مساعد يقوم بتوليد عناوين للمحادثات.
+        for (const key of apiKeys) {
+            const genAI = new GoogleGenerativeAI(key);
+            for (const modelName of MODEL_CANDIDATES) {
+                try {
+                    const model = genAI.getGenerativeModel({ model: modelName });
+                    const prompt = `أنت مساعد يقوم بتوليد عناوين للمحادثات.
 اكتب عنوان قصير جداً (3 كلمات كحد أقصى) يعبر عن محتوى هذه الرسالة من مدير نظام. لا تضع نقطة في النهاية ولا تضف أي عبارات أخرى.
 الرسالة: "${firstMessage}"`;
-                result = await model.generateContent(prompt);
-                break;
-            } catch (e) {
-                // Try next
+                    result = await model.generateContent(prompt);
+                    break;
+                } catch (e) {
+                    // Try next
+                }
             }
+            if (result) break;
         }
 
         if (result) return result.response.text().trim().replace(/['"]+/g, '');
