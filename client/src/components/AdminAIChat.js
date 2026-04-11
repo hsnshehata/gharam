@@ -401,6 +401,10 @@ function AdminAIChat({ user }) {
             50% { transform: translateY(-4px) scale(1.03); filter: drop-shadow(0 0 18px rgba(31, 182, 166, 0.8)); }
             100% { transform: translateY(0px) scale(1); filter: drop-shadow(0 0 10px rgba(2, 128, 144, 0.4)); }
           }
+          @keyframes fadeInStatus {
+            0% { opacity: 0; transform: translateY(4px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
           .afrakoush-magic-fab {
             position: fixed;
             z-index: 9999;
