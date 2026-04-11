@@ -541,22 +541,37 @@ function AdminAIChat({ user }) {
             <span style={{ color: '#555', fontSize: '14px' }}>"في مساحة اللاند بيج (landing-dynamic-space)، ضيفلي بانر لعرض جديد وفيه زرار واتساب.. ومتمسحش الحاجات اللي مكتوبة هناك قبل كدا!"</span>
           </div>
           <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0', marginBottom: '10px' }}>
-            <strong style={{ color: '#0097e6' }}>للمشرفين والمديرين للتقارير السريعة:</strong><br />
-            <span style={{ color: '#555', fontSize: '14px' }}>"هاتلي تقرير مفصل عن إجمالي مصاريف وسلف اليوم وقارنها بإجمالي العربون المدفوع."</span>
+            <strong style={{ color: '#0097e6' }}>للمشرفين والمديرين للتقارير المتقدمة السريعة:</strong><br />
+            <span style={{ color: '#555', fontSize: '14px' }}>
+              "هاتلي تقرير مفصل عن إجمالي مصاريف وسلف اليوم وقارنها بإجمالي العربون المدفوع."<br/>
+              "قارن أداء الشهر ده بالشهر اللي فات من حيث عدد الحجوزات."
+            </span>
           </div>
-          <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
-            <strong style={{ color: '#44bd32' }}>لإدارة العمليات:</strong><br />
-            <span style={{ color: '#555', fontSize: '14px' }}>"عاوز جدول يوضح الحجوزات اللي من المقرر تنفيذها بكرا مع اسم الباكدج والمبلغ الإجمالي."</span>
+          <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0', marginBottom: '10px' }}>
+            <strong style={{ color: '#44bd32' }}>للمشرفين للإدارة وتتبع الموظفين بدقة:</strong><br />
+            <span style={{ color: '#555', fontSize: '14px' }}>
+              "الموظفة (سارة) عملت كام خدمة النهاردة وجمعت كام نقطة؟"<br/>
+              "مين نفذ خدمة وش وحواجب للعروسة (أميرة)؟"<br/>
+              "آخر عملية تنظيف بشرة مين عملها؟ وما هي آخر 3 عمليات بترتيب التاريخ؟"<br/>
+              "مين أكتر موظفة نفذت خدمة ميك أب خلال الشهر الجاري؟"
+            </span>
           </div>
 
           <hr />
           <h5 style={{ color: '#028090', fontWeight: 'bold' }}>نصائح هامة 💡</h5>
           <ul style={{ fontSize: '14px', lineHeight: '1.6', color: '#444' }}>
-            <li>كن دقيقاً في طلبك واذكر التواريخ المطلوبة إذا لزم الأمر، ولا تتردد في طلب تصميمات وألوان محددة في اللوحات.</li>
-            <li>يمكنك دائماً الاعتماد عليه لتحليل الجداول الطويلة وعمل ملخص سريع لها.</li>
-            <li>لتسجيل رسالة صوتية اضغط على علامة المايك 🎤 وتحدث، ثم سيتلقاها عفركوش ويجيبك صوتياً.</li>
+            <li>كن دقيقاً في طلبك واذكر التواريخ المطلوبة إذا لزم الأمر، يمكنك التحدث معه باللهجة المصرية العادية أو الفصحى وسيفهمك.</li>
+            <li>لا تتردد في طلب جداول مفصلة أو طلب تحليل عميق للبيانات، فقدراته غير محدودة ويمكنه استنتاج رؤى غير مرئية للمشرف العادي.</li>
+            <li>لتسجيل رسالة صوتية اضغط على علامة المايك 🎤 وتحدث، ثم سيتلقاها عفركوش ويجيبك.</li>
             <li>لتصفية ذهن عفركوش لطلب جديد كلياً، اضغط على <strong>زر الإضافة ➕ لبدء محادثة جديدة</strong>.</li>
           </ul>
+
+          <div style={{ background: '#e6f7fa', padding: '15px', borderRadius: '8px', border: '1px solid #b3e6ec', marginTop: '15px' }}>
+            <strong style={{ color: '#028090' }}>📞 دعم وتطوير عفركوش:</strong><br />
+            <span style={{ fontSize: '14px', color: '#444' }}>
+              إمكانيات الأداة يتم تطويرها بشكل يومي لتناسب احتياجات السنتر. في حال واجهتكم أي مشكلة تقنية، أو إذا كنتم بحاجة لإضافة صلاحيات أو إمكانيات وقدرات جديدة لأي قسم، يرجى التواصل مباشرة مع <strong>أستاذ حسن</strong>.
+            </span>
+          </div>
         </Modal.Body>
         <Modal.Footer style={{ backgroundColor: '#f8f9fa', borderTop: '1px solid #e0e0e0', justifyContent: 'flex-start' }}>
           <Button variant="secondary" onClick={() => setShowInfo(false)} style={{ backgroundColor: '#028090', border: 'none', fontWeight: 'bold', padding: '8px 24px' }}>
