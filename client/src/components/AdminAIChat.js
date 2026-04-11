@@ -143,7 +143,7 @@ function AdminAIChat({ user }) {
     'predictive_scheduling': '🗓️ يُحلل جدول الحجوزات القادمة...',
     'search_admin_conversations': '💬 يبحث في أرشيف المحادثات...',
     'build_afrakoush_page': '💻 يُرسل الطلب لعفركوش لبناء الواجهة...',
-    'get_afrakoush_page': '📄 عفركوش يقرأ كود الصفحة الحالية...'
+    'get_afrakoush_page': '📄 يقرأ كود الصفحة الحالية...'
   };
 
   // Simulated thinking steps (shown while waiting for response)
@@ -159,7 +159,15 @@ function AdminAIChat({ user }) {
     '💻 يُرسل الطلب للذراع التقني...',
     '✍️ يصيغ الرد بالتفصيل...',
     '🔄 يُراجع البيانات للتأكد من الدقة...',
-    '📝 يُنسق الإجابة للعرض...'
+    '📝 يُنسق الإجابة للعرض...',
+    '🗄️ يفتح أرشيف الحجوزات القديمة...',
+    '⚙️ يُعالج البيانات الخام...',
+    '🧮 يحسب الإحصائيات والمتوسطات...',
+    '📑 يُطابق السجلات مع بعضها...',
+    '🔗 يربط النتائج من مصادر مختلفة...',
+    '🎯 يُحدد الأنماط والملاحظات...',
+    '📤 يُجهز البيانات للعرض النهائي...',
+    '✅ يتحقق من صحة النتائج...'
   ];
 
   const thinkingTimerRef = useRef(null);
@@ -167,20 +175,26 @@ function AdminAIChat({ user }) {
 
   const startThinkingSimulation = () => {
     sseOverrideRef.current = false;
-    let stepIndex = 0;
     const shuffled = [...THINKING_STEPS].sort(() => Math.random() - 0.5);
+    let stepIndex = 0;
     setToolStatus(shuffled[0]);
 
-    thinkingTimerRef.current = setInterval(() => {
-      if (sseOverrideRef.current) return;
-      stepIndex = (stepIndex + 1) % shuffled.length;
-      setToolStatus(shuffled[stepIndex]);
-    }, 2500 + Math.random() * 1500);
+    const scheduleNext = () => {
+      // Variable delays: randomly between 3 and 8 seconds
+      const delay = 3000 + Math.random() * 5000;
+      thinkingTimerRef.current = setTimeout(() => {
+        if (sseOverrideRef.current) return;
+        stepIndex = (stepIndex + 1) % shuffled.length;
+        setToolStatus(shuffled[stepIndex]);
+        scheduleNext();
+      }, delay);
+    };
+    scheduleNext();
   };
 
   const stopThinkingSimulation = () => {
     if (thinkingTimerRef.current) {
-      clearInterval(thinkingTimerRef.current);
+      clearTimeout(thinkingTimerRef.current);
       thinkingTimerRef.current = null;
     }
     setToolStatus(null);
