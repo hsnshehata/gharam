@@ -20,10 +20,10 @@ export const printReceiptElement = (element) => {
   style.setAttribute('data-print-style', 'receipt-only');
   style.textContent = `
     @media print {
-      @page { size: 80mm auto; margin: 0; }
+      @page { size: 900mm auto; margin: 0; }
       body * { visibility: hidden !important; }
-      #receipt-print-container, #receipt-print-container * { visibility: visible !important; }
-      #receipt-print-container { position: absolute; top: 0; left: 0; width: 80mm; margin: 0 auto; padding: 3mm; font-size: 15px; text-align: center; }
+      #receipt-print-container, #receipt-print-container * { visibility: visible !important; color: #000 !important; }
+      #receipt-print-container { position: absolute; top: 0; left: 0; width: 75mm; margin: 0 auto; padding: 3mm; font-size: 15px; text-align: center; }
     }
   `;
 
@@ -61,7 +61,7 @@ const ReceiptPrint = ({ data, type }) => {
         color: '#000',
         fontWeight: 'bold',
         fontSize: '15px',
-        width: '80mm',
+        width: '75mm',
         padding: '3mm',
         textAlign: 'center',
         margin: '0 auto',
@@ -70,13 +70,21 @@ const ReceiptPrint = ({ data, type }) => {
     >
       <style>
         {`
+          .receipt-content, .receipt-content * {
+            color: #000 !important;
+          }
+          .receipt-content th, .receipt-content td {
+            color: #000 !important;
+            background-color: #fff !important;
+          }
           @media print {
-            @page { size: 80mm auto; margin: 0; }
-            body { margin: 0; padding: 0; width: 80mm; }
+            @page { size: 75mm auto; margin: 0; }
+            body { margin: 0; padding: 0; width: 75mm; }
             /* اخفي كل حاجة وقت الطباعة إلا الوصل النشط */
             body * { visibility: hidden !important; }
-            .receipt-content.print-active, .receipt-content.print-active * { visibility: visible !important; }
-            .receipt-content.print-active { position: absolute; left: 0; top: 0; width: 80mm; margin: 0 auto; padding: 3mm; font-size: 15px; text-align: center; }
+            .receipt-content.print-active, .receipt-content.print-active * { visibility: visible !important; color: #000 !important; }
+            .receipt-content.print-active { position: absolute; left: 0; top: 0; width: 75mm; margin: 0 auto; padding: 3mm; font-size: 15px; text-align: center; }
+            .receipt-content.print-active th, .receipt-content.print-active td { color: #000 !important; background-color: #fff !important; }
             .qr-code { margin: 5mm auto; }
             table { width: 100%; border-collapse: collapse; }
             th, td { border: 1px solid #000; padding: 2mm; }
