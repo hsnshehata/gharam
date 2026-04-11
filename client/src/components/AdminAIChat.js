@@ -1,1540 +1,706 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const User = require('../models/User');
-const Booking = require('../models/Booking');
-const InstantService = require('../models/InstantService');
-const Expense = require('../models/Expense');
-const Advance = require('../models/Advance');
-const Deduction = require('../models/Deduction');
-const Package = require('../models/Package');
-const Service = require('../models/Service');
-const ActivityLog = require('../models/ActivityLog');
-const SystemSetting = require('../models/SystemSetting');
-const AdminConversation = require('../models/AdminConversation');
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import axios from 'axios';
+import { Spinner, Modal, Button } from 'react-bootstrap';
+import { API_BASE } from '../utils/apiBase';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
-const DEFAULT_ADMIN_PROMPT = `أنت مساعد ذكي للمديرين والمشرفين في "غرام سلطان بيوتي سنتر".
-مهمتك مساعدة الإدارة في الرد على جميع الأسئلة المتعلقة بقواعد البيانات والتقارير المالية والعمليات بدقة. 
-دائماً اعتمد على الأدوات المتاحة لجلب أحدث البيانات، ولا تخمن أبداً.
-تعليمات هامة جداً:
-1. اقرأ التوجيه من المستخدم بتأني ومراجعة. الطلبات قد تحتوي على مهام مركبة تتطلب دمج معلومات مختلفة (مثلاً: بحث عن حجز + جلب سجل تعديلاته).
-2. لديك القدرة على استدعاء الأداة المناسبة، وإذا اكتشفت نقص في المعلومات، قم باستدعاء أداة أخرى أو نفس الأداة مدخلات مختلفة قبل بناء الرد النهائي للمستخدم (Multi-step Tool Usage).
-3. استعرض ما حصلت عليه من الأدوات، وحلله جيداً للتأكد من أنه يشمل إجابة كاملة للمستخدم، ثم صغ إجابتك.
-4. كن احترافياً، استعمل جداول ملخصة (Markdown Tables) وقوائم لتسهيل القراءة على الإدارة.
-5. يمكنك بناء تطبيقات مصغرة وتقارير مخصصة (واجهات) وحفظها للعميل باستخدام أداة build_afrakoush_page. الاداة دي اسمها عفركوش الذراع التقني لغرام سلطان وعندما تقوم بذلك، أخبر العميل بالرابط، فإذا كان عام سيكون /p/afrakoush/{name} وإذا كان إداري سيكون /admin/afrakoush/{name}.
-6. عند كتابة كود JavaScript للأدوات الديناميكية (script)، يجب أن تستخدم فقط المسارات الحقيقية الموجودة في النظام. إليك الدليل الكامل لـ APIs المتاحة للاستخدام في الـ script:
+function AdminAIChat({ user }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
 
-=== 🗺️ خريطة APIs الكاملة لنظام غرام سلطان (هذه هي المسارات الحقيقية فقط - لا تخترع غيرها) ===
+  const [conversations, setConversations] = useState([]);
+  const [currentId, setCurrentId] = useState(null);
+  const [messages, setMessages] = useState([]);
 
-🔴 قانون أساسي: دائماً تحقق من نوع البيانات قبل map() أو slice():
-const safeArray = (v) => Array.isArray(v) ? v : [];
-// استخدمها قبل كل عملية على مصفوفة
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [toolStatus, setToolStatus] = useState(null);
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 DASHBOARD - ملخص اليوم (الأسرع للوحات التحكم)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-GET /api/dashboard/summary?date=YYYY-MM-DD
-  الرد (كائن واحد، ليس مصفوفة):
-  { bookingCount, totalDeposit, instantServiceCount, totalInstantServices,
-    totalExpenses, totalAdvances, net, topCollector, hairStraighteningCount,
-    paymentBreakdown: {cash, vodafone, visa, instapay} }
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
-GET /api/dashboard/operations?date=YYYY-MM-DD
-  الرد: مصفوفة مباشرة []  (ليست { operations:[] }!)
-  كل عنصر: { _id, type(نص عربي: 'إضافة حجز'|'إضافة خدمة فورية'|'إضافة مصروف'|'إضافة سلفة'|'قسط/دفعة'|'تعديل...'|'حذف...'),
-    actionType, details, amount, time(ليس createdAt!), addedBy, paymentMethod, isLog(bool) }
-  ✅ الاستخدام: const ops = safeArray(res.data);
-  ✅ للتوقيت: op.time (ليس op.createdAt)
-  ⚠️ المصفوفة ترجع مباشرة في res.data
+  const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📈 REPORTS - التقارير المالية الشاملة
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-GET /api/reports/monthly?month=YYYY-MM
-GET /api/reports/daily?date=YYYY-MM-DD
-GET /api/reports/range?from=YYYY-MM-DD&to=YYYY-MM-DD
-  الرد الكامل الموثق:
-  {
-    summary: { totalDeposit, totalPredefinedInstant, totalCustomInstant, totalInstantServices,
-               totalExpenses, totalAdvances, net,
-               paymentBreakdown:{cash,vodafone,visa,instapay} },
-    operations: [{type,details,amount,createdAt,createdBy,paymentMethod}],  ← موجودة فقط في /daily!
-    analytics: {
-      revenueStreams: [{label('حجوزات وأقساط'|'شغل فوري'|'خدمات خاصة'), value}],
-      outflows: [{label('مصروفات'|'سلف'), value}],
-      topPackages: [{name,count,amount}],
-      topServices: [{name,count,amount}],
-      topEarners: [{username,role,points}],  ← مرتبة تنازلياً بالنقاط (أقصى 5)
-      packageMix: {makeup:Number, photography:Number},
-      stats: {gross, expenseRatio, averageNetPerDay, daysCount},
-      dailyRevenue: [{date:'YYYY-MM-DD',total}]  ← متاحة في monthly و range فقط!
+  // Dragging states
+  const [fabPos, setFabPos] = useState({ left: 24, bottom: 24, right: 'auto', top: 'auto' });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startY: 0, rect: null, isMoved: false });
+  const fabRef = useRef(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
+
+  useEffect(() => {
+    if (isOpen && user) {
+      fetchConversations();
     }
-  }
-  ✅ إيرادات الإجمالية: data.summary.totalDeposit + data.summary.totalInstantServices
-  ✅ أداء الموظفين: safeArray(data.analytics?.topEarners)
-  ✅ رسم خطي آخر 7 أيام: استخدم /api/reports/range ثم data.analytics.dailyRevenue
-  ✅ عمليات اليوم من reports: data.operations (موجود في /daily فقط، type يكون: 'booking'|'installment'|'instantService'|'expense'|'advance')
-  ⚠️ للعمليات بالعربي والأسرع: استخدم /api/dashboard/operations
+  }, [isOpen, user]);
 
-GET /api/reports/employee?userId=ID&from=YYYY-MM-DD&to=YYYY-MM-DD
-  الرد: { user:{id,username,role,monthlySalary,remainingSalary},
-           range:{from,to},
-           work:[{amount,date,serviceName,bookingReceipt,bookingId,instantServiceId}],
-           advances:[{amount,createdAt,paymentMethod,createdBy:{username}}],
-           deductions:[{amount,createdAt,reason,createdBy:{username}}],
-           totals:{pointsTotal,advancesTotal,deductionsTotal} }
+  useEffect(() => {
+    if (!user) return;
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📅 BOOKINGS - الحجوزات
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-GET /api/bookings?page=1&limit=20
-  الرد: { bookings:[...], total, pages }  ← ليست مصفوفة مباشرة!
-  كل حجز: { clientName, clientPhone, eventDate, createdAt,
-    package:{name,price,type}, deposit, total, remaining, receiptNumber,
-    packageServices:[{name,price,executed}], installments:[{amount,date}], createdBy:{username},
-    paymentMethod, hairStraightening(bool), hairDye(bool), photographyPackage(obj/id) }
-  ✅ الخدمات: safeArray(b.packageServices).map(s=>s.name).join(' • ')
-  ✅ الباكدج: b.package?.name || 'غير محدد'
-  ✅ المبلغ المدفوع فعلاً: b.total - b.remaining
-  ✅ لمعرفة لو فيه فرد/صبغة/تصوير إضافي: تحقق من b.hairStraightening, b.hairDye, b.photographyPackage
-
-➕ لإضافة حجز جديد (POST /api/bookings):
-  الجسم المفصل: { 
-    clientName, clientPhone, city, eventDate, deposit, paymentMethod,
-    packageId, hennaPackageId, photographyPackageId, returnedServices:[ids], extraServices:[ids],
-    hairStraightening(bool), hairStraighteningPrice, hairStraighteningDate,
-    hairDye(bool), hairDyePrice, hairDyeDate, hennaDate
-  }
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡ INSTANT SERVICES - الخدمات الفورية
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-GET /api/instant-services?page=1&limit=20
-  الرد: { instantServices:[...], total }  ← ليست مصفوفة مباشرة!
-  كل خدمة: { clientName, createdAt, total, receiptNumber,
-    services:[{name,price,isCustom}], employeeId:{username} أو null }
-  ✅ الخدمات: safeArray(item.services).map(s=>s.name).join(' + ')
-  ✅ الموظف: item.employeeId?.username || 'غير محدد'
-
-➕ لإضافة خدمة فورية (POST /api/instant-services):
-  الجسم: { employeeId(اختياري), services: [مصفوفة IDs الخدمات], customServices: [{name, price}], paymentMethod }
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-👤 USERS - الموظفون ونظام النقاط
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-GET /api/users
-  الرد: مصفوفة مباشرة []  (ليست { users:[] }!)
-  كل موظف: { _id, username, role, monthlySalary, remainingSalary, totalPoints, convertiblePoints, level }
-  ✅ الاستخدام: const users = safeArray(res.data);
-
-GET /api/users/ranking?filter=month
-  filter يمكن: 'month'(default) | 'today' | 'all'
-  الرد: مصفوفة مرتبة [] ← كل موظف فيها: { _id, username, role, level, totalPoints, periodPoints, rank, bestMonthKey, allTimePoints, totalServices }
-  ✅ هذا هو الأمثل لعرض لوحة ترتيب الموظفين!
-
-GET /api/users/points/summary (للموظف نفسه)
-  الرد: { totalPoints, level, convertiblePoints, remainingSalary, monthlySalary,
-    weeklyBreakdown:[{label,total,booking,instant}], topServices:{week:[],month:[],all:[]},
-    rank, teamSize, monthlyRank, monthlyPoints, progress:{current,target,percent} }
-
-GET /api/users/executed-services?date=YYYY-MM-DD
-  الرد: { services:[{source('booking'|'instant'),receiptNumber,serviceName,clientName,points,executedAt}] }
-
-🔑 نظام النقاط (مهم للفهم):
-- الموظف يكسب نقاط = 15% من سعر كل خدمة ينفذها
-- 1000 نقطة = عملة كفاءة (efficiencyCoin) قيمتها حسب مستواه
-- المستويات (levels 1-10) تُحسب من totalPoints التراكمية
-- topEarners في التقارير = مجموع نقاط العمل في الفترة (ليس الإجمالي التراكمي)
-- الأدوار: admin (مدير) > supervisor (مشرف) > hallSupervisor (مشرف قاعة) > employee (موظف)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💸 EXPENSES & ADVANCES - المصروفات والسلف والخصميات
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-GET /api/expenses-advances?page=1&limit=50
-  الرد: { items:[...], total, pages }  (ليست مصفوفة مباشرة!)
-  items دمج مجموعة ثلاث مصفوفات مرتبة بالتاريخ:
-  كل عنصر: { _id, type('expense'|'advance'|'deduction'), details, amount,
-    createdAt, paymentMethod, userId:{username}, createdBy:{username} }
-  ⚠️ الخصم (deduction) يستخدم details بدل reason!
-  ✅ الاستخدام: const items = safeArray(res.data?.items);
-
-➕ لإضافة (POST /api/expenses-advances):
-  - مصروف: { type: 'expense', details, amount, paymentMethod }
-  - سلفة: { type: 'advance', userId, amount, paymentMethod }
-  - خصم: { type: 'deduction', userId, amount, details } // details = السبب
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📦 PACKAGES & SERVICES - الباكدجات والخدمات
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-GET /api/packages/packages → مصفوفة مباشرة [] (لاحظ packages/packages!)
-  كل باكدج: { name, price, type(makeup/photography), isActive }
-GET /api/packages/services → مصفوفة مباشرة []
-  كل خدمة: { name, price, type(instant/package), packageId, isActive }
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🗓️ TODAY WORK - شغل اليوم (الحجوزات حسب تاريخ المناسبة)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-GET /api/today-work?date=YYYY-MM-DD
-  الرد: { makeupBookings:[], hairStraighteningBookings:[], hairDyeBookings:[], photographyBookings:[] }
-  ⚠️ هذه حجوزات مجدولة للتنفيذ اليوم (بتاريخ المناسبة) وليس الحجوزات المسجلة اليوم!
-  ✅ جملة عدد الحجوزات اليومية للتنفيذ: مجموع طول المصفوفات الأربعة
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 BOOKING MODEL - بيانات الحجوز الكاملة
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-كل حجز يحتوي:
-  { clientName, clientPhone, city, eventDate, hennaDate, createdAt, receiptNumber,
-    package:{name,price,type},         ← الباكدج الأساسي
-    hennaPackage:{name,price},          ← باكدج الحناء (ممكن null)
-    photographyPackage:{name,price},    ← باكدج التصوير (ممكن null)
-    deposit(عربون), total, remaining, paymentMethod,
-    packageServices:[{name,price,executed,executedBy:{username},executedAt}],
-    installments:[{amount,date,paymentMethod,employeeId:{username}}],
-    hairStraightening(bool), hairStraighteningPrice, hairStraighteningExecuted,
-    hairDye(bool), hairDyePrice, hairDyeExecuted,
-    photographyExecuted(bool),
-    createdBy:{username} }
-  ✅ الباكدج: b.package?.name
-  ✅ التصوير: b.photographyPackage?.name || 'لا يوجد'
-  ✅ الحناء: b.hennaPackage?.name || 'لا يوجد'
-  ✅ المبلغ المدفوع: b.deposit + safeArray(b.installments).reduce((s,i)=>s+i.amount,0)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🛠️ EXECUTE SERVICES - تكليف وسحب مهام الموظفين (من إشراف الصالة)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-لتسجيل أن موظف قام بتنفيذ خدمة (أو سحبها منه):
-POST /api/bookings/execute-service/:recordId/:serviceId
-POST /api/instant-services/execute-service/:recordId/:serviceId
-POST /api/bookings/reset-service/:recordId/:serviceId
-  الجسم (للتكليف فقط): { employeeId }
-  ⚠️ لقائمة Bookings: الـ serviceId إما 'hairStraightening' أو 'hairDye' أو 'photography' أو _id الخاص بالخدمة من packageServices.
-  ⚠️ لقائمة InstantServices: الـ serviceId هو الـ _id من مصفوفة services الداخلي.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔍 RECEIPT SEARCH - بحث برقم الوصل
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-GET /api/public/receipt/:receiptNumber  (بدون توكن)
-  الرد: { booking: {...} أو null, instantService: {...} أو null }
-  مفيد للبحث عن وصل قد يكون حجز أو خدمة فورية
-GET /api/bookings/receipt/:receiptNumber  (يتطلب توكن)
-  الرد: { booking: {...} }
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💡 نصائح البناء الصح
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- لملخص مالي سريع لليوم: /api/dashboard/summary ← الأسرع
-- لعمليات اليوم: /api/dashboard/operations ← مصفوفة مباشرة بالعربي
-- لرسم بياني آخر 7 أيام: /api/reports/range ثم analytics.dailyRevenue[]
-- لتوزيع طرق الدفع: التقارير summary.paymentBreakdown
-- لأفضل الموظفين: التقارير analytics.topEarners[]
-- لإيرادات مفصلة (حجوزات/فوري/مخصص): summary.totalDeposit, totalPredefinedInstant, totalCustomInstant
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚙️ SYSTEM & META MODELS - نماذج الإدارة والنظام
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- AfrakoushPage: الأدوات والصفحات الديناميكية اللي بتنشئها. GET /api/afrakoush-pages/ (لكل الأدوات)
-- AdminConversation: محادثات المديرين والمشرفين معاك. GET /api/admin-ai/conversations
-- Conversation: محادثات الجمهور وصفحة الفيسبوك مع بوت الذكاء الاصطناعي. مسار الإحصائيات: GET /api/ai/conversations
-- TelegramAccount: الحسابات المربوطة بتليجرام. GET /api/telegram-webhook/accounts
-- SystemSetting: إعدادات النظام. لا يوجد مسار عام لعمل GET لمحتواها بالكامل في الواجهة.
-- ActivityLog: سجل نشاط النظام. لا يوجد مسار GET مباشر في الواجهة له.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🤖 AI CHAT & COMMUNICATION - التحدث مع الذكاء الاصطناعي من صفحاتك
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-يمكنك بناء واجهات محادثة (شات) وتوجيه رسائل لغزل (مساعدة الجمهور) أو المساعد (أنت) وتغيير شخصيتكم!
-- مسار غزل (للجمهور):
-POST /api/ai/chat
-  الجسم: { messages: [{role:"user", text:"مرحبا غزل"}], sessionId: "...", additionalPrompt: "توجيه إضافي خفي لغزل لتتحدث مثلا بالانجليزي" }
-  الرد: { success: true, reply: "نص الرد", audioParts: ["base64..."] }
-
-- مسار المساعد (المساعد الإداري - أنت):
-POST /api/admin-ai/chat
-  الجسم: { text: "آخر رسالة", messages: [{role:"user",text:"..."}], conversationId: "...", additionalPrompt: "توجيه إضافي للمساعد ليتحدث كخبير تقني مثلا" }
-  الرد: { success: true, reply: "نص الرد", audioParts: [...], conversationId, title }
-  ملاحظة: يمكنك استخدام هذا المسار لسؤال المساعد (أنت) عن أي بيانات إحصائية من واجهة مخصصة تبنيها، ويمكنك إعطاء توجيه إضافي في additionalPrompt.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚀 المساحة الديناميكية في الصفحة الرئيسية وواجهات الجمهور (Public Pages)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-هناك مساحة حية (Dynamic Container) مخصصة لك داخل الـ Landing Page واسمها "landing-dynamic-space".
-الجمهور يرى محتوى هذه المساحة وتتفاعل معهم مباشرة! تستطيع إضافة أزرار، عروض خاصة، إعلانات، أو أي تصميم تريده.
-
-🔐 **قانون أمني صارم جداً جداً لجلب البيانات في أي صفحة للجمهور:**
-بما أن الجمهور يدخل المساحات العامة بدون تسجيل دخول (بدون Token)، **لا تقم أبداً بكتابة كود JavaScript (fetch أو apiClient أو axios) يجلب بيانات من مسارات الـ API المحمية (مثل /api/packages أو التقرير وغيره) داخل الصفحة العامة لأن ذلك سيؤدي لظهور خطأ 401 Unauthorized.**
-✅ **الحل الوحيد والصحيح:** قم أنت كـ "المساعد الاداري" باستدعاء الأدوات المتاحة لك (مثل get_packages_and_services) للحصول على البيانات في "عقلك/سياقك" أولاً، ثم قم بـ "تضمين البيانات حرفياً" (Hardcoding) داخل كود الـ JavaScript أو الـ HTML الذي ستقوم ببنائه للصفحة.
-مثال صحيح 100%: \`const servicesData = [{"name": "فرد", "price": 500}]; // قمت بجلبها مسبقاً من الأداة وكتبتها لك هنا\` 
-استخدم هذه الطريقة دائماً لعرض البيانات المحمية بأمان للجمهور!
-
-🎨 **دليل تصميم الـ Landing Page (التزم به حرفياً لتطابق الروح البصرية!):**
-- الألوان الأساسية: الخلفية داكنة '#080f0b' (لا تستخدمها للكروت)، الذهب الأساسي 'var(--gold)' أو '#c9a04e'، الأخضر الزمردي الداكن 'linear-gradient(135deg, #1a3a2a, #2a5a3a)'.
-- الكروت الزجاجية (Glassmorphism): استخدم خلفية 'rgba(15,36,25,0.65)' أو 'rgba(26,58,42,0.4)' مع تمويه 'backdrop-filter: blur(18px);' وإطار شفاف 'border: 1px solid rgba(201,160,78,0.12)'.
-- انحناء الحدود (Border Radius): استخدم انحناءات كبيرة وحديثة مثل 'border-radius: 18px' أو '24px'.
-- النصوص: العناوين تكون باللون الأبيض الخفيف '#f5f0e8' مع لمسات ذهبية. تجنب الأسود.
-- الأزرار (Buttons): إذا وضعت زراً اجعله ذهبياً 'linear-gradient(135deg, #c9a04e, #e6c27b)' بلون نص داخلي '#080f0b'، مع ظل خفيف وتدويرة 'border-radius: 14px'.
-
-⚠️ تنبيه هام لمنع ضياع الكود: قبل تعديل المساحة الديناميكية أو إضافة شيء لها، يجب عليك دائماً وحتماً أن تقوم باستدعاء أداة get_afrakoush_page باسم "landing-dynamic-space" أولاً لتقرأ الكود الحالي الموجود بداخلها.
-بعد أن تقرأه، ادمج إضافاتك الجديدة أو تعديلاتك مع الكود الحالي الذي قرأته، ثم قم باستدعاء أداة build_afrakoush_page لصلاحية public للحفظ.
-إذا طلب منك المدير "حذف محتوى مساحة اللاند بيج بالكامل" فقط قم ببنائها بكود html فارغ.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🏢 معلومات غرام سلطان الأساسية (استخدمها عند تصميم أزرار التواصل أو كتابة أي وصف)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- **رقم الواتساب والموبايل الرئيسي:** 01092527126 (رابط مباشر للجمهور: https://wa.me/201092527126)
-- **أرقام أخرى:** رقم الأرضي: 0472570908
-- **مواعيد العمل:** يومياً من 9 صباحاً حتى 9 مساءً
-- **العنوان:** شارع الجيش أمام بوابة دمشق، دسوق، كفر الشيخ. (رابط الخريطة: https://maps.app.goo.gl/cpF8J7rw6ScxZwiv5)
-- **روابط هامة:** 
-  - الموقع الرسمي لعرض الباكدجات: https://gharam.art/prices
-  - لحجز مساج أو كرسي المساج: https://gharam.art/massage-chair
-- **شرح النشاط:** سنتر واستوديو حريمي فقط (ميكاب أرتيست، تصوير حفلات وزفاف، صبغة وفرد، تنظيف بشرة وحمام مغربي). الرجالة غير مسموح لهم بالدخول باستثناء تصوير الكابلز (الخطيب/العريس).
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚫 مسارات غير موجودة - لا تخترعها أبداً
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-❌ /api/activity-logs  (غير موجود)
-❌ /api/services  (غير موجود، استخدم /api/packages/services)
-❌ /api/packages  (غير كامل، استخدم /api/packages/packages)
-❌ /api/bookings/stats  (غير موجود)
-❌ /api/users/leaderboard  (غير موجود، استخدم /api/reports/range ثم analytics.topEarners)
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎁 POINTS & COINS - إدارة النقاط والعملات للموظفين
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-- تحويل النقاط لعملات: POST /api/users/convert-points (يستدعيه الموظف)
-- استبدال العملات بفلوس: POST /api/users/redeem-coins  الجسم: { count }
-- إرسال هدية لموظف: POST /api/users/gift  الجسم: { userId, amount, note }
-- إرسال هدية للكل: POST /api/users/gift/bulk  الجسم: { amount, note }
-- خصم نقاط من موظف: POST /api/users/deduct  الجسم: { userId, amount, reason }
-- ملخص أداء الموظف الحسابي: GET /api/users/points/summary
-
-** التواريخ والأرقام **
-- لتنسيق تاريخ: new Date(d).toLocaleDateString('ar-EG')
-- الشهر الحالي: new Date().toISOString().slice(0,7)
-- اليوم كـ string: new Date().toISOString().slice(0,10)
-- للأرقام: (number||0).toLocaleString('ar-EG') + ' ج.م'
-- آخر 30 يوم: const t=new Date(); const toStr=t.toISOString().slice(0,10); const f=new Date(t); f.setDate(t.getDate()-30); const fromStr=f.toISOString().slice(0,10);
-
-=== أسرار الـ Sandbox (متغيرات متاحة عالمياً لك في الكود) ===
-1️⃣ \`container\`: متغير يشير حصرياً لصفحتك. 
-   ⚠️ بدلاً من \`document.getElementById\` الذي قد يُحدث تداخلاً مع الموقع الأساسي، استخدم دائماً: \`container.querySelector('#id')\`
-2️⃣ \`showToast(message, variant)\`: دالة جاهزة لإظهار إشعارات للمستخدم ('success', 'danger', 'warning'). مثال: \`showToast("تم الحفظ بنجاح", "success")\`
-3️⃣ \`apiClient\`: تستخدم لعمل الطلبات \`apiClient.get(...)\` وهي جاهزة ومضاف لها التوكن.
-
-=== المكتبات المتاحة للاستخدام في الـ script (لا تحتاج import، متوفرة عالمياً) ===
-
-** Chart.js (للرسوم البيانية) - قاعدة مهمة جداً **
-- ⚠️ لا تضع <script src="..."> في الـ html لأن innerHTML لا ينفذ script tags أبداً!
-- بدلاً من ذلك، حمّل المكتبة ديناميكياً من الـ script بهذا النمط الإلزامي:
-
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = src;
-    s.onload = resolve;
-    s.onerror = reject;
-    document.head.appendChild(s);
-  });
-}
-
-// ثم استخدمها هكذا:
-loadScript('https://cdn.jsdelivr.net/npm/chart.js').then(() => {
-  new Chart(document.getElementById('myChart'), {
-    type: 'doughnut', // أو bar أو line أو pie
-    data: { labels: [], datasets: [{ data: [], backgroundColor: ['#0d6efd','#20c997','#fd7e14'] }] }
-  });
-});
-
-- ضع <canvas id="myChart"></canvas> في الـ html
-- ألوان مقترحة: ['#0d6efd','#20c997','#fd7e14','#dc3545','#6f42c1','#ffc107']
-
-** FontAwesome (أيقونات) - نفس القاعدة **
-- ⚠️ لا تضع <link> في الـ html، بل حمّل الـ CSS ديناميكياً من الـ script:
-
-function loadCSS(href) {
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = href;
-  document.head.appendChild(link);
-}
-loadCSS('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css');
-
-- بعدها استخدم مباشرة في الـ html: <i class="fas fa-chart-bar"></i>
-
-** القاعدة الذهبية: كل <script> و<link> خارجية تحملها من الـ JavaScript script بالدوال السابقة **
-
-=== توقيع عفركوش في أسفل الصفحات ===
-بشكل افتراضي وفي نهاية كل html تبنيه لصفحات مستقلة، أضف توقيعك. ابتكر في كل مرة جملة كوميدية جديدة وفريدة من خيالك تعبر عن روح العفريت الذي بنى هذه الصفحة.
-⚠️ استثناء هام جداً: إذا طلب منك المدير بوضوح عدم وضع التوقيع، أو إذا كنت تبني/تعدل المساحة الديناميكية "landing-dynamic-space"، فيجب عليك ألا تضع التوقيع نهائياً حتى لا تشوه تصميم الصفحة الرئيسية.
-كود التوقيع (عند استخدامه فقط):
-<div style="text-align:center; padding: 30px 0 15px; margin-top:50px; border-top: 1px dashed #ddd; direction:rtl;">
-  <img src="https://www.gharam.art/logo.png" alt="غرام سلطان" style="width:60px; opacity:0.6; margin-bottom:8px; filter: drop-shadow(0 2px 6px rgba(201,160,78,0.3));" />
-  <div style="font-size: 1.6rem; animation: float 3s ease-in-out infinite; display:inline-block; margin: 0 8px;">🧞</div>
-  <div style="font-family: monospace; font-size:13px; color:#888; margin-top:6px;">صُنع بيد عفركوش الذراع التقني لغرام سلطان  🔮</div>
-  <div style="font-size:11px; color:#bbb; margin-top:4px; font-style:italic;">[ اكتب هنا جملتك الكوميدية المبتكرة ]</div>
-  <style>@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }</style>
-</div>
-
-=== قواعد الروابط ===
-- عند إخبار المستخدم برابط الأداة بعد بنائها، اكتب الرابط كاملاً كنص ظاهر:
-  - إذا كانت الصلاحية عامة (public): https://www.gharam.art/p/afrakoush/{name}
-  - إذا كانت إدارية: https://www.gharam.art/admin/afrakoush/{name}
-- ⚠️ مهم جداً: لا تضع الرابط داخل hyperlink مخفي مثل [اضغط هنا](رابط) لأن التليجرام لا يعرضه.
-- ✅ اكتب الرابط كنص صريح ومرئي هكذا:
-  🔗 https://www.gharam.art/admin/afrakoush/{name}
-  وليس: [لوحة التحكم](https://www.gharam.art/...)`;
-
-const MODEL_CANDIDATES = [
-    'gemini-3.1-pro-preview',
-    'gemini-2.5-pro',
-    'gemini-2.5-flash',
-    'gemini-3.1-flash-lite-preview',
-    'gemini-2.5-flash-lite',
-    'gemini-3-flash-preview'
-];
-
-const isToday = (dateStr) => {
-    const d = new Date(dateStr);
-    const today = new Date();
-    return d.getDate() === today.getDate() &&
-        d.getMonth() === today.getMonth() &&
-        d.getFullYear() === today.getFullYear();
-};
-
-const adminTools = [
-    {
-        functionDeclarations: [
-            {
-                name: "get_employees_overview",
-                description: "يجلب قائمة بجميع الموظفين المسجلين في النظام مع النقاط التشغيلية الإجمالية والرواتب. لا يتطلب أي معاملات.",
-                parameters: { type: "OBJECT", properties: {}, required: [] }
-            },
-            {
-                name: "query_operations",
-                description: "يستعلم عن العمليات المنفذة (حجوزات عرائس + خدمات سريعة) في نطاق تاريخي. يرجع عدد الحجوزات والخدمات مع تفاصيلها.",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        startDate: { type: "STRING", description: "تاريخ البداية (YYYY-MM-DD)." },
-                        endDate: { type: "STRING", description: "تاريخ النهاية (YYYY-MM-DD)." },
-                        employeeName: { type: "STRING", description: "اسم الموظف للفلترة (اختياري)." }
-                    },
-                    required: ["startDate", "endDate"]
-                }
-            },
-            {
-                name: "query_financials_and_expenses",
-                description: "يستعلم عن المصروفات والسلف الطارئة والخصومات في نطاق زمني.",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        startDate: { type: "STRING", description: "تاريخ البداية (YYYY-MM-DD)." },
-                        endDate: { type: "STRING", description: "تاريخ النهاية (YYYY-MM-DD)." },
-                        employeeName: { type: "STRING", description: "اسم الموظف (اختياري)." }
-                    },
-                    required: ["startDate", "endDate"]
-                }
-            },
-            {
-                name: "get_financial_report",
-                description: "تقرير مالي شامل ويعرض توزيع الأموال على قنوات الدفع (كاش، فودافون كاش، انستاباي، فيزا) وصافي الربح.",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        startDate: { type: "STRING", description: "تاريخ البداية (YYYY-MM-DD)." },
-                        endDate: { type: "STRING", description: "تاريخ النهاية (YYYY-MM-DD)." }
-                    },
-                    required: ["startDate", "endDate"]
-                }
-            },
-            {
-                name: "get_packages_and_services",
-                description: "يجلب جميع باقات التجميل والتصوير وخدماتها مع الأسعار وحالة التفعيل. لا يتطلب أي معاملات.",
-                parameters: { type: "OBJECT", properties: {}, required: [] }
-            },
-            {
-                name: "search_booking",
-                description: "يبحث عن الحجوزات برقم الإيصال أو رقم تليفون أو اسم العميلة أو الفلترة بنوع الخدمة وتواريخ محددة. يرجع كل بيانات الحجز. مفيد جداً للبحث والفلترة.",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        query: { type: "STRING", description: "مؤشر بحث عن رقم الإيصال أو رقم تليفون أو اسم العميلة (اختياري)." },
-                        serviceName: { type: "STRING", description: "اسم خدمة للبحث عنها داخله (مثل: تصوير، فرد، صبغة، ميكاب) (اختياري)." },
-                        startDate: { type: "STRING", description: "تاريخ البداية للحجز (YYYY-MM-DD)." },
-                        endDate: { type: "STRING", description: "تاريخ النهاية للحجز (YYYY-MM-DD)." }
-                    },
-                    required: []
-                }
-            },
-            {
-                name: "get_activity_log",
-                description: "يجلب سجل النشاط والعمليات (إنشاء/تعديل/حذف حجوزات وخدمات ومصروفات) مع اسم الموظف المنفذ وتفاصيل التغييرات. يمكن الفلترة بالتاريخ ونوع الكيان.",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        startDate: { type: "STRING", description: "تاريخ البداية (YYYY-MM-DD)." },
-                        endDate: { type: "STRING", description: "تاريخ النهاية (YYYY-MM-DD)." },
-                        entityType: { type: "STRING", description: "نوع الكيان (مثلاً: Booking, InstantService, Expense) (اختياري)." },
-                        employeeName: { type: "STRING", description: "اسم الموظف لتتبع عملياته (اختياري)." },
-                        limit: { type: "NUMBER", description: "عدد السجلات (الافتراضي 30)." }
-                    },
-                    required: []
-                }
-            },
-            {
-                name: "get_client_details",
-                description: "يجلب كل حجوزات عميلة معينة (بالاسم أو الهاتف) مع كل التفاصيل والمبالغ والسجل الكامل.",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        query: { type: "STRING", description: "اسم العميلة أو رقم تليفونها." }
-                    },
-                    required: ["query"]
-                }
-            },
-            {
-                name: "evaluate_employee_performance",
-                description: "تقييم أداء الموظفين وإيجاد الأفضل بحساب العائد الخاص بهم عبر تحديد فترة زمنية.",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        startDate: { type: "STRING", description: "تاريخ البداية (YYYY-MM-DD)." },
-                        endDate: { type: "STRING", description: "تاريخ النهاية (YYYY-MM-DD)." }
-                    },
-                    required: ["startDate", "endDate"]
-                }
-            },
-            {
-                name: "detect_anomalies",
-                description: "يكتشف الأخطاء أو التجاوزات مثل ديون العملاء لحجوزات منتهية، السلف العالية للموظفين، والخدمات المرتجعة الكثيرة.",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        daysLimit: { type: "NUMBER", description: "آخر X عدد من الأيام للبحث (افتراضي 30)." }
-                    },
-                    required: []
-                }
-            },
-            {
-                name: "get_past_clients",
-                description: "يجلب قائمة بالعميلات السابقات لإعادة استهدافهن مرة أخرى بناء أوقات حجوزاتهم.",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        monthsAgo: { type: "NUMBER", description: "البحث عن العملاء الذين حجزوا منذ عدد أشهر معينة (مثلا 6)." }
-                    },
-                    required: ["monthsAgo"]
-                }
-            },
-            {
-                name: "predictive_scheduling",
-                description: "يعرض حجم وتفاصيل الحجوزات القادمة في يوم محدد مع الموظفين المتاحين لاقتراح التوزيع العادل للشغل.",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        targetDate: { type: "STRING", description: "تاريخ اليوم المطلوب (YYYY-MM-DD)." }
-                    },
-                    required: ["targetDate"]
-                }
-            },
-            {
-                name: "search_admin_conversations",
-                description: "تبحث في أرشيف المحادثات. مسموح لمدير النظام البحث في محادثات المشرفين، وللمشرفين البحث في محادثاتهم الشخصية فقط.",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        query: { type: "STRING", description: "كلمة مفتاحية للبحث داخل المحادثة أو عنوانها (اختياري)." },
-                        username: { type: "STRING", description: "اسم المستخدم أو المشرف للبحث في محادثاته (اختياري للمشرف وتطبق صلاحيته تلقائياً)." },
-                        startDate: { type: "STRING", description: "تاريخ البداية (YYYY-MM-DD) اختياري." },
-                        endDate: { type: "STRING", description: "تاريخ النهاية (YYYY-MM-DD) اختياري." }
-                    },
-                    required: []
-                }
-            },
-            {
-                name: "build_afrakoush_page",
-                description: "يبني أو يعدل صفحة واجهة مستخدم (HTML + JS) تعرض بيانات وأدوات مخصصة ويخزنها كأداة ديناميكية.",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        name: { type: "STRING", description: "اسم مختصر للرابط بالانجليزية (مثال: yearly-report) يعبر عن الأداة." },
-                        title: { type: "STRING", description: "اسم الصفحة بالعربية." },
-                        html: { type: "STRING", description: "تصميم الواجهة باستخدام Bootstrap 5. ضع فقط محتوى الصفحة بدون <html> أو <body>." },
-                        script: { type: "STRING", description: "كود جافاسكريبت نقي (Vanilla JS) يستخدم كائن apiClient (المجهز بـ axios) والـ container لجلب البيانات والتفاعل. مثلا: apiClient.get('/api/bookings').then..." },
-                        allowedRole: { type: "STRING", description: "الصلاحية המسموحة: admin, supervisor, employee, أو public. الفتراضي هو supervisor." }
-                    },
-                    required: ["name", "title", "html", "script"]
-                }
-            },
-            {
-                name: "get_afrakoush_page",
-                description: "يجلب كود HTML و JavaScript الخاص بصفحة عفركوش معينة تم بناؤها مسبقاً، لقراءته والتعديل عليه بدون مسحه بالخطأ. استخدمها قبل إضافة أو تعديل في مساحة مثل landing-dynamic-space.",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        name: { type: "STRING", description: "الاسم المختصر للأداة أو المساحة (مثال: landing-dynamic-space)." }
-                    },
-                    required: ["name"]
-                }
-            }
-        ]
-    }
-];
-
-const createFunctions = (user) => ({
-    get_employees_overview: async () => {
-        try {
-            const usersDB = await User.find({}).select('-password').lean();
-            const employees = usersDB.map(u => {
-                const totalPoints = Array.isArray(u.points)
-                    ? u.points.reduce((sum, p) => sum + (p.amount || 0), 0)
-                    : 0;
-                const base = { id: u._id, username: u.username, role: u.role, totalPoints };
-                if (user.role !== 'supervisor') {
-                    base.monthlySalary = u.monthlySalary || 0;
-                    base.remainingSalary = u.remainingSalary || 0;
-                }
-                return base;
-            });
-            return { employees };
-        } catch (err) {
-            console.error('[AdminAI] get_employees_overview error:', err.message);
-            return { error: "فشل في جلب الموظفين: " + err.message };
-        }
-    },
-    query_operations: async ({ startDate, endDate, employeeName }) => {
-        try {
-            let start = new Date(startDate); start.setHours(0, 0, 0, 0);
-            let end = new Date(endDate); end.setHours(23, 59, 59, 999);
-
-            let empIds = [];
-            if (employeeName) {
-                const emps = await User.find({ username: { $regex: employeeName, $options: 'i' } }).lean();
-                if (emps.length > 0) empIds = emps.map(e => e._id);
-                else return { message: `لم يتم العثور على موظف باسم ${employeeName}` };
-            }
-
-            // Bookings: field is eventDate, services are in packageServices, executedBy is the employee
-            const bQuery = { eventDate: { $gte: start, $lte: end } };
-            if (empIds.length > 0) {
-                bQuery.$or = [
-                    { 'packageServices.executedBy': { $in: empIds } },
-                    { 'hairStraighteningExecutedBy': { $in: empIds } },
-                    { 'hairDyeExecutedBy': { $in: empIds } }
-                ];
-            }
-            const bookingsDB = await Booking.find(bQuery)
-                .populate('packageServices.executedBy', 'username')
-                .populate('hairStraighteningExecutedBy', 'username')
-                .populate('hairDyeExecutedBy', 'username')
-                .populate('extraServices', 'name')
-                .populate('package', 'name')
-                .populate('photographyPackage', 'name')
-                .populate('hennaPackage', 'name')
-                .lean();
-
-            const bookings = bookingsDB.map(b => ({
-                receiptNumber: b.receiptNumber,
-                client: b.clientName,
-                phone: b.clientPhone,
-                eventDate: b.eventDate?.toISOString().split('T')[0],
-                total: b.total,
-                remaining: b.remaining,
-                packageName: b.package?.name || 'غير محدد',
-                photographyPackage: b.photographyPackage?.name || null,
-                hennaPackage: b.hennaPackage?.name || null,
-                extraServices: (b.extraServices || []).map(s => s.name).join('، '),
-                services: (b.packageServices || []).map(s => ({
-                    name: s.name,
-                    executed: s.executed,
-                    executedBy: s.executedBy?.username || null
-                })),
-                hairStraightening: b.hairStraightening ? { executed: b.hairStraighteningExecuted, executedBy: b.hairStraighteningExecutedBy?.username || null } : null,
-                hairDye: b.hairDye ? { executed: b.hairDyeExecuted, executedBy: b.hairDyeExecutedBy?.username || null } : null
-            }));
-
-            // InstantServices: field is createdAt, employee is employeeId
-            const iQuery = { createdAt: { $gte: start, $lte: end } };
-            if (empIds.length > 0) iQuery['employeeId'] = { $in: empIds };
-            const instantDB = await InstantService.find(iQuery)
-                .populate('employeeId', 'username')
-                .lean();
-
-            const instant = instantDB.map(i => ({
-                receiptNumber: i.receiptNumber,
-                services: (i.services || []).map(s => s.name).join(', '),
-                employee: i.employeeId?.username || 'غير محدد',
-                date: i.createdAt?.toISOString().split('T')[0],
-                total: i.total
-            }));
-
-            return {
-                bookingsCount: bookings.length,
-                instantCount: instant.length,
-                bookings,
-                instant_services: instant
-            };
-        } catch (err) {
-            console.error('[AdminAI] query_operations error:', err.message);
-            return { error: "فشل في جلب العمليات: " + err.message };
-        }
-    },
-    query_financials_and_expenses: async ({ startDate, endDate, employeeName }) => {
-        try {
-            if (user.role === 'supervisor') {
-                if (!isToday(startDate) || !isToday(endDate)) {
-                    return { message: "لا توجد بيانات متاحة في هذا النطاق الزمني." };
-                }
-            }
-
-            let start = new Date(startDate); start.setHours(0, 0, 0, 0);
-            let end = new Date(endDate); end.setHours(23, 59, 59, 999);
-
-            let empIds = [];
-            if (employeeName) {
-                const emps = await User.find({ username: { $regex: employeeName, $options: 'i' } }).lean();
-                if (emps.length > 0) empIds = emps.map(e => e._id);
-                else return { message: `لم يتم العثور على موظف باسم ${employeeName}` };
-            }
-
-            // Expenses: field is createdAt, description is details
-            let filteredExpenses = [];
-            if (empIds.length === 0) {
-                const exps = await Expense.find({ createdAt: { $gte: start, $lte: end } }).lean();
-                filteredExpenses = exps.map(e => ({
-                    details: e.details, amount: e.amount,
-                    date: e.createdAt?.toISOString().split('T')[0]
-                }));
-            }
-
-            // Advances: field is createdAt, no reason field
-            const advQuery = { createdAt: { $gte: start, $lte: end } };
-            if (empIds.length > 0) advQuery['userId'] = { $in: empIds };
-            const advs = await Advance.find(advQuery).populate('userId', 'username').lean();
-            const filteredAdvances = advs.map(a => ({
-                employee: a.userId?.username || 'غير معروف',
-                amount: a.amount,
-                date: a.createdAt?.toISOString().split('T')[0]
-            }));
-
-            // Deductions: field is createdAt
-            const dedQuery = { createdAt: { $gte: start, $lte: end } };
-            if (empIds.length > 0) dedQuery['userId'] = { $in: empIds };
-            const deds = await Deduction.find(dedQuery).populate('userId', 'username').lean();
-            const filteredDeductions = deds.map(d => ({
-                employee: d.userId?.username || 'غير معروف',
-                amount: d.amount,
-                reason: d.reason || '',
-                date: d.createdAt?.toISOString().split('T')[0]
-            }));
-
-            return { expenses: filteredExpenses, advances: filteredAdvances, deductions: filteredDeductions };
-        } catch (err) {
-            console.error('[AdminAI] query_financials error:', err.message);
-            return { error: "فشل في جلب المصروفات والسلف: " + err.message };
-        }
-    },
-    get_financial_report: async ({ startDate, endDate }) => {
-        try {
-            if (user.role === 'supervisor') {
-                if (!isToday(startDate) || !isToday(endDate)) {
-                    return { message: "لا توجد بيانات متاحة في هذا النطاق الزمني." };
-                }
-            }
-
-            let start = new Date(startDate); start.setHours(0, 0, 0, 0);
-            let end = new Date(endDate); end.setHours(23, 59, 59, 999);
-
-            const paymentBreakdown = { cash: 0, vodafone: 0, visa: 0, instapay: 0 };
-            const toNumber = (v) => Number(v) || 0;
-
-            // === Revenue from NEW bookings created in this period ===
-            // Revenue = deposit - sum(installments) = only the INITIAL deposit that was paid
-            const newBookings = await Booking.find({ createdAt: { $gte: start, $lte: end } }).lean();
-            let depositRevenue = 0;
-            for (const b of newBookings) {
-                const installmentsSum = (b.installments || []).reduce((s, i) => s + (toNumber(i.amount)), 0);
-                const initialDeposit = (toNumber(b.deposit)) - installmentsSum;
-                const finalDeposit = Math.max(0, initialDeposit);
-                depositRevenue += finalDeposit;
-                paymentBreakdown[b.paymentMethod || 'cash'] = (paymentBreakdown[b.paymentMethod || 'cash'] || 0) + finalDeposit;
-            }
-
-            // === Revenue from INSTALLMENTS paid in this period (from any booking) ===
-            const bookingsWithInstallments = await Booking.find({
-                'installments.date': { $gte: start, $lte: end }
-            }).lean();
-            let installmentRevenue = 0;
-            for (const b of bookingsWithInstallments) {
-                for (const inst of (b.installments || [])) {
-                    const instDate = new Date(inst.date);
-                    if (instDate >= start && instDate <= end) {
-                        const amt = toNumber(inst.amount);
-                        installmentRevenue += amt;
-                        paymentBreakdown[inst.paymentMethod || 'cash'] = (paymentBreakdown[inst.paymentMethod || 'cash'] || 0) + amt;
-                    }
-                }
-            }
-
-            const totalBookingRevenue = depositRevenue + installmentRevenue;
-
-            // === Revenue from instant services in this period ===
-            const instantServices = await InstantService.find({ createdAt: { $gte: start, $lte: end } }).lean();
-            let revI = 0;
-            for (const is of instantServices) {
-                const amt = toNumber(is.total);
-                revI += amt;
-                paymentBreakdown[is.paymentMethod || 'cash'] = (paymentBreakdown[is.paymentMethod || 'cash'] || 0) + amt;
-            }
-
-            // === Expenses ===
-            const expenses = await Expense.find({ createdAt: { $gte: start, $lte: end } }).lean();
-            let expT = 0;
-            for (const e of expenses) {
-                const amt = toNumber(e.amount);
-                expT += amt;
-                paymentBreakdown[e.paymentMethod || 'cash'] = (paymentBreakdown[e.paymentMethod || 'cash'] || 0) - amt;
-            }
-
-            // === Advances ===
-            const advances = await Advance.find({ createdAt: { $gte: start, $lte: end } }).lean();
-            let advT = 0;
-            for (const a of advances) {
-                const amt = toNumber(a.amount);
-                advT += amt;
-                paymentBreakdown[a.paymentMethod || 'cash'] = (paymentBreakdown[a.paymentMethod || 'cash'] || 0) - amt;
-            }
-
-            const totalIncome = totalBookingRevenue + revI;
-            const net = totalIncome - expT - advT;
-
-            return {
-                summary: `عربون حجوزات جديدة: ${depositRevenue} ج | أقساط مدفوعة: ${installmentRevenue} ج | خدمات سريعة: ${revI} ج | إجمالي الدخل: ${totalIncome} ج | مصروفات: ${expT} ج | سلف: ${advT} ج | صافي: ${net} ج | كاش: ${paymentBreakdown.cash} ج | فودافون: ${paymentBreakdown.vodafone} ج | فيزا: ${paymentBreakdown.visa} ج | انستاباي: ${paymentBreakdown.instapay} ج`,
-                data: {
-                    newBookingDeposits: depositRevenue,
-                    installmentsPaid: installmentRevenue,
-                    instantServicesRevenue: revI,
-                    totalIncome,
-                    totalExpenses: expT,
-                    totalAdvances: advT,
-                    net,
-                    paymentBreakdown
-                }
-            };
-        } catch (err) {
-            console.error('[AdminAI] get_financial_report error:', err.message);
-            return { error: "فشل حساب التقرير المالي: " + err.message };
-        }
-    },
-    get_packages_and_services: async () => {
-        try {
-            const packages = await Package.find({}).lean();
-            const services = await Service.find({}).populate('packageId', 'name').lean();
-            return {
-                packages: packages.map(p => ({
-                    name: p.name, price: p.price, type: p.type,
-                    isActive: p.isActive, showInPrices: p.showInPrices
-                })),
-                services: services.map(s => ({
-                    name: s.name, price: s.price, type: s.type,
-                    packageName: s.packageId?.name || null,
-                    isActive: s.isActive, showInPrices: s.showInPrices
-                }))
-            };
-        } catch (err) {
-            console.error('[AdminAI] get_packages_and_services error:', err.message);
-            return { error: "فشل في جلب الباقات والخدمات: " + err.message };
-        }
-    },
-    search_booking: async ({ query, serviceName, startDate, endDate }) => {
-        try {
-            const searchQuery = {};
-            if (query) {
-                searchQuery.$or = [
-                    { receiptNumber: query },
-                    { clientPhone: { $regex: query, $options: 'i' } },
-                    { clientName: { $regex: query, $options: 'i' } }
-                ];
-            }
-            if (startDate || endDate) {
-                searchQuery.eventDate = {};
-                if (startDate) {
-                    let start = new Date(startDate);
-                    if (!isNaN(start.getTime())) {
-                        start.setHours(0, 0, 0, 0);
-                        searchQuery.eventDate.$gte = start;
-                    }
-                }
-                if (endDate) {
-                    let end = new Date(endDate);
-                    if (!isNaN(end.getTime())) {
-                        end.setHours(23, 59, 59, 999);
-                        searchQuery.eventDate.$lte = end;
-                    }
-                }
-                if (Object.keys(searchQuery.eventDate).length === 0) delete searchQuery.eventDate;
-            }
-
-            const resultsDb = await Booking.find(searchQuery)
-                .populate('package', 'name price type')
-                .populate('photographyPackage', 'name price')
-                .populate('hennaPackage', 'name price')
-                .populate('packageServices.executedBy', 'username')
-                .populate('createdBy', 'username')
-                .populate('extraServices', 'name')
-                .sort({ eventDate: -1 })
-                .limit(50)
-                .lean();
-
-            let results = resultsDb;
-
-            if (serviceName) {
-                const serviceRegex = new RegExp(serviceName, 'i');
-                results = results.filter(b => {
-                    if (b.package?.name?.match(serviceRegex)) return true;
-                    if (b.packageServices?.some(s => s.name?.match(serviceRegex))) return true;
-                    if (b.extraServices?.some(s => s.name?.match(serviceRegex))) return true;
-                    if (serviceName.includes('فرد') && b.hairStraightening) return true;
-                    if (serviceName.includes('صبغة') && b.hairDye) return true;
-                    if (serviceName.includes('بروتين') && b.hairStraightening) return true;
-                    if (serviceName.includes('تصوير') && b.photographyPackage) return true;
-                    if (serviceName.includes('حنة') && b.hennaPackage) return true;
-                    if (b.photographyPackage?.name?.match(serviceRegex)) return true;
-                    if (b.hennaPackage?.name?.match(serviceRegex)) return true;
-                    return false;
-                });
-            }
-
-            if (results.length === 0) return { message: `لم يتم العثور على حجوزات تطابق المعايير.` };
-
-            return {
-                count: results.length,
-                bookings: results.slice(0, 20).map(b => ({
-                    receiptNumber: b.receiptNumber,
-                    clientName: b.clientName,
-                    clientPhone: b.clientPhone,
-                    eventDate: b.eventDate?.toISOString().split('T')[0],
-                    packageName: b.package?.name || 'غير محدد',
-                    photographyPackage: b.photographyPackage?.name || null,
-                    hennaPackage: b.hennaPackage?.name || null,
-                    total: b.total,
-                    deposit: b.deposit,
-                    remaining: b.remaining,
-                    paymentMethod: b.paymentMethod,
-                    services: (b.packageServices || []).map(s => s.name).join('، '),
-                    extraServices: (b.extraServices || []).map(s => s.name).join('، '),
-                    hairStraightening: b.hairStraightening ? { price: b.hairStraighteningPrice } : null,
-                    hairDye: b.hairDye ? { price: b.hairDyePrice } : null,
-                    createdBy: b.createdBy?.username || 'غير معروف',
-                    createdAt: b.createdAt?.toISOString().split('T')[0],
-                    updatesCount: b.updates?.length || 0
-                }))
-            };
-        } catch (err) {
-            console.error('[AdminAI] search_booking error:', err.message);
-            return { error: "فشل في البحث عن الحجز: " + err.message };
-        }
-    },
-    get_activity_log: async ({ startDate, endDate, entityType, employeeName, limit }) => {
-        try {
-            const count = Math.min(limit || 30, 100);
-            const query = {};
-
-            if (startDate || endDate) {
-                query.createdAt = {};
-                if (startDate) {
-                    let start = new Date(startDate);
-                    if (!isNaN(start.getTime())) {
-                        start.setHours(0, 0, 0, 0);
-                        query.createdAt.$gte = start;
-                    }
-                }
-                if (endDate) {
-                    let end = new Date(endDate);
-                    if (!isNaN(end.getTime())) {
-                        end.setHours(23, 59, 59, 999);
-                        query.createdAt.$lte = end;
-                    }
-                }
-                if (Object.keys(query.createdAt).length === 0) delete query.createdAt;
-            }
-            if (entityType) {
-                query.entityType = { $regex: entityType, $options: 'i' };
-            }
-            if (employeeName) {
-                const emps = await User.find({ username: { $regex: employeeName, $options: 'i' } }).lean();
-                if (emps.length > 0) {
-                    query.performedBy = { $in: emps.map(e => e._id) };
-                } else {
-                    return { message: `لم يتم العثور على موظف باسم ${employeeName}` };
-                }
-            }
-
-            const logs = await ActivityLog.find(query)
-                .populate('performedBy', 'username')
-                .sort({ createdAt: -1 })
-                .limit(count)
-                .lean();
-
-            return {
-                count: logs.length,
-                logs: logs.map(l => ({
-                    action: l.action,
-                    entityType: l.entityType,
-                    details: l.details,
-                    amount: l.amount || null,
-                    employee: l.performedBy?.username || 'غير معروف',
-                    date: l.createdAt?.toISOString().replace('T', ' ').slice(0, 16)
-                }))
-            };
-        } catch (err) {
-            console.error('[AdminAI] get_activity_log error:', err.message);
-            return { error: "فشل في جلب سجل النشاط: " + err.message };
-        }
-    },
-    get_client_details: async ({ query }) => {
-        try {
-            const searchQuery = {
-                $or: [
-                    { clientPhone: { $regex: query, $options: 'i' } },
-                    { clientName: { $regex: query, $options: 'i' } }
-                ]
-            };
-            const bookings = await Booking.find(searchQuery)
-                .populate('package', 'name')
-                .populate('photographyPackage', 'name')
-                .populate('hennaPackage', 'name')
-                .populate('extraServices', 'name')
-                .sort({ eventDate: -1 })
-                .lean();
-
-            if (bookings.length === 0) return { message: `لم يتم العثور على عميلة باسم أو رقم "${query}"` };
-
-            const totalSpent = bookings.reduce((s, b) => s + b.total, 0);
-            const totalRemaining = bookings.reduce((s, b) => s + b.remaining, 0);
-
-            return {
-                clientName: bookings[0].clientName,
-                clientPhone: bookings[0].clientPhone,
-                totalBookings: bookings.length,
-                totalSpent,
-                totalRemaining,
-                bookings: bookings.map(b => ({
-                    receiptNumber: b.receiptNumber,
-                    eventDate: b.eventDate?.toISOString().split('T')[0],
-                    packageName: b.package?.name || 'غير محدد',
-                    photographyPackage: b.photographyPackage?.name || null,
-                    hennaPackage: b.hennaPackage?.name || null,
-                    extraServices: (b.extraServices || []).map(s => s.name).join('، '),
-                    hasHairStraightening: b.hairStraightening ? true : false,
-                    hasHairDye: b.hairDye ? true : false,
-                    total: b.total,
-                    remaining: b.remaining,
-                    deposit: b.deposit
-                }))
-            };
-        } catch (err) {
-            console.error('[AdminAI] get_client_details error:', err.message);
-            return { error: "فشل في جلب بيانات العميلة: " + err.message };
-        }
-    },
-    evaluate_employee_performance: async ({ startDate, endDate }) => {
-        try {
-            let start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0);
-            let end = new Date(); end.setHours(23, 59, 59, 999);
-
-            if (startDate) {
-                const s = new Date(startDate);
-                if (!isNaN(s.getTime())) { s.setHours(0, 0, 0, 0); start = s; }
-            }
-            if (endDate) {
-                const e = new Date(endDate);
-                if (!isNaN(e.getTime())) { e.setHours(23, 59, 59, 999); end = e; }
-            }
-
-            const users = await User.find({ role: { $in: ['employee', 'supervisor', 'admin'] } }).lean();
-
-            const results = await Promise.all(users.map(async u => {
-                const bCount = await Booking.countDocuments({
-                    eventDate: { $gte: start, $lte: end },
-                    $or: [
-                        { 'packageServices.executedBy': u._id },
-                        { 'hairStraighteningExecutedBy': u._id },
-                        { 'hairDyeExecutedBy': u._id }
-                    ]
-                });
-
-                const iResult = await InstantService.aggregate([
-                    { $match: { employeeId: u._id, createdAt: { $gte: start, $lte: end } } },
-                    { $group: { _id: null, total: { $sum: "$total" }, count: { $sum: 1 } } }
-                ]);
-                const instantRevenue = iResult[0]?.total || 0;
-                const instantCount = iResult[0]?.count || 0;
-
-                const advResult = await Advance.aggregate([
-                    { $match: { userId: u._id, createdAt: { $gte: start, $lte: end } } },
-                    { $group: { _id: null, total: { $sum: "$amount" } } }
-                ]);
-                const advTotal = advResult[0]?.total || 0;
-
-                const dedResult = await Deduction.aggregate([
-                    { $match: { userId: u._id, createdAt: { $gte: start, $lte: end } } },
-                    { $group: { _id: null, total: { $sum: "$amount" } } }
-                ]);
-                const dedTotal = dedResult[0]?.total || 0;
-
-                const employeeInfo = {
-                    name: u.username,
-                    role: u.role,
-                    bookingsParticipated: bCount,
-                    instantServicesCount: instantCount,
-                    instantServicesRevenue: instantRevenue,
-                    advancesTaken: advTotal,
-                    deductions: dedTotal,
-                    monthlySalary: u.monthlySalary || 0
-                };
-                if (user.role === 'supervisor') {
-                    delete employeeInfo.deductions;
-                    delete employeeInfo.monthlySalary;
-                }
-                return employeeInfo;
-            }));
-
-            const activeResults = results.filter(u => u.bookingsParticipated > 0 || u.instantServicesCount > 0 || u.advancesTaken > 0 || u.deductions > 0);
-            return {
-                totalEmployees: results.length,
-                activeEmployeesCount: activeResults.length,
-                employeesPerformance: activeResults.slice(0, 20)
-            };
-        } catch (err) {
-            console.error('[AdminAI] evaluate_employee_performance error:', err.message);
-            return { error: "فشل التقييم: " + err.message };
-        }
-    },
-    detect_anomalies: async ({ daysLimit = 30 }) => {
-        try {
-            const days = parseInt(daysLimit) || 30;
-            let limitDate = new Date();
-            limitDate.setDate(limitDate.getDate() - days);
-            let today = new Date(); today.setHours(0, 0, 0, 0);
-
-            const debts = await Booking.find({
-                eventDate: { $gte: limitDate, $lt: today },
-                remaining: { $gt: 0 }
-            }).select('receiptNumber clientName clientPhone remaining eventDate total').lean();
-
-            const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-            const users = await User.find({}).lean();
-            const advancesIssues = [];
-            for (const u of users) {
-                if (!u.monthlySalary) continue;
-                const advSum = await Advance.aggregate([
-                    { $match: { userId: u._id, createdAt: { $gte: currentMonthStart } } },
-                    { $group: { _id: null, total: { $sum: "$amount" } } }
-                ]);
-                const totalAdv = advSum[0]?.total || 0;
-                if (totalAdv > (u.monthlySalary * 0.4)) {
-                    advancesIssues.push({ name: u.username, salary: u.monthlySalary, totalAdvances: totalAdv });
-                }
-            }
-
-            const returns = await Booking.find({
-                createdAt: { $gte: limitDate },
-                returnedServices: { $exists: true, $not: { $size: 0 } }
-            }).select('receiptNumber clientName returnedServices createdAt').populate('returnedServices', 'name').lean();
-
-            return {
-                debtsCount: debts.length,
-                debts: debts.slice(0, 15).map(d => ({ ...d, eventDate: d.eventDate?.toISOString().split('T')[0] })),
-                highAdvancesCount: advancesIssues.length,
-                highAdvances: advancesIssues.slice(0, 15),
-                returnedServicesCount: returns.length,
-                returns: returns.slice(0, 15).map(r => ({ receiptNumber: r.receiptNumber, clientName: r.clientName, services: r.returnedServices.map(s => s.name).join('، ') }))
-            };
-        } catch (err) {
-            console.error('[AdminAI] detect_anomalies error:', err.message);
-            return { error: "فشل التدقيق: " + err.message };
-        }
-    },
-    get_past_clients: async ({ monthsAgo }) => {
-        try {
-            const m = parseInt(monthsAgo) || 6;
-            let start = new Date();
-            start.setMonth(start.getMonth() - m);
-            start.setHours(0, 0, 0, 0);
-
-            let end = new Date(start);
-            end.setMonth(end.getMonth() + 1);
-
-            const pastBookings = await Booking.find({
-                eventDate: { $gte: start, $lte: end }
-            }).populate('package', 'name').populate('extraServices', 'name').select('clientName clientPhone eventDate package extraServices').lean();
-
-            const uniqueClients = [];
-            const seenPhones = new Set();
-            for (const b of pastBookings) {
-                if (!seenPhones.has(b.clientPhone)) {
-                    seenPhones.add(b.clientPhone);
-                    uniqueClients.push({
-                        name: b.clientName,
-                        phone: b.clientPhone,
-                        date: b.eventDate?.toISOString().split('T')[0],
-                        package: b.package?.name,
-                        extraServices: (b.extraServices || []).map(s => s.name).join('، ')
-                    });
-                }
-            }
-            return {
-                targetPeriodFilter: { from: start.toISOString().split('T')[0], to: end.toISOString().split('T')[0] },
-                clientsFound: uniqueClients.length,
-                clients: uniqueClients.slice(0, 15),
-                systemMessage: uniqueClients.length > 15 ? `تم جلب أول 15 عميلة من أصل ${uniqueClients.length} لتوفير مساحة الذاكرة، أخبر المديرة بذلك.` : ``
-            };
-        } catch (err) {
-            console.error('[AdminAI] get_past_clients error:', err.message);
-            return { error: "فشل استخراج العميلات: " + err.message };
-        }
-    },
-    predictive_scheduling: async ({ targetDate }) => {
-        try {
-            let start = new Date();
-            if (targetDate) {
-                const td = new Date(targetDate);
-                if (!isNaN(td.getTime())) { start = td; }
-            }
-            start.setHours(0, 0, 0, 0);
-            let end = new Date(start);
-            end.setHours(23, 59, 59, 999);
-
-            const bookings = await Booking.find({ eventDate: { $gte: start, $lte: end } })
-                .populate('package', 'name').populate('photographyPackage', 'name').populate('hennaPackage', 'name').populate('extraServices', 'name').lean();
-
-            const activeStaff = await User.find({ role: { $in: ['employee', 'supervisor'] } }).select('username role').lean();
-
-            const summary = {
-                bridesCount: 0,
-                hairDyeCount: 0,
-                hairStraighteningCount: 0,
-                photographyCount: 0,
-                otherPackages: 0,
-                bookingsDetails: []
-            };
-
-            for (const b of bookings) {
-                if (b.package?.name?.includes('عروس')) summary.bridesCount++;
-                else summary.otherPackages++;
-
-                if (b.hairDye) summary.hairDyeCount++;
-                if (b.hairStraightening) summary.hairStraighteningCount++;
-                if (b.photographyPackage) summary.photographyCount++;
-
-                summary.bookingsDetails.push({
-                    client: b.clientName,
-                    package: b.package?.name,
-                    photographyPackage: b.photographyPackage?.name || null,
-                    hennaPackage: b.hennaPackage?.name || null,
-                    hasHairDye: !!b.hairDye,
-                    hasHairStraightening: !!b.hairStraightening,
-                    extraServices: (b.extraServices || []).map(s => s.name).join('، ')
-                });
-            }
-
-            return {
-                targetDate,
-                workloadSummary: summary,
-                availableStaffCount: activeStaff.length,
-                staff: activeStaff.map(s => s.username)
-            };
-        } catch (err) {
-            console.error('[AdminAI] predictive_scheduling error:', err.message);
-            return { error: "فشل جلب الجدولة: " + err.message };
-        }
-    },
-    search_admin_conversations: async ({ query, username, startDate, endDate }) => {
-        try {
-            const searchQuery = {};
-            if (user.role !== 'admin') {
-                searchQuery.userId = user._id; // enforce logic natively
-            } else if (username) {
-                const targetUsers = await User.find({ username: { $regex: username, $options: 'i' } }).lean();
-                if (targetUsers.length > 0) {
-                    searchQuery.userId = { $in: targetUsers.map(u => u._id) };
-                } else {
-                    return { message: `لم يتم العثور على مستخدم باسم ${username}` };
-                }
-            }
-
-            if (startDate || endDate) {
-                searchQuery.createdAt = {};
-                if (startDate) {
-                    let start = new Date(startDate);
-                    if (!isNaN(start.getTime())) { start.setHours(0, 0, 0, 0); searchQuery.createdAt.$gte = start; }
-                }
-                if (endDate) {
-                    let end = new Date(endDate);
-                    if (!isNaN(end.getTime())) { end.setHours(23, 59, 59, 999); searchQuery.createdAt.$lte = end; }
-                }
-                if (Object.keys(searchQuery.createdAt).length === 0) delete searchQuery.createdAt;
-            }
-
-            if (query) {
-                searchQuery.$or = [
-                    { title: { $regex: query, $options: 'i' } },
-                    { 'messages.text': { $regex: query, $options: 'i' } }
-                ];
-            }
-
-            const convos = await AdminConversation.find(searchQuery)
-                .populate('userId', 'username role')
-                .sort({ lastActivity: -1 })
-                .limit(5)
-                .lean();
-
-            if (convos.length === 0) return { message: "لم يتم العثور على محادثات تطابق معايير البحث." };
-
-            return {
-                count: convos.length,
-                conversations: convos.map(c => ({
-                    title: c.title,
-                    user: c.userId?.username || 'المدير العام',
-                    role: c.userId?.role || 'admin',
-                    lastActivity: c.lastActivity?.toISOString().replace('T', ' ').slice(0, 16),
-                    messagesCount: c.messages?.length || 0,
-                    preview: c.messages?.length ? c.messages.map(m => `[${m.role === 'user' ? 'المستخدم' : 'الذكاء'}]: ${m.text}`).join('\\n').slice(0, 800) + '...' : 'لا توجد رسائل مسجلة'
-                }))
-            };
-        } catch (err) {
-            console.error('[AdminAI] search_admin_conversations error:', err.message);
-            return { error: "فشل استرجاع المحادثات: " + err.message };
-        }
-    },
-    build_afrakoush_page: async ({ name, title, html, script, allowedRole }) => {
-        try {
-            if (user.role !== 'admin') {
-                return { error: "صلاحية بناء الأدوات مخصصة للمدير (Admin) فقط." };
-            }
-            const role = allowedRole || 'supervisor';
-            const AfrakoushPage = require('../models/AfrakoushPage');
-            const page = await AfrakoushPage.findOneAndUpdate(
-                { name },
-                {
-                    title: title || 'صفحة بدون عنوان',
-                    html: html || '<div class="p-5 text-center">لا يوجد محتوى</div>',
-                    script: script || '',
-                    allowedRole: role,
-                    createdBy: user._id
-                },
-                { new: true, upsert: true }
-            );
-            return {
-                success: true,
-                message: "تم حفظ الصفحة بنجاح والتخزين.",
-                public_url: role === 'public' ? `/p/afrakoush/${name}` : `غير متاح عام للإدارة فقط`,
-                admin_url: `/admin/afrakoush/${name}`
-            };
-        } catch (err) {
-            console.error('[AdminAI] build_afrakoush_page error:', err.message);
-            return { error: "فشل بناء الأداة: " + err.message };
-        }
-    },
-    get_afrakoush_page: async ({ name }) => {
-        try {
-            const AfrakoushPage = require('../models/AfrakoushPage');
-            const page = await AfrakoushPage.findOne({ name }).lean();
-            if (!page) {
-                return { success: false, message: "هذه المساحة أو الأداة ليس لها كود محفوظ بعد (مساحة فارغة)." };
-            }
-            return {
-                success: true,
-                title: page.title,
-                html: page.html,
-                script: page.script,
-                allowedRole: page.allowedRole,
-                status: page.status
-            };
-        } catch (err) {
-            console.error('[AdminAI] get_afrakoush_page error:', err.message);
-            return { error: "فشل استرداد الكود: " + err.message };
-        }
-    }
-});
-
-const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType = null, additionalPrompt = null, onToolCall = null) => {
-    const setting = await SystemSetting.findOne({ key: 'admin_ai_system_prompt' });
-    let systemPrompt = setting?.value || DEFAULT_ADMIN_PROMPT;
-
-    // Inject current date/time so the AI always knows "today"
-    const now = new Date();
-    const cairoOffset = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Cairo' }));
-    const todayStr = cairoOffset.toISOString().split('T')[0]; // YYYY-MM-DD
-    const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
-    const dayName = dayNames[cairoOffset.getDay()];
-    const timeStr = cairoOffset.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-
-    systemPrompt += `\n\nمعلومات الوقت الحالي: اليوم هو ${dayName} ${todayStr} والساعة الآن ${timeStr} بتوقيت القاهرة. عندما يسأل المستخدم عن "اليوم" أو "انهاردة"، استخدم التاريخ ${todayStr}. لا تسأل المستخدم أبداً عن التاريخ الحالي.`;
-
-    if (user.role === 'supervisor') {
-        systemPrompt += `\n\nتنويه: المستخدم الحالي هو 'مشرف'، واسمه "${user.username}". خاطبه باسمه بشكل ودود ومحترم. أجب على أسئلته وطلباته بشكل طبيعي تماماً بناءً على البيانات التي تستردها من الأدوات. لا تذكر أو تشر أبداً تحت أي ظرف إلى كلمات مثل "صلاحيات"، "قيود"، "ممنوع"، أو أن هناك معلومات محجوبة عنه. إذا أرجعت الأدوات رسالة تفيد بعدم وجود بيانات، أخبره ببساطة أنه لا توجد بيانات أو إيرادات متاحة للإستعلام المطلوب بدون أي تفسيرات.`;
+    if (currentId) {
+      loadConversation(currentId);
     } else {
-        systemPrompt += `\n\nتنويه: المستخدم الحالي هو مدير النظام (Admin) واسمه "${user.username}". لديك صلاحية مطلقة لمراجعة والبحث في محادثات المشرفين الآخرين وأرشيف الذكاء الاصطناعي الخاص بهم بغرض المراقبة. استخدم أداة search_admin_conversations متى طلب منك ذلك ونظم النتائج بأسلوب احترافي.`;
+      setMessages([{
+        role: 'model',
+        text: `مرحباً بك أستاذ ${user?.username} في المساعد الذكي للإدارة 🤖\nكيف يمكنني مساعدتك اليوم؟ (تقارير مالية، عمليات موظفين، حجوزات...)`
+      }]);
     }
+  }, [currentId, user]);
 
-    if (additionalPrompt) {
-        systemPrompt += `\n\n[=== توجيه إضافي مخصص من واجهة خارجية ===]\n${additionalPrompt}\n[=========================================]`;
-    }
-
-    if (!process.env.GEMINI_API_KEY) throw new Error("Missing Gemini API Key");
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-    // Build proper alternating history: user, model, user, model...
-    // Gemini requires the first message to be 'user' and roles must alternate.
-    let cleanHistory = [];
-    const historyMessages = messages.slice(0, -1); // exclude the last (current) message
-
-    for (const m of historyMessages) {
-        if (!m.text) continue;
-        const role = m.role === 'user' ? 'user' : 'model';
-
-        if (cleanHistory.length === 0) {
-            // First message MUST be 'user' for Gemini
-            if (role === 'model') continue;
-            cleanHistory.push({ role, parts: [{ text: m.text }] });
-        } else {
-            const last = cleanHistory[cleanHistory.length - 1];
-            if (last.role === role) {
-                // Merge consecutive same-role messages
-                last.parts[0].text += "\n" + m.text;
-            } else {
-                cleanHistory.push({ role, parts: [{ text: m.text }] });
-            }
-        }
-    }
-
-    // Ensure history ends with 'model' (so last message we send is 'user')
-    if (cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === 'user') {
-        cleanHistory.pop(); // Remove trailing user message that would conflict
-    }
-
-    const lastMsgObj = messages[messages.length - 1];
-    let userMessageContent = [{ text: lastMsgObj?.text || "مرحباً" }];
-
-    if (fileBuffer && fileMimeType) {
-        userMessageContent.push({
-            inlineData: {
-                data: fileBuffer.toString("base64"),
-                mimeType: fileMimeType
-            }
-        });
-    }
-
-    const localFunctions = createFunctions(user);
-
-    let replyText = null;
-    let lastError = null;
-
-    for (const modelName of MODEL_CANDIDATES) {
-        try {
-            let modelFeatures = {
-                model: modelName,
-                systemInstruction: systemPrompt,
-                tools: adminTools
-            };
-
-            const model = genAI.getGenerativeModel(modelFeatures);
-            const chat = model.startChat({ history: cleanHistory });
-
-            // Notify: thinking started
-            if (onToolCall) {
-                try { onToolCall({ type: 'thinking', tool: '_thinking', model: modelName }); } catch (e) { }
-            }
-
-            let result = await chat.sendMessage(userMessageContent);
-            let response = result.response;
-            let callCount = 0;
-
-            while (response.functionCalls()?.length && callCount < 5) {
-                const functionCalls = response.functionCalls();
-                const functionResponses = [];
-
-                for (const call of functionCalls) {
-                    const funcName = call.name;
-                    const args = call.args;
-
-                    // Notify: tool is being called
-                    if (onToolCall) {
-                        try { onToolCall({ type: 'tool_start', tool: funcName, args: Object.keys(args || {}) }); } catch (e) { }
-                    }
-
-                    if (localFunctions[funcName]) {
-                        const apiResponse = await localFunctions[funcName](args);
-                        functionResponses.push({
-                            functionResponse: {
-                                name: funcName,
-                                response: apiResponse
-                            }
-                        });
-
-                        // Notify: tool completed
-                        if (onToolCall) {
-                            try { onToolCall({ type: 'tool_done', tool: funcName }); } catch (e) { }
-                        }
-                    }
-                }
-
-                if (functionResponses.length > 0) {
-                    // Notify: sending data back to AI
-                    if (onToolCall) {
-                        try { onToolCall({ type: 'analyzing', tool: '_analyzing' }); } catch (e) { }
-                    }
-                    result = await chat.sendMessage(functionResponses);
-                    response = result.response;
-                }
-                callCount++;
-            }
-
-            replyText = response.text();
-            break; // Success!
-
-        } catch (err) {
-            console.warn(`[AdminAI] Model ${modelName} failed. Reason: ${err.message}. Trying next model...`);
-            lastError = err;
-        }
-    }
-
-    if (!replyText) {
-        console.error('[AdminAI] All models failed in fallback chain.', lastError);
-        throw new Error(lastError ? lastError.message : 'جميع نماذج الذكاء الاصطناعي غير متاحة حالياً.');
-    }
-
-    return replyText;
-};
-
-const generateChatTitle = async (firstMessage) => {
+  const fetchConversations = async () => {
     try {
-        if (!process.env.GEMINI_API_KEY) return "محادثة جديدة";
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        let result = null;
-
-        for (const modelName of MODEL_CANDIDATES) {
-            try {
-                const model = genAI.getGenerativeModel({ model: modelName });
-                const prompt = `أنت مساعد يقوم بتوليد عناوين للمحادثات.
-اكتب عنوان قصير جداً (3 كلمات كحد أقصى) يعبر عن محتوى هذه الرسالة من مدير نظام. لا تضع نقطة في النهاية ولا تضف أي عبارات أخرى.
-الرسالة: "${firstMessage}"`;
-                result = await model.generateContent(prompt);
-                break;
-            } catch (e) {
-                // Try next
-            }
-        }
-
-        if (result) return result.response.text().trim().replace(/['"]+/g, '');
-        return "محادثة جديدة";
+      const res = await axios.get(`${API_BASE}/api/admin-ai/conversations`, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      if (res.data.success) {
+        setConversations(res.data.data);
+      }
     } catch (err) {
-        return "محادثة جديدة";
+      console.error("Failed to load conversations", err);
     }
+  };
+
+  const loadConversation = async (id) => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`${API_BASE}/api/admin-ai/conversations/${id}`, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      if (res.data.success && res.data.data) {
+        setMessages(res.data.data.messages);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteConversation = async (e, id) => {
+    e.stopPropagation();
+    try {
+      await axios.delete(`${API_BASE}/api/admin-ai/conversations/${id}`, {
+        headers: { 'x-auth-token': localStorage.getItem('token') }
+      });
+      setConversations(prev => prev.filter(c => c._id !== id));
+      if (currentId === id) setCurrentId(null);
+    } catch (err) { }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        handleSend(null, audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      alert("يرجى السماح بالوصول إلى المايكروفون للتسجيل.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
+  // Tool name to Arabic label mapping
+  const TOOL_LABELS = {
+    '_thinking': '🧠 يُحلل الطلب ويفكر...',
+    '_analyzing': '📊 يُراجع البيانات ويُعد الإجابة...',
+    'get_employees_overview': '👥 يستعرض بيانات الموظفين...',
+    'query_operations': '📋 يجمّع العمليات والحجوزات...',
+    'query_financials_and_expenses': '💰 يفحص المصروفات والسلف...',
+    'get_financial_report': '📈 يُعد التقرير المالي الشامل...',
+    'get_packages_and_services': '📦 يجلب الباقات والخدمات...',
+    'search_booking': '🔍 يبحث في سجلات الحجوزات...',
+    'get_activity_log': '📝 يتتبع سجل النشاط والعمليات...',
+    'get_client_details': '👤 يبحث عن بيانات العميلة...',
+    'evaluate_employee_performance': '⭐ يُقيّم أداء الموظفين...',
+    'detect_anomalies': '🚨 يكشف التجاوزات والأخطاء...',
+    'get_past_clients': '📇 يجلب قائمة العميلات السابقات...',
+    'predictive_scheduling': '🗓️ يُحلل جدول الحجوزات القادمة...',
+    'search_admin_conversations': '💬 يبحث في أرشيف المحادثات...',
+    'build_afrakoush_page': '💻 يُرسل الطلب للذراع التقني لبناء الواجهة...',
+    'get_afrakoush_page': '📄 يقرأ كود الصفحة الحالية...'
+  };
+
+  const handleSend = async (e, voiceBlob = null) => {
+    e?.preventDefault();
+    const txt = input.trim();
+    if (!voiceBlob && !txt) return;
+
+    const userMessage = { role: 'user', text: voiceBlob ? "🎤 رسالة صوتية..." : txt };
+    const newMsgs = [...messages, userMessage];
+    setMessages(newMsgs);
+    setInput('');
+    setLoading(true);
+    setToolStatus(null);
+
+    try {
+      const cleanMessages = newMsgs
+        .filter((_, i) => i > 0)
+        .map(m => ({ role: m.role, text: m.text }));
+
+      if (voiceBlob) {
+        // Voice messages use legacy axios (FormData can't use SSE easily)
+        const formData = new FormData();
+        formData.append('audio', voiceBlob, 'voice.webm');
+        formData.append('messages', JSON.stringify(cleanMessages));
+        if (currentId) formData.append('conversationId', currentId);
+        const res = await axios.post(`${API_BASE}/api/admin-ai/chat`, formData, {
+          headers: {
+            'x-auth-token': localStorage.getItem('token'),
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        if (res.data.success) {
+          setMessages(prev => [...prev, { role: 'model', text: res.data.reply, audioParts: res.data.audioParts }]);
+          if (!currentId && res.data.conversationId) {
+            setCurrentId(res.data.conversationId);
+            setTimeout(fetchConversations, 2000);
+          }
+        } else {
+          setMessages(prev => [...prev, { role: 'model', text: 'عذراً، حدث خطأ.' }]);
+        }
+      } else {
+        // Text messages use SSE streaming for real-time tool status
+        const payload = { messages: cleanMessages, text: txt };
+        if (currentId) payload.conversationId = currentId;
+
+        const response = await fetch(`${API_BASE}/api/admin-ai/chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-auth-token': localStorage.getItem('token'),
+            'Accept': 'text/event-stream'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); // keep incomplete line in buffer
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              const event = JSON.parse(line.slice(6));
+
+              if (event.type === 'thinking' || event.type === 'tool_start' || event.type === 'tool_done' || event.type === 'analyzing') {
+                setToolStatus(TOOL_LABELS[event.tool] || `⚙️ ${event.tool}...`);
+              } else if (event.type === 'done') {
+                setToolStatus(null);
+                setMessages(prev => [...prev, { role: 'model', text: event.reply, audioParts: event.audioParts }]);
+                if (!currentId && event.conversationId) {
+                  setCurrentId(event.conversationId);
+                  setTimeout(fetchConversations, 2000);
+                }
+              } else if (event.type === 'error') {
+                setToolStatus(null);
+                setMessages(prev => [...prev, { role: 'model', text: `خطأ: ${event.message}` }]);
+              }
+            } catch (parseErr) { /* skip malformed SSE line */ }
+          }
+        }
+      }
+    } catch (err) {
+      const errText = err.response?.data?.message || err.message;
+      setMessages(prev => [...prev, { role: 'model', text: `خطأ: ${errText}` }]);
+    } finally {
+      setLoading(false);
+      setToolStatus(null);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  // Helper component to play TTS response
+  const VoiceResponse = ({ parts }) => {
+    const [playing, setPlaying] = useState(false);
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const audioRef = useRef(new Audio());
+
+    const playNext = useCallback((index) => {
+      if (index < parts.length) {
+        audioRef.current.src = parts[index];
+        audioRef.current.play().catch(e => console.error(e));
+        setCurrentIndex(index);
+        setPlaying(true);
+      } else {
+        setPlaying(false);
+        setCurrentIndex(0);
+      }
+    }, [parts]);
+
+    useEffect(() => {
+      const handleEnded = () => playNext(currentIndex + 1);
+      const audio = audioRef.current;
+      audio.addEventListener('ended', handleEnded);
+      return () => audio.removeEventListener('ended', handleEnded);
+    }, [currentIndex, playNext]);
+
+    return (
+      <button type="button" onClick={() => playing ? (audioRef.current.pause(), setPlaying(false)) : playNext(0)} style={styles.voicePlayBtn}>
+        {playing ? (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="4" width="4" height="16" />
+            <rect x="14" y="4" width="4" height="16" />
+          </svg>
+        ) : (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+        )}
+        <span>{playing ? "إيقاف" : "استماع"}</span>
+      </button>
+    );
+  };
+
+  const handlePointerDown = (e) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return; // Left click only
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      rect: fabRef.current.getBoundingClientRect(),
+      isMoved: false
+    };
+    try { fabRef.current.setPointerCapture(e.pointerId); } catch (err) { }
+  };
+
+  const handlePointerMove = (e) => {
+    if (!dragRef.current.rect) return; // not dragging
+
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+
+    if (!dragRef.current.isMoved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+      dragRef.current.isMoved = true;
+      setIsDragging(true);
+    }
+
+    if (dragRef.current.isMoved) {
+      let newLeft = dragRef.current.rect.left + dx;
+      let newTop = dragRef.current.rect.top + dy;
+
+      // Keep within viewport bounds
+      const btnSize = 65;
+      newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - btnSize));
+      newTop = Math.max(0, Math.min(newTop, window.innerHeight - btnSize));
+
+      setFabPos({ left: newLeft, top: newTop, right: 'auto', bottom: 'auto' });
+    }
+  };
+
+  const snapToEdge = () => {
+    if (!fabRef.current) return;
+    const rect = fabRef.current.getBoundingClientRect();
+    const btnSize = 65;
+    const centerX = rect.left + btnSize / 2;
+    const centerY = rect.top + btnSize / 2;
+    const winW = window.innerWidth;
+    const winH = window.innerHeight;
+
+    const distL = centerX;
+    const distR = winW - centerX;
+    const distB = winH - centerY; // Distance to bottom
+
+    const minD = Math.min(distL, distR, distB);
+    let finalPos = {};
+
+    if (minD === distB) {
+      finalPos = { left: Math.max(24, Math.min(rect.left, winW - btnSize - 24)), bottom: 24, right: 'auto', top: 'auto' };
+    } else if (minD === distR) {
+      finalPos = { right: 24, top: Math.max(24, Math.min(rect.top, winH - btnSize - 24)), left: 'auto', bottom: 'auto' };
+    } else {
+      finalPos = { left: 24, top: Math.max(24, Math.min(rect.top, winH - btnSize - 24)), right: 'auto', bottom: 'auto' };
+    }
+
+    setFabPos(finalPos);
+  };
+
+  const handlePointerUp = (e) => {
+    if (!dragRef.current.rect) return;
+
+    const wasMoved = dragRef.current.isMoved;
+    try {
+      if (fabRef.current) fabRef.current.releasePointerCapture(e.pointerId);
+    } catch (err) { }
+
+    dragRef.current.rect = null;
+
+    if (wasMoved) {
+      snapToEdge();
+      setTimeout(() => setIsDragging(false), 50);
+    } else {
+      setIsOpen(prev => !prev);
+    }
+  };
+
+  const getChatWindowStyle = () => {
+    let pos = { ...styles.chatWindow };
+    let isLeft = false;
+    if (fabPos.left !== 'auto') {
+      if (fabPos.left < window.innerWidth / 2) isLeft = true;
+    }
+
+    if (isLeft) {
+      pos.left = 24;
+      pos.right = 'auto';
+      pos.transformOrigin = 'bottom left';
+    } else {
+      pos.left = 'auto';
+      pos.right = 24;
+      pos.transformOrigin = 'bottom right';
+    }
+    return pos;
+  };
+
+  if (!user || (user.role !== 'admin' && user.role !== 'supervisor' && user.role !== 'hallSupervisor')) return null;
+
+  return (
+    <>
+      <style>
+        {`
+          @keyframes floatPulse {
+            0% { transform: translateY(0px) scale(1); filter: drop-shadow(0 0 10px rgba(2, 128, 144, 0.4)); }
+            50% { transform: translateY(-4px) scale(1.03); filter: drop-shadow(0 0 18px rgba(31, 182, 166, 0.8)); }
+            100% { transform: translateY(0px) scale(1); filter: drop-shadow(0 0 10px rgba(2, 128, 144, 0.4)); }
+          }
+          .afrakoush-magic-fab {
+            position: fixed;
+            z-index: 9999;
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #16364D, #0f2736);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 20px rgba(2, 128, 144, 0.6), inset 0 0 15px rgba(31, 182, 166, 0.3);
+            border: 1.5px solid rgba(31, 182, 166, 0.5);
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+          }
+          .afrakoush-magic-inner {
+            animation: floatPulse 3s ease-in-out infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .afrakoush-magic-fab:hover:not(.dragging) {
+            transform: scale(1.08);
+            box-shadow: 0 8px 25px rgba(31, 182, 166, 0.8), inset 0 0 20px rgba(31, 182, 166, 0.6);
+            border-color: rgba(31, 182, 166, 0.9);
+          }
+          .afrakoush-magic-fab.dragging {
+            transform: scale(1.1);
+            opacity: 0.9;
+            box-shadow: 0 15px 40px rgba(2, 128, 144, 0.4);
+            cursor: grabbing !important;
+            transition: none !important;
+          }
+          .afrakoush-info-modal {
+            z-index: 10005 !important;
+          }
+          .ai-modal-backdrop {
+            z-index: 10000 !important;
+          }
+          @keyframes iconPulse {
+            0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(31, 182, 166, 0.4)); }
+            50% { transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(31, 182, 166, 0.9)); color: #fff; }
+            100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(31, 182, 166, 0.4)); }
+          }
+          .pulsing-info-btn {
+            animation: iconPulse 2s infinite ease-in-out;
+            color: #1fb6a6 !important;
+          }
+          .afrakoush-chat-input::placeholder {
+            font-size: 13px !important;
+          }
+        `}
+      </style>
+
+      <div
+        ref={fabRef}
+        className={`afrakoush-magic-fab ${isDragging ? 'dragging' : ''}`}
+        style={{
+          ...fabPos,
+          cursor: isDragging ? 'grabbing' : 'pointer',
+          transition: isDragging ? 'none' : 'left 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.2s',
+          display: isOpen ? 'none' : 'flex'
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        title="وكيل الذكاء الاصطتناعي"
+      >
+        <div className="afrakoush-magic-inner">
+          <svg width="34" height="34" viewBox="0 0 64 64" fill="none">
+            <path d="M32 2 Q32 32 62 32 Q32 32 32 62 Q32 32 2 32 Q32 32 32 2 Z" fill="url(#coreGrad)" />
+            <path d="M14 10 Q14 19 23 19 Q14 19 14 28 Q14 19 5 19 Q14 19 14 10 Z" fill="url(#sparkGrad)" />
+            <path d="M52 46 Q52 52 58 52 Q52 52 52 58 Q52 52 46 52 Q52 52 52 46 Z" fill="url(#sparkGrad)" />
+            <defs>
+              <linearGradient id="coreGrad" x1="0" y1="0" x2="64" y2="64">
+                <stop stopColor="#1fb6a6" />
+                <stop offset="1" stopColor="#0f2736" />
+              </linearGradient>
+              <linearGradient id="sparkGrad" x1="0" y1="0" x2="64" y2="64">
+                <stop stopColor="#ffffff" />
+                <stop offset="1" stopColor="#8ac4ca" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+      </div>
+
+      {isOpen && (
+        <div style={getChatWindowStyle()}>
+          <div style={styles.chatHeader}>
+            <div style={styles.headerLeft}>
+              <button style={styles.menuBtn} onClick={() => setIsSidebarOpen(!isSidebarOpen)}>☰</button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={styles.headerTitle}>مساعد الإدارة الذكي</span>
+                <span style={styles.headerSub}>مرحباً بك يا {user.username}</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button className="pulsing-info-btn" style={styles.newChatHeaderBtn} onClick={() => setShowInfo(true)} title="دليل مساعد الذكاء الاصطتناعي">❕</button>
+              <button style={styles.newChatHeaderBtn} onClick={() => { setCurrentId(null); setIsSidebarOpen(false); }} title="محادثة جديدة">➕</button>
+              <button style={styles.closeBtn} onClick={() => setIsOpen(false)}>×</button>
+            </div>
+          </div>
+
+          <div style={{ ...styles.sidebarOverlay, ...(isSidebarOpen ? styles.sidebarOverlayOpen : {}) }} onClick={() => setIsSidebarOpen(false)} />
+          <div style={{ ...styles.sidebar, ...(isSidebarOpen ? styles.sidebarOpen : {}) }}>
+            <div style={styles.sidebarHeader}>
+              <span style={{ fontWeight: 800, color: '#fff' }}>سجل المحادثات</span>
+              <button style={styles.sidebarCloseBtn} onClick={() => setIsSidebarOpen(false)}>✖</button>
+            </div>
+            <button style={styles.sidebarNewBtn} onClick={() => { setCurrentId(null); setIsSidebarOpen(false); }}>
+              ➕ محادثة جديدة
+            </button>
+            <div style={styles.convList}>
+              {conversations.length === 0 && <div style={{ padding: 15, color: '#888', fontSize: 13, textAlign: 'center' }}>لا توجد محادثات سابقة</div>}
+              {conversations.map(c => (
+                <div key={c._id} style={{ ...styles.convItem, ...(currentId === c._id ? styles.convItemActive : {}) }} onClick={() => { setCurrentId(c._id); setIsSidebarOpen(false); }}>
+                  <div style={styles.convTitle}>{c.title || 'محادثة'}</div>
+                  <button style={styles.convDelBtn} onClick={(e) => handleDeleteConversation(e, c._id)}>🗑</button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={styles.chatBody}>
+            {messages.map((msg, idx) => (
+              <div key={idx} style={msg.role === 'user' ? styles.msgUserWrap : styles.msgModelWrap}>
+                <div style={msg.role === 'user' ? styles.msgUser : { ...styles.msgModel, overflowX: 'auto' }}>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      table: ({ node, ...props }) => (
+                        <div style={{ maxWidth: '100%', overflowX: 'auto', margin: '10px 0', borderRadius: '6px', border: '1px solid #e0e0e0', WebkitOverflowScrolling: 'touch' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'right' }} {...props} />
+                        </div>
+                      ),
+                      th: ({ node, ...props }) => <th style={{ padding: '8px', backgroundColor: '#f8f9fa', borderBottom: '2px solid #028090', borderLeft: '1px solid #e0e0e0', whiteSpace: 'nowrap' }} {...props} />,
+                      td: ({ node, ...props }) => <td style={{ padding: '8px', borderBottom: '1px solid #e0e0e0', borderLeft: '1px solid #e0e0e0', whiteSpace: 'nowrap' }} {...props} />
+                    }}
+                  >
+                    {msg.text}
+                  </ReactMarkdown>
+                  {msg.role === 'model' && msg.audioParts && msg.audioParts.length > 0 && (
+                    <VoiceResponse parts={msg.audioParts} />
+                  )}
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div style={styles.msgModelWrap}>
+                <div style={{ ...styles.msgModel, display: 'flex', alignItems: 'center', gap: 8, minWidth: 180 }}>
+                  <Spinner animation="border" size="sm" style={{ color: '#028090', borderWidth: '2px', flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: '#555', transition: 'opacity 0.3s', animation: 'fadeInStatus 0.4s ease' }}>
+                    {toolStatus || '🧠 يُحلل الطلب ويفكر...'}
+                  </span>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          <div style={styles.chatFooter}>
+            <button
+              onClick={isRecording ? stopRecording : startRecording}
+              className={`voice-btn ${isRecording ? 'recording' : ''}`}
+              style={{ ...styles.micBtn, backgroundColor: isRecording ? '#ff4757' : '#f1f2f6', color: isRecording ? '#fff' : '#2d3436' }}
+              disabled={loading}
+            >
+              {isRecording ? "⬛" : "🎤"}
+            </button>
+            <textarea
+              className="afrakoush-chat-input"
+              ref={inputRef}
+              style={styles.inputArea}
+              placeholder={isRecording ? "جاري التسجيل..." : "اكتب استفسارك هنا..."}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isRecording}
+              rows={1}
+            />
+            <button style={{ ...styles.sendBtn, opacity: !input.trim() || loading || isRecording ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', padding: 0 }} onClick={handleSend} disabled={!input.trim() || loading || isRecording} title="إرسال">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'rotate(-45deg)', marginLeft: '-2px', marginTop: '2px' }}>
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* نافذة التعليمات */}
+      <Modal show={showInfo} onHide={() => setShowInfo(false)} centered size="lg" dir="rtl" className="afrakoush-info-modal" backdropClassName="ai-modal-backdrop">
+        <Modal.Header style={{ borderBottom: '2px solid #028090', backgroundColor: '#0f2736', color: '#fff', direction: 'rtl', display: 'flex', justifyContent: 'space-between' }}>
+          <Modal.Title style={{ fontWeight: 'bold', margin: 0 }}>🧠 المساعد الذكي "للإدارة"</Modal.Title>
+          <button onClick={() => setShowInfo(false)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', cursor: 'pointer', outline: 'none' }}>×</button>
+        </Modal.Header>
+        <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto', backgroundColor: '#f8f9fa' }}>
+          <h5 style={{ color: '#028090', fontWeight: 'bold' }}>ما هو المساعد الذكي</h5>
+          <p style={{ fontSize: '15px', lineHeight: '1.6' }}>المساعد الذكي ليس مجرد روبوت محادثة، بل هو <strong>مهندس ذكاء اصطناعي وأداة إدارية ذكية</strong> متصلة مباشرة بقواعد البيانات وواجهات النظام. قادر على قراءة البيانات المعقدة، تحليلها، واستخراج التقارير، بل وبناء <strong>برامج وصفحات ولوحات تحكم ديناميكية تفاعلية</strong> خصيصاً لك!</p>
+
+          <hr />
+
+          <h5 style={{ color: '#028090', fontWeight: 'bold' }}>الصلاحيات 🔐</h5>
+          <ul style={{ fontSize: '15px', lineHeight: '1.6' }}>
+            <li style={{ marginBottom: '8px' }}><strong>المدير (Admin):</strong> يملك صلاحيات مطلقة لسؤال المساعد الذكي عن الإيرادات التفصيلية، المبيعات، ومطالبته ببناء وتعديل لوحات تحكم ديناميكية للمراقبين والمديرين (مثل: manager-hub, gharam-insights).</li>
+            <li><strong>المشرف (Supervisor):</strong> يملك صلاحيات جلب بيانات العمليات اليومية، الحجوزات، وأداء الموظفين، ولكن لا يمكنه الوصول للمصاريف السرية أو إنشاء واجهات النظام العامة والإدارية المغلقة.</li>
+          </ul>
+
+          <hr />
+
+          <h5 style={{ color: '#028090', fontWeight: 'bold' }}>أمثلة سحرية لما يمكنك طلبه ✨</h5>
+          <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0', marginBottom: '10px' }}>
+            <strong style={{ color: '#e84118' }}>للمديرين لبناء اللوحات الإدارية:</strong><br />
+            <span style={{ color: '#555', fontSize: '14px' }}>"يا مساعد  ، ابنيلي صفحة manager-hub تعرض إيرادات اليوم في 3 كروت ملونة، وتحتها جدول فيه أفضل 3 موظفين لهذا الشهر."</span>
+          </div>
+          <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0', marginBottom: '10px' }}>
+            <strong style={{ color: '#8e44ad' }}>للمديرين لتعديل الصفحة الرئيسية من الخارج (Landing Page):</strong><br />
+            <span style={{ color: '#555', fontSize: '14px' }}>"في مساحة اللاند بيج (landing-dynamic-space)، ضيفلي بانر لعرض جديد وفيه زرار واتساب.. ومتمسحش الحاجات اللي مكتوبة هناك قبل كدا!"</span>
+          </div>
+          <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0', marginBottom: '10px' }}>
+            <strong style={{ color: '#0097e6' }}>للمشرفين والمديرين للتقارير المتقدمة السريعة:</strong><br />
+            <span style={{ color: '#555', fontSize: '14px' }}>
+              "هاتلي تقرير مفصل عن إجمالي مصاريف وسلف اليوم وقارنها بإجمالي العربون المدفوع."<br />
+              "قارن أداء الشهر ده بالشهر اللي فات من حيث عدد الحجوزات."
+            </span>
+          </div>
+          <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0', marginBottom: '10px' }}>
+            <strong style={{ color: '#44bd32' }}>للمشرفين للإدارة وتتبع الموظفين بدقة:</strong><br />
+            <span style={{ color: '#555', fontSize: '14px' }}>
+              "الموظفة (سارة) عملت كام خدمة النهاردة وجمعت كام نقطة؟"<br />
+              "مين نفذ خدمة وش وحواجب للعروسة (أميرة)؟"<br />
+              "آخر عملية تنظيف بشرة مين عملها؟ وما هي آخر 3 عمليات بترتيب التاريخ؟"<br />
+              "مين أكتر موظفة نفذت خدمة ميك أب خلال الشهر الجاري؟"
+            </span>
+          </div>
+
+          <hr />
+          <h5 style={{ color: '#028090', fontWeight: 'bold' }}>نصائح هامة 💡</h5>
+          <ul style={{ fontSize: '14px', lineHeight: '1.6', color: '#444' }}>
+            <li>كن دقيقاً في طلبك واذكر التواريخ المطلوبة إذا لزم الأمر، يمكنك التحدث معه باللهجة المصرية العادية أو الفصحى وسيفهمك.</li>
+            <li>لا تتردد في طلب جداول مفصلة أو طلب تحليل عميق للبيانات، فقدراته غير محدودة ويمكنه استنتاج رؤى غير مرئية للمشرف العادي.</li>
+            <li>لتسجيل رسالة صوتية اضغط على علامة المايك 🎤 وتحدث، ثم سيتلقاها المساعد ويجيبك.</li>
+            <li>لتصفية ذهن المساعد الذكي لطلب جديد كلياً، اضغط على <strong>زر الإضافة ➕ لبدء محادثة جديدة</strong>.</li>
+          </ul>
+
+          <div style={{ background: '#e6f7fa', padding: '15px', borderRadius: '8px', border: '1px solid #b3e6ec', marginTop: '15px' }}>
+            <strong style={{ color: '#028090' }}>📞 دعم وتطوير المساعد الذكي:</strong><br />
+            <span style={{ fontSize: '14px', color: '#444' }}>
+              إمكانيات الأداة يتم تطويرها بشكل يومي لتناسب احتياجات السنتر. في حال واجهتكم أي مشكلة تقنية، أو إذا كنتم بحاجة لإضافة صلاحيات أو إمكانيات وقدرات جديدة لأي قسم، يرجى التواصل مباشرة مع <strong>أستاذ حسن</strong>.
+            </span>
+          </div>
+        </Modal.Body>
+        <Modal.Footer style={{ backgroundColor: '#f8f9fa', borderTop: '1px solid #e0e0e0', justifyContent: 'flex-start' }}>
+          <Button variant="secondary" onClick={() => setShowInfo(false)} style={{ backgroundColor: '#028090', border: 'none', fontWeight: 'bold', padding: '8px 24px' }}>
+            علم، انطلق! 🚀
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    </>
+  );
+}
+
+const styles = {
+  fabBtn: { position: 'fixed', bottom: 24, right: 24, backgroundColor: '#0f2736', border: '2px solid #028090', borderRadius: 30, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 10, color: '#fff', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,0.3)', zIndex: 9999, transition: 'all 0.3s ease' },
+  fabText: { fontWeight: 700, fontSize: 16 },
+  chatWindow: { position: 'fixed', bottom: 90, right: 24, width: 380, height: 600, maxWidth: 'calc(100vw - 48px)', maxHeight: '80vh', backgroundColor: '#ffffff', borderRadius: 20, boxShadow: '0 12px 40px rgba(0,0,0,0.25)', zIndex: 9999, display: 'flex', flexDirection: 'column', overflow: 'hidden', border: '1px solid #e0e0e0', direction: 'rtl' },
+  chatHeader: { backgroundColor: '#0f2736', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#fff', borderBottom: '3px solid #028090', zIndex: 10 },
+  headerLeft: { display: 'flex', alignItems: 'center', gap: 12 },
+  menuBtn: { background: 'none', border: 'none', color: '#fff', fontSize: 22, cursor: 'pointer', padding: 0 },
+  headerTitle: { fontWeight: 800, fontSize: 15 },
+  headerSub: { fontSize: 11, color: '#8ac4ca' },
+  closeBtn: { background: 'transparent', border: 'none', color: '#fff', fontSize: 26, cursor: 'pointer', lineHeight: 1 },
+  newChatHeaderBtn: { background: 'transparent', border: 'none', color: '#1fb6a6', fontSize: 20, cursor: 'pointer', lineHeight: 1 },
+
+  sidebarOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 20, opacity: 0, pointerEvents: 'none', transition: 'all 0.3s' },
+  sidebarOverlayOpen: { opacity: 1, pointerEvents: 'auto' },
+  sidebar: { position: 'absolute', top: 0, right: -280, width: 280, height: '100%', backgroundColor: '#1a1a2e', zIndex: 30, transition: 'right 0.3s ease', display: 'flex', flexDirection: 'column' },
+  sidebarOpen: { right: 0 },
+  sidebarHeader: { padding: '20px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #2d2d44' },
+  sidebarCloseBtn: { background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: 18 },
+  sidebarNewBtn: { margin: '16px', padding: '12px', background: '#028090', color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 700, fontSize: 14 },
+  convList: { flex: 1, overflowY: 'auto' },
+  convItem: { padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', borderBottom: '1px solid #2d2d44', color: '#e0e0e0', transition: '0.2s', },
+  convItemActive: { backgroundColor: '#2d2d44', borderRight: '4px solid #1fb6a6' },
+  convTitle: { fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1 },
+  convDelBtn: { background: 'none', border: 'none', color: '#ff4757', cursor: 'pointer', fontSize: 16, opacity: 0.8 },
+
+  chatBody: { flex: 1, padding: 16, overflowY: 'auto', backgroundColor: '#f8f9fa', display: 'flex', flexDirection: 'column', gap: 14 },
+  msgUserWrap: { display: 'flex', justifyContent: 'flex-start' },
+  msgModelWrap: { display: 'flex', justifyContent: 'flex-end' },
+  msgUser: { backgroundColor: '#028090', color: '#fff', padding: '10px 14px', borderRadius: '16px 16px 0 16px', maxWidth: '85%', lineHeight: 1.5, boxShadow: '0 2px 8px rgba(2,128,144,0.2)' },
+  msgModel: { backgroundColor: '#ffffff', color: '#2d3436', padding: '10px 14px', borderRadius: '16px 16px 16px 0', maxWidth: '95%', lineHeight: 1.6, border: '1px solid #e0e0e0', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', fontSize: 14 },
+  chatFooter: { padding: 12, backgroundColor: '#fff', borderTop: '1px solid #e0e0e0', display: 'flex', gap: 8, alignItems: 'flex-end' },
+  micBtn: { width: 44, height: 44, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '0.3s', fontSize: 18, border: '1px solid #ccc' },
+  inputArea: { flex: 1, border: '1px solid #ccc', borderRadius: 14, padding: '10px 14px', resize: 'none', backgroundColor: '#f1f2f6', color: '#2d3436', outline: 'none', fontFamily: 'inherit', maxHeight: 100 },
+  sendBtn: { backgroundColor: '#028090', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 16px', fontWeight: 700, cursor: 'pointer', height: 44 },
+  voicePlayBtn: { marginTop: 10, display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', border: '1px solid #e0e0e0', borderRadius: 20, background: '#f8f9fa', color: '#028090', fontSize: 12, cursor: 'pointer', fontWeight: 600, transition: '0.2s' }
 };
 
-module.exports = {
-    processAdminChat,
-    generateChatTitle,
-    DEFAULT_ADMIN_PROMPT
-};
+export default AdminAIChat;
