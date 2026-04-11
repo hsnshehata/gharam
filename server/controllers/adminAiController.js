@@ -55,7 +55,7 @@ exports.getAllConversationsAdmin = async (req, res) => {
 // Post Chat (SSE Stream for real-time tool events)
 exports.chat = async (req, res) => {
     try {
-        let { text, conversationId, messages, additionalPrompt } = req.body;
+        let { text, conversationId, messages, additionalPrompt, fastMode } = req.body;
         const fullUser = await User.findById(req.user.id);
         if (!fullUser) return res.status(401).json({ success: false, message: 'مستخدم غير موجود' });
 
@@ -63,6 +63,8 @@ exports.chat = async (req, res) => {
         if (typeof messages === 'string') {
             try { messages = JSON.parse(messages); } catch (e) { }
         }
+        // FormData sends fastMode as string
+        if (typeof fastMode === 'string') fastMode = fastMode === 'true';
 
         if (!text && !req.file) {
             return res.status(400).json({ success: false, message: 'النص أو الصوت مطلوب' });
@@ -131,7 +133,7 @@ exports.chat = async (req, res) => {
             };
 
             // Process with streaming tool events
-            const reply = await processAdminChat(messages, fullUser, fileBuffer, fileMimeType, additionalPrompt, onToolCall);
+            const reply = await processAdminChat(messages, fullUser, fileBuffer, fileMimeType, additionalPrompt, onToolCall, !!fastMode);
 
             // Push model message
             conv.messages.push({ role: 'model', text: reply });
@@ -166,7 +168,7 @@ exports.chat = async (req, res) => {
 
         } else {
             // === Legacy JSON Mode (for Telegram & other clients) ===
-            const reply = await processAdminChat(messages, fullUser, fileBuffer, fileMimeType, additionalPrompt);
+            const reply = await processAdminChat(messages, fullUser, fileBuffer, fileMimeType, additionalPrompt, null, !!fastMode);
 
             // Push model message
             conv.messages.push({ role: 'model', text: reply });
