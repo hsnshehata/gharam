@@ -17,6 +17,7 @@ function AdminAIChat({ user }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [toolStatus, setToolStatus] = useState(null);
+  const [fastMode, setFastMode] = useState(true);
 
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef(null);
@@ -267,6 +268,7 @@ function AdminAIChat({ user }) {
         const formData = new FormData();
         formData.append('audio', voiceBlob, 'voice.webm');
         formData.append('messages', JSON.stringify(cleanMessages));
+        formData.append('fastMode', fastMode);
         if (currentId) formData.append('conversationId', currentId);
         const res = await axios.post(`${API_BASE}/api/admin-ai/chat`, formData, {
           headers: {
@@ -284,7 +286,7 @@ function AdminAIChat({ user }) {
           setMessages(prev => [...prev, { role: 'model', text: 'عذراً، حدث خطأ.' }]);
         }
       } else {
-        const payload = { messages: cleanMessages, text: txt };
+        const payload = { messages: cleanMessages, text: txt, fastMode };
         if (currentId) payload.conversationId = currentId;
 
         const response = await fetch(`${API_BASE}/api/admin-ai/chat`, {
@@ -314,9 +316,12 @@ function AdminAIChat({ user }) {
             try {
               const event = JSON.parse(line.slice(6));
 
-              if (event.type === 'thinking' || event.type === 'tool_start' || event.type === 'tool_done' || event.type === 'analyzing') {
+              if (event.type === 'tool_start' || event.type === 'tool_done' || event.type === 'analyzing') {
+                // Real tool activity — override simulation with actual tool name
                 sseOverrideRef.current = true;
                 setToolStatus(TOOL_LABELS[event.tool] || `⚙️ ${event.tool}...`);
+              } else if (event.type === 'thinking') {
+                // Model is thinking — let the simulation continue running naturally
               } else if (event.type === 'done') {
                 setMessages(prev => [...prev, { role: 'model', text: event.reply, audioParts: event.audioParts }]);
                 if (!currentId && event.conversationId) {
@@ -604,6 +609,25 @@ function AdminAIChat({ user }) {
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
               <button className="pulsing-info-btn" style={styles.newChatHeaderBtn} onClick={() => setShowInfo(true)} title="دليل مساعد الذكاء الاصطتناعي">❕</button>
+              <button
+                style={{
+                  ...styles.newChatHeaderBtn,
+                  position: 'relative',
+                  fontSize: 11,
+                  fontWeight: 800,
+                  padding: '4px 8px',
+                  borderRadius: 8,
+                  background: fastMode ? 'rgba(255,193,7,0.15)' : 'rgba(2,128,144,0.12)',
+                  color: fastMode ? '#ffc107' : '#1fb6a6',
+                  border: `1px solid ${fastMode ? 'rgba(255,193,7,0.3)' : 'rgba(2,128,144,0.25)'}`,
+                  transition: 'all 0.3s ease',
+                  minWidth: 32,
+                }}
+                onClick={() => setFastMode(prev => !prev)}
+                title={fastMode ? 'الوضع السريع (نماذج خفيفة وموفرة)' : 'الوضع المتقدم (نماذج قوية ومفكرة)'}
+              >
+                {fastMode ? '⚡' : '🧠'}
+              </button>
               <button style={styles.newChatHeaderBtn} onClick={() => { setCurrentId(null); setIsSidebarOpen(false); }} title="محادثة جديدة">➕</button>
               <button style={styles.closeBtn} onClick={() => setIsOpen(false)}>×</button>
             </div>
