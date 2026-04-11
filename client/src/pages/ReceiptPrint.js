@@ -23,7 +23,7 @@ export const printReceiptElement = (element) => {
       @page { size: 90mm auto; margin: 0; }
       body * { visibility: hidden !important; }
       #receipt-print-container, #receipt-print-container * { visibility: visible !important; color: #000 !important; }
-      #receipt-print-container { position: absolute; top: 0; left: 0; width: 75mm; margin: 0 auto; padding: 3mm; font-size: 15px; text-align: center; }
+      #receipt-print-container { position: absolute; top: 0; left: 0; width: 75mm; margin: 0 auto; padding: 10mm 3mm 5mm 3mm; font-size: 15px; text-align: center; }
       #receipt-print-container th,
       #receipt-print-container td,
       #receipt-print-container .table thead th,
@@ -92,7 +92,7 @@ const ReceiptPrint = ({ data, type }) => {
             /* اخفي كل حاجة وقت الطباعة إلا الوصل النشط */
             body * { visibility: hidden !important; }
             .receipt-content.print-active, .receipt-content.print-active * { visibility: visible !important; color: #000 !important; }
-            .receipt-content.print-active { position: absolute; left: 0; top: 0; width: 75mm; margin: 0 auto; padding: 3mm; font-size: 15px; text-align: center; }
+            .receipt-content.print-active { position: absolute; left: 0; top: 0; width: 75mm; margin: 0 auto; padding: 10mm 3mm 5mm 3mm; font-size: 15px; text-align: center; }
             .receipt-content.print-active th,
             .receipt-content.print-active td,
             .receipt-content.print-active .table thead th,
