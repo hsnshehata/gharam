@@ -24,6 +24,12 @@ function AdminAIChat({ user }) {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
+  // Dragging states
+  const [fabPos, setFabPos] = useState({ right: 24, bottom: 24, left: 'auto', top: 'auto' });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startY: 0, rect: null, isMoved: false });
+  const fabRef = useRef(null);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
@@ -220,17 +226,189 @@ function AdminAIChat({ user }) {
     );
   };
 
+  const handlePointerDown = (e) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return; // Left click only
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      rect: fabRef.current.getBoundingClientRect(),
+      isMoved: false
+    };
+    try { fabRef.current.setPointerCapture(e.pointerId); } catch (err) { }
+  };
+
+  const handlePointerMove = (e) => {
+    if (!dragRef.current.rect) return; // not dragging
+
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+
+    if (!dragRef.current.isMoved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+      dragRef.current.isMoved = true;
+      setIsDragging(true);
+    }
+
+    if (dragRef.current.isMoved) {
+      let newLeft = dragRef.current.rect.left + dx;
+      let newTop = dragRef.current.rect.top + dy;
+      
+      // Keep within viewport bounds
+      const btnSize = 65;
+      newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - btnSize));
+      newTop = Math.max(0, Math.min(newTop, window.innerHeight - btnSize));
+
+      setFabPos({ left: newLeft, top: newTop, right: 'auto', bottom: 'auto' });
+    }
+  };
+
+  const snapToEdge = () => {
+    if (!fabRef.current) return;
+    const rect = fabRef.current.getBoundingClientRect();
+    const btnSize = 65;
+    const centerX = rect.left + btnSize / 2;
+    const centerY = rect.top + btnSize / 2;
+    const winW = window.innerWidth;
+    const winH = window.innerHeight;
+
+    const distL = centerX;
+    const distR = winW - centerX;
+    const distB = winH - centerY; // Distance to bottom
+
+    const minD = Math.min(distL, distR, distB);
+    let finalPos = {};
+
+    if (minD === distB) {
+      finalPos = { left: Math.max(24, Math.min(rect.left, winW - btnSize - 24)), bottom: 24, right: 'auto', top: 'auto' };
+    } else if (minD === distR) {
+      finalPos = { right: 24, top: Math.max(24, Math.min(rect.top, winH - btnSize - 24)), left: 'auto', bottom: 'auto' };
+    } else {
+      finalPos = { left: 24, top: Math.max(24, Math.min(rect.top, winH - btnSize - 24)), right: 'auto', bottom: 'auto' };
+    }
+
+    setFabPos(finalPos);
+  };
+
+  const handlePointerUp = (e) => {
+    if (!dragRef.current.rect) return;
+    
+    const wasMoved = dragRef.current.isMoved;
+    try {
+      if (fabRef.current) fabRef.current.releasePointerCapture(e.pointerId);
+    } catch(err) {}
+    
+    dragRef.current.rect = null;
+    
+    if (wasMoved) {
+      snapToEdge();
+      setTimeout(() => setIsDragging(false), 50);
+    } else {
+      setIsOpen(prev => !prev);
+    }
+  };
+
+  const getChatWindowStyle = () => {
+    let pos = { ...styles.chatWindow };
+    let isLeft = false;
+    if (fabPos.left !== 'auto') {
+      if (fabPos.left < window.innerWidth / 2) isLeft = true;
+    }
+
+    if (isLeft) {
+      pos.left = 24;
+      pos.right = 'auto';
+      pos.transformOrigin = 'bottom left';
+    } else {
+      pos.left = 'auto';
+      pos.right = 24;
+      pos.transformOrigin = 'bottom right';
+    }
+    return pos;
+  };
+
   if (!user || (user.role !== 'admin' && user.role !== 'supervisor' && user.role !== 'hallSupervisor')) return null;
 
   return (
     <>
-      <button style={styles.fabBtn} onClick={() => setIsOpen(!isOpen)} title="مساعد الإدارة">
-        <span style={{ fontSize: 24 }}>🧠</span>
-        <span style={styles.fabText}>مساعد الإدارة</span>
-      </button>
+      <style>
+        {`
+          @keyframes floatPulse {
+            0% { transform: translateY(0px) scale(1); filter: drop-shadow(0 0 10px rgba(2, 128, 144, 0.4)); }
+            50% { transform: translateY(-4px) scale(1.03); filter: drop-shadow(0 0 18px rgba(31, 182, 166, 0.8)); }
+            100% { transform: translateY(0px) scale(1); filter: drop-shadow(0 0 10px rgba(2, 128, 144, 0.4)); }
+          }
+          .afrakoush-magic-fab {
+            position: fixed;
+            z-index: 9999;
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #16364D, #0f2736);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 20px rgba(2, 128, 144, 0.6), inset 0 0 15px rgba(31, 182, 166, 0.3);
+            border: 1.5px solid rgba(31, 182, 166, 0.5);
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+          }
+          .afrakoush-magic-inner {
+            animation: floatPulse 3s ease-in-out infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .afrakoush-magic-fab:hover:not(.dragging) {
+            transform: scale(1.08);
+            box-shadow: 0 8px 25px rgba(31, 182, 166, 0.8), inset 0 0 20px rgba(31, 182, 166, 0.6);
+            border-color: rgba(31, 182, 166, 0.9);
+          }
+          .afrakoush-magic-fab.dragging {
+            transform: scale(1.1);
+            opacity: 0.9;
+            box-shadow: 0 15px 40px rgba(2, 128, 144, 0.4);
+            cursor: grabbing !important;
+            transition: none !important;
+          }
+        `}
+      </style>
+
+      <div
+        ref={fabRef}
+        className={`afrakoush-magic-fab ${isDragging ? 'dragging' : ''}`}
+        style={{
+          ...fabPos,
+          cursor: isDragging ? 'grabbing' : 'pointer',
+          transition: isDragging ? 'none' : 'left 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), right 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.2s',
+          display: isOpen ? 'none' : 'flex'
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        title="المساعد السحري الذكي"
+      >
+        <div className="afrakoush-magic-inner">
+          <svg width="34" height="34" viewBox="0 0 64 64" fill="none">
+            <path d="M32 2 Q32 32 62 32 Q32 32 32 62 Q32 32 2 32 Q32 32 32 2 Z" fill="url(#coreGrad)"/>
+            <path d="M14 10 Q14 19 23 19 Q14 19 14 28 Q14 19 5 19 Q14 19 14 10 Z" fill="url(#sparkGrad)"/>
+            <path d="M52 46 Q52 52 58 52 Q52 52 52 58 Q52 52 46 52 Q52 52 52 46 Z" fill="url(#sparkGrad)"/>
+            <defs>
+              <linearGradient id="coreGrad" x1="0" y1="0" x2="64" y2="64">
+                <stop stopColor="#1fb6a6" />
+                <stop offset="1" stopColor="#0f2736" />
+              </linearGradient>
+              <linearGradient id="sparkGrad" x1="0" y1="0" x2="64" y2="64">
+                <stop stopColor="#ffffff" />
+                <stop offset="1" stopColor="#8ac4ca" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+      </div>
 
       {isOpen && (
-        <div style={styles.chatWindow}>
+        <div style={getChatWindowStyle()}>
           <div style={styles.chatHeader}>
             <div style={styles.headerLeft}>
               <button style={styles.menuBtn} onClick={() => setIsSidebarOpen(!isSidebarOpen)}>☰</button>
