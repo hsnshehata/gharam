@@ -700,7 +700,7 @@ function AdminAIChat({ user }) {
               className="afrakoush-chat-input"
               ref={inputRef}
               style={styles.inputArea}
-              placeholder={isRecording ? "جاري التسجيل..." : "اكتب استفسارك هنا..."}
+              placeholder={isRecording ? "جاري التسجيل..." : "اسأل هنا..."}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
