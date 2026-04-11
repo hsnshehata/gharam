@@ -251,7 +251,7 @@ function AdminAIChat({ user }) {
     if (dragRef.current.isMoved) {
       let newLeft = dragRef.current.rect.left + dx;
       let newTop = dragRef.current.rect.top + dy;
-      
+
       // Keep within viewport bounds
       const btnSize = 65;
       newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - btnSize));
@@ -290,14 +290,14 @@ function AdminAIChat({ user }) {
 
   const handlePointerUp = (e) => {
     if (!dragRef.current.rect) return;
-    
+
     const wasMoved = dragRef.current.isMoved;
     try {
       if (fabRef.current) fabRef.current.releasePointerCapture(e.pointerId);
-    } catch(err) {}
-    
+    } catch (err) { }
+
     dragRef.current.rect = null;
-    
+
     if (wasMoved) {
       snapToEdge();
       setTimeout(() => setIsDragging(false), 50);
@@ -392,13 +392,13 @@ function AdminAIChat({ user }) {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        title="المساعد السحري الذكي"
+        title="وكيل الذكاء الاصطتناعي"
       >
         <div className="afrakoush-magic-inner">
           <svg width="34" height="34" viewBox="0 0 64 64" fill="none">
-            <path d="M32 2 Q32 32 62 32 Q32 32 32 62 Q32 32 2 32 Q32 32 32 2 Z" fill="url(#coreGrad)"/>
-            <path d="M14 10 Q14 19 23 19 Q14 19 14 28 Q14 19 5 19 Q14 19 14 10 Z" fill="url(#sparkGrad)"/>
-            <path d="M52 46 Q52 52 58 52 Q52 52 52 58 Q52 52 46 52 Q52 52 52 46 Z" fill="url(#sparkGrad)"/>
+            <path d="M32 2 Q32 32 62 32 Q32 32 32 62 Q32 32 2 32 Q32 32 32 2 Z" fill="url(#coreGrad)" />
+            <path d="M14 10 Q14 19 23 19 Q14 19 14 28 Q14 19 5 19 Q14 19 14 10 Z" fill="url(#sparkGrad)" />
+            <path d="M52 46 Q52 52 58 52 Q52 52 52 58 Q52 52 46 52 Q52 52 52 46 Z" fill="url(#sparkGrad)" />
             <defs>
               <linearGradient id="coreGrad" x1="0" y1="0" x2="64" y2="64">
                 <stop stopColor="#1fb6a6" />
@@ -424,7 +424,7 @@ function AdminAIChat({ user }) {
               </div>
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
-              <button style={styles.newChatHeaderBtn} onClick={() => setShowInfo(true)} title="دليل عفركوش">❕</button>
+              <button style={styles.newChatHeaderBtn} onClick={() => setShowInfo(true)} title="دليل مساعد الذكاء الاصطتناعي">❕</button>
               <button style={styles.newChatHeaderBtn} onClick={() => { setCurrentId(null); setIsSidebarOpen(false); }} title="محادثة جديدة">➕</button>
               <button style={styles.closeBtn} onClick={() => setIsOpen(false)}>×</button>
             </div>
@@ -514,18 +514,18 @@ function AdminAIChat({ user }) {
       {/* نافذة التعليمات */}
       <Modal show={showInfo} onHide={() => setShowInfo(false)} centered size="lg" dir="rtl" className="afrakoush-info-modal" backdropClassName="ai-modal-backdrop">
         <Modal.Header style={{ borderBottom: '2px solid #028090', backgroundColor: '#0f2736', color: '#fff', direction: 'rtl', display: 'flex', justifyContent: 'space-between' }}>
-          <Modal.Title style={{ fontWeight: 'bold', margin: 0 }}>🧠 المساعد الذكي "عفركوش"</Modal.Title>
+          <Modal.Title style={{ fontWeight: 'bold', margin: 0 }}>🧠 المساعد الذكي "للإدارة"</Modal.Title>
           <button onClick={() => setShowInfo(false)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', cursor: 'pointer', outline: 'none' }}>×</button>
         </Modal.Header>
         <Modal.Body style={{ maxHeight: '70vh', overflowY: 'auto', backgroundColor: '#f8f9fa' }}>
-          <h5 style={{ color: '#028090', fontWeight: 'bold' }}>ما هو عفركوش؟</h5>
-          <p style={{ fontSize: '15px', lineHeight: '1.6' }}>عفركوش ليس مجرد روبوت محادثة، بل هو <strong>مهندس ذكاء اصطناعي وأداة إدارية ذكية</strong> متصلة مباشرة بقواعد البيانات وواجهات النظام. قادر على قراءة البيانات المعقدة، تحليلها، واستخراج التقارير، بل وبناء <strong>برامج وصفحات ولوحات تحكم ديناميكية تفاعلية</strong> خصيصاً لك!</p>
+          <h5 style={{ color: '#028090', fontWeight: 'bold' }}>ما هو المساعد الذكي</h5>
+          <p style={{ fontSize: '15px', lineHeight: '1.6' }}>المساعد الذكي ليس مجرد روبوت محادثة، بل هو <strong>مهندس ذكاء اصطناعي وأداة إدارية ذكية</strong> متصلة مباشرة بقواعد البيانات وواجهات النظام. قادر على قراءة البيانات المعقدة، تحليلها، واستخراج التقارير، بل وبناء <strong>برامج وصفحات ولوحات تحكم ديناميكية تفاعلية</strong> خصيصاً لك!</p>
 
           <hr />
 
           <h5 style={{ color: '#028090', fontWeight: 'bold' }}>الصلاحيات 🔐</h5>
           <ul style={{ fontSize: '15px', lineHeight: '1.6' }}>
-            <li style={{ marginBottom: '8px' }}><strong>المدير (Admin):</strong> يملك صلاحيات مطلقة لسؤال عفركوش عن الإيرادات التفصيلية، المبيعات، ومطالبته ببناء وتعديل لوحات تحكم ديناميكية للمراقبين والمديرين (مثل: manager-hub, gharam-insights).</li>
+            <li style={{ marginBottom: '8px' }}><strong>المدير (Admin):</strong> يملك صلاحيات مطلقة لسؤال المساعد الذكي عن الإيرادات التفصيلية، المبيعات، ومطالبته ببناء وتعديل لوحات تحكم ديناميكية للمراقبين والمديرين (مثل: manager-hub, gharam-insights).</li>
             <li><strong>المشرف (Supervisor):</strong> يملك صلاحيات جلب بيانات العمليات اليومية، الحجوزات، وأداء الموظفين، ولكن لا يمكنه الوصول للمصاريف السرية أو إنشاء واجهات النظام العامة والإدارية المغلقة.</li>
           </ul>
 
@@ -543,16 +543,16 @@ function AdminAIChat({ user }) {
           <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0', marginBottom: '10px' }}>
             <strong style={{ color: '#0097e6' }}>للمشرفين والمديرين للتقارير المتقدمة السريعة:</strong><br />
             <span style={{ color: '#555', fontSize: '14px' }}>
-              "هاتلي تقرير مفصل عن إجمالي مصاريف وسلف اليوم وقارنها بإجمالي العربون المدفوع."<br/>
+              "هاتلي تقرير مفصل عن إجمالي مصاريف وسلف اليوم وقارنها بإجمالي العربون المدفوع."<br />
               "قارن أداء الشهر ده بالشهر اللي فات من حيث عدد الحجوزات."
             </span>
           </div>
           <div style={{ background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0', marginBottom: '10px' }}>
             <strong style={{ color: '#44bd32' }}>للمشرفين للإدارة وتتبع الموظفين بدقة:</strong><br />
             <span style={{ color: '#555', fontSize: '14px' }}>
-              "الموظفة (سارة) عملت كام خدمة النهاردة وجمعت كام نقطة؟"<br/>
-              "مين نفذ خدمة وش وحواجب للعروسة (أميرة)؟"<br/>
-              "آخر عملية تنظيف بشرة مين عملها؟ وما هي آخر 3 عمليات بترتيب التاريخ؟"<br/>
+              "الموظفة (سارة) عملت كام خدمة النهاردة وجمعت كام نقطة؟"<br />
+              "مين نفذ خدمة وش وحواجب للعروسة (أميرة)؟"<br />
+              "آخر عملية تنظيف بشرة مين عملها؟ وما هي آخر 3 عمليات بترتيب التاريخ؟"<br />
               "مين أكتر موظفة نفذت خدمة ميك أب خلال الشهر الجاري؟"
             </span>
           </div>
@@ -562,8 +562,8 @@ function AdminAIChat({ user }) {
           <ul style={{ fontSize: '14px', lineHeight: '1.6', color: '#444' }}>
             <li>كن دقيقاً في طلبك واذكر التواريخ المطلوبة إذا لزم الأمر، يمكنك التحدث معه باللهجة المصرية العادية أو الفصحى وسيفهمك.</li>
             <li>لا تتردد في طلب جداول مفصلة أو طلب تحليل عميق للبيانات، فقدراته غير محدودة ويمكنه استنتاج رؤى غير مرئية للمشرف العادي.</li>
-            <li>لتسجيل رسالة صوتية اضغط على علامة المايك 🎤 وتحدث، ثم سيتلقاها عفركوش ويجيبك.</li>
-            <li>لتصفية ذهن عفركوش لطلب جديد كلياً، اضغط على <strong>زر الإضافة ➕ لبدء محادثة جديدة</strong>.</li>
+            <li>لتسجيل رسالة صوتية اضغط على علامة المايك 🎤 وتحدث، ثم سيتلقاها المساعد ويجيبك.</li>
+            <li>لتصفية ذهن المساعد الذكي لطلب جديد كلياً، اضغط على <strong>زر الإضافة ➕ لبدء محادثة جديدة</strong>.</li>
           </ul>
 
           <div style={{ background: '#e6f7fa', padding: '15px', borderRadius: '8px', border: '1px solid #b3e6ec', marginTop: '15px' }}>
@@ -575,7 +575,7 @@ function AdminAIChat({ user }) {
         </Modal.Body>
         <Modal.Footer style={{ backgroundColor: '#f8f9fa', borderTop: '1px solid #e0e0e0', justifyContent: 'flex-start' }}>
           <Button variant="secondary" onClick={() => setShowInfo(false)} style={{ backgroundColor: '#028090', border: 'none', fontWeight: 'bold', padding: '8px 24px' }}>
-            علم، انطلق يا عفركوش! 🚀
+            علم، انطلق! 🚀
           </Button>
         </Modal.Footer>
       </Modal>
