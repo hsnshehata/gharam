@@ -125,7 +125,7 @@ function AdminAIChat({ user }) {
     }
   };
 
-  // Tool name to Arabic label mapping
+  // Tool name to Arabic label mapping (used by real SSE events)
   const TOOL_LABELS = {
     '_thinking': '🧠 يُحلل الطلب ويفكر...',
     '_analyzing': '📊 يُراجع البيانات ويُعد الإجابة...',
@@ -142,8 +142,48 @@ function AdminAIChat({ user }) {
     'get_past_clients': '📇 يجلب قائمة العميلات السابقات...',
     'predictive_scheduling': '🗓️ يُحلل جدول الحجوزات القادمة...',
     'search_admin_conversations': '💬 يبحث في أرشيف المحادثات...',
-    'build_afrakoush_page': '💻 يُرسل الطلب للذراع التقني لبناء الواجهة...',
-    'get_afrakoush_page': '📄 يقرأ كود الصفحة الحالية...'
+    'build_afrakoush_page': '💻 يُرسل الطلب لعفركوش لبناء الواجهة...',
+    'get_afrakoush_page': '📄 عفركوش يقرأ كود الصفحة الحالية...'
+  };
+
+  // Simulated thinking steps (shown while waiting for response)
+  const THINKING_STEPS = [
+    '🧠 يُحلل الطلب ويفكر...',
+    '🔌 يتصل بقواعد البيانات...',
+    '📋 يجمّع العمليات والسجلات...',
+    '🔍 يبحث في البيانات المطلوبة...',
+    '👥 يستعرض بيانات الموظفين والعمليات...',
+    '📊 يُحلل النتائج ويُقارن الأرقام...',
+    '💡 يستخرج الرؤى والاستنتاجات...',
+    '📈 يُعد التقرير النهائي...',
+    '💻 يُرسل الطلب للذراع التقني...',
+    '✍️ يصيغ الرد بالتفصيل...',
+    '🔄 يُراجع البيانات للتأكد من الدقة...',
+    '📝 يُنسق الإجابة للعرض...'
+  ];
+
+  const thinkingTimerRef = useRef(null);
+  const sseOverrideRef = useRef(false);
+
+  const startThinkingSimulation = () => {
+    sseOverrideRef.current = false;
+    let stepIndex = 0;
+    const shuffled = [...THINKING_STEPS].sort(() => Math.random() - 0.5);
+    setToolStatus(shuffled[0]);
+
+    thinkingTimerRef.current = setInterval(() => {
+      if (sseOverrideRef.current) return;
+      stepIndex = (stepIndex + 1) % shuffled.length;
+      setToolStatus(shuffled[stepIndex]);
+    }, 2500 + Math.random() * 1500);
+  };
+
+  const stopThinkingSimulation = () => {
+    if (thinkingTimerRef.current) {
+      clearInterval(thinkingTimerRef.current);
+      thinkingTimerRef.current = null;
+    }
+    setToolStatus(null);
   };
 
   const handleSend = async (e, voiceBlob = null) => {
@@ -156,7 +196,7 @@ function AdminAIChat({ user }) {
     setMessages(newMsgs);
     setInput('');
     setLoading(true);
-    setToolStatus(null);
+    startThinkingSimulation();
 
     try {
       const cleanMessages = newMsgs
@@ -164,7 +204,6 @@ function AdminAIChat({ user }) {
         .map(m => ({ role: m.role, text: m.text }));
 
       if (voiceBlob) {
-        // Voice messages use legacy axios (FormData can't use SSE easily)
         const formData = new FormData();
         formData.append('audio', voiceBlob, 'voice.webm');
         formData.append('messages', JSON.stringify(cleanMessages));
@@ -185,7 +224,6 @@ function AdminAIChat({ user }) {
           setMessages(prev => [...prev, { role: 'model', text: 'عذراً، حدث خطأ.' }]);
         }
       } else {
-        // Text messages use SSE streaming for real-time tool status
         const payload = { messages: cleanMessages, text: txt };
         if (currentId) payload.conversationId = currentId;
 
@@ -209,7 +247,7 @@ function AdminAIChat({ user }) {
 
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
-          buffer = lines.pop(); // keep incomplete line in buffer
+          buffer = lines.pop();
 
           for (const line of lines) {
             if (!line.startsWith('data: ')) continue;
@@ -217,16 +255,15 @@ function AdminAIChat({ user }) {
               const event = JSON.parse(line.slice(6));
 
               if (event.type === 'thinking' || event.type === 'tool_start' || event.type === 'tool_done' || event.type === 'analyzing') {
+                sseOverrideRef.current = true;
                 setToolStatus(TOOL_LABELS[event.tool] || `⚙️ ${event.tool}...`);
               } else if (event.type === 'done') {
-                setToolStatus(null);
                 setMessages(prev => [...prev, { role: 'model', text: event.reply, audioParts: event.audioParts }]);
                 if (!currentId && event.conversationId) {
                   setCurrentId(event.conversationId);
                   setTimeout(fetchConversations, 2000);
                 }
               } else if (event.type === 'error') {
-                setToolStatus(null);
                 setMessages(prev => [...prev, { role: 'model', text: `خطأ: ${event.message}` }]);
               }
             } catch (parseErr) { /* skip malformed SSE line */ }
@@ -238,7 +275,7 @@ function AdminAIChat({ user }) {
       setMessages(prev => [...prev, { role: 'model', text: `خطأ: ${errText}` }]);
     } finally {
       setLoading(false);
-      setToolStatus(null);
+      stopThinkingSimulation();
     }
   };
 
