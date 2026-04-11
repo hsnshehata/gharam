@@ -52,7 +52,7 @@ exports.getAllConversationsAdmin = async (req, res) => {
     }
 };
 
-// Post Chat
+// Post Chat (SSE Stream for real-time tool events)
 exports.chat = async (req, res) => {
     try {
         let { text, conversationId, messages, additionalPrompt } = req.body;
@@ -104,36 +104,94 @@ exports.chat = async (req, res) => {
             messages = conv.messages;
         }
 
-        // Pass to processAdminChat
-        const reply = await processAdminChat(messages, fullUser, fileBuffer, fileMimeType, additionalPrompt);
+        // Check if client supports SSE streaming
+        const acceptsStream = req.headers.accept && req.headers.accept.includes('text/event-stream');
 
-        // Push model message
-        conv.messages.push({ role: 'model', text: reply });
-        conv.lastActivity = Date.now();
-        await conv.save();
-
-        let audioParts = [];
-        try {
-            const cleanReply = reply.replace(/[*#]/g, '').slice(0, 800);
-            const urls = googleTTS.getAllAudioUrls(cleanReply, {
-                lang: 'ar',
-                slow: false,
-                host: 'https://translate.google.com',
+        if (acceptsStream) {
+            // === SSE Stream Mode ===
+            res.writeHead(200, {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'X-Accel-Buffering': 'no'
             });
-            for (const item of urls) {
-                try {
-                    const audioRes = await axios.get(item.url, { responseType: 'arraybuffer' });
-                    const base64 = Buffer.from(audioRes.data).toString('base64');
-                    audioParts.push(`data:audio/mpeg;base64,${base64}`);
-                } catch (fetchErr) {
-                    console.error('Error fetching TTS chunk:', fetchErr.message);
-                }
-            }
-        } catch (ttsErr) {
-            console.error('TTS error:', ttsErr);
-        }
 
-        res.json({ success: true, reply, audioParts, conversationId: conv._id, title: conv.title });
+            const sendSSE = (data) => {
+                try {
+                    res.write(`data: ${JSON.stringify(data)}\n\n`);
+                } catch (e) { }
+            };
+
+            const onToolCall = (event) => {
+                sendSSE(event);
+            };
+
+            // Process with streaming tool events
+            const reply = await processAdminChat(messages, fullUser, fileBuffer, fileMimeType, additionalPrompt, onToolCall);
+
+            // Push model message
+            conv.messages.push({ role: 'model', text: reply });
+            conv.lastActivity = Date.now();
+            await conv.save();
+
+            // Generate TTS
+            let audioParts = [];
+            try {
+                const cleanReply = reply.replace(/[*#]/g, '').slice(0, 800);
+                const urls = googleTTS.getAllAudioUrls(cleanReply, {
+                    lang: 'ar',
+                    slow: false,
+                    host: 'https://translate.google.com',
+                });
+                for (const item of urls) {
+                    try {
+                        const audioRes = await axios.get(item.url, { responseType: 'arraybuffer' });
+                        const base64 = Buffer.from(audioRes.data).toString('base64');
+                        audioParts.push(`data:audio/mpeg;base64,${base64}`);
+                    } catch (fetchErr) {
+                        console.error('Error fetching TTS chunk:', fetchErr.message);
+                    }
+                }
+            } catch (ttsErr) {
+                console.error('TTS error:', ttsErr);
+            }
+
+            // Send final result
+            sendSSE({ type: 'done', reply, audioParts, conversationId: conv._id, title: conv.title });
+            res.end();
+
+        } else {
+            // === Legacy JSON Mode (for Telegram & other clients) ===
+            const reply = await processAdminChat(messages, fullUser, fileBuffer, fileMimeType, additionalPrompt);
+
+            // Push model message
+            conv.messages.push({ role: 'model', text: reply });
+            conv.lastActivity = Date.now();
+            await conv.save();
+
+            let audioParts = [];
+            try {
+                const cleanReply = reply.replace(/[*#]/g, '').slice(0, 800);
+                const urls = googleTTS.getAllAudioUrls(cleanReply, {
+                    lang: 'ar',
+                    slow: false,
+                    host: 'https://translate.google.com',
+                });
+                for (const item of urls) {
+                    try {
+                        const audioRes = await axios.get(item.url, { responseType: 'arraybuffer' });
+                        const base64 = Buffer.from(audioRes.data).toString('base64');
+                        audioParts.push(`data:audio/mpeg;base64,${base64}`);
+                    } catch (fetchErr) {
+                        console.error('Error fetching TTS chunk:', fetchErr.message);
+                    }
+                }
+            } catch (ttsErr) {
+                console.error('TTS error:', ttsErr);
+            }
+
+            res.json({ success: true, reply, audioParts, conversationId: conv._id, title: conv.title });
+        }
 
         // Generate title asynchronously if new
         if (isNew) {
@@ -145,6 +203,14 @@ exports.chat = async (req, res) => {
 
     } catch (err) {
         console.error('[AdminAI] error in chat:', err);
-        res.status(500).json({ success: false, message: 'تعذر الاتصال بالمساعد الذكي للإدارة', error: err.message });
+        // If headers already sent (SSE mode), try to send error event then close
+        if (res.headersSent) {
+            try {
+                res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
+                res.end();
+            } catch (e) { }
+        } else {
+            res.status(500).json({ success: false, message: 'تعذر الاتصال بالمساعد الذكي للإدارة', error: err.message });
+        }
     }
 };
