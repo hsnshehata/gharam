@@ -20,7 +20,7 @@ export const printReceiptElement = (element) => {
   style.setAttribute('data-print-style', 'receipt-only');
   style.textContent = `
     @media print {
-      @page { size: 900mm auto; margin: 0; }
+      @page { size: 90mm auto; margin: 0; }
       body * { visibility: hidden !important; }
       #receipt-print-container, #receipt-print-container * { visibility: visible !important; color: #000 !important; }
       #receipt-print-container { position: absolute; top: 0; left: 0; width: 75mm; margin: 0 auto; padding: 3mm; font-size: 15px; text-align: center; }
