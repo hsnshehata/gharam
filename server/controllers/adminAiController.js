@@ -111,14 +111,18 @@ exports.chat = async (req, res) => {
             // === SSE Stream Mode ===
             res.writeHead(200, {
                 'Content-Type': 'text/event-stream',
-                'Cache-Control': 'no-cache',
+                'Cache-Control': 'no-cache, no-transform',
                 'Connection': 'keep-alive',
-                'X-Accel-Buffering': 'no'
+                'X-Accel-Buffering': 'no',
+                'Content-Encoding': 'identity'
             });
+            res.flushHeaders();
 
             const sendSSE = (data) => {
                 try {
                     res.write(`data: ${JSON.stringify(data)}\n\n`);
+                    // Force flush for compression middleware & proxies
+                    if (typeof res.flush === 'function') res.flush();
                 } catch (e) { }
             };
 
