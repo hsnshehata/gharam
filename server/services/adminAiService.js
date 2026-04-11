@@ -392,6 +392,13 @@ const MODEL_CANDIDATES = [
     'gemini-2.5-flash-lite'
 ];
 
+// Fast/cheap models for simple tasks (e.g. generating chat titles)
+const LIGHT_MODEL_CANDIDATES = [
+    'gemini-2.5-flash-lite',
+    'gemini-3.1-flash-lite-preview',
+    'gemini-2.5-flash'
+];
+
 const isToday = (dateStr) => {
     const d = new Date(dateStr);
     const today = new Date();
@@ -1539,7 +1546,7 @@ const generateChatTitle = async (firstMessage) => {
 
         for (const key of apiKeys) {
             const genAI = new GoogleGenerativeAI(key);
-            for (const modelName of MODEL_CANDIDATES) {
+            for (const modelName of LIGHT_MODEL_CANDIDATES) {
                 try {
                     const model = genAI.getGenerativeModel({ model: modelName });
                     const prompt = `أنت مساعد يقوم بتوليد عناوين للمحادثات.
