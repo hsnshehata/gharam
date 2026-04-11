@@ -609,25 +609,6 @@ function AdminAIChat({ user }) {
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
               <button className="pulsing-info-btn" style={styles.newChatHeaderBtn} onClick={() => setShowInfo(true)} title="دليل مساعد الذكاء الاصطتناعي">❕</button>
-              <button
-                style={{
-                  ...styles.newChatHeaderBtn,
-                  position: 'relative',
-                  fontSize: 11,
-                  fontWeight: 800,
-                  padding: '4px 8px',
-                  borderRadius: 8,
-                  background: fastMode ? 'rgba(255,193,7,0.15)' : 'rgba(2,128,144,0.12)',
-                  color: fastMode ? '#ffc107' : '#1fb6a6',
-                  border: `1px solid ${fastMode ? 'rgba(255,193,7,0.3)' : 'rgba(2,128,144,0.25)'}`,
-                  transition: 'all 0.3s ease',
-                  minWidth: 32,
-                }}
-                onClick={() => setFastMode(prev => !prev)}
-                title={fastMode ? 'الوضع السريع (نماذج خفيفة وموفرة)' : 'الوضع المتقدم (نماذج قوية ومفكرة)'}
-              >
-                {fastMode ? '⚡' : '🧠'}
-              </button>
               <button style={styles.newChatHeaderBtn} onClick={() => { setCurrentId(null); setIsSidebarOpen(false); }} title="محادثة جديدة">➕</button>
               <button style={styles.closeBtn} onClick={() => setIsOpen(false)}>×</button>
             </div>
@@ -691,13 +672,29 @@ function AdminAIChat({ user }) {
           </div>
 
           <div style={styles.chatFooter}>
-            <button
-              onClick={isRecording ? stopRecording : startRecording}
-              className={`voice-btn ${isRecording ? 'recording' : ''}`}
-              style={{ ...styles.micBtn, backgroundColor: isRecording ? '#ff4757' : '#f1f2f6', color: isRecording ? '#fff' : '#2d3436' }}
-              disabled={loading}
-            >
-              {isRecording ? "⬛" : "🎤"}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
+              <button
+                onClick={() => setFastMode(prev => !prev)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  padding: '5px 10px', borderRadius: 20,
+                  border: 'none', cursor: 'pointer',
+                  fontSize: 11, fontWeight: 700,
+                  background: fastMode ? 'linear-gradient(135deg, #fff3cd, #ffeeba)' : 'linear-gradient(135deg, #d1ecf1, #bee5eb)',
+                  color: fastMode ? '#856404' : '#0c5460',
+                  transition: 'all 0.3s ease',
+                  whiteSpace: 'nowrap', flexShrink: 0,
+                }}
+              >
+                {fastMode ? '⚡ سريع' : '🧠 متقدم'}
+              </button>
+              <button
+                onClick={isRecording ? stopRecording : startRecording}
+                className={`voice-btn ${isRecording ? 'recording' : ''}`}
+                style={{ ...styles.micBtn, backgroundColor: isRecording ? '#ff4757' : '#f1f2f6', color: isRecording ? '#fff' : '#2d3436' }}
+                disabled={loading}
+              >
+                {isRecording ? "⬛" : "🎙️"}
             </button>
             <textarea
               className="afrakoush-chat-input"
@@ -716,6 +713,7 @@ function AdminAIChat({ user }) {
                 <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
               </svg>
             </button>
+            </div>
           </div>
         </div>
       )}
