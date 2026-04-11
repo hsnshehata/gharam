@@ -9,8 +9,8 @@ export const printReceiptElement = (element) => {
   const clone = element.cloneNode(true);
   clone.classList.add('print-active');
 
-  const logo = clone.querySelector('img[src="/logo.png"]');
-  if (logo) logo.src = `${window.location.origin}/logo.png`;
+  const logo = clone.querySelector('img[src="/logo4print.png"]');
+  if (logo) logo.src = `${window.location.origin}/logo4print.png`;
 
   const printContainer = document.createElement('div');
   printContainer.id = 'receipt-print-container';
@@ -23,7 +23,7 @@ export const printReceiptElement = (element) => {
       @page { size: 80mm auto; margin: 0; }
       body * { visibility: hidden !important; }
       #receipt-print-container, #receipt-print-container * { visibility: visible !important; }
-      #receipt-print-container { position: absolute; top: 0; left: 0; width: 80mm; margin: 0 auto; padding: 10mm; font-size: 13px; text-align: center; }
+      #receipt-print-container { position: absolute; top: 0; left: 0; width: 80mm; margin: 0 auto; padding: 3mm; font-size: 15px; text-align: center; }
     }
   `;
 
@@ -40,6 +40,16 @@ export const printReceiptElement = (element) => {
   window.print();
 };
 
+const formatDate = (dateString) => {
+  if (!dateString) return 'غير متوفر';
+  const d = new Date(dateString);
+  if (isNaN(d)) return 'غير متوفر';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 const ReceiptPrint = ({ data, type }) => {
   if (!data || !type) return null;
 
@@ -50,9 +60,9 @@ const ReceiptPrint = ({ data, type }) => {
         backgroundColor: '#fff',
         color: '#000',
         fontWeight: 'bold',
-        fontSize: '12px',
+        fontSize: '15px',
         width: '80mm',
-        padding: '10mm',
+        padding: '3mm',
         textAlign: 'center',
         margin: '0 auto',
         fontFamily: 'Tajawal, Arial, sans-serif'
@@ -66,22 +76,22 @@ const ReceiptPrint = ({ data, type }) => {
             /* اخفي كل حاجة وقت الطباعة إلا الوصل النشط */
             body * { visibility: hidden !important; }
             .receipt-content.print-active, .receipt-content.print-active * { visibility: visible !important; }
-            .receipt-content.print-active { position: absolute; left: 0; top: 0; width: 80mm; margin: 0 auto; padding: 10mm; font-size: 13px; text-align: center; }
-            .qr-code { margin: 10mm auto; }
+            .receipt-content.print-active { position: absolute; left: 0; top: 0; width: 80mm; margin: 0 auto; padding: 3mm; font-size: 15px; text-align: center; }
+            .qr-code { margin: 5mm auto; }
             table { width: 100%; border-collapse: collapse; }
             th, td { border: 1px solid #000; padding: 2mm; }
             img { max-width: 100%; height: auto; }
           }
         `}
       </style>
-      <img src="/logo.png" alt="Logo" style={{ height: '25mm', marginBottom: '10mm' }} />
+      <img src="/logo4print.png" alt="Logo" style={{ height: '30mm', marginBottom: '5mm' }} />
       <h5>Beauty Center</h5>
       {type === 'booking' ? (
         <>
           <p>اسم العميل: {data.clientName || 'غير متوفر'}</p>
           <p>رقم الوصل: {data.receiptNumber || 'غير متوفر'}</p>
-          <p>تاريخ المناسبة: {data.eventDate ? new Date(data.eventDate).toLocaleDateString() : 'غير متوفر'}</p>
-          {data.hennaDate && <p>تاريخ الحنة: {new Date(data.hennaDate).toLocaleDateString()}</p>}
+          <p>تاريخ المناسبة: {data.eventDate ? formatDate(data.eventDate) : 'غير متوفر'}</p>
+          {data.hennaDate && <p>تاريخ الحنة: {formatDate(data.hennaDate)}</p>}
           <h6>تفاصيل الباكدجات:</h6>
           <Table bordered size="sm">
             <thead>
@@ -162,7 +172,7 @@ const ReceiptPrint = ({ data, type }) => {
                   </tr>
                   <tr key="hairStraighteningDate">
                     <td>تاريخ فرد الشعر</td>
-                    <td>{data.hairStraighteningDate ? new Date(data.hairStraighteningDate).toLocaleDateString() : 'غير معروف'}</td>
+                    <td>{data.hairStraighteningDate ? formatDate(data.hairStraighteningDate) : 'غير معروف'}</td>
                   </tr>
                 </tbody>
               </Table>
@@ -179,7 +189,7 @@ const ReceiptPrint = ({ data, type }) => {
                   </tr>
                   <tr key="hairDyeDate">
                     <td>تاريخ الصبغة</td>
-                    <td>{data.hairDyeDate ? new Date(data.hairDyeDate).toLocaleDateString() : 'غير معروف'}</td>
+                    <td>{data.hairDyeDate ? formatDate(data.hairDyeDate) : 'غير معروف'}</td>
                   </tr>
                 </tbody>
               </Table>
@@ -192,7 +202,7 @@ const ReceiptPrint = ({ data, type }) => {
       ) : (
         <>
           <p>رقم الوصل: {data.receiptNumber || 'غير متوفر'}</p>
-          <p>تاريخ الخدمة: {data.createdAt ? new Date(data.createdAt).toLocaleDateString() : 'غير متوفر'}</p>
+          <p>تاريخ الخدمة: {data.createdAt ? formatDate(data.createdAt) : 'غير متوفر'}</p>
           <p>الموظف: {data.employeeId ? data.employeeId.username : 'غير محدد'}</p>
           <h6>الخدمات:</h6>
           <Table bordered size="sm">
