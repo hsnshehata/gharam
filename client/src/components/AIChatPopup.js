@@ -349,7 +349,7 @@ export default function AIChatPopup({ onClose }) {
             </div>
 
             {/* نافذة دليل غزل */}
-            <Modal show={showInfo} onHide={() => setShowInfo(false)} centered dir="rtl" className="ghazal-info-modal">
+            <Modal show={showInfo} onHide={() => setShowInfo(false)} centered dir="rtl" className="ghazal-info-modal" backdropClassName="ai-modal-backdrop">
                 <Modal.Header style={{ backgroundColor: '#1fb6a6', color: '#fff', borderBottom: 'none' }}>
                     <Modal.Title style={{ fontWeight: 'bold', margin: 0, fontSize: '1.2rem' }}>🌸 دليلك للحديث مع غزل</Modal.Title>
                     <button onClick={() => setShowInfo(false)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', cursor: 'pointer', outline: 'none', position: 'absolute', left: '15px' }}>×</button>
@@ -432,6 +432,13 @@ export default function AIChatPopup({ onClose }) {
                 ::-webkit-scrollbar-track { background: transparent; }
                 ::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 10px; }
                 ::-webkit-scrollbar-thumb:hover { background: #d0d0d0; }
+                
+                .ghazal-info-modal {
+                    z-index: 10005 !important;
+                }
+                .ai-modal-backdrop {
+                    z-index: 10000 !important;
+                }
             `}</style>
         </div>
     );
