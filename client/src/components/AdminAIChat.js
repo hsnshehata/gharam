@@ -559,7 +559,7 @@ function AdminAIChat({ user }) {
               <div style={styles.msgModelWrap}>
                 <div style={{ ...styles.msgModel, display: 'flex', alignItems: 'center', gap: 8, minWidth: 180 }}>
                   <Spinner animation="border" size="sm" style={{ color: '#028090', borderWidth: '2px', flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, color: '#555', transition: 'opacity 0.3s', animation: 'fadeInStatus 0.4s ease' }}>
+                  <span key={toolStatus || 'default'} style={{ fontSize: 12, color: '#555', animation: 'fadeInStatus 0.4s ease' }}>
                     {toolStatus || '🧠 يُحلل الطلب ويفكر...'}
                   </span>
                 </div>
