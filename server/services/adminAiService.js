@@ -273,6 +273,22 @@ POST /api/admin-ai/chat
 - النصوص: العناوين تكون باللون الأبيض الخفيف '#f5f0e8' مع لمسات ذهبية. تجنب الأسود.
 - الأزرار (Buttons): إذا وضعت زراً اجعله ذهبياً 'linear-gradient(135deg, #c9a04e, #e6c27b)' بلون نص داخلي '#080f0b'، مع ظل خفيف وتدويرة 'border-radius: 14px'.
 
+🎨 **دليل تصميم لوحة الإدارة (Admin Dashboard) — عند بناء صفحات إدارية:**
+إذا كانت الصفحة من نوع إداري (admin)، استخدم نظام الألوان التالي المتوافق مع لوحة الإدارة:
+- اللون الرئيسي (Olive/Teal): '#028090' — يُستخدم للعناوين، الأزرار الأساسية، والأيقونات.
+- الخلفيات: '#ffffff' للخلفية العامة، '#f5f5f5' للكروت والأسطح.
+- النصوص: العناوين بلون '#028090'، النصوص الثانوية '#666666'.
+- الحدود: '#e5e5e5' لجميع الحدود والفواصل.
+- الظلال: 'box-shadow: 0 6px 18px rgba(0,0,0,0.08)'
+- الأزرار الأساسية: 'background: linear-gradient(135deg, #028090, #0f2736)' بلون نص '#f5fbff'، مع 'border-radius: 12px'.
+- زر التمرير: 'background: var(--btn-bg-hover)' = '#026b73'
+- الكروت: 'background: var(--surface)' = '#f5f5f5'، إطار 'border: 1px solid #e5e5e5'، تدويرة '8px'.
+- كروت الإحصائيات: 'background: rgba(255,255,255,0.65)' مع 'border-radius: 14px' و 'box-shadow: 0 4px 20px rgba(0,0,0,0.06)'.
+- التدرجات المميزة: 'radial-gradient(ellipse at 10% 0%, rgba(2,128,144,0.14), transparent 50%)' لخلفية البطل.
+- الخط: 'Tajawal', Arial, sans-serif — الاتجاه RTL.
+- ⚠️ لا تستخدم ألوان اللاند بيج الداكنة (الذهبي والأخضر الزمردي) في الصفحات الإدارية.
+- ✅ الهوية البصرية: زيتي/Teal حديث + أبيض نظيف + ظلال خفيفة = تصميم إداري احترافي.
+
 ⚠️ تنبيه هام لمنع ضياع الكود: قبل تعديل المساحة الديناميكية أو إضافة شيء لها، يجب عليك دائماً وحتماً أن تقوم باستدعاء أداة get_afrakoush_page باسم "landing-dynamic-space" أولاً لتقرأ الكود الحالي الموجود بداخلها.
 بعد أن تقرأه، ادمج إضافاتك الجديدة أو تعديلاتك مع الكود الحالي الذي قرأته، ثم قم باستدعاء أداة build_afrakoush_page لصلاحية public للحفظ.
 إذا طلب منك المدير "حذف محتوى مساحة اللاند بيج بالكامل" فقط قم ببنائها بكود html فارغ.
@@ -1365,7 +1381,7 @@ const createFunctions = (user) => ({
     }
 });
 
-const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType = null, additionalPrompt = null, onToolCall = null) => {
+const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType = null, additionalPrompt = null, onToolCall = null, fastMode = false) => {
     const setting = await SystemSetting.findOne({ key: 'admin_ai_system_prompt' });
     let systemPrompt = setting?.value || DEFAULT_ADMIN_PROMPT;
 
@@ -1438,6 +1454,10 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
 
     const localFunctions = createFunctions(user);
 
+    // Select model list based on mode
+    const activeModels = fastMode ? LIGHT_MODEL_CANDIDATES : MODEL_CANDIDATES;
+    console.log(`[AdminAI] Mode: ${fastMode ? '⚡ Fast' : '🧠 Pro'} | Models: ${activeModels.join(', ')}`);
+
     let replyText = null;
     let lastError = null;
 
@@ -1451,7 +1471,7 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
             console.log(`[AdminAI] 🔄 Switching to ${keyLabel} API key...`);
         }
 
-        for (const modelName of MODEL_CANDIDATES) {
+        for (const modelName of activeModels) {
             try {
                 console.log(`[AdminAI] Trying model: ${modelName} (${keyLabel} key)...`);
                 let modelFeatures = {
