@@ -146,28 +146,36 @@ function AdminAIChat({ user }) {
     'get_afrakoush_page': '📄 يقرأ كود الصفحة الحالية...'
   };
 
-  // Simulated thinking steps (shown while waiting for response)
-  const THINKING_STEPS = [
-    '🧠 يُحلل الطلب ويفكر...',
-    '🔌 يتصل بقواعد البيانات...',
-    '📋 يجمّع العمليات والسجلات...',
-    '🔍 يبحث في البيانات المطلوبة...',
-    '👥 يستعرض بيانات الموظفين والعمليات...',
+  // Phase 1: Intro steps — fixed order, shown once, specific delays
+  const INTRO_STEPS = [
+    { text: '🧠 يُحلل الطلب ويفكر...', delay: 7000 },
+    { text: '🔌 يتصل بقواعد البيانات...', delay: 3000 },
+    { text: '📋 يجمّع المعلومات والسجلات...', delay: 4000 },
+    { text: '🔍 يبحث في البيانات المطلوبة...', delay: 6000 },
+  ];
+
+  // Phase 2: Middle steps — random order, each shown once, fast (2-4s)
+  const MIDDLE_STEPS = [
+    '👥 يستعرض بيانات بواسطة الادوات ...',
     '📊 يُحلل النتائج ويُقارن الأرقام...',
     '💡 يستخرج الرؤى والاستنتاجات...',
-    '📈 يُعد التقرير النهائي...',
+    '📈 يُعد التقرير المبدئي ...',
     '💻 يُرسل الطلب للذراع التقني...',
-    '✍️ يصيغ الرد بالتفصيل...',
     '🔄 يُراجع البيانات للتأكد من الدقة...',
-    '📝 يُنسق الإجابة للعرض...',
-    '🗄️ يفتح أرشيف الحجوزات القديمة...',
+    '🗄️ يفتح أرشيف عمليات...',
     '⚙️ يُعالج البيانات الخام...',
-    '🧮 يحسب الإحصائيات والمتوسطات...',
     '📑 يُطابق السجلات مع بعضها...',
     '🔗 يربط النتائج من مصادر مختلفة...',
+  ];
+
+  // Phase 3: Loop steps — random order, repeats forever, slow (3-7s)
+  const LOOP_STEPS = [
+    '📑 يُطابق السجلات مع بعضها...',
+    '✅ يتحقق من صحة النتائج...',
+    '🔗 يربط النتائج من مصادر مختلفة...',
+    '✍️ يصيغ الرد بالتفصيل...',
     '🎯 يُحدد الأنماط والملاحظات...',
-    '📤 يُجهز البيانات للعرض النهائي...',
-    '✅ يتحقق من صحة النتائج...'
+    '📝 يُنسق الإجابة للعرض...',
   ];
 
   const thinkingTimerRef = useRef(null);
@@ -175,21 +183,59 @@ function AdminAIChat({ user }) {
 
   const startThinkingSimulation = () => {
     sseOverrideRef.current = false;
-    const shuffled = [...THINKING_STEPS].sort(() => Math.random() - 0.5);
-    let stepIndex = 0;
-    setToolStatus(shuffled[0]);
 
-    const scheduleNext = () => {
-      // Variable delays: randomly between 3 and 8 seconds
-      const delay = 3000 + Math.random() * 5000;
+    // Build the full sequence: intro (fixed) → middle (shuffled once) → loop (shuffled forever)
+    const middleShuffled = [...MIDDLE_STEPS].sort(() => Math.random() - 0.5);
+    let introIndex = 0;
+
+    // Start with first intro step
+    setToolStatus(INTRO_STEPS[0].text);
+
+    const runIntro = () => {
+      // Wait current intro delay, then show next
       thinkingTimerRef.current = setTimeout(() => {
         if (sseOverrideRef.current) return;
-        stepIndex = (stepIndex + 1) % shuffled.length;
-        setToolStatus(shuffled[stepIndex]);
-        scheduleNext();
+        introIndex++;
+        if (introIndex < INTRO_STEPS.length) {
+          setToolStatus(INTRO_STEPS[introIndex].text);
+          runIntro();
+        } else {
+          // Move to Phase 2
+          runMiddle(0);
+        }
+      }, INTRO_STEPS[introIndex].delay);
+    };
+
+    const runMiddle = (idx) => {
+      if (sseOverrideRef.current) return;
+      if (idx >= middleShuffled.length) {
+        // Move to Phase 3
+        runLoop();
+        return;
+      }
+      setToolStatus(middleShuffled[idx]);
+      const delay = 2000 + Math.random() * 2000; // 2-4 seconds
+      thinkingTimerRef.current = setTimeout(() => {
+        runMiddle(idx + 1);
       }, delay);
     };
-    scheduleNext();
+
+    const runLoop = () => {
+      if (sseOverrideRef.current) return;
+      const loopShuffled = [...LOOP_STEPS].sort(() => Math.random() - 0.5);
+      let loopIdx = 0;
+
+      const nextLoop = () => {
+        if (sseOverrideRef.current) return;
+        setToolStatus(loopShuffled[loopIdx]);
+        loopIdx = (loopIdx + 1) % loopShuffled.length;
+        const delay = 3000 + Math.random() * 4000; // 3-7 seconds
+        thinkingTimerRef.current = setTimeout(nextLoop, delay);
+      };
+      nextLoop();
+    };
+
+    runIntro();
   };
 
   const stopThinkingSimulation = () => {
