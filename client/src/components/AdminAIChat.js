@@ -370,6 +370,12 @@ function AdminAIChat({ user }) {
             cursor: grabbing !important;
             transition: none !important;
           }
+          .afrakoush-info-modal {
+            z-index: 10005 !important;
+          }
+          .ai-modal-backdrop {
+            z-index: 10000 !important;
+          }
         `}
       </style>
 
@@ -506,7 +512,7 @@ function AdminAIChat({ user }) {
       )}
 
       {/* نافذة التعليمات */}
-      <Modal show={showInfo} onHide={() => setShowInfo(false)} centered size="lg" dir="rtl" className="afrakoush-info-modal">
+      <Modal show={showInfo} onHide={() => setShowInfo(false)} centered size="lg" dir="rtl" className="afrakoush-info-modal" backdropClassName="ai-modal-backdrop">
         <Modal.Header style={{ borderBottom: '2px solid #028090', backgroundColor: '#0f2736', color: '#fff', direction: 'rtl', display: 'flex', justifyContent: 'space-between' }}>
           <Modal.Title style={{ fontWeight: 'bold', margin: 0 }}>🧠 المساعد الذكي "عفركوش"</Modal.Title>
           <button onClick={() => setShowInfo(false)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '24px', cursor: 'pointer', outline: 'none' }}>×</button>
