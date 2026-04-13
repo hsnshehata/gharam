@@ -428,7 +428,9 @@ exports.getBookings = async (req, res) => {
   try {
     if (dataStore.isReady()) {
       const payload = dataStore.getBookings({ page: parseInt(page), limit: parseInt(limit), search, date, receiptNumber });
-      return res.json(payload);
+      // Strip heavy fields from list view to reduce response size
+      const lightBookings = payload.bookings.map(({ updates, ...rest }) => rest);
+      return res.json({ ...payload, bookings: lightBookings });
     }
     // Fallback to MongoDB if cache not ready
     const key = `bookings:list:${JSON.stringify({ page, limit, search, date, receiptNumber })}`;
