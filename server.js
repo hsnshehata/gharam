@@ -4,6 +4,8 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
+const mongoSanitize = require('express-mongo-sanitize');
 const cron = require('node-cron');
 const { startSalaryResetScheduler } = require('./server/services/salaryResetService');
 const { initTelegramBot } = require('./server/services/telegramBot');
@@ -23,6 +25,8 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Middleware
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(mongoSanitize());
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -54,6 +58,17 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Routes
 console.log('Registering routes...');
+
+// Login Brute-force protection
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { msg: 'تم تجاوز الحد الأقصى لمحاولات تسجيل الدخول من هذا الجهاز. يرجى المحاولة بعد 15 دقيقة.' }
+});
+app.use('/api/auth/login', loginLimiter);
+
 app.use('/api/auth', require('./server/routes/auth'));
 app.use('/api/users', require('./server/routes/users'));
 app.use('/api/packages', require('./server/routes/packages'));
