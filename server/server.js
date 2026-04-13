@@ -50,5 +50,18 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+// Memory usage monitor — warn when approaching heap limit
+setInterval(() => {
+  const used = process.memoryUsage();
+  const heapMB = Math.round(used.heapUsed / 1024 / 1024);
+  const rssMB = Math.round(used.rss / 1024 / 1024);
+  if (heapMB > 200) {
+    console.warn(`[Memory] ⚠️ Heap: ${heapMB}MB, RSS: ${rssMB}MB — approaching limit!`);
+  }
+}, 60000).unref();
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  const mem = process.memoryUsage();
+  console.log(`Server running on port ${PORT} | Heap: ${Math.round(mem.heapUsed / 1024 / 1024)}MB`);
+});
