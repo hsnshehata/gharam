@@ -1,5 +1,6 @@
 const WebSocket = require('ws');
 const Conversation = require('../models/Conversation');
+const sessionCache = require('./sessionCache');
 
 const API_KEYS = [
     process.env.GEMINI_API_KEY,
@@ -51,30 +52,69 @@ const setupLiveVoiceWebSocket = (server) => {
         const callStartTime = Date.now();
         let currentGeminiWs = null;
         let isClosedByClient = false;
-        // Track the current message handler so we can remove it before adding a new one
         let currentClientMsgHandler = null;
+
+        // ── Transcript Accumulator ──
+        // Collects user and model transcripts during the call
+        let currentUserTranscript = '';      // Accumulates user speech across chunks
+        let currentModelTranscript = '';     // Accumulates model speech across chunks
+        const transcriptMessages = [];      // Final ordered list of { role, text }
+
+        const flushUserTranscript = () => {
+            if (currentUserTranscript.trim()) {
+                transcriptMessages.push({ role: 'user', text: currentUserTranscript.trim() });
+                currentUserTranscript = '';
+            }
+        };
+
+        const flushModelTranscript = () => {
+            if (currentModelTranscript.trim()) {
+                transcriptMessages.push({ role: 'model', text: currentModelTranscript.trim() });
+                currentModelTranscript = '';
+            }
+        };
 
         clientWs.on('close', async () => {
             isClosedByClient = true;
             if (currentGeminiWs && currentGeminiWs.readyState === WebSocket.OPEN) {
                 currentGeminiWs.close();
             }
+
+            // Flush any remaining transcript
+            flushUserTranscript();
+            flushModelTranscript();
+
             // Save Duration
             const durationSeconds = Math.round((Date.now() - callStartTime) / 1000);
+
             try {
+                // Save quota
                 await Conversation.findOneAndUpdate(
                     { sessionId },
                     {
-                        $set: {
-                            "metadata.voiceLimitDate": todayStr
-                        },
-                        $inc: {
-                            "metadata.voiceSecondsUsed": durationSeconds
-                        }
+                        $set: { "metadata.voiceLimitDate": todayStr },
+                        $inc: { "metadata.voiceSecondsUsed": durationSeconds }
                     },
                     { upsert: true }
                 );
-            } catch (err) { console.error("[AudioLive] Error saving quota:", err); }
+
+                // Save transcript messages to conversation history
+                if (transcriptMessages.length > 0) {
+                    console.log(`[AudioLive] Saving ${transcriptMessages.length} transcript messages for session ${sessionId}`);
+
+                    // Add a call separator message
+                    await sessionCache.persistMessage(sessionId, 'web', 'model',
+                        `📞 مكالمة صوتية (${Math.floor(durationSeconds / 60)}:${(durationSeconds % 60).toString().padStart(2, '0')} دقيقة)`
+                    );
+
+                    // Save each transcript message
+                    for (const msg of transcriptMessages) {
+                        await sessionCache.persistMessage(sessionId, 'web', msg.role, msg.text);
+                    }
+                }
+            } catch (err) {
+                console.error("[AudioLive] Error saving session data:", err);
+            }
         });
 
         const connectToGemini = async (keyIndex, isFallbackModel) => {
@@ -104,9 +144,8 @@ const setupLiveVoiceWebSocket = (server) => {
 
             const geminiWs = new WebSocket(wsUrl);
             currentGeminiWs = geminiWs;
-            let setupComplete = false; // Track when Gemini acknowledges the setup
+            let setupComplete = false;
 
-            // Set a connection timeout — if Gemini doesn't open in 10s, try next
             const connectionTimeout = setTimeout(() => {
                 if (geminiWs.readyState !== WebSocket.OPEN) {
                     console.warn(`[AudioLive] Connection timeout for key #${keyIndex}, model: ${modelName}`);
@@ -130,37 +169,40 @@ const setupLiveVoiceWebSocket = (server) => {
                     console.error("[AudioLive] Error fetching system prompt:", err.message);
                 }
 
-                geminiWs.send(JSON.stringify({
+                // Build setup config with transcription enabled
+                const setupConfig = {
                     setup: {
                         model: modelName,
                         systemInstruction: { parts: [{ text: finalInstruction }] },
-                        generationConfig: { responseModalities: ["AUDIO"] }
+                        generationConfig: {
+                            responseModalities: ["AUDIO"],
+                            // Enable output audio transcription (model's speech → text)
+                            outputAudioTranscription: {}
+                        },
+                        // Enable input audio transcription (user's speech → text)
+                        inputAudioTranscription: {}
                     }
-                }));
-                // DON'T set setupComplete here — wait for Gemini's first response
+                };
+
+                geminiWs.send(JSON.stringify(setupConfig));
             });
 
             geminiWs.on('message', (data) => {
                 const msgStr = data.toString();
 
-                // The very first message from Gemini after setup is the setupComplete confirmation
                 if (!setupComplete) {
                     setupComplete = true;
                     console.log(`[AudioLive] ✅ Setup confirmed for ${modelName} (key #${keyIndex})`);
 
-                    // NOW we tell the client we're ready and start forwarding audio
                     if (clientWs.readyState === WebSocket.OPEN) {
                         clientWs.send(JSON.stringify({ type: 'ready' }));
                     }
 
-                    // IMPORTANT: Remove old message handler before adding new one (prevents duplicate sends)
                     if (currentClientMsgHandler) {
                         clientWs.removeListener('message', currentClientMsgHandler);
                     }
                     currentClientMsgHandler = (clientData) => {
                         if (geminiWs.readyState === WebSocket.OPEN && setupComplete) {
-                            // Transform message format for new models
-                            // Gemini 3.1+ uses realtimeInput.audio instead of deprecated realtimeInput.mediaChunks
                             if (!isFallbackModel) {
                                 try {
                                     const msg = JSON.parse(clientData.toString());
@@ -186,7 +228,38 @@ const setupLiveVoiceWebSocket = (server) => {
                     return;
                 }
 
-                // Forward Gemini audio chunks to client
+                // ── Process Gemini messages: extract transcripts + forward audio ──
+                try {
+                    const parsed = JSON.parse(msgStr);
+
+                    // 1. Input transcription (user's speech as text)
+                    if (parsed.serverContent?.inputTranscription?.text) {
+                        const userText = parsed.serverContent.inputTranscription.text;
+                        // Flush any previous model transcript before adding user text
+                        flushModelTranscript();
+                        currentUserTranscript += userText;
+                        // Don't forward transcript-only messages to client (just audio)
+                    }
+
+                    // 2. Output transcription (model's speech as text)
+                    if (parsed.serverContent?.outputTranscription?.text) {
+                        const modelText = parsed.serverContent.outputTranscription.text;
+                        // Flush any previous user transcript before adding model text
+                        flushUserTranscript();
+                        currentModelTranscript += modelText;
+                    }
+
+                    // 3. Turn complete → flush current transcript
+                    if (parsed.serverContent?.turnComplete) {
+                        flushUserTranscript();
+                        flushModelTranscript();
+                    }
+
+                } catch {
+                    // Not JSON — ignore parse errors
+                }
+
+                // Always forward the message to client for audio playback
                 if (clientWs.readyState === WebSocket.OPEN) {
                     clientWs.send(msgStr);
                 }
@@ -195,7 +268,6 @@ const setupLiveVoiceWebSocket = (server) => {
             geminiWs.on('error', (err) => {
                 clearTimeout(connectionTimeout);
                 console.error(`[AudioLive] Gemini WS Error (Key #${keyIndex}, Model: ${modelName}):`, err.message);
-                // Don't close here — the 'close' event will handle retry
             });
 
             geminiWs.on('close', (code, reason) => {
@@ -205,12 +277,10 @@ const setupLiveVoiceWebSocket = (server) => {
 
                 if (isClosedByClient) return;
 
-                // If setup never completed, or abnormal close → retry
                 if (!setupComplete || (code !== 1000 && code !== 1005)) {
                     console.log(`[AudioLive] Retrying... next key #${keyIndex + 1}`);
                     connectToGemini(keyIndex + 1, isFallbackModel);
                 } else {
-                    // Normal close after successful session
                     if (clientWs.readyState === WebSocket.OPEN) clientWs.close();
                 }
             });
