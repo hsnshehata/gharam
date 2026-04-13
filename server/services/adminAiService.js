@@ -289,9 +289,10 @@ POST /api/admin-ai/chat
 - ⚠️ لا تستخدم ألوان اللاند بيج الداكنة (الذهبي والأخضر الزمردي) في الصفحات الإدارية.
 - ✅ الهوية البصرية: زيتي/Teal حديث + أبيض نظيف + ظلال خفيفة = تصميم إداري احترافي.
 
-⚠️ تنبيه هام لمنع ضياع الكود: قبل تعديل المساحة الديناميكية أو إضافة شيء لها، يجب عليك دائماً وحتماً أن تقوم باستدعاء أداة get_afrakoush_page باسم "landing-dynamic-space" أولاً لتقرأ الكود الحالي الموجود بداخلها.
-بعد أن تقرأه، ادمج إضافاتك الجديدة أو تعديلاتك مع الكود الحالي الذي قرأته، ثم قم باستدعاء أداة build_afrakoush_page لصلاحية public للحفظ.
-إذا طلب منك المدير "حذف محتوى مساحة اللاند بيج بالكامل" فقط قم ببنائها بكود html فارغ.
+⚠️ تنبيه هام جدا للمحافظة على الصفحات والذاكرة (قاعدة عفركوش الذهبية للتعديل):
+1- ذاكرة المحادثة: سياق المحادثة النصي يحفظ الرسائل فقط. إذا طلب منك المُستخدم تعديل صفحة وفهمت أنها الصفحة الأخيرة التي صنعتها، فابحث في ردك السابق عن اسم الصفحة من الرابط الذي أرسلته (مثال: /admin/afrakoush/users-report فإن الاسم هو users-report) أو اسأله عن اسم الصفحة.
+2- ممنوع الحذف أثناء التعديل: مستحيل ولا تقم أبداً باستدعاء build_afrakoush_page لتعديل صفحة (سواء الديناميكية أو غيرها) إلا بعد أن تستدعي get_afrakoush_page باسم الصفحة المقصودة لتقرأ كودها القديم كاملاً. بعد استخراج الكود القديم، ادمج تعديلاتك فيه، ثم احفظ الصفحة بكامل محتواها القديم والجديد! التعديل الأعمى يمسح الصفحات!
+3- لحذف اللاند بيج بالكامل فقط ابنيها بكود html فارغ.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🏢 معلومات غرام سلطان الأساسية (استخدمها عند تصميم أزرار التواصل أو كتابة أي وصف)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -401,11 +402,7 @@ loadCSS('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.c
 
 const MODEL_CANDIDATES = [
     'gemini-3.1-pro-preview',
-    'gemini-2.5-pro',
-    'gemini-3-flash-preview',
-    'gemini-2.5-flash',
-    'gemini-3.1-flash-lite-preview',
-    'gemini-2.5-flash-lite'
+    'gemini-2.5-pro'
 ];
 
 // Fast/cheap models for simple tasks (e.g. generating chat titles)
@@ -427,6 +424,42 @@ const isToday = (dateStr) => {
 const adminTools = [
     {
         functionDeclarations: [
+            {
+                name: "analyze_public_conversations",
+                description: "يجلب ويحلل آخر محادثات تمت بين الجمهور وبوت الذكاء الاصطناعي (غزل) على الماسنجر والموقع. يعرض أحدث المحادثات لمراقبة شكاوى الجمهور.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        limit: { type: "NUMBER", description: "عدد المحادثات المراد جلبها (الافتراضي 10)." },
+                        platform: { type: "STRING", description: "المنصة للفلترة مثلا: messenger أو web (اختياري)." }
+                    },
+                    required: []
+                }
+            },
+            {
+                name: "manage_system_settings",
+                description: "يقرأ أو يعدل إعدادات النظام الحية (مثل حالة البوت ai_bot_enabled أو facebook_welcome_message). لا تمرر قيمة value للقراءة فقط.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        action: { type: "STRING", description: "نوع الإجراء: 'read' للقراءة أو 'update' للتعديل." },
+                        key: { type: "STRING", description: "مفتاح الإعداد (مثلاً: ai_bot_enabled)." },
+                        value: { type: "STRING", description: "القيمة الجديدة عند التحديث (للإيقاف/التشغيل استخدم 'true' أو 'false')." }
+                    },
+                    required: ["action", "key"]
+                }
+            },
+            {
+                name: "get_facebook_insights",
+                description: "يجلب إحصائيات بوستات صفحة الفيسبوك من تعليقات وإعجابات (أحدث البوستات).",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        limit: { type: "NUMBER", description: "عدد البوستات للتحليل (الافتراضي 5)." }
+                    },
+                    required: []
+                }
+            },
             {
                 name: "get_employees_overview",
                 description: "يجلب قائمة بجميع الموظفين المسجلين في النظام مع النقاط التشغيلية الإجمالية والرواتب. لا يتطلب أي معاملات.",
@@ -1379,6 +1412,83 @@ const createFunctions = (user) => ({
             console.error('[AdminAI] get_afrakoush_page error:', err.message);
             return { error: "فشل استرداد الكود: " + err.message };
         }
+    },
+    analyze_public_conversations: async ({ limit = 10, platform }) => {
+        try {
+            const Conversation = require('../models/Conversation');
+            const query = {};
+            if (platform) query.source = platform;
+            
+            const convos = await Conversation.find(query)
+                .sort({ lastActivity: -1 })
+                .limit(limit)
+                .lean();
+
+            return {
+                totalInQuery: convos.length,
+                conversations: convos.map(c => ({
+                    source: c.source,
+                    senderName: c.senderName,
+                    lastActivity: c.lastActivity?.toISOString().replace('T', ' ').slice(0, 16),
+                    messagesCount: c.messages?.length || 0,
+                    preview: c.messages?.slice(-3).map(m => `[${m.role}]: ${m.text}`).join(' | ')
+                }))
+            };
+        } catch (err) {
+            console.error('[AdminAI] analyze_public_conversations error:', err.message);
+            return { error: err.message };
+        }
+    },
+    manage_system_settings: async ({ action, key, value }) => {
+        try {
+            if (user.role !== 'admin') return { error: "صلاحية إدارة الإعدادات للمدير العام فقط." };
+            if (action === 'update') {
+                if (value === undefined) return { error: "يجب تمرير القيمة الجديدة عند التحديث." };
+                let valToSave = value;
+                if (value === 'true' || value === true) valToSave = true;
+                if (value === 'false' || value === false) valToSave = false;
+                
+                const updated = await SystemSetting.findOneAndUpdate(
+                    { key },
+                    { value: valToSave, updatedAt: new Date() },
+                    { new: true, upsert: true }
+                ).lean();
+                return { success: true, message: `تم تحديث ${key}`, new_value: updated.value };
+            } else {
+                const setting = await SystemSetting.findOne({ key }).lean();
+                return { success: true, key, value: setting ? setting.value : null };
+            }
+        } catch (err) {
+            console.error('[AdminAI] manage_system_settings error:', err.message);
+            return { error: err.message };
+        }
+    },
+    get_facebook_insights: async ({ limit = 5 }) => {
+        try {
+            const FacebookPost = require('../models/FacebookPost');
+            const posts = await FacebookPost.find({ isActive: true })
+                .sort({ createdTime: -1 })
+                .limit(limit)
+                .lean();
+            
+            if (!posts.length) return { message: "لا توجد بوستات مزامنة من فيسبوك." };
+            
+            return {
+                postsCount: posts.length,
+                posts: posts.map(p => ({
+                    message: p.message?.slice(0, 100) + '...',
+                    type: p.type,
+                    createdTime: p.createdTime?.toISOString().split('T')[0],
+                    likes: p.likeCount,
+                    comments: p.commentCount,
+                    shares: p.shareCount,
+                    link: p.permalink
+                }))
+            };
+        } catch (err) {
+            console.error('[AdminAI] get_facebook_insights error:', err.message);
+            return { error: err.message };
+        }
     }
 });
 
@@ -1462,17 +1572,17 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
     let replyText = null;
     let lastError = null;
 
-    // Try each API key, then each model within that key
-    for (let keyIdx = 0; keyIdx < apiKeys.length; keyIdx++) {
-        const currentKey = apiKeys[keyIdx];
-        const keyLabel = keyIdx === 0 ? 'Primary' : 'Backup';
-        const genAI = new GoogleGenerativeAI(currentKey);
+    // Try each model, then each API key within that model
+    for (const modelName of activeModels) {
+        for (let keyIdx = 0; keyIdx < apiKeys.length; keyIdx++) {
+            const currentKey = apiKeys[keyIdx];
+            const keyLabel = keyIdx === 0 ? 'Primary' : 'Backup';
+            const genAI = new GoogleGenerativeAI(currentKey);
 
-        if (keyIdx > 0) {
-            console.log(`[AdminAI] 🔄 Switching to ${keyLabel} API key...`);
-        }
+            if (keyIdx > 0) {
+                console.log(`[AdminAI] 🔄 Switching to ${keyLabel} API key for model ${modelName}...`);
+            }
 
-        for (const modelName of activeModels) {
             try {
                 console.log(`[AdminAI] Trying model: ${modelName} (${keyLabel} key)...`);
                 let modelFeatures = {
@@ -1545,7 +1655,7 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
             }
         }
 
-        if (replyText) break; // Got a response, stop trying keys
+        if (replyText) break; // Got a response, stop trying models
     }
 
     if (!replyText) {
@@ -1565,9 +1675,9 @@ const generateChatTitle = async (firstMessage) => {
 
         let result = null;
 
-        for (const key of apiKeys) {
-            const genAI = new GoogleGenerativeAI(key);
-            for (const modelName of LIGHT_MODEL_CANDIDATES) {
+        for (const modelName of LIGHT_MODEL_CANDIDATES) {
+            for (const key of apiKeys) {
+                const genAI = new GoogleGenerativeAI(key);
                 try {
                     const model = genAI.getGenerativeModel({ model: modelName });
                     const prompt = `أنت مساعد يقوم بتوليد عناوين للمحادثات.
@@ -1576,7 +1686,7 @@ const generateChatTitle = async (firstMessage) => {
                     result = await model.generateContent(prompt);
                     break;
                 } catch (e) {
-                    // Try next
+                    // Try next key
                 }
             }
             if (result) break;
