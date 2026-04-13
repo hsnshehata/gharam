@@ -242,13 +242,13 @@ export default function AIChatPopup({ onClose }) {
                 if (ws.readyState !== WebSocket.OPEN) return;
                 const f32 = e.inputBuffer.getChannelData(0);
 
-                // Smooth orb scale based on mic volume — only when NOT speaking (use ref to avoid stale closure)
+                // Use CSS variable for mic glow intensity — no transform to avoid fighting CSS animations
                 if (orbRef.current && !isSpeakingRef.current) {
                     let sum = 0;
                     for (let i = 0; i < f32.length; i++) sum += Math.abs(f32[i]);
                     const avg = sum / f32.length;
-                    const scale = 1 + Math.min(avg * 2.5, 0.18);
-                    orbRef.current.style.transform = `scale(${scale})`;
+                    const glow = Math.min(avg * 5, 1);
+                    orbRef.current.style.setProperty('--mic-glow', glow.toFixed(2));
                 }
 
                 ws.send(JSON.stringify({
@@ -778,8 +778,15 @@ export default function AIChatPopup({ onClose }) {
 
                 /* ── Responsive ── */
                 @media (max-width: 480px) {
-                    .ghazal-overlay { left: 10px; right: 10px; bottom: 80px; }
-                    .ghazal-container { width: 100%; height: calc(100vh - 100px); border-radius: 20px; }
+                    .ghazal-overlay { left: 8px; right: 8px; bottom: 75px; }
+                    .ghazal-container {
+                        width: 100%;
+                        height: 70vh;
+                        height: 70dvh;
+                        max-height: calc(100vh - 160px);
+                        max-height: calc(100dvh - 160px);
+                        border-radius: 20px;
+                    }
                     .ghazal-header { padding: 14px 16px; }
                     .ghazal-chat-box { padding: 16px 12px; }
                     .ghazal-input-area { padding: 12px 12px 16px; }
