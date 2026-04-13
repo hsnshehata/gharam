@@ -4,7 +4,6 @@ const authenticate = require('../middleware/authenticate');
 const SystemSetting = require('../models/SystemSetting');
 const Conversation = require('../models/Conversation');
 const multer = require('multer');
-const googleTTS = require('google-tts-api');
 const { processAiChat, DEFAULT_PROMPT } = require('../services/aiService');
 const sessionCache = require('../services/sessionCache');
 
@@ -176,33 +175,7 @@ router.post('/chat', upload.single('audio'), async (req, res) => {
             await sessionCache.persistMessage(sessionId, 'web', 'model', reply);
         }
 
-        // Generate Audio Response (Base64 parts to avoid browser blocks)
-        let audioParts = [];
-        try {
-            const axios = require('axios');
-            // Split audio into chunks because Google TTS has 200 char limit
-            const cleanReply = reply.replace(/[*#]/g, '').slice(0, 800); // Clean and limit for TTS stability
-            const urls = googleTTS.getAllAudioUrls(cleanReply, {
-                lang: 'ar',
-                slow: false,
-                host: 'https://translate.google.com',
-            });
-
-            // Fetch each chunk and convert to base64
-            for (const item of urls) {
-                try {
-                    const audioRes = await axios.get(item.url, { responseType: 'arraybuffer' });
-                    const base64 = Buffer.from(audioRes.data).toString('base64');
-                    audioParts.push(`data:audio/mpeg;base64,${base64}`);
-                } catch (fetchErr) {
-                    console.error('Error fetching TTS chunk:', fetchErr.message);
-                }
-            }
-        } catch (ttsErr) {
-            console.error('TTS error:', ttsErr);
-        }
-
-        res.json({ success: true, reply, audioParts });
+        res.json({ success: true, reply });
     } catch (err) {
         console.error('Request error:', err);
         res.status(500).json({ message: 'خطأ داخلي في الخادم' });
