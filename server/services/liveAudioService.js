@@ -304,16 +304,35 @@ const setupLiveVoiceWebSocket = (server) => {
                     const parsed = JSON.parse(msgStr);
 
                     // ═══ FUNCTION CALL HANDLING ═══
-                    // Gemini is requesting a tool call — execute it and send result back
-                    const toolCall = parsed.serverContent?.modelTurn?.parts?.find(p => p.functionCall);
-                    if (toolCall?.functionCall) {
-                        const { name, args } = toolCall.functionCall;
-                        console.log(`[AudioLive] 🔧 Function call: ${name}(${JSON.stringify(args)})`);
+                    // Live API format: { toolCall: { functionCalls: [{ id, name, args }] } }
+                    // REST API format: { serverContent: { modelTurn: { parts: [{ functionCall: { name, args } }] } } }
+                    
+                    let fcName = null, fcArgs = null, fcId = null;
+
+                    // Check Live API format FIRST
+                    if (parsed.toolCall?.functionCalls?.length > 0) {
+                        const fc = parsed.toolCall.functionCalls[0];
+                        fcName = fc.name;
+                        fcArgs = fc.args;
+                        fcId = fc.id || fc.name;
+                    }
+                    // Fallback: REST API format
+                    else {
+                        const toolCall = parsed.serverContent?.modelTurn?.parts?.find(p => p.functionCall);
+                        if (toolCall?.functionCall) {
+                            fcName = toolCall.functionCall.name;
+                            fcArgs = toolCall.functionCall.args;
+                            fcId = toolCall.functionCall.id || fcName;
+                        }
+                    }
+
+                    if (fcName) {
+                        console.log(`[AudioLive] 🔧 Function call: ${fcName}(${JSON.stringify(fcArgs)})`);
 
                         let result = { error: "Unknown function" };
-                        if (voiceFunctions[name]) {
+                        if (voiceFunctions[fcName]) {
                             try {
-                                result = await voiceFunctions[name](args);
+                                result = await voiceFunctions[fcName](fcArgs);
                             } catch (err) {
                                 console.error(`[AudioLive] Function error:`, err);
                                 result = { error: err.message };
@@ -326,8 +345,8 @@ const setupLiveVoiceWebSocket = (server) => {
                         const functionResponse = {
                             toolResponse: {
                                 functionResponses: [{
-                                    id: toolCall.functionCall.id || name,
-                                    name: name,
+                                    id: fcId,
+                                    name: fcName,
                                     response: result
                                 }]
                             }
