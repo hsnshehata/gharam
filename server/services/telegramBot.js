@@ -79,11 +79,7 @@ const initTelegramBot = () => {
             await conv.save();
 
             // Send reply back to Telegram
-            // Telegram has a max message length of 4096, so we split if needed
-            const maxLength = 4000;
-            for (let i = 0; i < replyText.length; i += maxLength) {
-                await bot.sendMessage(chatId, replyText.substring(i, i + maxLength), { parse_mode: 'Markdown' });
-            }
+            await sendTelegramMessageWithFallback(chatId, replyText);
 
             // Generate title if new
             if (isNew) {
@@ -110,21 +106,52 @@ const initTelegramBot = () => {
     });
 };
 
+const sendTelegramMessageWithFallback = async (chatId, text) => {
+    if (!bot) return;
+    
+    // Split by newlines to avoid breaking markdown entities mid-sentence
+    const maxLength = 3900; // Slightly under 4096 to be safe
+    let chunks = [];
+    let currentChunk = '';
+
+    const lines = text.split('\n');
+    for (const line of lines) {
+        if ((currentChunk.length + line.length + 1) > maxLength) {
+            if (currentChunk) chunks.push(currentChunk);
+            currentChunk = line;
+            
+            // If a single line is still too long, we have to brute-force split it
+            while (currentChunk.length > maxLength) {
+                chunks.push(currentChunk.substring(0, maxLength));
+                currentChunk = currentChunk.substring(maxLength);
+            }
+        } else {
+            currentChunk += (currentChunk ? '\n' : '') + line;
+        }
+    }
+    if (currentChunk) chunks.push(currentChunk);
+
+    for (const chunk of chunks) {
+        try {
+            await bot.sendMessage(chatId, chunk, { parse_mode: 'Markdown' });
+        } catch (err) {
+            // If markdown parsing fails, fallback to plain text
+            console.warn(`[Telegram Bot] Markdown parse failed for chat ${chatId}, falling back to plain text. Error: ${err.message}`);
+            try {
+                await bot.sendMessage(chatId, chunk);
+            } catch (fallbackErr) {
+                console.error(`[Telegram Bot] Send error for chat ${chatId}:`, fallbackErr.message);
+            }
+        }
+    }
+}
 
 const sendToAdmins = async (text) => {
     if (!bot) return;
     try {
         const accounts = await TelegramAccount.find();
         for (const account of accounts) {
-            try {
-                // Telegram max length is 4096
-                const maxLength = 4000;
-                for (let i = 0; i < text.length; i += maxLength) {
-                    await bot.sendMessage(account.telegramId, text.substring(i, i + maxLength), { parse_mode: 'Markdown' });
-                }
-            } catch (err) {
-                console.error(`[Telegram Bot] Send error for chat ${account.telegramId}:`, err.message);
-            }
+            await sendTelegramMessageWithFallback(account.telegramId, text);
         }
     } catch (err) {
         console.error('[Telegram Bot] Error sending to admins:', err);
