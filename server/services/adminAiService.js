@@ -632,6 +632,23 @@ const adminTools = [
                     },
                     required: ["name"]
                 }
+            },
+            {
+                name: "manage_scheduled_tasks",
+                description: "يقرأ، يضيف أو يحذف مهام روتينية مجدولة يقوم بها النظام وتُرسل نتيجتها على التليجرام. يفيد للتقارير الدورية (مثلا: ابعتلي كل يوم، فكرني كمان 3 أيام).",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        action: { type: "STRING", description: "نوع الإجراء: 'list' لعرض المهام، 'create' لإنشاء مهمة، 'delete' لحذف مهمة." },
+                        title: { type: "STRING", description: "عنوان المهمة (مطلوب عند الإنشاء)." },
+                        prompt: { type: "STRING", description: "أمر صريح ومفصل للمساعد الذكي لتنفيذه في الوقت المحدد وتلخيص الناتج في رسالة للمديرين على التليجرام (مطلوب عند الإنشاء)." },
+                        scheduleType: { type: "STRING", description: "نوع الجدولة: 'cron' لحدث متكرر أو 'once' لحدث لمرة واحدة (مطلوب عند الإنشاء)." },
+                        cronExpression: { type: "STRING", description: "تعبير الكرون للمهام المتكررة (مثلاً '0 23 * * *') (مطلوب إذا كان النوع cron)." },
+                        runAt: { type: "STRING", description: "تاريخ وقت محدد YYYY-MM-DDTHH:mm:ss لحدث المرة الواحدة (مطلوب إذا كان النوع once)." },
+                        taskId: { type: "STRING", description: "معرف المهمة للحذف (مطلوب عند action='delete')." }
+                    },
+                    required: ["action"]
+                }
             }
         ]
     }
@@ -1436,6 +1453,65 @@ const createFunctions = (user) => ({
             };
         } catch (err) {
             console.error('[AdminAI] analyze_public_conversations error:', err.message);
+            return { error: err.message };
+        }
+    },
+    manage_scheduled_tasks: async ({ action, title, prompt, scheduleType, cronExpression, runAt, taskId }) => {
+        try {
+            const cronService = require('./cronService');
+            const ScheduledTask = require('../models/ScheduledTask');
+
+            if (action === 'list') {
+                const tasks = await ScheduledTask.find().lean();
+                return {
+                    total: tasks.length,
+                    tasks: tasks.map(t => ({
+                        id: t._id,
+                        title: t.title,
+                        scheduleType: t.scheduleType,
+                        cronExpression: t.cronExpression,
+                        runAt: t.runAt,
+                        isActive: t.isActive,
+                        isSystem: t.isSystem,
+                        lastRun: t.lastRun
+                    }))
+                };
+            }
+
+            if (action === 'create') {
+                if (!title || !prompt || !scheduleType) return { error: "title, prompt, and scheduleType are required for creation." };
+                if (scheduleType === 'cron' && !cronExpression) return { error: "cronExpression is required for recurring tasks." };
+                if (scheduleType === 'once' && !runAt) return { error: "runAt is required for one-time tasks." };
+
+                const newTask = new ScheduledTask({
+                    title,
+                    prompt,
+                    scheduleType,
+                    cronExpression,
+                    runAt: runAt ? new Date(runAt) : undefined,
+                    createdBy: user._id
+                });
+                await newTask.save();
+                
+                cronService.scheduleTask(newTask);
+                
+                return { success: true, message: "تم إنشاء المهمة وجدولتها بنجاح.", taskId: newTask._id };
+            }
+
+            if (action === 'delete') {
+                if (!taskId) return { error: "taskId is required for deletion." };
+                const task = await ScheduledTask.findById(taskId);
+                if (!task) return { error: "لم يتم العثور على المهمة." };
+                if (task.isSystem) return { error: "لا يمكن حذف مهام النظام الأساسية." };
+
+                cronService.cancelTask(taskId);
+                await ScheduledTask.findByIdAndDelete(taskId);
+                return { success: true, message: "تم إيقاف وحذف المهمة بنجاح." };
+            }
+
+            return { error: "إجراء غير معروف. استخدم list, create, or delete." };
+        } catch (err) {
+            console.error('[AdminAI] manage_scheduled_tasks error:', err.message);
             return { error: err.message };
         }
     },

@@ -110,4 +110,25 @@ const initTelegramBot = () => {
     });
 };
 
-module.exports = { initTelegramBot };
+
+const sendToAdmins = async (text) => {
+    if (!bot) return;
+    try {
+        const accounts = await TelegramAccount.find();
+        for (const account of accounts) {
+            try {
+                // Telegram max length is 4096
+                const maxLength = 4000;
+                for (let i = 0; i < text.length; i += maxLength) {
+                    await bot.sendMessage(account.telegramId, text.substring(i, i + maxLength), { parse_mode: 'Markdown' });
+                }
+            } catch (err) {
+                console.error(`[Telegram Bot] Send error for chat ${account.telegramId}:`, err.message);
+            }
+        }
+    } catch (err) {
+        console.error('[Telegram Bot] Error sending to admins:', err);
+    }
+};
+
+module.exports = { initTelegramBot, sendToAdmins };
