@@ -8,8 +8,8 @@ async function getCache(key) {
 }
 
 async function setCache(key, value, ttlSeconds) {
-  const payload = JSON.stringify(value);
-  memoryStore.set(key, payload ? JSON.parse(payload) : value);
+  // Store value directly — no JSON roundtrip needed (saves significant memory)
+  memoryStore.set(key, value);
   if (ttlSeconds) {
     setTimeout(() => memoryStore.delete(key), ttlSeconds * 1000).unref();
   }
