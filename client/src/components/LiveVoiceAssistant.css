@@ -35,7 +35,7 @@
   to { transform: rotate(360deg); }
 }
 
-/* ---- Hang-Up Button (Phone End Call Style) ---- */
+/* ---- Hang-Up Button ---- */
 .hangup-btn {
   width: 60px;
   height: 60px;
@@ -48,19 +48,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s;
   z-index: 2;
   margin-top: 10px;
   flex-shrink: 0;
+  /* NO transition on transform — it was causing flicker */
+  transition: box-shadow 0.25s;
 }
 
 .hangup-btn:hover {
-  transform: scale(1.1);
   box-shadow: 0 8px 32px rgba(231, 76, 60, 0.7), 0 0 0 6px rgba(231, 76, 60, 0.2);
-}
-
-.hangup-btn:active {
-  transform: scale(0.95);
 }
 
 /* ---- AI Orb Container ---- */
@@ -74,7 +70,7 @@
   flex-shrink: 0;
 }
 
-/* ---- Outer Ring Animation ---- */
+/* ---- Outer Ring ---- */
 .ai-orb-ring {
   position: absolute;
   width: 100%;
@@ -103,8 +99,9 @@
   50% { transform: scale(1.08); opacity: 1; }
 }
 
-/* ---- The Orb Itself ---- */
+/* ---- The Orb ---- */
 .ai-orb {
+  --mic-glow: 0;
   width: 130px;
   height: 130px;
   border-radius: 50%;
@@ -113,12 +110,14 @@
     0 0 50px rgba(31, 182, 166, 0.4),
     0 0 100px rgba(31, 182, 166, 0.15),
     inset 0 0 30px rgba(255, 255, 255, 0.08);
-  transition: transform 0.08s ease-out, box-shadow 0.15s ease-out;
+  /* NO transform transition — avoids flicker with CSS animations */
+  transition: box-shadow 0.3s ease-out;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   z-index: 2;
+  will-change: box-shadow;
 }
 
 /* Logo inside orb */
@@ -133,34 +132,50 @@
 }
 
 /* ---- Recording State ---- */
+/* Uses --mic-glow CSS variable (set via JS) for reactive glow  */
 .ai-orb.recording {
-  animation: orbBreath 2s ease-in-out infinite;
+  animation: orbBreath 2.5s ease-in-out infinite;
   box-shadow: 
-    0 0 60px rgba(31, 182, 166, 0.5),
-    0 0 120px rgba(31, 182, 166, 0.2),
+    0 0 calc(50px + var(--mic-glow) * 40px) rgba(31, 182, 166, calc(0.4 + var(--mic-glow) * 0.3)),
+    0 0 calc(100px + var(--mic-glow) * 60px) rgba(31, 182, 166, calc(0.15 + var(--mic-glow) * 0.2)),
     inset 0 0 30px rgba(255, 255, 255, 0.08);
 }
 
 @keyframes orbBreath {
-  0%, 100% { box-shadow: 0 0 50px rgba(31, 182, 166, 0.4), 0 0 100px rgba(31, 182, 166, 0.15); }
-  50% { box-shadow: 0 0 70px rgba(31, 182, 166, 0.6), 0 0 140px rgba(31, 182, 166, 0.25); }
+  0%, 100% { 
+    box-shadow: 
+      0 0 50px rgba(31, 182, 166, 0.4),
+      0 0 100px rgba(31, 182, 166, 0.15),
+      inset 0 0 30px rgba(255, 255, 255, 0.08);
+  }
+  50% { 
+    box-shadow: 
+      0 0 65px rgba(31, 182, 166, 0.55),
+      0 0 130px rgba(31, 182, 166, 0.22),
+      inset 0 0 35px rgba(255, 255, 255, 0.1);
+  }
 }
 
 /* ---- Speaking State (AI talking) ---- */
+/* Uses ONLY box-shadow and filter — NO transform to avoid layout shifts */
 .ai-orb.speaking {
-  animation: orbSpeak 0.8s ease-in-out infinite alternate;
+  animation: orbSpeak 0.9s ease-in-out infinite alternate;
 }
 
 @keyframes orbSpeak {
   0% { 
-    transform: scale(1);
-    box-shadow: 0 0 50px rgba(31, 182, 166, 0.5), 0 0 100px rgba(31, 182, 166, 0.2);
-    filter: hue-rotate(0deg) brightness(1);
+    box-shadow: 
+      0 0 55px rgba(31, 182, 166, 0.5),
+      0 0 110px rgba(31, 182, 166, 0.2),
+      inset 0 0 30px rgba(255, 255, 255, 0.08);
+    filter: brightness(1);
   }
   100% { 
-    transform: scale(1.12);
-    box-shadow: 0 0 80px rgba(31, 182, 166, 0.7), 0 0 150px rgba(31, 182, 166, 0.35);
-    filter: hue-rotate(10deg) brightness(1.1);
+    box-shadow: 
+      0 0 85px rgba(31, 182, 166, 0.7),
+      0 0 160px rgba(31, 182, 166, 0.35),
+      inset 0 0 40px rgba(255, 255, 255, 0.12);
+    filter: brightness(1.15) hue-rotate(8deg);
   }
 }
 
@@ -172,13 +187,7 @@
   letter-spacing: 0.5px;
   font-family: 'Tajawal', sans-serif;
   text-align: center;
-  animation: textFadeIn 0.6s ease;
   z-index: 2;
-}
-
-@keyframes textFadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ---- Responsive ---- */
