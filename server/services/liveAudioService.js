@@ -13,7 +13,7 @@ const AUDIO_CONSTRAINTS = `
 - أنتِ الآن في مكالمة صوتية مباشِرة مع العميل. إجاباتك يجب أن تكون قصيرة جداً ومختصرة مثل المحادثة الطبيعية.
 - تجنبي الإطالة تماماً، ولا تعطِ تفاصيل كثيرة إلا إذا طلبها العميل.
 - يجب أن ألا تتجاوز إجابتك الجملتين بأي حال.
-- يجب أن ألا تقوم بنطق أي روابط فقط قل اذهبي الى صفحة ( اسعار الخدمات او معرض الصور او الموقع الرسمي او الخ.... ) فقط انطق اسم الصفحة وليس الرابط.
+- يجب أن ألا تقوم بنطق أي روابط فقط قل اذهبي الى صفحة ( اسعار الخدمات او معرض الصور او الموقع الرسمي او الخ.... ) فقط قل من خلال موقعنا صفحة ( اسم الصفحة ).
 `;
 
 const setupLiveVoiceWebSocket = (server) => {
@@ -40,9 +40,6 @@ const setupLiveVoiceWebSocket = (server) => {
             if (conv.metadata?.voiceLimitDate === todayStr) {
                 usedSeconds = conv.metadata?.voiceSecondsUsed || 0;
             }
-        } else {
-            // we don't block new sessions
-            usedSeconds = 0;
         }
 
         if (usedSeconds >= 300) {
@@ -54,6 +51,8 @@ const setupLiveVoiceWebSocket = (server) => {
         const callStartTime = Date.now();
         let currentGeminiWs = null;
         let isClosedByClient = false;
+        // Track the current message handler so we can remove it before adding a new one
+        let currentClientMsgHandler = null;
 
         clientWs.on('close', async () => {
             isClosedByClient = true;
@@ -79,12 +78,15 @@ const setupLiveVoiceWebSocket = (server) => {
         });
 
         const connectToGemini = async (keyIndex, isFallbackModel) => {
+            if (isClosedByClient) return;
+
             if (keyIndex >= API_KEYS.length) {
                 if (!isFallbackModel) {
                     console.log("[AudioLive] Primary model failed all keys, trying fallback model...");
                     return connectToGemini(0, true);
                 }
-                if (!isClosedByClient) {
+                console.error("[AudioLive] All models and keys exhausted.");
+                if (!isClosedByClient && clientWs.readyState === WebSocket.OPEN) {
                     clientWs.send(JSON.stringify({ type: 'error', message: 'All AI models exhausted.' }));
                     clientWs.close();
                 }
@@ -98,12 +100,23 @@ const setupLiveVoiceWebSocket = (server) => {
             const apiKey = API_KEYS[keyIndex];
             const wsUrl = `wss://${HOST}/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}`;
 
+            console.log(`[AudioLive] Attempting ${modelName} with key #${keyIndex}...`);
+
             const geminiWs = new WebSocket(wsUrl);
             currentGeminiWs = geminiWs;
-            let setupSent = false;
+            let setupComplete = false; // Track when Gemini acknowledges the setup
+
+            // Set a connection timeout — if Gemini doesn't open in 10s, try next
+            const connectionTimeout = setTimeout(() => {
+                if (geminiWs.readyState !== WebSocket.OPEN) {
+                    console.warn(`[AudioLive] Connection timeout for key #${keyIndex}, model: ${modelName}`);
+                    geminiWs.terminate();
+                }
+            }, 10000);
 
             geminiWs.on('open', async () => {
-                console.log(`[AudioLive] Connected to ${modelName}`);
+                clearTimeout(connectionTimeout);
+                console.log(`[AudioLive] WebSocket opened to ${modelName}`);
 
                 // Fetch dynamic prompt from DB
                 let finalInstruction = "أنتِ مساعدة افتراضية واسمك غزل.";
@@ -124,33 +137,61 @@ const setupLiveVoiceWebSocket = (server) => {
                         generationConfig: { responseModalities: ["AUDIO"] }
                     }
                 }));
-                setupSent = true;
-                clientWs.send(JSON.stringify({ type: 'ready' }));
+                // DON'T set setupComplete here — wait for Gemini's first response
             });
 
             geminiWs.on('message', (data) => {
+                const msgStr = data.toString();
+
+                // The very first message from Gemini after setup is the setupComplete confirmation
+                if (!setupComplete) {
+                    setupComplete = true;
+                    console.log(`[AudioLive] ✅ Setup confirmed for ${modelName} (key #${keyIndex})`);
+
+                    // NOW we tell the client we're ready and start forwarding audio
+                    if (clientWs.readyState === WebSocket.OPEN) {
+                        clientWs.send(JSON.stringify({ type: 'ready' }));
+                    }
+
+                    // IMPORTANT: Remove old message handler before adding new one (prevents duplicate sends)
+                    if (currentClientMsgHandler) {
+                        clientWs.removeListener('message', currentClientMsgHandler);
+                    }
+                    currentClientMsgHandler = (clientData) => {
+                        if (geminiWs.readyState === WebSocket.OPEN && setupComplete) {
+                            geminiWs.send(clientData);
+                        }
+                    };
+                    clientWs.on('message', currentClientMsgHandler);
+                    return;
+                }
+
+                // Forward Gemini audio chunks to client
                 if (clientWs.readyState === WebSocket.OPEN) {
-                    clientWs.send(data.toString());
+                    clientWs.send(msgStr);
                 }
             });
 
             geminiWs.on('error', (err) => {
-                console.error(`[AudioLive] Gemini WS Error (Key ${keyIndex}, FB: ${isFallbackModel}):`, err.message);
-                geminiWs.close();
+                clearTimeout(connectionTimeout);
+                console.error(`[AudioLive] Gemini WS Error (Key #${keyIndex}, Model: ${modelName}):`, err.message);
+                // Don't close here — the 'close' event will handle retry
             });
 
-            geminiWs.on('close', (code) => {
-                if (!setupSent || code !== 1000) {
-                    // Abnormal close, try next key
-                    if (!isClosedByClient) connectToGemini(keyIndex + 1, isFallbackModel);
+            geminiWs.on('close', (code, reason) => {
+                clearTimeout(connectionTimeout);
+                const reasonStr = reason ? reason.toString() : '';
+                console.log(`[AudioLive] Gemini WS closed (code: ${code}, reason: ${reasonStr}, setupDone: ${setupComplete})`);
+
+                if (isClosedByClient) return;
+
+                // If setup never completed, or abnormal close → retry
+                if (!setupComplete || (code !== 1000 && code !== 1005)) {
+                    console.log(`[AudioLive] Retrying... next key #${keyIndex + 1}`);
+                    connectToGemini(keyIndex + 1, isFallbackModel);
                 } else {
-                    if (!isClosedByClient) clientWs.close();
-                }
-            });
-
-            clientWs.on('message', (data) => {
-                if (geminiWs.readyState === WebSocket.OPEN && setupSent) {
-                    geminiWs.send(data);
+                    // Normal close after successful session
+                    if (clientWs.readyState === WebSocket.OPEN) clientWs.close();
                 }
             });
         };
