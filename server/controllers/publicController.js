@@ -27,17 +27,8 @@ exports.checkAvailability = async (req, res) => {
 
     let count;
     if (dataStore.isReady()) {
-      // Count from cache
-      const allBookings = dataStore.getBookings({ page: 1, limit: 99999 }).bookings;
-      count = allBookings.filter(b => {
-        const ed = new Date(b.eventDate);
-        if (ed < startOfDay || ed > endOfDay) return false;
-        if (type === 'photo') {
-          return b.photographyPackage;
-        } else {
-          return !b.photographyPackage;
-        }
-      }).length;
+      // Count directly from cache — no array copies needed
+      count = dataStore.countBookingsByDate(date, type);
     } else {
       // Fallback
       const query = { eventDate: { $gte: startOfDay, $lte: endOfDay } };
