@@ -1,37 +1,53 @@
 {
-  "name": "beauty-center-manager",
-  "version": "1.0.0",
-  "description": "",
-  "type": "commonjs",
-  "main": "index.js",
-  "scripts": {
-    "start": "node server.js",
-    "client": "cd client && npm start",
-    "dev": "concurrently \"npm start\" \"npm run client\"",
-    "clone:db": "node scripts/cloneMongoCluster.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "name": "client",
+  "version": "0.1.0",
+  "private": true,
   "dependencies": {
-    "@google/generative-ai": "^0.21.0",
+    "@fortawesome/fontawesome-svg-core": "^7.0.0",
+    "@fortawesome/free-solid-svg-icons": "^7.0.0",
+    "@fortawesome/react-fontawesome": "^3.0.1",
+    "@testing-library/jest-dom": "^5.17.0",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^13.5.0",
     "axios": "^1.7.2",
-    "bcryptjs": "^3.0.2",
-    "concurrently": "^9.0.1",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.1",
-    "express": "^5.1.0",
-    "express-mongo-sanitize": "^2.2.0",
-    "express-rate-limit": "^7.1.5",
-    "google-tts-api": "^2.0.2",
-    "helmet": "^8.1.0",
-    "ioredis": "^5.4.1",
-    "jsonwebtoken": "^9.0.2",
-    "mongodb": "^6.11.0",
-    "mongoose": "^8.18.0",
-    "multer": "^2.1.1",
-    "node-cron": "^3.0.3",
-    "node-telegram-bot-api": "^0.67.0"
+    "bootstrap": "^5.3.3",
+    "html5-qrcode": "^2.3.8",
+    "qrcode.react": "^3.1.0",
+    "react": "^18.2.0",
+    "react-bootstrap": "^2.8.0",
+    "react-dom": "^18.2.0",
+    "react-markdown": "^9.0.1",
+    "remark-gfm": "^4.0.0",
+    "react-router-dom": "^6.14.2",
+    "react-scripts": "^5.0.1",
+    "react-select": "^5.10.2",
+    "recharts": "^3.8.1",
+    "swr": "^2.3.0",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "proxy": "http://localhost:5000",
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }
