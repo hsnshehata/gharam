@@ -1,5 +1,6 @@
 const WebSocket = require('ws');
 const Conversation = require('../models/Conversation');
+const Booking = require('../models/Booking');
 const sessionCache = require('./sessionCache');
 
 const API_KEYS = [
@@ -8,6 +9,7 @@ const API_KEYS = [
 ].filter(Boolean);
 
 const HOST = 'generativelanguage.googleapis.com';
+const MAX_BOOKINGS_PER_DAY = 12;
 
 const AUDIO_CONSTRAINTS = `
 (تعليمات هامة جداً للمكالمة الصوتية):
@@ -16,6 +18,75 @@ const AUDIO_CONSTRAINTS = `
 - يجب أن ألا تتجاوز إجابتك الجملتين بأي حال.
 - يجب أن ألا تقوم بنطق أي روابط فقط قل اذهبي الى صفحة ( اسعار الخدمات او معرض الصور او الموقع الرسمي او الخ.... ) فقط قل من خلال موقعنا صفحة ( اسم الصفحة ).
 `;
+
+// ── Tool Declarations (same as text chat) ──
+const voiceTools = [
+    {
+        functionDeclarations: [
+            {
+                name: "get_booking_count_by_date",
+                description: "Returns the number of existing bookings for a specific date (YYYY-MM-DD). Use this to check if a day is full or available.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: { date: { type: "STRING", description: "The date in YYYY-MM-DD format." } },
+                    required: ["date"]
+                }
+            },
+            {
+                name: "search_booking_by_query",
+                description: "Searches for a specific booking using a receipt number or client phone number. Returns details like name, date, total, and remaining balance.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: { query: { type: "STRING", description: "The receipt number or phone number to search for." } },
+                    required: ["query"]
+                }
+            }
+        ]
+    }
+];
+
+// ── Tool Implementations ──
+const voiceFunctions = {
+    get_booking_count_by_date: async ({ date }) => {
+        try {
+            const startOfDay = new Date(date);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(date);
+            endOfDay.setHours(23, 59, 59, 999);
+            const count = await Booking.countDocuments({ eventDate: { $gte: startOfDay, $lte: endOfDay } });
+            const isFull = count >= MAX_BOOKINGS_PER_DAY;
+            return {
+                dateRequested: date,
+                isFull,
+                statusAr: isFull ? "اليوم مكتمل العدد" : "اليوم متاح للحجز",
+                importantInstructionForAI: "DO NOT MENTION ANY NUMBERS. Just say available or fully booked."
+            };
+        } catch (err) {
+            return { error: "Failed to fetch bookings count" };
+        }
+    },
+    search_booking_by_query: async ({ query }) => {
+        try {
+            const booking = await Booking.findOne({
+                $or: [{ receiptNumber: query }, { clientPhone: query }]
+            }).populate('package');
+
+            if (!booking) return { message: "لم يتم العثور على حجز بهذا الرقم" };
+
+            return {
+                clientName: booking.clientName,
+                eventDate: booking.eventDate.toISOString().split('T')[0],
+                packageName: booking.package?.name || "N/A",
+                total: booking.total,
+                remaining: booking.remaining,
+                receiptNumber: booking.receiptNumber,
+                status: booking.remaining <= 0 ? "مدفوع بالكامل" : "يوجد متبقي"
+            };
+        } catch (err) {
+            return { error: "Failed to search booking" };
+        }
+    }
+};
 
 const setupLiveVoiceWebSocket = (server) => {
     const wss = new WebSocket.Server({ noServer: true });
@@ -55,10 +126,9 @@ const setupLiveVoiceWebSocket = (server) => {
         let currentClientMsgHandler = null;
 
         // ── Transcript Accumulator ──
-        // Collects user and model transcripts during the call
-        let currentUserTranscript = '';      // Accumulates user speech across chunks
-        let currentModelTranscript = '';     // Accumulates model speech across chunks
-        const transcriptMessages = [];      // Final ordered list of { role, text }
+        let currentUserTranscript = '';
+        let currentModelTranscript = '';
+        const transcriptMessages = [];
 
         const flushUserTranscript = () => {
             if (currentUserTranscript.trim()) {
@@ -80,15 +150,12 @@ const setupLiveVoiceWebSocket = (server) => {
                 currentGeminiWs.close();
             }
 
-            // Flush any remaining transcript
             flushUserTranscript();
             flushModelTranscript();
 
-            // Save Duration
             const durationSeconds = Math.round((Date.now() - callStartTime) / 1000);
 
             try {
-                // Save quota
                 await Conversation.findOneAndUpdate(
                     { sessionId },
                     {
@@ -98,16 +165,13 @@ const setupLiveVoiceWebSocket = (server) => {
                     { upsert: true }
                 );
 
-                // Save transcript messages to conversation history
                 if (transcriptMessages.length > 0) {
                     console.log(`[AudioLive] Saving ${transcriptMessages.length} transcript messages for session ${sessionId}`);
 
-                    // Add a call separator message
                     await sessionCache.persistMessage(sessionId, 'web', 'model',
                         `📞 مكالمة صوتية (${Math.floor(durationSeconds / 60)}:${(durationSeconds % 60).toString().padStart(2, '0')} دقيقة)`
                     );
 
-                    // Save each transcript message
                     for (const msg of transcriptMessages) {
                         await sessionCache.persistMessage(sessionId, 'web', msg.role, msg.text);
                     }
@@ -169,7 +233,14 @@ const setupLiveVoiceWebSocket = (server) => {
                     console.error("[AudioLive] Error fetching system prompt:", err.message);
                 }
 
-                // Build setup config with transcription enabled
+                // Add date context (same as text chat)
+                const now = new Date();
+                const dayName = now.toLocaleDateString('ar-EG', { weekday: 'long' });
+                const formattedDate = now.toISOString().split('T')[0];
+                finalInstruction += `\n\nمعلومات التاريخ: اليوم هو ${dayName} ${formattedDate}. السنة الحالية ${now.getFullYear()}.`;
+                finalInstruction += `\nإذا ذكر العميل تاريخ بدون سنة، افترض السنة الحالية. إذا التاريخ فات، افترض السنة القادمة ${now.getFullYear() + 1}.`;
+
+                // Build setup config
                 const setupConfig = {
                     setup: {
                         model: modelName,
@@ -177,16 +248,17 @@ const setupLiveVoiceWebSocket = (server) => {
                         generationConfig: {
                             responseModalities: ["AUDIO"]
                         },
-                        // Transcription: both at setup level (NOT inside generationConfig)
                         outputAudioTranscription: {},
-                        inputAudioTranscription: {}
+                        inputAudioTranscription: {},
+                        // Function Calling — same tools as text chat
+                        tools: voiceTools
                     }
                 };
 
                 geminiWs.send(JSON.stringify(setupConfig));
             });
 
-            geminiWs.on('message', (data) => {
+            geminiWs.on('message', async (data) => {
                 const msgStr = data.toString();
 
                 if (!setupComplete) {
@@ -227,28 +299,58 @@ const setupLiveVoiceWebSocket = (server) => {
                     return;
                 }
 
-                // ── Process Gemini messages: extract transcripts + forward audio ──
+                // ── Process Gemini messages ──
                 try {
                     const parsed = JSON.parse(msgStr);
 
-                    // 1. Input transcription (user's speech as text)
+                    // ═══ FUNCTION CALL HANDLING ═══
+                    // Gemini is requesting a tool call — execute it and send result back
+                    const toolCall = parsed.serverContent?.modelTurn?.parts?.find(p => p.functionCall);
+                    if (toolCall?.functionCall) {
+                        const { name, args } = toolCall.functionCall;
+                        console.log(`[AudioLive] 🔧 Function call: ${name}(${JSON.stringify(args)})`);
+
+                        let result = { error: "Unknown function" };
+                        if (voiceFunctions[name]) {
+                            try {
+                                result = await voiceFunctions[name](args);
+                            } catch (err) {
+                                console.error(`[AudioLive] Function error:`, err);
+                                result = { error: err.message };
+                            }
+                        }
+
+                        console.log(`[AudioLive] 🔧 Function result:`, JSON.stringify(result).slice(0, 200));
+
+                        // Send function response back to Gemini
+                        const functionResponse = {
+                            toolResponse: {
+                                functionResponses: [{
+                                    id: toolCall.functionCall.id || name,
+                                    name: name,
+                                    response: result
+                                }]
+                            }
+                        };
+                        geminiWs.send(JSON.stringify(functionResponse));
+                        // Don't forward the function call to the client
+                        return;
+                    }
+
+                    // ═══ TRANSCRIPTION ═══
+                    // 1. Input transcription (user's speech)
                     if (parsed.serverContent?.inputTranscription?.text) {
-                        const userText = parsed.serverContent.inputTranscription.text;
-                        // Flush any previous model transcript before adding user text
                         flushModelTranscript();
-                        currentUserTranscript += userText;
-                        // Don't forward transcript-only messages to client (just audio)
+                        currentUserTranscript += parsed.serverContent.inputTranscription.text;
                     }
 
-                    // 2. Output transcription (model's speech as text)
+                    // 2. Output transcription (model's speech)
                     if (parsed.serverContent?.outputTranscription?.text) {
-                        const modelText = parsed.serverContent.outputTranscription.text;
-                        // Flush any previous user transcript before adding model text
                         flushUserTranscript();
-                        currentModelTranscript += modelText;
+                        currentModelTranscript += parsed.serverContent.outputTranscription.text;
                     }
 
-                    // 3. Turn complete → flush current transcript
+                    // 3. Turn complete
                     if (parsed.serverContent?.turnComplete) {
                         flushUserTranscript();
                         flushModelTranscript();
@@ -258,7 +360,7 @@ const setupLiveVoiceWebSocket = (server) => {
                     // Not JSON — ignore parse errors
                 }
 
-                // Always forward the message to client for audio playback
+                // Forward to client for audio playback
                 if (clientWs.readyState === WebSocket.OPEN) {
                     clientWs.send(msgStr);
                 }
