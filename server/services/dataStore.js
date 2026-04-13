@@ -111,12 +111,42 @@ const startSelfHealing = () => {
 
       let reloaded = [];
 
+      // Incremental sync for bookings — avoid full reload for small mismatches
       if (bCount !== store.bookings.length) {
-        store.bookings = await Booking.find({}).populate(BOOKING_POPULATE).lean();
+        const diff = Math.abs(bCount - store.bookings.length);
+        if (diff > 5) {
+          // Large mismatch — full reload
+          store.bookings = await Booking.find({}).populate(BOOKING_POPULATE).lean();
+        } else {
+          // Small mismatch — incremental sync
+          const dbIds = new Set((await Booking.find({}).select('_id').lean()).map(b => b._id.toString()));
+          const cacheIds = new Set(store.bookings.map(b => _id(b)));
+          for (const id of dbIds) {
+            if (!cacheIds.has(id)) {
+              const doc = await Booking.findById(id).populate(BOOKING_POPULATE).lean();
+              if (doc) store.bookings.push(doc);
+            }
+          }
+          store.bookings = store.bookings.filter(b => dbIds.has(_id(b)));
+        }
         reloaded.push(`Bookings(${store.bookings.length})`);
       }
+      // Incremental sync for instant services
       if (isCount !== store.instantServices.length) {
-        store.instantServices = await InstantService.find({}).populate(INSTANT_POPULATE).lean();
+        const diff = Math.abs(isCount - store.instantServices.length);
+        if (diff > 5) {
+          store.instantServices = await InstantService.find({}).populate(INSTANT_POPULATE).lean();
+        } else {
+          const dbIds = new Set((await InstantService.find({}).select('_id').lean()).map(i => i._id.toString()));
+          const cacheIds = new Set(store.instantServices.map(i => _id(i)));
+          for (const id of dbIds) {
+            if (!cacheIds.has(id)) {
+              const doc = await InstantService.findById(id).populate(INSTANT_POPULATE).lean();
+              if (doc) store.instantServices.push(doc);
+            }
+          }
+          store.instantServices = store.instantServices.filter(i => dbIds.has(_id(i)));
+        }
         reloaded.push(`InstantServices(${store.instantServices.length})`);
       }
       if (eCount !== store.expenses.length) {
@@ -188,7 +218,8 @@ const resolvePackage = (id) => {
 //  READ: BOOKINGS
 // ────────────────────────────────────────────
 const getBookings = ({ page = 1, limit = 50, search, date, receiptNumber } = {}) => {
-  let results = [...store.bookings];
+  // Filter without copying the full array first — filter() already creates a new array
+  let results = store.bookings;
 
   if (receiptNumber) {
     results = results.filter(b => b.receiptNumber === receiptNumber);
@@ -199,6 +230,9 @@ const getBookings = ({ page = 1, limit = 50, search, date, receiptNumber } = {})
       (b.clientPhone && b.clientPhone.includes(s)) ||
       (b.receiptNumber && b.receiptNumber.includes(s))
     );
+  } else {
+    // Only copy when no filter applied (need a mutable copy for sort)
+    results = results.slice();
   }
 
   if (date) {
@@ -223,6 +257,26 @@ const getBookings = ({ page = 1, limit = 50, search, date, receiptNumber } = {})
   return { bookings, total, pages };
 };
 
+// Efficient count-only query for availability checks — no array copies
+const countBookingsByDate = (date, type) => {
+  const startOfDay = new Date(date);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(date);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  let count = 0;
+  for (const b of store.bookings) {
+    const ed = new Date(b.eventDate);
+    if (ed < startOfDay || ed > endOfDay) continue;
+    if (type === 'photo') {
+      if (b.photographyPackage) count++;
+    } else {
+      if (!b.photographyPackage) count++;
+    }
+  }
+  return count;
+};
+
 const getBookingById = (id) => {
   return store.bookings.find(b => _id(b) === id) || null;
 };
@@ -235,7 +289,8 @@ const getBookingByReceipt = (receiptNumber) => {
 //  READ: INSTANT SERVICES
 // ────────────────────────────────────────────
 const getInstantServices = ({ page = 1, limit = 50, search, date, receiptNumber } = {}) => {
-  let results = [...store.instantServices];
+  // Filter without copying the full array first
+  let results = store.instantServices;
 
   if (receiptNumber) {
     results = results.filter(is => is.receiptNumber === receiptNumber.toString().trim());
@@ -246,6 +301,9 @@ const getInstantServices = ({ page = 1, limit = 50, search, date, receiptNumber 
       (is.receiptNumber && is.receiptNumber.includes(s)) ||
       (is.employeeId?.username && is.employeeId.username.toLowerCase().includes(s))
     );
+  } else {
+    // Only copy when no filter applied (need a mutable copy for sort)
+    results = results.slice();
   }
 
   if (date) {
@@ -281,9 +339,9 @@ const getInstantServiceByReceipt = (receiptNumber) => {
 //  READ: EXPENSES/ADVANCES/DEDUCTIONS
 // ────────────────────────────────────────────
 const getExpensesAdvances = ({ page = 1, limit = 50, search } = {}) => {
-  let expensesFiltered = [...store.expenses];
-  let advancesFiltered = [...store.advances];
-  let deductionsFiltered = [...store.deductions];
+  let expensesFiltered = store.expenses;
+  let advancesFiltered = store.advances;
+  let deductionsFiltered = store.deductions;
 
   if (search) {
     const s = search.toLowerCase();
@@ -763,6 +821,7 @@ module.exports = {
 
   // Read
   getBookings,
+  countBookingsByDate,
   getBookingById,
   getBookingByReceipt,
   getInstantServices,
