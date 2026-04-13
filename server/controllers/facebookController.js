@@ -2,6 +2,7 @@ const axios = require('axios');
 const FacebookPost = require('../models/FacebookPost');
 const MediaGallery = require('../models/MediaGallery');
 const SystemSetting = require('../models/SystemSetting');
+const WebhookEvent = require('../models/WebhookEvent');
 const { processAiChat } = require('../services/aiService');
 const sessionCache = require('../services/sessionCache');// استخراج كل الصور والفيديوهات من البوست والحفظ في MediaGallery
 const extractAndSaveMediaItems = async (post) => {
@@ -525,8 +526,7 @@ const verifyWebhook = (req, res) => {
     }
 };
 
-const processedWebhookEvents = new Set();
-
+// تمت إزالة processedWebhookEvents المعتمد على الذاكرة لتعارضها مع إعادات التشغيل
 const handleWebhook = async (req, res) => {
     try {
         const body = req.body;
@@ -541,13 +541,17 @@ const handleWebhook = async (req, res) => {
                 // Handling messaging events (Messages, Edits, Attachments)
                 if (entry.messaging) {
                     for (const webhook_event of entry.messaging) {
-                        // Deduplication check
+                        // Robust deduplication check using MongoDB
                         const eventId = webhook_event.message?.mid || webhook_event.message_edit?.mid || null;
                         if (eventId) {
-                            if (processedWebhookEvents.has(eventId)) continue;
-                            processedWebhookEvents.add(eventId);
-                            if (processedWebhookEvents.size > 2000) {
-                                processedWebhookEvents.delete(processedWebhookEvents.values().next().value);
+                            try {
+                                await WebhookEvent.create({ eventId });
+                            } catch (duplicateErr) {
+                                // If it throws a duplicate key error, we already processed it!
+                                if (duplicateErr.code === 11000) {
+                                    console.log(`[FB Webhook] Deduplicated duplicate message event: ${eventId}`);
+                                    continue;
+                                }
                             }
                         }
 
@@ -617,7 +621,11 @@ const handleWebhook = async (req, res) => {
                                     message: { text: aiReply }
                                 });
                             } catch (aiError) {
-                                console.error('Error generating AI reply for FB Webhook (Message):', aiError);
+                                if (aiError.response?.data?.error?.code === 551) {
+                                    console.log(`[FB Webhook] Info: Could not reply because user ${sender_psid} is unavailable (blocked page or expired window). Error 551.`);
+                                } else {
+                                    console.error('Error generating AI reply for FB Webhook (Message):', aiError.response?.data || aiError.message);
+                                }
                             }
                         }
                     }
@@ -671,7 +679,11 @@ const handleWebhook = async (req, res) => {
                                         });
                                         console.log(`Successfully replied to comment ${commentId}. Reply ID:`, fbRes.data.id);
                                     } catch (err) {
-                                        console.error('Error replying to FB Webhook (Comment):', err.response?.data || err.message);
+                                        if (err.response?.data?.error?.code === 551) {
+                                            console.log(`[FB Webhook] Info: Could not reply to comment because user ${senderId} is unavailable. Error 551.`);
+                                        } else {
+                                            console.error('Error replying to FB Webhook (Comment):', err.response?.data || err.message);
+                                        }
                                     }
                                 }
                             }
