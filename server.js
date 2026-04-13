@@ -25,11 +25,13 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Middleware
-app.use(helmet({ contentSecurityPolicy: false }));
-app.use(mongoSanitize());
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Security middlewares that depend on body/query should be AFTER parsers
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(mongoSanitize());
 const rateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
