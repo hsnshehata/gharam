@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { Modal, Button } from 'react-bootstrap';
 import { API_BASE } from '../utils/apiBase';
+import './LiveVoiceAssistant.css';
 
 const BOT_IMAGE = "https://i.ibb.co/7JJScM0Q/zain-ai.png";
 
@@ -14,6 +15,42 @@ const getSessionId = () => {
     }
     return sid;
 };
+
+// ── Audio Conversion Utilities for Live Voice ──
+function float32To16BitPCMBase64(float32Array) {
+    const int16Array = new Int16Array(float32Array.length);
+    for (let i = 0; i < float32Array.length; i++) {
+        const s = Math.max(-1, Math.min(1, float32Array[i]));
+        int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    const bytes = new Uint8Array(int16Array.buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+}
+
+function base64ToFloat32Array(base64) {
+    const binaryStr = window.atob(base64);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+        bytes[i] = binaryStr.charCodeAt(i);
+    }
+    const int16Array = new Int16Array(bytes.buffer);
+    const float32Array = new Float32Array(int16Array.length);
+    for (let i = 0; i < int16Array.length; i++) {
+        float32Array[i] = int16Array[i] / 32768.0;
+    }
+    return float32Array;
+}
+
+// ── Phone Hang-Up SVG Icon ──
+const HangUpIcon = () => (
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+        <path fill="white" d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .4-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/>
+    </svg>
+);
 
 export default function AIChatPopup({ onClose }) {
     const [messages, setMessages] = useState([
@@ -29,6 +66,22 @@ export default function AIChatPopup({ onClose }) {
     const messagesEndRef = useRef(null);
     const sessionId = useRef(getSessionId());
 
+    // ── Voice Mode State ──
+    const [voiceMode, setVoiceMode] = useState(false);
+    const [voiceStatus, setVoiceStatus] = useState('');
+    const [isSpeaking, setIsSpeaking] = useState(false);
+    const [isVoiceRecording, setIsVoiceRecording] = useState(false);
+    const [callDuration, setCallDuration] = useState(0);
+    const orbRef = useRef(null);
+    const timerRef = useRef(null);
+    const voiceWsRef = useRef(null);
+    const voiceAudioCtxRef = useRef(null);
+    const voiceStreamRef = useRef(null);
+    const voiceProcessorRef = useRef(null);
+    const voicePlaybackCtxRef = useRef(null);
+    const speakingTimeoutRef = useRef(null);
+    const nextPlayTimeRef = useRef(0);
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
@@ -43,7 +96,6 @@ export default function AIChatPopup({ onClose }) {
             try {
                 const res = await axios.get(`${API_BASE}/api/ai/chat/history/${sessionId.current}`);
                 if (res.data.success && res.data.data && res.data.data.length > 0) {
-                    // Prepend the welcome message, then add history
                     const historyMessages = res.data.data.map(m => ({ role: m.role, text: m.text }));
                     setMessages([
                         { role: 'model', text: 'أهلاً بكِ في غرام سلطان بيوتي سنتر! ✨ أنا غزل مساعدتكِ الذكية، كيف يمكنني مساعدتك اليوم؟' },
@@ -51,13 +103,20 @@ export default function AIChatPopup({ onClose }) {
                     ]);
                 }
             } catch (err) {
-                // Silent fail - just use the default welcome message
                 console.log('No previous chat history found');
             } finally {
                 setHistoryLoading(false);
             }
         };
         loadHistory();
+    }, []);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            stopVoiceMode();
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const startRecording = async () => {
@@ -141,7 +200,7 @@ export default function AIChatPopup({ onClose }) {
         try {
             let res;
             const cleanMessages = newMessages
-                .filter((_, i) => i > 0) // Skip the initial welcome message
+                .filter((_, i) => i > 0)
                 .map(m => ({ role: m.role, text: m.text }));
 
             if (voiceBlob) {
@@ -175,6 +234,170 @@ export default function AIChatPopup({ onClose }) {
         } finally {
             setLoading(false);
         }
+    };
+
+    // ══════════════════════════════════════
+    //  VOICE MODE LOGIC
+    // ══════════════════════════════════════
+
+    const formatTime = (seconds) => {
+        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const s = (seconds % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    };
+
+    const startVoiceMode = async () => {
+        setVoiceMode(true);
+        setVoiceStatus('جاري الاتصال بغزل...');
+        setIsVoiceRecording(false);
+        setIsSpeaking(false);
+        setCallDuration(0);
+
+        try {
+            const sid = getSessionId();
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/api/live-audio?sessionId=${sid}`;
+
+            const ws = new WebSocket(wsUrl);
+            voiceWsRef.current = ws;
+
+            ws.onopen = async () => {
+                setVoiceStatus('غزل جاهزة تسمعك... 🎤');
+                setIsVoiceRecording(true);
+                // Start timer
+                timerRef.current = setInterval(() => {
+                    setCallDuration(prev => prev + 1);
+                }, 1000);
+                await startVoiceMic(ws);
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+
+                    if (data.type === 'quota_exceeded') {
+                        setVoiceStatus('انتهت دقائقك الصوتية اليوم 😢');
+                        setTimeout(() => stopVoiceMode(), 2000);
+                        return;
+                    }
+
+                    if (data.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data) {
+                        const base64Audio = data.serverContent.modelTurn.parts[0].inlineData.data;
+                        playVoiceChunk(base64Audio);
+
+                        setIsSpeaking(true);
+                        setVoiceStatus('غزل بتتكلم... 💬');
+
+                        if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
+                        speakingTimeoutRef.current = setTimeout(() => {
+                            setIsSpeaking(false);
+                            setVoiceStatus('غزل جاهزة تسمعك... 🎤');
+                        }, 1200);
+                    }
+
+                    if (data.serverContent?.turnComplete) {
+                        if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
+                        speakingTimeoutRef.current = setTimeout(() => {
+                            setIsSpeaking(false);
+                            setVoiceStatus('غزل جاهزة تسمعك... 🎤');
+                        }, 800);
+                    }
+                } catch (err) {
+                    console.error("Parse WS error", err);
+                }
+            };
+
+            ws.onclose = () => {
+                if (voiceMode) {
+                    setVoiceStatus('انقطع الاتصال');
+                    setTimeout(() => stopVoiceMode(), 1500);
+                }
+            };
+        } catch (err) {
+            setVoiceStatus('مفيش مايك!');
+            console.error(err);
+        }
+    };
+
+    const startVoiceMic = async (ws) => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1 } });
+            voiceStreamRef.current = stream;
+
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+            voiceAudioCtxRef.current = audioCtx;
+
+            const source = audioCtx.createMediaStreamSource(stream);
+            const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+            voiceProcessorRef.current = processor;
+
+            source.connect(processor);
+            processor.connect(audioCtx.destination);
+
+            processor.onaudioprocess = (e) => {
+                if (ws.readyState !== WebSocket.OPEN) return;
+                const float32Array = e.inputBuffer.getChannelData(0);
+
+                // Orb visualizer
+                let sum = 0;
+                for (let i = 0; i < float32Array.length; i++) sum += Math.abs(float32Array[i]);
+                const avg = sum / float32Array.length;
+                if (orbRef.current && !isSpeaking) {
+                    const scale = 1 + Math.min(avg * 3, 0.25);
+                    orbRef.current.style.transform = `scale(${scale})`;
+                }
+
+                const base64Data = float32To16BitPCMBase64(float32Array);
+                ws.send(JSON.stringify({
+                    realtimeInput: {
+                        mediaChunks: [{ mimeType: 'audio/pcm;rate=16000', data: base64Data }]
+                    }
+                }));
+            };
+        } catch (err) {
+            console.error(err);
+            setVoiceStatus('رفضت صلاحية المايك!');
+        }
+    };
+
+    const playVoiceChunk = (base64) => {
+        if (!voicePlaybackCtxRef.current) {
+            voicePlaybackCtxRef.current = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+        }
+        const ctx = voicePlaybackCtxRef.current;
+        if (ctx.state === 'suspended') ctx.resume();
+
+        const float32Array = base64ToFloat32Array(base64);
+        const audioBuffer = ctx.createBuffer(1, float32Array.length, 24000);
+        audioBuffer.getChannelData(0).set(float32Array);
+
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(ctx.destination);
+
+        const currentTime = ctx.currentTime;
+        if (nextPlayTimeRef.current < currentTime) nextPlayTimeRef.current = currentTime;
+        source.start(nextPlayTimeRef.current);
+        nextPlayTimeRef.current += audioBuffer.duration;
+    };
+
+    const stopVoiceMode = () => {
+        if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+        if (speakingTimeoutRef.current) { clearTimeout(speakingTimeoutRef.current); speakingTimeoutRef.current = null; }
+        if (voiceWsRef.current) { voiceWsRef.current.close(); voiceWsRef.current = null; }
+        if (voiceProcessorRef.current) { voiceProcessorRef.current.disconnect(); voiceProcessorRef.current = null; }
+        if (voiceStreamRef.current) { voiceStreamRef.current.getTracks().forEach(t => t.stop()); voiceStreamRef.current = null; }
+        if (voiceAudioCtxRef.current) { voiceAudioCtxRef.current.close(); voiceAudioCtxRef.current = null; }
+        setVoiceMode(false);
+        setIsVoiceRecording(false);
+        setIsSpeaking(false);
+        nextPlayTimeRef.current = 0;
+    };
+
+    const getOrbClass = () => {
+        if (isSpeaking) return 'ai-orb speaking';
+        if (isVoiceRecording) return 'ai-orb recording';
+        return 'ai-orb';
     };
 
     // Helper component to play sequence of audio chunks
@@ -226,7 +449,7 @@ export default function AIChatPopup({ onClose }) {
     return (
         <div style={styles.overlay}>
             <div style={styles.container} dir="rtl">
-                {/* Header with Glassmorphism */}
+                {/* Header */}
                 <div style={styles.header}>
                     <div style={styles.headerTitle}>
                         <div style={styles.avatarWrapper}>
@@ -235,117 +458,157 @@ export default function AIChatPopup({ onClose }) {
                         </div>
                         <div>
                             <div style={styles.headerMainText}>غزل المساعدة الذكية ✨</div>
-                            <div style={styles.headerSubText}>تواصل فوري • ذكاء اصطناعي</div>
+                            <div style={styles.headerSubText}>
+                                {voiceMode ? `مكالمة صوتية • ${formatTime(callDuration)}` : 'تواصل فوري • ذكاء اصطناعي'}
+                            </div>
                         </div>
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
+                        {/* Voice Call Button */}
+                        {!voiceMode && (
+                            <button 
+                                style={{...styles.infoBtn, background: 'rgba(255,255,255,0.25)'}} 
+                                onClick={startVoiceMode} 
+                                aria-label="مكالمة صوتية"
+                                title="تحدث مع غزل صوتياً"
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                                </svg>
+                            </button>
+                        )}
                         <button style={styles.infoBtn} onClick={() => setShowInfo(true)} aria-label="Info">❓</button>
-                        <button style={styles.closeBtn} onClick={onClose} aria-label="Close">✕</button>
+                        <button style={styles.closeBtn} onClick={() => { stopVoiceMode(); onClose(); }} aria-label="Close">✕</button>
                     </div>
                 </div>
 
-                {/* Chat Area */}
-                <div style={styles.chatBox}>
-                    {historyLoading ? (
-                        <div style={styles.historyLoader}>
-                            <div className="typing-dot"></div>
-                            <div className="typing-dot"></div>
-                            <div className="typing-dot"></div>
+                {/* ═══ VOICE MODE VIEW ═══ */}
+                {voiceMode ? (
+                    <div className="voice-mode-container">
+                        {/* Orb */}
+                        <div className="ai-orb-container">
+                            <div className="ai-orb-ring"></div>
+                            <div className="ai-orb-ring"></div>
+                            <div className="ai-orb-ring"></div>
+                            <div ref={orbRef} className={getOrbClass()}>
+                                <img src="/logo.png" alt="غرام" className="orb-logo" />
+                            </div>
                         </div>
-                    ) : (
-                        messages.map((m, idx) => (
-                            <div key={idx} style={{
-                                ...styles.messageRow,
-                                justifyContent: m.role === 'user' ? 'flex-start' : 'flex-end',
-                                flexDirection: m.role === 'user' ? 'row' : 'row-reverse'
-                            }}>
-                                {m.role === 'model' && (
+
+                        {/* Status */}
+                        <div className="voice-status-text">{voiceStatus}</div>
+
+                        {/* Hang Up */}
+                        <button className="hangup-btn" onClick={stopVoiceMode} title="إنهاء المكالمة">
+                            <HangUpIcon />
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        {/* ═══ TEXT CHAT VIEW ═══ */}
+                        <div style={styles.chatBox}>
+                            {historyLoading ? (
+                                <div style={styles.historyLoader}>
+                                    <div className="typing-dot"></div>
+                                    <div className="typing-dot"></div>
+                                    <div className="typing-dot"></div>
+                                </div>
+                            ) : (
+                                messages.map((m, idx) => (
+                                    <div key={idx} style={{
+                                        ...styles.messageRow,
+                                        justifyContent: m.role === 'user' ? 'flex-start' : 'flex-end',
+                                        flexDirection: m.role === 'user' ? 'row' : 'row-reverse'
+                                    }}>
+                                        {m.role === 'model' && (
+                                            <div style={styles.botIconWrapper}>
+                                                <img src={BOT_IMAGE} alt="bot" style={styles.botIcon} />
+                                            </div>
+                                        )}
+                                        <div style={{
+                                            ...styles.bubble,
+                                            backgroundColor: m.role === 'user' ? '#1fb6a6' : '#ffffff',
+                                            color: m.role === 'user' ? '#fff' : '#2d3436',
+                                            borderBottomRightRadius: m.role === 'user' ? 4 : '20px',
+                                            borderBottomLeftRadius: m.role === 'model' ? 4 : '20px',
+                                            boxShadow: m.role === 'user' ? '0 4px 15px rgba(31, 182, 166, 0.2)' : '0 4px 15px rgba(0,0,0,0.05)',
+                                        }}>
+                                            {formatText(m.text)}
+
+                                            {m.role === 'model' && m.audioParts && m.audioParts.length > 0 && (
+                                                <div style={{ marginTop: '12px', borderTop: '1px solid #efefef', paddingTop: '10px' }}>
+                                                    <VoiceResponse parts={m.audioParts} />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+
+                            {loading && (
+                                <div style={{ ...styles.messageRow, justifyContent: 'flex-end', flexDirection: 'row-reverse' }}>
                                     <div style={styles.botIconWrapper}>
                                         <img src={BOT_IMAGE} alt="bot" style={styles.botIcon} />
                                     </div>
-                                )}
-                                <div style={{
-                                    ...styles.bubble,
-                                    backgroundColor: m.role === 'user' ? '#1fb6a6' : '#ffffff',
-                                    color: m.role === 'user' ? '#fff' : '#2d3436',
-                                    borderBottomRightRadius: m.role === 'user' ? 4 : '20px',
-                                    borderBottomLeftRadius: m.role === 'model' ? 4 : '20px',
-                                    boxShadow: m.role === 'user' ? '0 4px 15px rgba(31, 182, 166, 0.2)' : '0 4px 15px rgba(0,0,0,0.05)',
-                                }}>
-                                    {formatText(m.text)}
-
-                                    {m.role === 'model' && m.audioParts && m.audioParts.length > 0 && (
-                                        <div style={{ marginTop: '12px', borderTop: '1px solid #efefef', paddingTop: '10px' }}>
-                                            <VoiceResponse parts={m.audioParts} />
+                                    <div style={{ ...styles.bubble, backgroundColor: '#ffffff', borderBottomLeftRadius: 4 }}>
+                                        <div style={styles.typingIndicator}>
+                                            <span className="typing-dot"></span>
+                                            <span className="typing-dot"></span>
+                                            <span className="typing-dot"></span>
                                         </div>
-                                    )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))
-                    )}
-
-                    {loading && (
-                        <div style={{ ...styles.messageRow, justifyContent: 'flex-end', flexDirection: 'row-reverse' }}>
-                            <div style={styles.botIconWrapper}>
-                                <img src={BOT_IMAGE} alt="bot" style={styles.botIcon} />
-                            </div>
-                            <div style={{ ...styles.bubble, backgroundColor: '#ffffff', borderBottomLeftRadius: 4 }}>
-                                <div style={styles.typingIndicator}>
-                                    <span className="typing-dot"></span>
-                                    <span className="typing-dot"></span>
-                                    <span className="typing-dot"></span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    <div ref={messagesEndRef} />
-                </div>
-
-                {/* Input Area */}
-                <form onSubmit={handleSend} style={styles.inputArea}>
-                    <div style={{ ...styles.inputWrapper, borderColor: isRecording ? '#ff4757' : '#e1e2e6' }}>
-                        <button
-                            type="button"
-                            style={{
-                                ...styles.micBtn,
-                                color: isRecording ? '#ff4757' : '#747d8c',
-                                animation: isRecording ? 'pulse 1.5s infinite' : 'none'
-                            }}
-                            onClick={isRecording ? stopRecording : startRecording}
-                            title={isRecording ? "إيقاف التسجيل" : "تسجيل رسالة صوتية"}
-                        >
-                            {isRecording ? (
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                                    <rect x="6" y="6" width="12" height="12" rx="2" />
-                                </svg>
-                            ) : (
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                                    <line x1="12" y1="19" x2="12" y2="23"></line>
-                                    <line x1="8" y1="23" x2="16" y2="23"></line>
-                                </svg>
                             )}
-                        </button>
-                        <input
-                            style={styles.input}
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            placeholder={isRecording ? "جاري التسجيل..." : "اكتبي رسالتك هنا..."}
-                            disabled={isRecording}
-                        />
-                        <button
-                            type="submit"
-                            style={{ ...styles.sendBtn, opacity: (input.trim()) ? 1 : 0.5 }}
-                            disabled={(!input.trim()) || loading || isRecording}
-                        >
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <line x1="22" y1="2" x2="11" y2="13"></line>
-                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                            </svg>
-                        </button>
-                    </div>
-                </form>
+                            <div ref={messagesEndRef} />
+                        </div>
+
+                        {/* Input Area */}
+                        <form onSubmit={handleSend} style={styles.inputArea}>
+                            <div style={{ ...styles.inputWrapper, borderColor: isRecording ? '#ff4757' : '#e1e2e6' }}>
+                                <button
+                                    type="button"
+                                    style={{
+                                        ...styles.micBtn,
+                                        color: isRecording ? '#ff4757' : '#747d8c',
+                                        animation: isRecording ? 'pulse 1.5s infinite' : 'none'
+                                    }}
+                                    onClick={isRecording ? stopRecording : startRecording}
+                                    title={isRecording ? "إيقاف التسجيل" : "تسجيل رسالة صوتية"}
+                                >
+                                    {isRecording ? (
+                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                                            <rect x="6" y="6" width="12" height="12" rx="2" />
+                                        </svg>
+                                    ) : (
+                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                            <line x1="12" y1="19" x2="12" y2="23"></line>
+                                            <line x1="8" y1="23" x2="16" y2="23"></line>
+                                        </svg>
+                                    )}
+                                </button>
+                                <input
+                                    style={styles.input}
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    placeholder={isRecording ? "جاري التسجيل..." : "اكتبي رسالتك هنا..."}
+                                    disabled={isRecording}
+                                />
+                                <button
+                                    type="submit"
+                                    style={{ ...styles.sendBtn, opacity: (input.trim()) ? 1 : 0.5 }}
+                                    disabled={(!input.trim()) || loading || isRecording}
+                                >
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                    </svg>
+                                </button>
+                            </div>
+                        </form>
+                    </>
+                )}
             </div>
 
             {/* نافذة دليل غزل */}
@@ -376,6 +639,7 @@ export default function AIChatPopup({ onClose }) {
                     <ul style={{ fontSize: '14.5px', lineHeight: '1.7', paddingRight: '20px', color: '#444' }}>
                         <li>اسألي غزل بشكل مباشر (مثال: <span style={{ color: '#e84118' }}>"بكام باكدج الميك أب السبيشيال؟"</span> أو <span style={{ color: '#e84118' }}>"إيه أسعار تنظيف البشرة؟"</span>).</li>
                         <li>يمكنك <strong>تسجيل استفسارك صوتياً</strong> بالضغط على علامة المايك 🎤، وستقوم غزل بالرد عليكِ صوتياً أيضاً!</li>
+                        <li>يمكنك أيضاً <strong>الاتصال بغزل صوتياً مباشرة</strong> بالضغط على أيقونة الهاتف 📞 في الأعلى!</li>
                         <li>لتأكيد الحجوزات أو تغيير المواعيد، يتم عبر الواتساب أو الرقم الأرضي.</li>
                     </ul>
 
