@@ -175,11 +175,10 @@ const setupLiveVoiceWebSocket = (server) => {
                         model: modelName,
                         systemInstruction: { parts: [{ text: finalInstruction }] },
                         generationConfig: {
-                            responseModalities: ["AUDIO"],
-                            // Enable output audio transcription (model's speech → text)
-                            outputAudioTranscription: {}
+                            responseModalities: ["AUDIO"]
                         },
-                        // Enable input audio transcription (user's speech → text)
+                        // Transcription: both at setup level (NOT inside generationConfig)
+                        outputAudioTranscription: {},
                         inputAudioTranscription: {}
                     }
                 };
