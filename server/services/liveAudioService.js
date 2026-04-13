@@ -13,6 +13,7 @@ const AUDIO_CONSTRAINTS = `
 - أنتِ الآن في مكالمة صوتية مباشِرة مع العميل. إجاباتك يجب أن تكون قصيرة جداً ومختصرة مثل المحادثة الطبيعية.
 - تجنبي الإطالة تماماً، ولا تعطِ تفاصيل كثيرة إلا إذا طلبها العميل.
 - يجب أن ألا تتجاوز إجابتك الجملتين بأي حال.
+- يجب أن ألا تقوم بنطق أي روابط فقط قل اذهبي الى صفحة ( اسعار الخدمات او معرض الصور او الموقع الرسمي او الخ.... ) فقط انطق اسم الصفحة وليس الرابط.
 `;
 
 const setupLiveVoiceWebSocket = (server) => {
@@ -34,7 +35,7 @@ const setupLiveVoiceWebSocket = (server) => {
         const todayStr = new Date().toISOString().split('T')[0];
         let conv = await Conversation.findOne({ sessionId }).lean();
         let usedSeconds = 0;
-        
+
         if (conv) {
             if (conv.metadata?.voiceLimitDate === todayStr) {
                 usedSeconds = conv.metadata?.voiceSecondsUsed || 0;
@@ -64,17 +65,17 @@ const setupLiveVoiceWebSocket = (server) => {
             try {
                 await Conversation.findOneAndUpdate(
                     { sessionId },
-                    { 
-                        $set: { 
-                            "metadata.voiceLimitDate": todayStr 
+                    {
+                        $set: {
+                            "metadata.voiceLimitDate": todayStr
                         },
-                        $inc: { 
-                            "metadata.voiceSecondsUsed": durationSeconds 
+                        $inc: {
+                            "metadata.voiceSecondsUsed": durationSeconds
                         }
                     },
                     { upsert: true }
                 );
-            } catch(err) { console.error("[AudioLive] Error saving quota:", err); }
+            } catch (err) { console.error("[AudioLive] Error saving quota:", err); }
         });
 
         const connectToGemini = async (keyIndex, isFallbackModel) => {
@@ -90,13 +91,13 @@ const setupLiveVoiceWebSocket = (server) => {
                 return;
             }
 
-            const modelName = isFallbackModel 
-                ? "models/gemini-2.5-flash-native-audio-preview-12-2025" 
+            const modelName = isFallbackModel
+                ? "models/gemini-2.5-flash-native-audio-preview-12-2025"
                 : "models/gemini-3.1-flash-live-preview";
-            
+
             const apiKey = API_KEYS[keyIndex];
             const wsUrl = `wss://${HOST}/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${apiKey}`;
-            
+
             const geminiWs = new WebSocket(wsUrl);
             currentGeminiWs = geminiWs;
             let setupSent = false;
@@ -112,7 +113,7 @@ const setupLiveVoiceWebSocket = (server) => {
                     if (setting && setting.value) {
                         finalInstruction = setting.value + "\n\n" + AUDIO_CONSTRAINTS;
                     }
-                } catch(err) {
+                } catch (err) {
                     console.error("[AudioLive] Error fetching system prompt:", err.message);
                 }
 
@@ -156,7 +157,7 @@ const setupLiveVoiceWebSocket = (server) => {
 
         connectToGemini(0, false);
     });
-    
+
     console.log('[AudioLive] Live Audio WebSocket endpoint registered at /api/live-audio');
 };
 
