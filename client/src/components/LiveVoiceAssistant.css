@@ -1,0 +1,123 @@
+.live-voice-floater {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #d32f2f, #f06292);
+  box-shadow: 0 4px 15px rgba(211, 47, 47, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  font-size: 24px;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.live-voice-floater:hover {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.live-voice-floater.pulse {
+  animation: floatPulse 2s infinite;
+}
+
+@keyframes floatPulse {
+  0% { box-shadow: 0 0 0 0 rgba(240, 98, 146, 0.7); }
+  70% { box-shadow: 0 0 0 15px rgba(240, 98, 146, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(240, 98, 146, 0); }
+}
+
+.live-voice-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.close-btn {
+  position: absolute;
+  top: 30px;
+  right: 30px;
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-size: 20px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.1);
+}
+
+/* 
+  The AI Orb
+*/
+.ai-orb-container {
+  position: relative;
+  width: 250px;
+  height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+
+.ai-orb {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #ff8a80, #c2185b);
+  box-shadow: 
+    0 0 40px rgba(194, 24, 91, 0.5),
+    inset 0 0 20px rgba(255, 255, 255, 0.5);
+  transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+}
+
+.ai-orb.speaking {
+  animation: orbThrob 1.5s infinite alternate;
+}
+
+@keyframes orbThrob {
+  0% { transform: scale(1); filter: hue-rotate(0deg); box-shadow: 0 0 40px rgba(194, 24, 91, 0.5); }
+  100% { transform: scale(1.1); filter: hue-rotate(20deg); box-shadow: 0 0 80px rgba(255, 128, 171, 0.8); }
+}
+
+.status-text {
+  color: #fff;
+  font-size: 24px;
+  font-weight: 300;
+  letter-spacing: 1px;
+  animation: breathe 2s infinite alternate;
+}
+
+@keyframes breathe {
+  from { opacity: 0.6; }
+  to { opacity: 1; }
+}
+
+.gemini-logo {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  position: absolute;
+  bottom: 20px;
+}

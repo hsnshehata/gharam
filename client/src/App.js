@@ -25,6 +25,7 @@ import AfrakoushToolViewer from './pages/AfrakoushToolViewer';
 import AfrakoushToolsRegistry from './pages/AfrakoushToolsRegistry';
 import Navbar from './components/Navbar';
 import AdminAIChat from './components/AdminAIChat';
+import LiveVoiceAssistant from './components/LiveVoiceAssistant';
 import { ToastProvider } from './components/ToastProvider';
 import './App.css';
 import { API_BASE } from './utils/apiBase';
@@ -204,6 +205,7 @@ function AppContent() {
               <Route path="*" element={<NotFound />} />
             </Routes>
             {!isPublicPage && <AdminAIChat user={user} />}
+            {isPublicPage && <LiveVoiceAssistant />}
           </>
         )}
       </div>
