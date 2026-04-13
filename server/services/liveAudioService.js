@@ -103,16 +103,31 @@ const setupLiveVoiceWebSocket = (server) => {
         const urlParams = new URLSearchParams(request.url.split('?')[1]);
         const sessionId = urlParams.get('sessionId') || 'unknown';
 
-        // Check Quota
-        const todayStr = new Date().toISOString().split('T')[0];
-        let conv = await Conversation.findOne({ sessionId }).lean();
-        let usedSeconds = 0;
+        // ── Get client IP (behind Render.com proxy) ──
+        const clientIp = (request.headers['x-forwarded-for'] || '').split(',')[0].trim()
+            || request.socket.remoteAddress
+            || 'unknown';
+        // Create an IP-based quota key (harder to bypass than sessionId)
+        const ipQuotaKey = `voice_ip_${clientIp.replace(/[.:]/g, '_')}`;
 
-        if (conv) {
-            if (conv.metadata?.voiceLimitDate === todayStr) {
-                usedSeconds = conv.metadata?.voiceSecondsUsed || 0;
-            }
+        // Check Quota — DUAL CHECK: both sessionId AND IP
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        // 1. Check session-based quota
+        let sessionUsed = 0;
+        const conv = await Conversation.findOne({ sessionId }).lean();
+        if (conv && conv.metadata?.voiceLimitDate === todayStr) {
+            sessionUsed = conv.metadata?.voiceSecondsUsed || 0;
         }
+
+        // 2. Check IP-based quota (prevents clearing localStorage bypass)
+        let ipUsed = 0;
+        const ipConv = await Conversation.findOne({ sessionId: ipQuotaKey }).lean();
+        if (ipConv && ipConv.metadata?.voiceLimitDate === todayStr) {
+            ipUsed = ipConv.metadata?.voiceSecondsUsed || 0;
+        }
+
+        const usedSeconds = Math.max(sessionUsed, ipUsed);
 
         if (usedSeconds >= 300) {
             clientWs.send(JSON.stringify({ type: 'quota_exceeded', msg: 'استهلكت الخمس دقائق الصوتية اليوم، كمل معايا نصي يا قمر!' }));
@@ -120,10 +135,26 @@ const setupLiveVoiceWebSocket = (server) => {
             return;
         }
 
+        const remainingSeconds = 300 - usedSeconds;
+        console.log(`[AudioLive] Session ${sessionId} | IP: ${clientIp} | Used: ${usedSeconds}s | Remaining: ${remainingSeconds}s`);
+
         const callStartTime = Date.now();
         let currentGeminiWs = null;
         let isClosedByClient = false;
         let currentClientMsgHandler = null;
+
+        // ── Server-side auto-disconnect timer ──
+        // Cuts the call when remaining quota runs out
+        const autoDisconnectTimer = setTimeout(() => {
+            console.log(`[AudioLive] ⏰ Time's up for session ${sessionId} (${remainingSeconds}s limit reached)`);
+            if (clientWs.readyState === WebSocket.OPEN) {
+                clientWs.send(JSON.stringify({
+                    type: 'quota_exceeded',
+                    msg: 'خلصت الخمس دقائق بتاعتك النهارده يا قمر! كمّلي معايا نصي 💬'
+                }));
+                clientWs.close();
+            }
+        }, remainingSeconds * 1000);
 
         // ── Transcript Accumulator ──
         let currentUserTranscript = '';
@@ -146,6 +177,7 @@ const setupLiveVoiceWebSocket = (server) => {
 
         clientWs.on('close', async () => {
             isClosedByClient = true;
+            clearTimeout(autoDisconnectTimer); // Stop the auto-disconnect timer
             if (currentGeminiWs && currentGeminiWs.readyState === WebSocket.OPEN) {
                 currentGeminiWs.close();
             }
@@ -156,6 +188,7 @@ const setupLiveVoiceWebSocket = (server) => {
             const durationSeconds = Math.round((Date.now() - callStartTime) / 1000);
 
             try {
+                // Save quota to SESSION record
                 await Conversation.findOneAndUpdate(
                     { sessionId },
                     {
@@ -164,6 +197,22 @@ const setupLiveVoiceWebSocket = (server) => {
                     },
                     { upsert: true }
                 );
+
+                // Save quota to IP record (prevents localStorage bypass)
+                await Conversation.findOneAndUpdate(
+                    { sessionId: ipQuotaKey },
+                    {
+                        $set: {
+                            source: 'web',
+                            "metadata.voiceLimitDate": todayStr,
+                            lastActivity: new Date()
+                        },
+                        $inc: { "metadata.voiceSecondsUsed": durationSeconds }
+                    },
+                    { upsert: true }
+                );
+
+                console.log(`[AudioLive] Saved ${durationSeconds}s for session ${sessionId} + IP ${clientIp}`);
 
                 if (transcriptMessages.length > 0) {
                     console.log(`[AudioLive] Saving ${transcriptMessages.length} transcript messages for session ${sessionId}`);
