@@ -159,6 +159,26 @@ const setupLiveVoiceWebSocket = (server) => {
                     }
                     currentClientMsgHandler = (clientData) => {
                         if (geminiWs.readyState === WebSocket.OPEN && setupComplete) {
+                            // Transform message format for new models
+                            // Gemini 3.1+ uses realtimeInput.audio instead of deprecated realtimeInput.mediaChunks
+                            if (!isFallbackModel) {
+                                try {
+                                    const msg = JSON.parse(clientData.toString());
+                                    if (msg.realtimeInput?.mediaChunks) {
+                                        const chunk = msg.realtimeInput.mediaChunks[0];
+                                        const transformed = {
+                                            realtimeInput: {
+                                                audio: {
+                                                    data: chunk.data,
+                                                    mimeType: chunk.mimeType
+                                                }
+                                            }
+                                        };
+                                        geminiWs.send(JSON.stringify(transformed));
+                                        return;
+                                    }
+                                } catch { /* if parse fails, send raw */ }
+                            }
                             geminiWs.send(clientData);
                         }
                     };
