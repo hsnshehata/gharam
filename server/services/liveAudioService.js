@@ -8,11 +8,11 @@ const API_KEYS = [
 
 const HOST = 'generativelanguage.googleapis.com';
 
-const SYSTEM_INSTRUCTION = `
-أنتِ مساعدة ذكية وصوتية اسمك "غزل"، تعملين في "سنتر غرام" للتجميل. 
-ردودك يجب أن تكون قصيرة جداً (سطر أو سطرين) ومباشرة وبصيغة المؤنث، لأنك في مكالمة صوتية حية مع العملاء.
-دائماً استخدمي لغة مرحة، دافئة وشعبية محترمة مثل "يا حبيبتي"، "يا قمر"، "أكيد طبعاً".
-تجنبي الإطالة أو الشرح المعقد. السنتر يقدم خدمات ميك اب، زفاف، عروض، وجلسات تصوير.
+const AUDIO_CONSTRAINTS = `
+(تعليمات هامة جداً للمكالمة الصوتية):
+- أنتِ الآن في مكالمة صوتية مباشِرة مع العميل. إجاباتك يجب أن تكون قصيرة جداً ومختصرة مثل المحادثة الطبيعية.
+- تجنبي الإطالة تماماً، ولا تعطِ تفاصيل كثيرة إلا إذا طلبها العميل.
+- يجب أن ألا تتجاوز إجابتك الجملتين بأي حال.
 `;
 
 const setupLiveVoiceWebSocket = (server) => {
@@ -77,7 +77,7 @@ const setupLiveVoiceWebSocket = (server) => {
             } catch(err) { console.error("[AudioLive] Error saving quota:", err); }
         });
 
-        const connectToGemini = (keyIndex, isFallbackModel) => {
+        const connectToGemini = async (keyIndex, isFallbackModel) => {
             if (keyIndex >= API_KEYS.length) {
                 if (!isFallbackModel) {
                     console.log("[AudioLive] Primary model failed all keys, trying fallback model...");
@@ -101,12 +101,25 @@ const setupLiveVoiceWebSocket = (server) => {
             currentGeminiWs = geminiWs;
             let setupSent = false;
 
-            geminiWs.on('open', () => {
+            geminiWs.on('open', async () => {
                 console.log(`[AudioLive] Connected to ${modelName}`);
+
+                // Fetch dynamic prompt from DB
+                let finalInstruction = "أنتِ مساعدة افتراضية واسمك غزل.";
+                try {
+                    const SystemSetting = require('../models/SystemSetting');
+                    const setting = await SystemSetting.findOne({ key: 'ai_system_prompt' }).lean();
+                    if (setting && setting.value) {
+                        finalInstruction = setting.value + "\n\n" + AUDIO_CONSTRAINTS;
+                    }
+                } catch(err) {
+                    console.error("[AudioLive] Error fetching system prompt:", err.message);
+                }
+
                 geminiWs.send(JSON.stringify({
                     setup: {
                         model: modelName,
-                        systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+                        systemInstruction: { parts: [{ text: finalInstruction }] },
                         generationConfig: { responseModalities: ["AUDIO"] }
                     }
                 }));
