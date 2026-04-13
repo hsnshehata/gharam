@@ -15,7 +15,9 @@ const conversationSchema = new mongoose.Schema({
   lastActivity: { type: Date, default: Date.now },
   metadata: {
     userAgent: { type: String, default: '' },
-    ip: { type: String, default: '' }
+    ip: { type: String, default: '' },
+    voiceLimitDate: { type: String, default: '' },
+    voiceSecondsUsed: { type: Number, default: 0 }
   }
 }, { timestamps: true });
 
