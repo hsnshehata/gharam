@@ -145,8 +145,12 @@ setInterval(() => {
   }
 }, 60000).unref();
 
+const { setupLiveVoiceWebSocket } = require('./server/services/liveAudioService');
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   const mem = process.memoryUsage();
   console.log(`Server running on port ${PORT} | Heap: ${Math.round(mem.heapUsed / 1024 / 1024)}MB`);
 });
+
+setupLiveVoiceWebSocket(server);
