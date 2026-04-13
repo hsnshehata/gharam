@@ -146,11 +146,13 @@ setInterval(() => {
 }, 60000).unref();
 
 const { setupLiveVoiceWebSocket } = require('./server/services/liveAudioService');
+const { initCronService } = require('./server/services/cronService');
 
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, async () => {
   const mem = process.memoryUsage();
   console.log(`Server running on port ${PORT} | Heap: ${Math.round(mem.heapUsed / 1024 / 1024)}MB`);
+  await initCronService();
 });
 
 setupLiveVoiceWebSocket(server);
