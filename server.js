@@ -24,7 +24,8 @@ app.set('trust proxy', 1);
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 const rateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
@@ -69,6 +70,7 @@ app.use('/api/ai', require('./server/routes/ai'));
 app.use('/api/admin-ai', require('./server/routes/adminAi'));
 app.use('/api/telegram', require('./server/routes/telegramRoutes'));
 app.use('/api/afrakoush', require('./server/routes/afrakoushRoutes'));
+app.use('/api/sync', require('./server/routes/sync'));
 console.log('Routes registered successfully');
 
 // Facebook Cron Job: تحديث البوستات كل 30 دقيقة
