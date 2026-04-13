@@ -31,7 +31,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Security middlewares that depend on body/query should be AFTER parsers
 app.use(helmet({ contentSecurityPolicy: false }));
-app.use(mongoSanitize());
+// Removed mongoSanitize() here because it is incompatible with Express 5
 const rateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 300,
