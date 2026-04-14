@@ -13,6 +13,11 @@ const ActivityLog = require('../models/ActivityLog');
 const SystemSetting = require('../models/SystemSetting');
 const AdminConversation = require('../models/AdminConversation');
 const DynamicTool = require('../models/DynamicTool');
+const AfrakoushPage = require('../models/AfrakoushPage');
+const Conversation = require('../models/Conversation');
+const cronService = require('./cronService');
+const ScheduledTask = require('../models/ScheduledTask');
+const FacebookPost = require('../models/FacebookPost');
 
 const DEFAULT_ADMIN_PROMPT = `أنت "المساعد الذكي" للمديرين والمشرفين في "غرام سلطان بيوتي سنتر".
 هويتك: أنت المساعد الذكي للإدارة، يمكن للمستخدم مناداتك بأي اسم يحبه. لا تقل أبداً أنك "عفركوش" — عفركوش هو مجرد أداة تقنية (build_afrakoush_page) تستخدمها أنت لبناء الصفحات والواجهات، وعندما تستخدمها أخبر المستخدم أنك استعنت بأداة "عفركوش الذراع التقني" لتنفيذ طلبه.
@@ -1233,7 +1238,7 @@ const createFunctions = (user) => ({
                     deductions: dedTotal,
                     monthlySalary: u.monthlySalary || 0
                 };
-                if (user.role === 'supervisor') {
+                if (u.role === 'supervisor') {
                     delete employeeInfo.deductions;
                     delete employeeInfo.monthlySalary;
                 }
@@ -1454,7 +1459,6 @@ const createFunctions = (user) => ({
                 return { error: "صلاحية بناء الأدوات مخصصة للمدير (Admin) فقط." };
             }
             const role = allowedRole || 'supervisor';
-            const AfrakoushPage = require('../models/AfrakoushPage');
             const page = await AfrakoushPage.findOneAndUpdate(
                 { name },
                 {
@@ -1479,7 +1483,6 @@ const createFunctions = (user) => ({
     },
     get_afrakoush_page: async ({ name }) => {
         try {
-            const AfrakoushPage = require('../models/AfrakoushPage');
             const page = await AfrakoushPage.findOne({ name }).lean();
             if (!page) {
                 return { success: false, message: "هذه المساحة أو الأداة ليس لها كود محفوظ بعد (مساحة فارغة)." };
@@ -1499,7 +1502,6 @@ const createFunctions = (user) => ({
     },
     analyze_public_conversations: async ({ limit = 10, platform }) => {
         try {
-            const Conversation = require('../models/Conversation');
             const query = {};
             if (platform) query.source = platform;
 
@@ -1525,9 +1527,6 @@ const createFunctions = (user) => ({
     },
     manage_scheduled_tasks: async ({ action, title, prompt, scheduleType, cronExpression, runAt, taskId }) => {
         try {
-            const cronService = require('./cronService');
-            const ScheduledTask = require('../models/ScheduledTask');
-
             if (action === 'list') {
                 const tasks = await ScheduledTask.find().lean();
                 return {
@@ -1608,7 +1607,6 @@ const createFunctions = (user) => ({
     },
     get_facebook_insights: async ({ limit = 5 }) => {
         try {
-            const FacebookPost = require('../models/FacebookPost');
             const posts = await FacebookPost.find({ isActive: true })
                 .sort({ createdTime: -1 })
                 .limit(limit)
