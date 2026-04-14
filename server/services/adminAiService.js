@@ -346,6 +346,13 @@ POST /api/admin-ai/chat
 - 🌐 شاشات الواجهة الأمامية الأساسية (React Pages): \`client/src/pages/\`
 - 🧩 المكونات المشتركة للواجهة (React Components): \`client/src/components/\`
 
+=== ⚡ أدوات التحليل الديناميكية (Dynamic Tools) ===
+بصفتك الذكاء الإداري، تمتلك قوة استثنائية لابتكار أدوات برمجية (Server-Side) تعمل بشكل حي على قاعدة البيانات للحصول على احصائيات و فلاتر لم نبرمجها لك.
+كيف تستخدمها؟
+1. إذا طلب المستخدم احصائية معقدة لا توفرها الـ APIs الافتراضية (مثلا: "من دفع كاش أكثر من 2000؟")، استعمل أداة \`manage_dynamic_tools\` (action="create") لكتابة كود جافاسكريبت يستقبل \`models\` ويجري البحث ثم يخزن الأداة.
+2. بعد إنشاء الأداة، قم بتشغيلها فورا بـ \`manage_dynamic_tools\` (action="run", name="tool_name") واستعرض النتائج للإدارة.
+3. يمكنك دائما استعراض الأدوات الموجودة مسبقا بطلب (action="list") لترى إذا تم برمجة ما تبحث عنه من قبل.
+
 === أسرار الـ Sandbox (متغيرات متاحة عالمياً لك في الكود) ===
 1️⃣ \`container\`: متغير يشير حصرياً لصفحتك. 
    ⚠️ بدلاً من \`document.getElementById\` الذي قد يُحدث تداخلاً مع الموقع الأساسي، استخدم دائماً: \`container.querySelector('#id')\`
@@ -661,6 +668,21 @@ const adminTools = [
                         cronExpression: { type: "STRING", description: "تعبير الكرون للمهام المتكررة (مثلاً '0 23 * * *') (مطلوب إذا كان النوع cron)." },
                         runAt: { type: "STRING", description: "تاريخ وقت محدد YYYY-MM-DDTHH:mm:ss لحدث المرة الواحدة (مطلوب إذا كان النوع once)." },
                         taskId: { type: "STRING", description: "معرف المهمة للحذف (مطلوب عند action='delete')." }
+                    },
+                    required: ["action"]
+                }
+            },
+            {
+                name: "manage_dynamic_tools",
+                description: "أداة لإنشاء أو تنفيذ كود JavaScript (Server-side) مخصص لحساب إحصائيات معقدة من قاعدة البيانات لا تدعمها الأدوات الافتراضية. يمكنك حفظ الأدوات وإعادة تشغيلها.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        action: { type: "STRING", description: "نوع الإجراء: 'list', 'create', 'run', 'delete'." },
+                        name: { type: "STRING", description: "اسم الأداة البرمجي بالإنجليزي (مثل get_vip_clients). (مطلوب في الخيارات ما عدا list)." },
+                        description: { type: "STRING", description: "وصف مهمة الأداة. (مطلوب عند create)." },
+                        script: { type: "STRING", description: "كود الجافاسكربت الذي سيعمل، يجب أن يكون محتوى Async Function يستقيل argument اسمه models ويُرجع كائن {} JSON. مثلا: const { Booking } = models; const res = await Booking.countDocuments(); return { count: res }; (مطلوب عند create)." },
+                        args: { type: "STRING", description: "مدخلات JSON للسكريبت عند اختيار run (اختياري)." }
                     },
                     required: ["action"]
                 }
@@ -1600,6 +1622,69 @@ const createFunctions = (user) => ({
             };
         } catch (err) {
             console.error('[AdminAI] get_facebook_insights error:', err.message);
+            return { error: err.message };
+        }
+    },
+    manage_dynamic_tools: async ({ action, name, description, script, args }) => {
+        try {
+            if (user.role !== 'admin') return { error: "صلاحية إدارة الأدوات الديناميكية للمدير العام فقط." };
+            const DynamicTool = require('../models/DynamicTool');
+            
+            if (action === 'list') {
+                const tools = await DynamicTool.find().select('-script').lean();
+                return { total: tools.length, tools };
+            }
+
+            if (action === 'create') {
+                if (!name || !description || !script) return { error: "name, description, and script are required." };
+                const existing = await DynamicTool.findOne({ name });
+                if (existing) return { error: "أداة بهذا الاسم موجودة مسبقاً." };
+                
+                const newTool = await DynamicTool.create({ name, description, script, createdBy: user._id });
+                return { success: true, message: "تم حفظ الأداة بنجاح.", toolId: newTool._id };
+            }
+
+            if (action === 'delete') {
+                if (!name) return { error: "name is required for deletion." };
+                await DynamicTool.findOneAndDelete({ name });
+                return { success: true, message: "تم حذف الأداة بنجاح." };
+            }
+
+            if (action === 'run') {
+                if (!name) return { error: "name is required to run a tool." };
+                const tool = await DynamicTool.findOne({ name });
+                if (!tool) return { error: "الأداة غير موجودة." };
+
+                const models = {
+                    User: require('../models/User'),
+                    Booking: require('../models/Booking'),
+                    InstantService: require('../models/InstantService'),
+                    Expense: require('../models/Expense'),
+                    Advance: require('../models/Advance'),
+                    Deduction: require('../models/Deduction'),
+                    Package: require('../models/Package'),
+                    Service: require('../models/Service')
+                };
+
+                let parsedArgs = {};
+                if (args) {
+                    try { parsedArgs = JSON.parse(args); } catch(e) { return { error: "فشل في تمرير args (JSON Error)." }; }
+                }
+
+                const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+                const dynamicFn = new AsyncFunction('models', 'args', tool.script);
+                
+                tool.runCount += 1;
+                tool.lastRun = new Date();
+                await tool.save();
+
+                const result = await dynamicFn(models, parsedArgs);
+                return { success: true, output: result };
+            }
+
+            return { error: "إجراء غير معروف." };
+        } catch (err) {
+            console.error('[AdminAI] manage_dynamic_tools error:', err.message);
             return { error: err.message };
         }
     },
