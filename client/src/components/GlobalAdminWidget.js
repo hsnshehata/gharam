@@ -1,9 +1,11 @@
 import React, { useEffect, useRef } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../utils/apiBase';
+import { useToast } from './ToastProvider';
 
 export default function GlobalAdminWidget() {
     const containerRef = useRef(null);
+    const { showToast } = useToast();
 
     useEffect(() => {
         const fetchWidget = async () => {
@@ -18,7 +20,7 @@ export default function GlobalAdminWidget() {
                         containerRef.current.innerHTML = res.data.html;
                         if (res.data.script) {
                             try {
-                                const executeTool = new Function('apiClient', 'container', `
+                                const executeTool = new Function('apiClient', 'container', 'showToast', `
                                     try {
                                         ${res.data.script}
                                     } catch(e) {
@@ -29,7 +31,7 @@ export default function GlobalAdminWidget() {
                                     baseURL: API_BASE,
                                     headers: { 'x-auth-token': token }
                                 });
-                                executeTool(apiClient, containerRef.current);
+                                executeTool(apiClient, containerRef.current, showToast);
                             } catch (e) {
                                 console.error("Failed to parse widget script:", e);
                             }
