@@ -3,6 +3,7 @@ import axios from 'axios';
 import { googleReviews } from '../data/googleReviews';
 import { API_BASE } from '../utils/apiBase';
 import AIChatPopup from '../components/AIChatPopup';
+import { useToast } from '../components/ToastProvider';
 
 const WHATSAPP_LINK = 'https://wa.me/gharam';
 const MAP_LINK = 'https://maps.app.goo.gl/cpF8J7rw6ScxZwiv5';
@@ -241,6 +242,7 @@ function Landing() {
 	const [reviewsLoading, setReviewsLoading] = useState(false);
 	const [reviewsError, setReviewsError] = useState('');
 	const afrakoushSpaceRef = useRef(null);
+	const { showToast } = useToast();
 
 	// palette is now a constant defined at module level
 	const availabilityBadge = availability ? availabilityCopy[availability.status] : null;
@@ -618,14 +620,14 @@ function Landing() {
 					// 2. Execute script
 					if (res.data.script && res.data.script.trim() !== '') {
 						try {
-							const executeTool = new Function('apiClient', 'container', `
+							const executeTool = new Function('apiClient', 'container', 'showToast', `
 								try {
 									${res.data.script}
 								} catch(e) {
 									console.error("Afrakoush dynamic script error:", e);
 								}
 							`);
-							executeTool(axios.create(), afrakoushSpaceRef.current);
+							executeTool(axios.create(), afrakoushSpaceRef.current, showToast);
 						} catch (e) {
 							console.error("Failed to parse Afrakoush script:", e);
 						}
