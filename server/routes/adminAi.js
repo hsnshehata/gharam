@@ -89,6 +89,8 @@ router.get('/model-config', authenticate, isAdmin, async (req, res) => {
     try {
         const setting = await SystemSetting.findOne({ key: 'ai_model_chain' });
         const disabledSetting = await SystemSetting.findOne({ key: 'ai_disabled_models' });
+        const adminFastSetting = await SystemSetting.findOne({ key: 'admin_fast_chain' });
+        const adminProSetting = await SystemSetting.findOne({ key: 'admin_pro_chain' });
 
         // All known models across the system
         const allModels = [
@@ -99,12 +101,19 @@ router.get('/model-config', authenticate, isAdmin, async (req, res) => {
             { id: 'gemini-3.1-pro-preview', provider: 'google', label: 'Gemini 3.1 Pro Preview', tier: 'pro' },
             { id: 'gemini-2.5-pro', provider: 'google', label: 'Gemini 2.5 Pro', tier: 'pro' },
             { id: 'gpt-4o-mini', provider: 'openai', label: 'GPT-4o Mini', tier: 'fast' },
+            { id: 'o4-mini', provider: 'openai', label: 'O4 Mini (Reasoning)', tier: 'pro' },
+            { id: 'o3-mini', provider: 'openai', label: 'O3 Mini (Reasoning)', tier: 'pro' },
         ];
 
-        // Default chain if nothing saved
-        const defaultChain = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-3.1-flash-lite-preview', 'gpt-4o-mini'];
-        const currentChain = setting ? JSON.parse(setting.value) : defaultChain;
+        // Default chains
+        const defaultPublicChain = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-3.1-flash-lite-preview', 'gpt-4o-mini'];
+        const defaultAdminFastChain = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-3.1-flash-lite-preview', 'gpt-4o-mini'];
+        const defaultAdminProChain = ['gemini-3.1-pro-preview', 'gemini-2.5-pro', 'o4-mini', 'o3-mini'];
+
+        const currentChain = setting ? JSON.parse(setting.value) : defaultPublicChain;
         const disabledModels = disabledSetting ? JSON.parse(disabledSetting.value) : [];
+        const adminFastChain = adminFastSetting ? JSON.parse(adminFastSetting.value) : defaultAdminFastChain;
+        const adminProChain = adminProSetting ? JSON.parse(adminProSetting.value) : defaultAdminProChain;
 
         res.json({
             success: true,
@@ -112,6 +121,8 @@ router.get('/model-config', authenticate, isAdmin, async (req, res) => {
                 allModels,
                 currentChain,
                 disabledModels,
+                adminFastChain,
+                adminProChain,
                 hasOpenAI: !!process.env.OPENAI_API_KEY,
                 hasGeminiBackup: !!process.env.GEMINI_API_KEY_2
             }
@@ -124,7 +135,7 @@ router.get('/model-config', authenticate, isAdmin, async (req, res) => {
 // POST /api/admin-ai/model-config — save model chain order + disabled models
 router.post('/model-config', authenticate, isAdmin, async (req, res) => {
     try {
-        const { chain, disabledModels } = req.body;
+        const { chain, disabledModels, adminFastChain, adminProChain } = req.body;
 
         if (chain && Array.isArray(chain)) {
             await SystemSetting.findOneAndUpdate(
@@ -138,6 +149,22 @@ router.post('/model-config', authenticate, isAdmin, async (req, res) => {
             await SystemSetting.findOneAndUpdate(
                 { key: 'ai_disabled_models' },
                 { value: JSON.stringify(disabledModels), updatedAt: Date.now() },
+                { upsert: true, new: true }
+            );
+        }
+
+        if (adminFastChain && Array.isArray(adminFastChain)) {
+            await SystemSetting.findOneAndUpdate(
+                { key: 'admin_fast_chain' },
+                { value: JSON.stringify(adminFastChain), updatedAt: Date.now() },
+                { upsert: true, new: true }
+            );
+        }
+
+        if (adminProChain && Array.isArray(adminProChain)) {
+            await SystemSetting.findOneAndUpdate(
+                { key: 'admin_pro_chain' },
+                { value: JSON.stringify(adminProChain), updatedAt: Date.now() },
                 { upsert: true, new: true }
             );
         }
