@@ -1896,6 +1896,10 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
     }
 
     if (!replyText) {
+        if (!fastMode) {
+            console.warn('[AdminAI] ⚠️ All Pro models failed. Falling back to emergency Fast mode...');
+            return await exports.processAdminChat(messages, user, onToolCall, fileBuffer, fileMimeType, true);
+        }
         console.error('[AdminAI] All models failed with all API keys.', lastError?.message || lastError);
         throw new Error(lastError?.message || 'جميع نماذج الذكاء الاصطناعي غير متاحة حالياً.');
     }
