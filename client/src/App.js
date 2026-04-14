@@ -23,6 +23,7 @@ import PointsAdmin from './pages/PointsAdmin';
 import NotFound from './pages/NotFound';
 import AfrakoushToolViewer from './pages/AfrakoushToolViewer';
 import AfrakoushToolsRegistry from './pages/AfrakoushToolsRegistry';
+import ModelComparison from './pages/ModelComparison';
 import GlobalAdminWidget from './components/GlobalAdminWidget';
 import Navbar from './components/Navbar';
 import AdminAIChat from './components/AdminAIChat';
@@ -143,6 +144,10 @@ function AppContent() {
               <Route
                 path="/ai-settings"
                 element={user && user.role === 'admin' ? <AISettings /> : <Navigate to="/login" />}
+              />
+              <Route
+                path="/model-comparison"
+                element={user && user.role === 'admin' ? <ModelComparison /> : <Navigate to="/login" />}
               />
               <Route
                 path="/users"
