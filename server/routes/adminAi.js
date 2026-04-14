@@ -59,4 +59,24 @@ router.post('/prompt', authenticate, isAdmin, async (req, res) => {
     }
 });
 
+const DynamicTool = require('../models/DynamicTool');
+
+router.get('/dynamic-tools', authenticate, isAdmin, async (req, res) => {
+    try {
+        const tools = await DynamicTool.find().populate('createdBy', 'username').sort({ createdAt: -1 });
+        res.json({ success: true, data: tools });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+router.delete('/dynamic-tools/:id', authenticate, isAdmin, async (req, res) => {
+    try {
+        await DynamicTool.findByIdAndDelete(req.params.id);
+        res.json({ success: true, message: 'Tool deleted' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 module.exports = router;
