@@ -18,6 +18,16 @@ function AdminAIChat({ user }) {
   const [loading, setLoading] = useState(false);
   const [toolStatus, setToolStatus] = useState(null);
   const [fastMode, setFastMode] = useState(true);
+  const [specificModel, setSpecificModel] = useState(null); // null = auto
+  const [showModelPicker, setShowModelPicker] = useState(false);
+
+  const PRO_MODELS = [
+    { id: null, label: '🔄 أوتو', desc: 'اختيار تلقائي' },
+    { id: 'o4-mini', label: 'O4 Mini', desc: 'تفكير عالي' },
+    { id: 'o3-mini', label: 'O3 Mini', desc: 'تفكير عالي' },
+    { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro', desc: 'أحدث نموذج' },
+    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', desc: 'نموذج مستقر' },
+  ];
 
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef(null);
@@ -269,6 +279,7 @@ function AdminAIChat({ user }) {
         formData.append('audio', voiceBlob, 'voice.webm');
         formData.append('messages', JSON.stringify(cleanMessages));
         formData.append('fastMode', fastMode);
+        if (!fastMode && specificModel) formData.append('specificModel', specificModel);
         if (currentId) formData.append('conversationId', currentId);
         const res = await axios.post(`${API_BASE}/api/admin-ai/chat`, formData, {
           headers: {
@@ -287,6 +298,7 @@ function AdminAIChat({ user }) {
         }
       } else {
         const payload = { messages: cleanMessages, text: txt, fastMode };
+        if (!fastMode && specificModel) payload.specificModel = specificModel;
         if (currentId) payload.conversationId = currentId;
 
         const response = await fetch(`${API_BASE}/api/admin-ai/chat`, {
@@ -673,21 +685,78 @@ function AdminAIChat({ user }) {
 
           <div style={styles.chatFooter}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
-              <button
-                onClick={() => setFastMode(prev => !prev)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 4,
-                  padding: '5px 10px', borderRadius: 20,
-                  border: 'none', cursor: 'pointer',
-                  fontSize: 11, fontWeight: 700,
-                  background: fastMode ? 'linear-gradient(135deg, #fff3cd, #ffeeba)' : 'linear-gradient(135deg, #d1ecf1, #bee5eb)',
-                  color: fastMode ? '#856404' : '#0c5460',
-                  transition: 'all 0.3s ease',
-                  whiteSpace: 'nowrap', flexShrink: 0,
-                }}
-              >
-                {fastMode ? '⚡ سريع' : '🧠 متقدم'}
-              </button>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <button
+                  onClick={() => {
+                    if (fastMode) {
+                      setFastMode(false);
+                    } else {
+                      setShowModelPicker(prev => !prev);
+                    }
+                  }}
+                  onDoubleClick={() => {
+                    setFastMode(true);
+                    setSpecificModel(null);
+                    setShowModelPicker(false);
+                  }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    padding: '5px 10px', borderRadius: 20,
+                    border: 'none', cursor: 'pointer',
+                    fontSize: 11, fontWeight: 700,
+                    background: fastMode ? 'linear-gradient(135deg, #fff3cd, #ffeeba)' : 'linear-gradient(135deg, #d1ecf1, #bee5eb)',
+                    color: fastMode ? '#856404' : '#0c5460',
+                    transition: 'all 0.3s ease',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title={fastMode ? 'اضغط للتبديل للوضع المتقدم' : 'اضغط لاختيار نموذج — دبل كليك للعودة للسريع'}
+                >
+                  {fastMode ? '⚡ سريع' : (specificModel ? `🧠 ${PRO_MODELS.find(m => m.id === specificModel)?.label || specificModel}` : '🧠 أوتو')}
+                </button>
+
+                {/* Model Picker Dropdown */}
+                {showModelPicker && !fastMode && (
+                  <div style={{
+                    position: 'absolute', bottom: '110%', left: 0,
+                    background: '#fff', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                    border: '1px solid #e0e0e0', overflow: 'hidden', zIndex: 100,
+                    minWidth: 180, direction: 'rtl'
+                  }}>
+                    <div style={{ padding: '8px 12px', background: '#0f2736', color: '#fff', fontSize: 11, fontWeight: 700 }}>
+                      اختر النموذج المتقدم
+                    </div>
+                    {PRO_MODELS.map(m => (
+                      <div
+                        key={m.id || 'auto'}
+                        onClick={() => { setSpecificModel(m.id); setShowModelPicker(false); }}
+                        style={{
+                          padding: '8px 14px', cursor: 'pointer', fontSize: 12,
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          background: specificModel === m.id ? '#e8f5e9' : 'transparent',
+                          borderBottom: '1px solid #f0f0f0',
+                          transition: 'background 0.15s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f5f5f5'}
+                        onMouseLeave={e => e.currentTarget.style.background = specificModel === m.id ? '#e8f5e9' : 'transparent'}
+                      >
+                        <span style={{ fontWeight: 600 }}>{m.label}</span>
+                        <span style={{ color: '#999', fontSize: 10 }}>{m.desc}</span>
+                      </div>
+                    ))}
+                    <div
+                      onClick={() => { setFastMode(true); setSpecificModel(null); setShowModelPicker(false); }}
+                      style={{
+                        padding: '8px 14px', cursor: 'pointer', fontSize: 12,
+                        fontWeight: 600, color: '#856404',
+                        background: 'linear-gradient(135deg, #fff3cd, #ffeeba)',
+                        textAlign: 'center'
+                      }}
+                    >
+                      ⚡ العودة للوضع السريع
+                    </div>
+                  </div>
+                )}
+              </div>
               <button
                 onClick={isRecording ? stopRecording : startRecording}
                 className={`voice-btn ${isRecording ? 'recording' : ''}`}
