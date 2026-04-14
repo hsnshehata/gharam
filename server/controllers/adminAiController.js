@@ -102,9 +102,8 @@ exports.chat = async (req, res) => {
         conv.lastActivity = Date.now();
         await conv.save();
 
-        if (!messages || !Array.isArray(messages)) {
-            messages = conv.messages;
-        }
+        // Always use the database conversation history as the single source of truth
+        messages = conv.messages;
 
         // Check if client supports SSE streaming
         const acceptsStream = req.headers.accept && req.headers.accept.includes('text/event-stream');
