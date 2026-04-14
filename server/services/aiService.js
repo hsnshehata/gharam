@@ -365,5 +365,7 @@ Keep your answers relatively concise, as users read this on a messenger app.`);
 
 module.exports = {
     processAiChat,
-    DEFAULT_PROMPT
+    DEFAULT_PROMPT,
+    publicTools: tools,
+    publicChatFunctions: chatFunctions
 };
