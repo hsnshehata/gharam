@@ -1916,6 +1916,38 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
 
 const generateChatTitle = async (firstMessage) => {
     try {
+        // Try OpenAI first (fast and cheap for title generation)
+        if (process.env.OPENAI_API_KEY) {
+            try {
+                const OpenAI = require('openai');
+                const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+                const completion = await openai.chat.completions.create({
+                    model: 'gpt-4o-mini',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'أنت مساعد يقوم بتوليد عناوين للمحادثات. اكتب عنوان قصير جداً (3 كلمات كحد أقصى) يعبر عن محتوى الرسالة. لا تضع نقطة في النهاية ولا تضف أي عبارات أخرى.'
+                        },
+                        {
+                            role: 'user',
+                            content: `الرسالة: "${firstMessage}"`
+                        }
+                    ],
+                    max_tokens: 30
+                });
+
+                const title = completion.choices[0]?.message?.content?.trim().replace(/['"]+/g, '');
+                if (title) {
+                    console.log(`[AdminAI] ✅ Title generated via OpenAI: "${title}"`);
+                    return title;
+                }
+            } catch (openaiErr) {
+                console.log(`[AdminAI] ❌ OpenAI title gen failed: ${openaiErr.message?.slice(0, 80)}`);
+            }
+        }
+
+        // Fallback to Gemini if OpenAI unavailable
         if (!process.env.GEMINI_API_KEY) return "محادثة جديدة";
 
         const apiKeys = [process.env.GEMINI_API_KEY];
