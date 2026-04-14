@@ -1,4 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const OpenAI = require('openai');
 const SystemSetting = require('../models/SystemSetting');
 const Package = require('../models/Package');
 const Service = require('../models/Service');
@@ -9,14 +10,30 @@ const MAX_BOOKINGS_PER_DAY = 12;
 const DEFAULT_PROMPT = `أنت مساعد ذكي ولطيف لصالون تجميل (غرام سلطان بيوتي سنتر).
 عليك الإجابة عن استفسارات العملاء بأدب وبطريقة احترافية بناءً على المعلومات المتاحة لك وبدون تأليف.`;
 
-const MODEL_CANDIDATES = [
-    'gemini-3.1-flash-lite-preview',
-    'gemini-2.5-flash',
-    'gemini-2.5-flash-lite',
+// Ordered model fallback chain:
+// 1. gemini-3.1-flash-lite-preview (primary key → backup key)
+// 2. gemini-3-flash-preview (primary key → backup key)
+// 3. OpenAI gpt-4o-mini (final fallback)
+const GEMINI_MODEL_CHAIN = [
     'gemini-3-flash-preview',
-    'gemini-3.1-pro-preview',
-    'gemini-2.5-pro'
+    'gemini-2.5-flash',
+    'gemini-3.1-flash-lite-preview'
 ];
+
+const OPENAI_FALLBACK_MODEL = 'gpt-4o-mini';
+
+// Timeout wrapper: rejects if the promise doesn't resolve within `ms` milliseconds
+const withTimeout = (promise, ms) => {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(`Timeout: exceeded ${ms}ms`)), ms);
+        promise.then(
+            (val) => { clearTimeout(timer); resolve(val); },
+            (err) => { clearTimeout(timer); reject(err); }
+        );
+    });
+};
+
+const GEMINI_TIMEOUT_MS = 10000; // 10 seconds per Gemini attempt
 
 const tools = [
     {
@@ -88,7 +105,7 @@ const chatFunctions = {
 };
 
 /**
- * Process a chat request via Gemini
+ * Process a chat request via Gemini (with OpenAI fallback)
  * @param {Array} messages - Array of { role: 'user'|'model', text: '...' }
  * @param {Buffer} fileBuffer - Optional file buffer
  * @param {String} fileMimeType - Optional file mime type
@@ -155,10 +172,11 @@ Keep your answers relatively concise, as users read this on a messenger app.`);
         throw new Error('Gemini API key not configured on server');
     }
 
-    // Build API keys list: primary + optional backup (from different project for separate quota)
+    // Build Google API keys list: primary + optional backup
     const apiKeys = [process.env.GEMINI_API_KEY];
     if (process.env.GEMINI_API_KEY_2) apiKeys.push(process.env.GEMINI_API_KEY_2);
 
+    // === Build Gemini-compatible history ===
     let cleanHistory = [];
     let prefixText = "";
 
@@ -204,18 +222,19 @@ Keep your answers relatively concise, as users read this on a messenger app.`);
     let reply = null;
     let lastError = null;
 
-    // Try each API key, then each model within that key
-    for (let keyIdx = 0; keyIdx < apiKeys.length; keyIdx++) {
-        const currentKey = apiKeys[keyIdx];
-        const keyLabel = keyIdx === 0 ? 'Primary' : 'Backup';
-        const genAI = new GoogleGenerativeAI(currentKey);
+    // ======================================================
+    // PHASE 1: Try Gemini models (with 10s timeout per attempt)
+    // Order: model1 → key1, key2 → model2 → key1, key2
+    // ======================================================
+    for (const modelName of GEMINI_MODEL_CHAIN) {
+        for (let keyIdx = 0; keyIdx < apiKeys.length; keyIdx++) {
+            const currentKey = apiKeys[keyIdx];
+            const keyLabel = keyIdx === 0 ? 'Primary' : 'Backup';
+            const genAI = new GoogleGenerativeAI(currentKey);
 
-        if (keyIdx > 0) {
-            console.log(`[AI] 🔄 Switching to ${keyLabel} API key...`);
-        }
-
-        for (const modelName of MODEL_CANDIDATES) {
             try {
+                console.log(`[AI] 🔄 Trying Gemini model: ${modelName} (${keyLabel} key)...`);
+
                 const model = genAI.getGenerativeModel({
                     model: modelName,
                     tools: tools,
@@ -223,7 +242,7 @@ Keep your answers relatively concise, as users read this on a messenger app.`);
                 });
 
                 const chat = model.startChat({ history: cleanHistory });
-                let result = await chat.sendMessage(userMessageParts);
+                let result = await withTimeout(chat.sendMessage(userMessageParts), GEMINI_TIMEOUT_MS);
                 let response = result.response;
 
                 let callCount = 0;
@@ -246,23 +265,73 @@ Keep your answers relatively concise, as users read this on a messenger app.`);
                     }
 
                     if (functionResponses.length > 0) {
-                        result = await chat.sendMessage(functionResponses);
+                        result = await withTimeout(chat.sendMessage(functionResponses), GEMINI_TIMEOUT_MS);
                         response = result.response;
                     }
                     callCount++;
                 }
 
                 reply = response.text();
-                console.log(`[AI] ✅ Success with model: ${modelName} (${keyLabel} key)`);
-                break;
+                if (reply) {
+                    console.log(`[AI] ✅ Success with Gemini model: ${modelName} (${keyLabel} key)`);
+                    break;
+                }
             } catch (modelErr) {
                 lastError = modelErr;
-                console.log(`[AI] ❌ Model ${modelName} failed (${keyLabel} key): ${modelErr.message?.slice(0, 100)}`);
-                if (modelErr.status === 400 || modelErr.status === 403) break; // Break for auth or bad request
+                console.log(`[AI] ❌ Gemini ${modelName} failed (${keyLabel} key): ${modelErr.message?.slice(0, 120)}`);
+                if (modelErr.status === 400 || modelErr.status === 403) break;
             }
         }
 
-        if (reply !== null) break; // Got a response, stop trying keys
+        if (reply !== null) break;
+    }
+
+    // ======================================================
+    // PHASE 2: OpenAI Fallback (gpt-4o-mini) if all Gemini failed
+    // ======================================================
+    if (reply === null && process.env.OPENAI_API_KEY) {
+        console.log(`[AI] 🔄 All Gemini models failed. Falling back to OpenAI ${OPENAI_FALLBACK_MODEL}...`);
+
+        try {
+            const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+            // Convert chat history to OpenAI format
+            const openaiMessages = [
+                { role: 'system', content: finalSystemPrompt }
+            ];
+
+            // Add history messages
+            for (const h of cleanHistory) {
+                openaiMessages.push({
+                    role: h.role === 'model' ? 'assistant' : 'user',
+                    content: h.parts[0].text
+                });
+            }
+
+            // Add the current user message
+            openaiMessages.push({
+                role: 'user',
+                content: lastMessageText
+            });
+
+            const completion = await withTimeout(
+                openai.chat.completions.create({
+                    model: OPENAI_FALLBACK_MODEL,
+                    messages: openaiMessages,
+                    max_tokens: 1200
+                }),
+                15000 // 15 seconds timeout for OpenAI
+            );
+
+            reply = completion.choices[0]?.message?.content;
+
+            if (reply) {
+                console.log(`[AI] ✅ Success with OpenAI ${OPENAI_FALLBACK_MODEL}`);
+            }
+        } catch (openaiErr) {
+            lastError = openaiErr;
+            console.log(`[AI] ❌ OpenAI ${OPENAI_FALLBACK_MODEL} failed: ${openaiErr.message?.slice(0, 120)}`);
+        }
     }
 
     if (reply === null) {
