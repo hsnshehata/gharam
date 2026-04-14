@@ -1982,5 +1982,7 @@ const generateChatTitle = async (firstMessage) => {
 module.exports = {
     processAdminChat,
     generateChatTitle,
-    DEFAULT_ADMIN_PROMPT
+    DEFAULT_ADMIN_PROMPT,
+    adminTools,
+    createAdminFunctions: createFunctions
 };
