@@ -1,4 +1,6 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const fs = require('fs');
+const path = require('path');
 const User = require('../models/User');
 const Booking = require('../models/Booking');
 const InstantService = require('../models/InstantService');
@@ -331,6 +333,19 @@ POST /api/admin-ai/chat
 - للأرقام: (number||0).toLocaleString('ar-EG') + ' ج.م'
 - آخر 30 يوم: const t=new Date(); const toStr=t.toISOString().slice(0,10); const f=new Date(t); f.setDate(t.getDate()-30); const fromStr=f.toISOString().slice(0,10);
 
+=== 🔍 أدوات قراءة الكود المصدري (The Codebase Viewer) ===
+أنت قادر على القراءة المباشرة من السورس كود الخاص بالنظام باستخدام أداتي \`list_codebase_directory\` و \`view_codebase_file\`.
+إذا سألك المستخدم: "إزاي بنحسب العمولات؟" أو "إيه الحقول الموجودة في موديل الفلان؟" أو طلب منك تصميم واجهة تعتمد على فهم الكود الخلفي:
+1. استخدم هذه الأدوات فورا لاستكشاف المجلدات (يبدأ بـ '.') وقراءة الملفات الحية.
+2. لا تخمن أبدا بنية الكود، بل اذهب واقرأه مباشرة لتعطي الإدارة تفاصيل هندسية دقيقة 100%.
+
+📍 **خريطة المشروع (Codebase Map) للوصول السريع:**
+- 🗄️ نماذج قواعد البيانات (Models): \`server/models/\`
+- ⚙️ المنطق البرمجي والروابط (Controllers & Routes): \`server/controllers/\` و \`server/routes/\`
+- 🧠 خدمات الذكاء الاصطناعي والأدوات الثقيلة (Services): \`server/services/\`
+- 🌐 شاشات الواجهة الأمامية الأساسية (React Pages): \`client/src/pages/\`
+- 🧩 المكونات المشتركة للواجهة (React Components): \`client/src/components/\`
+
 === أسرار الـ Sandbox (متغيرات متاحة عالمياً لك في الكود) ===
 1️⃣ \`container\`: متغير يشير حصرياً لصفحتك. 
    ⚠️ بدلاً من \`document.getElementById\` الذي قد يُحدث تداخلاً مع الموقع الأساسي، استخدم دائماً: \`container.querySelector('#id')\`
@@ -648,6 +663,28 @@ const adminTools = [
                         taskId: { type: "STRING", description: "معرف المهمة للحذف (مطلوب عند action='delete')." }
                     },
                     required: ["action"]
+                }
+            },
+            {
+                name: "list_codebase_directory",
+                description: "يعرض الملفات والمجلدات الموجودة في مسار معين داخل بيئة السيرفر (Root هو المجلد الرئيسي للمشروع). استخدم هذا لاستكشاف هيكل المشروع.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        dirPath: { type: "STRING", description: "المسار النسبي للمجلد (مثال: 'server/controllers' أو '.' للمسار الرئيسي)." }
+                    },
+                    required: []
+                }
+            },
+            {
+                name: "view_codebase_file",
+                description: "يقرأ محتوى ملف برمجي موجود على الخادم ليتمكن المساعد من فهم الكود والمنطق. تحكم في عدد السطور لتجنب استهلاك الحروف.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        filePath: { type: "STRING", description: "المسار النسبي للملف (مثال: 'server/models/User.js')." }
+                    },
+                    required: ["filePath"]
                 }
             }
         ]
@@ -1564,6 +1601,38 @@ const createFunctions = (user) => ({
         } catch (err) {
             console.error('[AdminAI] get_facebook_insights error:', err.message);
             return { error: err.message };
+        }
+    },
+    list_codebase_directory: async ({ dirPath = '.' }) => {
+        try {
+            const root = path.resolve(process.cwd());
+            const target = path.resolve(root, dirPath);
+            if (!target.startsWith(root)) return { error: "مسار خارج بيئة المشروع المسموح بها." };
+            
+            if (!fs.existsSync(target)) return { error: "المسار غير موجود." };
+            
+            const entries = fs.readdirSync(target, { withFileTypes: true });
+            const files = entries.filter(e => e.isFile()).map(e => e.name);
+            const dirs = entries.filter(e => e.isDirectory() && e.name !== 'node_modules' && e.name !== '.git').map(e => e.name + '/');
+            return { currentDirectory: dirPath, directories: dirs, files: files };
+        } catch (err) {
+            return { error: "فشل في استعراض المجلد: " + err.message };
+        }
+    },
+    view_codebase_file: async ({ filePath }) => {
+        try {
+            const root = path.resolve(process.cwd());
+            const target = path.resolve(root, filePath);
+            if (!target.startsWith(root)) return { error: "مسار خارج بيئة المشروع المسموح بها." };
+            
+            if (!fs.existsSync(target)) return { error: "الملف غير موجود." };
+            const stat = fs.statSync(target);
+            if (stat.size > 100 * 1024) return { error: "الملف ضخم جداً (> 100KB)." };
+
+            const content = fs.readFileSync(target, 'utf-8');
+            return { filePath, content };
+        } catch (err) {
+            return { error: "فشل في قراءة الملف: " + err.message };
         }
     }
 });
