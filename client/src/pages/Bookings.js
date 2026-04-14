@@ -224,10 +224,10 @@ function Bookings({ user }) {
     // compute selected package services from already-loaded `services` state
     const selectedIds = [formData.packageId, formData.hennaPackageId, formData.photographyPackageId].filter(id => id);
     if (selectedIds.length > 0 && services && services.length) {
-      const filteredServices = services.filter(srv => selectedIds.includes(srv.packageId?._id.toString()));
+      const filteredServices = services.filter(srv => srv.packageId?._id && selectedIds.includes(srv.packageId._id.toString()));
       setSelectedPackageServices(filteredServices.map(srv => ({
         value: srv._id,
-        label: `${srv.name} (${srv.packageId?.name})`,
+        label: `${srv.name} (${srv.packageId.name})`,
         price: srv.price
       })));
     } else {
