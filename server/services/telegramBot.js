@@ -15,6 +15,13 @@ const initTelegramBot = () => {
     bot = new TelegramBot(token, { polling: true });
     console.log('[Telegram Bot] يعمل بنجاح 🚀');
 
+    bot.on('polling_error', (error) => {
+        // Silently ignore or just log briefly. Usually EFATAL AggregateError happens on cold starts when DNS is still resolving
+        if (!error.message.includes('EFATAL')) {
+            console.error('[Telegram Bot] Polling Error:', error.message);
+        }
+    });
+
     bot.on('message', async (msg) => {
         const chatId = msg.chat.id;
         const text = msg.text || '';
