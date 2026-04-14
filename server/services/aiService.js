@@ -222,11 +222,33 @@ Keep your answers relatively concise, as users read this on a messenger app.`);
     let reply = null;
     let lastError = null;
 
+    // Load dynamic model chain from DB, fallback to default
+    let activeModelChain = [...GEMINI_MODEL_CHAIN];
+    let openaiInChain = false;
+    try {
+        const chainSetting = await SystemSetting.findOne({ key: 'ai_model_chain' });
+        const disabledSetting = await SystemSetting.findOne({ key: 'ai_disabled_models' });
+        if (chainSetting) {
+            const savedChain = JSON.parse(chainSetting.value);
+            const disabledModels = disabledSetting ? JSON.parse(disabledSetting.value) : [];
+            // Filter out disabled models
+            const filteredChain = savedChain.filter(m => !disabledModels.includes(m));
+            // Split into Gemini and OpenAI
+            activeModelChain = filteredChain.filter(m => !m.startsWith('gpt-'));
+            openaiInChain = filteredChain.some(m => m.startsWith('gpt-'));
+        } else {
+            openaiInChain = true; // default behavior
+        }
+    } catch (dbErr) {
+        console.error('[AI] Error loading model chain from DB:', dbErr.message);
+        openaiInChain = true;
+    }
+
     // ======================================================
     // PHASE 1: Try Gemini models (with 10s timeout per attempt)
     // Order: model1 → key1, key2 → model2 → key1, key2
     // ======================================================
-    for (const modelName of GEMINI_MODEL_CHAIN) {
+    for (const modelName of activeModelChain) {
         for (let keyIdx = 0; keyIdx < apiKeys.length; keyIdx++) {
             const currentKey = apiKeys[keyIdx];
             const keyLabel = keyIdx === 0 ? 'Primary' : 'Backup';
@@ -289,7 +311,7 @@ Keep your answers relatively concise, as users read this on a messenger app.`);
     // ======================================================
     // PHASE 2: OpenAI Fallback (gpt-4o-mini) if all Gemini failed
     // ======================================================
-    if (reply === null && process.env.OPENAI_API_KEY) {
+    if (reply === null && openaiInChain && process.env.OPENAI_API_KEY) {
         console.log(`[AI] 🔄 All Gemini models failed. Falling back to OpenAI ${OPENAI_FALLBACK_MODEL}...`);
 
         try {
