@@ -29,11 +29,11 @@ router.get('/:name', async (req, res) => {
     try {
         const page = await AfrakoushPage.findOne({ name: req.params.name });
         if (!page) {
-            return res.status(404).json({ message: 'الأداة غير موجودة' });
+            return res.json({ isEmpty: true, message: 'الأداة غير موجودة' });
         }
         
         if (page.status === 'paused') {
-            return res.status(403).json({ message: 'هذه الأداة متوقفة مؤقتاً' });
+            return res.json({ isEmpty: true, message: 'هذه الأداة متوقفة مؤقتاً' });
         }
 
         // If public, allow access unconditionally
