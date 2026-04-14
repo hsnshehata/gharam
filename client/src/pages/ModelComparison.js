@@ -254,6 +254,7 @@ function ModelComparison() {
                     <CompareTab
                         config={config}
                         selectedModels={selectedModels}
+                        setSelectedModels={setSelectedModels}
                         toggleModel={toggleModel}
                         selectAll={selectAll}
                         promptType={promptType}
@@ -298,7 +299,7 @@ function ModelComparison() {
 //  Compare Tab
 // ============================================================
 function CompareTab({
-    config, selectedModels, toggleModel, selectAll, promptType, setPromptType,
+    config, selectedModels, setSelectedModels, toggleModel, selectAll, promptType, setPromptType,
     userMessage, setUserMessage, results, comparing, runComparison, handleKeyDown,
     history, inputRef, resultsRef, getModelMeta
 }) {
