@@ -1,4 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const OpenAI = require('openai');
 const fs = require('fs');
 const path = require('path');
 const User = require('../models/User');
@@ -437,7 +438,9 @@ loadCSS('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.c
 
 const MODEL_CANDIDATES = [
     'gemini-3.1-pro-preview',
-    'gemini-2.5-pro'
+    'gemini-2.5-pro',
+    'o4-mini',
+    'o3-mini'
 ];
 
 // Fast/cheap models for simple tasks (e.g. generating chat titles)
@@ -445,8 +448,29 @@ const LIGHT_MODEL_CANDIDATES = [
     'gemini-3-flash-preview',
     'gemini-2.5-flash',
     'gemini-3.1-flash-lite-preview',
-    'gemini-2.5-flash-lite'
+    'gpt-4o-mini'
 ];
+
+// Helper: Convert Gemini tool schema to OpenAI format
+function geminiToolsToOpenAI(geminiTools) {
+    const openaiTools = [];
+    for (const toolGroup of geminiTools) {
+        for (const decl of toolGroup.functionDeclarations || []) {
+            const params = { type: 'object', properties: {}, required: decl.parameters?.required || [] };
+            for (const [key, val] of Object.entries(decl.parameters?.properties || {})) {
+                params.properties[key] = {
+                    type: val.type?.toLowerCase() === 'number' ? 'number' : 'string',
+                    description: val.description || ''
+                };
+            }
+            openaiTools.push({
+                type: 'function',
+                function: { name: decl.name, description: decl.description, parameters: params }
+            });
+        }
+    }
+    return openaiTools;
+}
 
 const isToday = (dateStr) => {
     const d = new Date(dateStr);
@@ -1731,7 +1755,7 @@ const createFunctions = (user) => ({
     }
 });
 
-const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType = null, additionalPrompt = null, onToolCall = null, fastMode = false) => {
+const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType = null, additionalPrompt = null, onToolCall = null, fastMode = false, specificModel = null) => {
     const setting = await SystemSetting.findOne({ key: 'admin_ai_system_prompt' });
     let systemPrompt = setting?.value || DEFAULT_ADMIN_PROMPT;
 
@@ -1785,12 +1809,17 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
         }
     }
 
+    // Build OpenAI-format history for OpenAI models
+    const openaiHistory = [{ role: 'system', content: systemPrompt }];
+    for (const m of historyMessages) {
+        if (!m.text) continue;
+        openaiHistory.push({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text });
+    }
+
     const lastMsgObj = messages[messages.length - 1];
     let userMessageContentText = lastMsgObj?.text || "مرحباً";
 
     // Ensure history ends with 'model' (so last message we send is 'user')
-    // If it ends with 'user', we must pop it to satisfy Gemini SDK alternating roles rule,
-    // but we prepend its text to the current message so no context is lost!
     if (cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === 'user') {
         const popped = cleanHistory.pop();
         userMessageContentText = popped.parts[0].text + "\n---\n" + userMessageContentText;
@@ -1807,107 +1836,215 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
         });
     }
 
+    // Add user message to OpenAI history
+    openaiHistory.push({ role: 'user', content: userMessageContentText });
+
     const localFunctions = createFunctions(user);
 
-    // Select model list based on mode
-    const activeModels = fastMode ? LIGHT_MODEL_CANDIDATES : MODEL_CANDIDATES;
-    console.log(`[AdminAI] Mode: ${fastMode ? '⚡ Fast' : '🧠 Pro'} | Models: ${activeModels.join(', ')}`);
+    // Determine model list: specificModel or dynamic chain from DB
+    let activeModels;
+    if (specificModel) {
+        activeModels = [specificModel];
+        console.log(`[AdminAI] 🎯 Specific model requested: ${specificModel}`);
+    } else {
+        // Try loading chain from DB
+        try {
+            const chainKey = fastMode ? 'admin_fast_chain' : 'admin_pro_chain';
+            const chainSetting = await SystemSetting.findOne({ key: chainKey });
+            if (chainSetting) {
+                activeModels = JSON.parse(chainSetting.value);
+            }
+        } catch (e) { /* ignore */ }
+
+        if (!activeModels || !activeModels.length) {
+            activeModels = fastMode ? LIGHT_MODEL_CANDIDATES : MODEL_CANDIDATES;
+        }
+        console.log(`[AdminAI] Mode: ${fastMode ? '⚡ Fast' : '🧠 Pro'} | Models: ${activeModels.join(', ')}`);
+    }
 
     let replyText = null;
     let lastError = null;
 
-    // Try each model, then each API key within that model
-    for (const modelName of activeModels) {
-        for (let keyIdx = 0; keyIdx < apiKeys.length; keyIdx++) {
-            const currentKey = apiKeys[keyIdx];
-            const keyLabel = keyIdx === 0 ? 'Primary' : 'Backup';
-            const genAI = new GoogleGenerativeAI(currentKey);
+    // Helper: Check if model is OpenAI
+    const isOpenAIModel = (name) => name.startsWith('gpt-') || name.startsWith('o4-') || name.startsWith('o3-') || name.startsWith('o1-');
 
-            if (keyIdx > 0) {
-                console.log(`[AdminAI] 🔄 Switching to ${keyLabel} API key for model ${modelName}...`);
+    // Try each model in the chain
+    for (const modelName of activeModels) {
+        if (isOpenAIModel(modelName)) {
+            // ===== OpenAI model with function calling =====
+            if (!process.env.OPENAI_API_KEY) {
+                console.log(`[AdminAI] ⏭ Skipping ${modelName} — no OpenAI API key`);
+                continue;
             }
 
             try {
-                console.log(`[AdminAI] Trying model: ${modelName} (${keyLabel} key)...`);
-                let modelFeatures = {
-                    model: modelName,
-                    systemInstruction: systemPrompt,
-                    tools: adminTools
-                };
-
-                const model = genAI.getGenerativeModel(modelFeatures);
-                const chat = model.startChat({ history: cleanHistory });
-
-                // Notify: thinking started
+                console.log(`[AdminAI] Trying OpenAI model: ${modelName}...`);
                 if (onToolCall) {
                     try { onToolCall({ type: 'thinking', tool: '_thinking', model: modelName }); } catch (e) { }
                 }
 
-                let result = await chat.sendMessage(userMessageContent);
-                let response = result.response;
+                const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+                const openaiToolDefs = geminiToolsToOpenAI(adminTools);
+                const chatMessages = [...openaiHistory];
+
                 let callCount = 0;
+                while (callCount < 5) {
+                    const completionParams = {
+                        model: modelName,
+                        messages: chatMessages,
+                        tools: openaiToolDefs
+                    };
 
-                while (response.functionCalls()?.length && callCount < 5) {
-                    const functionCalls = response.functionCalls();
-                    const functionResponses = [];
+                    // o-series reasoning models: enable high reasoning
+                    if (modelName.startsWith('o4-') || modelName.startsWith('o3-') || modelName.startsWith('o1-')) {
+                        completionParams.reasoning_effort = 'high';
+                    } else {
+                        completionParams.max_tokens = 4096;
+                    }
 
-                    for (const call of functionCalls) {
-                        const funcName = call.name;
-                        const args = call.args;
+                    const completion = await openai.chat.completions.create(completionParams);
+                    const choice = completion.choices[0];
 
-                        // Notify: tool is being called
-                        if (onToolCall) {
-                            try { onToolCall({ type: 'tool_start', tool: funcName, args: Object.keys(args || {}) }); } catch (e) { }
-                        }
+                    if (choice.finish_reason === 'tool_calls' && choice.message.tool_calls?.length > 0) {
+                        chatMessages.push(choice.message);
 
-                        if (localFunctions[funcName]) {
-                            const apiResponse = await localFunctions[funcName](args);
-                            functionResponses.push({
-                                functionResponse: {
-                                    name: funcName,
-                                    response: apiResponse
+                        for (const toolCall of choice.message.tool_calls) {
+                            const funcName = toolCall.function.name;
+                            let args = {};
+                            try { args = JSON.parse(toolCall.function.arguments || '{}'); } catch (e) { }
+
+                            if (onToolCall) {
+                                try { onToolCall({ type: 'tool_start', tool: funcName, args: Object.keys(args || {}) }); } catch (e) { }
+                            }
+
+                            let toolResult = { error: `أداة ${funcName} غير معروفة` };
+                            if (localFunctions[funcName]) {
+                                try {
+                                    toolResult = await localFunctions[funcName](args);
+                                } catch (e) {
+                                    toolResult = { error: e.message };
                                 }
-                            });
+                            }
 
-                            // Notify: tool completed
                             if (onToolCall) {
                                 try { onToolCall({ type: 'tool_done', tool: funcName }); } catch (e) { }
                             }
-                        }
-                    }
 
-                    if (functionResponses.length > 0) {
-                        // Notify: sending data back to AI
+                            chatMessages.push({
+                                role: 'tool',
+                                tool_call_id: toolCall.id,
+                                content: JSON.stringify(toolResult)
+                            });
+                        }
+
                         if (onToolCall) {
                             try { onToolCall({ type: 'analyzing', tool: '_analyzing' }); } catch (e) { }
                         }
-                        result = await chat.sendMessage(functionResponses);
-                        response = result.response;
+                        callCount++;
+                        continue;
                     }
-                    callCount++;
+
+                    replyText = choice.message?.content || '';
+                    break;
                 }
 
-                replyText = response.text();
                 if (replyText) {
-                    console.log(`[AdminAI] ✅ Success with model: ${modelName} (${keyLabel} key)`);
+                    console.log(`[AdminAI] ✅ Success with OpenAI model: ${modelName}`);
+                    break;
                 }
-                break; // Success!
-
             } catch (err) {
-                console.warn(`[AdminAI] ❌ Model ${modelName} failed (${keyLabel} key). Status: ${err.status || 'N/A'}. Reason: ${err.message?.slice(0, 200)}`);
+                console.warn(`[AdminAI] ❌ OpenAI ${modelName} failed: ${err.message?.slice(0, 200)}`);
                 lastError = err;
+            }
+        } else {
+            // ===== Gemini model =====
+            for (let keyIdx = 0; keyIdx < apiKeys.length; keyIdx++) {
+                const currentKey = apiKeys[keyIdx];
+                const keyLabel = keyIdx === 0 ? 'Primary' : 'Backup';
+                const genAI = new GoogleGenerativeAI(currentKey);
+
+                if (keyIdx > 0) {
+                    console.log(`[AdminAI] 🔄 Switching to ${keyLabel} API key for model ${modelName}...`);
+                }
+
+                try {
+                    console.log(`[AdminAI] Trying model: ${modelName} (${keyLabel} key)...`);
+                    let modelFeatures = {
+                        model: modelName,
+                        systemInstruction: systemPrompt,
+                        tools: adminTools
+                    };
+
+                    const model = genAI.getGenerativeModel(modelFeatures);
+                    const chat = model.startChat({ history: cleanHistory });
+
+                    if (onToolCall) {
+                        try { onToolCall({ type: 'thinking', tool: '_thinking', model: modelName }); } catch (e) { }
+                    }
+
+                    let result = await chat.sendMessage(userMessageContent);
+                    let response = result.response;
+                    let callCount = 0;
+
+                    while (response.functionCalls()?.length && callCount < 5) {
+                        const functionCalls = response.functionCalls();
+                        const functionResponses = [];
+
+                        for (const call of functionCalls) {
+                            const funcName = call.name;
+                            const args = call.args;
+
+                            if (onToolCall) {
+                                try { onToolCall({ type: 'tool_start', tool: funcName, args: Object.keys(args || {}) }); } catch (e) { }
+                            }
+
+                            if (localFunctions[funcName]) {
+                                const apiResponse = await localFunctions[funcName](args);
+                                functionResponses.push({
+                                    functionResponse: {
+                                        name: funcName,
+                                        response: apiResponse
+                                    }
+                                });
+
+                                if (onToolCall) {
+                                    try { onToolCall({ type: 'tool_done', tool: funcName }); } catch (e) { }
+                                }
+                            }
+                        }
+
+                        if (functionResponses.length > 0) {
+                            if (onToolCall) {
+                                try { onToolCall({ type: 'analyzing', tool: '_analyzing' }); } catch (e) { }
+                            }
+                            result = await chat.sendMessage(functionResponses);
+                            response = result.response;
+                        }
+                        callCount++;
+                    }
+
+                    replyText = response.text();
+                    if (replyText) {
+                        console.log(`[AdminAI] ✅ Success with model: ${modelName} (${keyLabel} key)`);
+                    }
+                    break;
+
+                } catch (err) {
+                    console.warn(`[AdminAI] ❌ Model ${modelName} failed (${keyLabel} key). Status: ${err.status || 'N/A'}. Reason: ${err.message?.slice(0, 200)}`);
+                    lastError = err;
+                }
             }
         }
 
-        if (replyText) break; // Got a response, stop trying models
+        if (replyText) break;
     }
 
     if (!replyText) {
-        if (!fastMode) {
+        if (!fastMode && !specificModel) {
             console.warn('[AdminAI] ⚠️ All Pro models failed. Falling back to emergency Fast mode...');
-            return await processAdminChat(messages, user, onToolCall, fileBuffer, fileMimeType, true);
+            return await processAdminChat(messages, user, fileBuffer, fileMimeType, additionalPrompt, onToolCall, true);
         }
-        console.error('[AdminAI] All models failed with all API keys.', lastError?.message || lastError);
+        console.error('[AdminAI] All models failed.', lastError?.message || lastError);
         throw new Error(lastError?.message || 'جميع نماذج الذكاء الاصطناعي غير متاحة حالياً.');
     }
 
