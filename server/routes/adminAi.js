@@ -79,11 +79,10 @@ router.delete('/dynamic-tools/:id', authenticate, isAdmin, async (req, res) => {
     }
 });
 
-// ============ MODEL COMPARISON & CONFIGURATION ============
-
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const OpenAI = require('openai');
-const { DEFAULT_PROMPT } = require('../services/aiService');
+const { DEFAULT_PROMPT, publicTools, publicChatFunctions } = require('../services/aiService');
+const { adminTools, createAdminFunctions } = require('../services/adminAiService');
 
 // GET /api/admin-ai/model-config — get current model chain + all available models
 router.get('/model-config', authenticate, isAdmin, async (req, res) => {
@@ -149,11 +148,32 @@ router.post('/model-config', authenticate, isAdmin, async (req, res) => {
     }
 });
 
-// POST /api/admin-ai/test-model — test a single specific model with a message
+// ============ HELPER: Convert Gemini tool schema to OpenAI format ============
+function geminiToolsToOpenAI(geminiTools) {
+    const openaiTools = [];
+    for (const toolGroup of geminiTools) {
+        for (const decl of toolGroup.functionDeclarations || []) {
+            const params = { type: 'object', properties: {}, required: decl.parameters?.required || [] };
+            for (const [key, val] of Object.entries(decl.parameters?.properties || {})) {
+                params.properties[key] = {
+                    type: val.type?.toLowerCase() === 'number' ? 'number' : 'string',
+                    description: val.description || ''
+                };
+            }
+            openaiTools.push({
+                type: 'function',
+                function: { name: decl.name, description: decl.description, parameters: params }
+            });
+        }
+    }
+    return openaiTools;
+}
+
+// POST /api/admin-ai/test-model — test a single model WITH real tools (function calling)
 router.post('/test-model', authenticate, isAdmin, async (req, res) => {
     try {
         const { modelId, message, promptType } = req.body;
-        // promptType: 'public' = ghazal bot prompt, 'admin' = admin AI prompt
+        // promptType: 'public' = ghazal bot tools, 'admin' = admin AI tools
 
         if (!modelId || !message) {
             return res.status(400).json({ success: false, message: 'النموذج والرسالة مطلوبين' });
@@ -175,6 +195,18 @@ router.post('/test-model', authenticate, isAdmin, async (req, res) => {
         const dayNames = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
         systemPrompt += `\n\nمعلومات الوقت: اليوم ${dayNames[cairoDate.getDay()]} ${cairoDate.toISOString().split('T')[0]}`;
 
+        // Select tools and function handlers based on prompt type
+        let geminiTools, functionHandlers;
+        const toolsCalled = []; // Track which tools were called
+
+        if (promptType === 'admin') {
+            geminiTools = adminTools;
+            functionHandlers = createAdminFunctions(req.user);
+        } else {
+            geminiTools = publicTools;
+            functionHandlers = publicChatFunctions;
+        }
+
         const startTime = Date.now();
         let reply = '';
         let error = null;
@@ -185,25 +217,70 @@ router.post('/test-model', authenticate, isAdmin, async (req, res) => {
 
         if (isOpenAI) {
             if (!process.env.OPENAI_API_KEY) {
-                return res.json({ success: true, data: { reply: '', error: 'مفتاح OpenAI غير متوفر', latency: 0, model: modelId } });
+                return res.json({ success: true, data: { reply: '', error: 'مفتاح OpenAI غير متوفر', latency: 0, model: modelId, toolsCalled: [] } });
             }
             try {
                 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-                const completion = await openai.chat.completions.create({
-                    model: modelId,
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: message }
-                    ],
-                    max_tokens: 1200
-                });
-                reply = completion.choices[0]?.message?.content || '';
-                tokens = completion.usage || null;
+                const openaiToolDefs = geminiToolsToOpenAI(geminiTools);
+                const messages = [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: message }
+                ];
+
+                let callCount = 0;
+                while (callCount < 5) {
+                    const completionParams = {
+                        model: modelId,
+                        messages,
+                        max_tokens: 1200
+                    };
+                    if (openaiToolDefs.length > 0) {
+                        completionParams.tools = openaiToolDefs;
+                    }
+
+                    const completion = await openai.chat.completions.create(completionParams);
+                    const choice = completion.choices[0];
+                    tokens = completion.usage || null;
+
+                    // Check if model wants to call tools
+                    if (choice.finish_reason === 'tool_calls' && choice.message.tool_calls?.length > 0) {
+                        messages.push(choice.message); // Add assistant message with tool_calls
+
+                        for (const toolCall of choice.message.tool_calls) {
+                            const funcName = toolCall.function.name;
+                            let args = {};
+                            try { args = JSON.parse(toolCall.function.arguments || '{}'); } catch (e) { }
+
+                            toolsCalled.push({ name: funcName, args: Object.keys(args) });
+
+                            let toolResult = { error: `أداة ${funcName} غير معروفة` };
+                            if (functionHandlers[funcName]) {
+                                try {
+                                    toolResult = await functionHandlers[funcName](args);
+                                } catch (e) {
+                                    toolResult = { error: e.message };
+                                }
+                            }
+
+                            messages.push({
+                                role: 'tool',
+                                tool_call_id: toolCall.id,
+                                content: JSON.stringify(toolResult)
+                            });
+                        }
+                        callCount++;
+                        continue; // Re-call with tool results
+                    }
+
+                    // No more tool calls — get the final response
+                    reply = choice.message?.content || '';
+                    break;
+                }
             } catch (e) {
                 error = e.message?.slice(0, 200);
             }
         } else {
-            // Gemini model
+            // ===== Gemini model with function calling =====
             const apiKeys = [process.env.GEMINI_API_KEY];
             if (process.env.GEMINI_API_KEY_2) apiKeys.push(process.env.GEMINI_API_KEY_2);
 
@@ -212,11 +289,45 @@ router.post('/test-model', authenticate, isAdmin, async (req, res) => {
                     const genAI = new GoogleGenerativeAI(key);
                     const model = genAI.getGenerativeModel({
                         model: modelId,
-                        systemInstruction: systemPrompt
+                        systemInstruction: systemPrompt,
+                        tools: geminiTools
                     });
-                    const result = await model.generateContent(message);
-                    reply = result.response.text();
-                    const usage = result.response.usageMetadata;
+
+                    const chat = model.startChat({ history: [] });
+                    let result = await chat.sendMessage(message);
+                    let response = result.response;
+
+                    // Function calling loop (max 5 rounds)
+                    let callCount = 0;
+                    while (response.functionCalls()?.length && callCount < 5) {
+                        const functionCalls = response.functionCalls();
+                        const functionResponses = [];
+
+                        for (const call of functionCalls) {
+                            const funcName = call.name;
+                            const args = call.args;
+                            toolsCalled.push({ name: funcName, args: Object.keys(args || {}) });
+
+                            if (functionHandlers[funcName]) {
+                                const data = await functionHandlers[funcName](args);
+                                functionResponses.push({
+                                    functionResponse: {
+                                        name: funcName,
+                                        response: { content: data }
+                                    }
+                                });
+                            }
+                        }
+
+                        if (functionResponses.length > 0) {
+                            result = await chat.sendMessage(functionResponses);
+                            response = result.response;
+                        }
+                        callCount++;
+                    }
+
+                    reply = response.text();
+                    const usage = response.usageMetadata;
                     if (usage) {
                         tokens = {
                             prompt_tokens: usage.promptTokenCount,
@@ -224,6 +335,7 @@ router.post('/test-model', authenticate, isAdmin, async (req, res) => {
                             total_tokens: usage.totalTokenCount
                         };
                     }
+                    error = null; // success — clear any previous key errors
                     break;
                 } catch (e) {
                     error = e.message?.slice(0, 200);
@@ -240,7 +352,8 @@ router.post('/test-model', authenticate, isAdmin, async (req, res) => {
                 reply,
                 error,
                 latency,
-                tokens
+                tokens,
+                toolsCalled
             }
         });
     } catch (err) {
@@ -249,3 +362,4 @@ router.post('/test-model', authenticate, isAdmin, async (req, res) => {
 });
 
 module.exports = router;
+
