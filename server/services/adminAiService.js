@@ -1785,13 +1785,18 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
         }
     }
 
+    const lastMsgObj = messages[messages.length - 1];
+    let userMessageContentText = lastMsgObj?.text || "مرحباً";
+
     // Ensure history ends with 'model' (so last message we send is 'user')
+    // If it ends with 'user', we must pop it to satisfy Gemini SDK alternating roles rule,
+    // but we prepend its text to the current message so no context is lost!
     if (cleanHistory.length > 0 && cleanHistory[cleanHistory.length - 1].role === 'user') {
-        cleanHistory.pop(); // Remove trailing user message that would conflict
+        const popped = cleanHistory.pop();
+        userMessageContentText = popped.parts[0].text + "\n---\n" + userMessageContentText;
     }
 
-    const lastMsgObj = messages[messages.length - 1];
-    let userMessageContent = [{ text: lastMsgObj?.text || "مرحباً" }];
+    let userMessageContent = [{ text: userMessageContentText }];
 
     if (fileBuffer && fileMimeType) {
         userMessageContent.push({
