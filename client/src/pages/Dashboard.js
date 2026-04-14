@@ -310,7 +310,7 @@ function Dashboard({ user }) {
           const res = await axios.get('/api/packages/services', {
             headers: { 'x-auth-token': localStorage.getItem('token') }
           });
-          const filteredServices = res.data.filter(srv => selectedIds.includes(srv.packageId?._id.toString()));
+          const filteredServices = res.data.filter(srv => srv.packageId?._id && selectedIds.includes(srv.packageId._id.toString()));
           setSelectedPackageServices(filteredServices.map(srv => ({
             value: srv._id,
             label: `${srv.name} (${srv.packageId.name})`,
