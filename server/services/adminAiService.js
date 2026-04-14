@@ -12,6 +12,7 @@ const Service = require('../models/Service');
 const ActivityLog = require('../models/ActivityLog');
 const SystemSetting = require('../models/SystemSetting');
 const AdminConversation = require('../models/AdminConversation');
+const DynamicTool = require('../models/DynamicTool');
 
 const DEFAULT_ADMIN_PROMPT = `أنت "المساعد الذكي" للمديرين والمشرفين في "غرام سلطان بيوتي سنتر".
 هويتك: أنت المساعد الذكي للإدارة، يمكن للمستخدم مناداتك بأي اسم يحبه. لا تقل أبداً أنك "عفركوش" — عفركوش هو مجرد أداة تقنية (build_afrakoush_page) تستخدمها أنت لبناء الصفحات والواجهات، وعندما تستخدمها أخبر المستخدم أنك استعنت بأداة "عفركوش الذراع التقني" لتنفيذ طلبه.
@@ -1501,7 +1502,7 @@ const createFunctions = (user) => ({
             const Conversation = require('../models/Conversation');
             const query = {};
             if (platform) query.source = platform;
-            
+
             const convos = await Conversation.find(query)
                 .sort({ lastActivity: -1 })
                 .limit(limit)
@@ -1558,9 +1559,9 @@ const createFunctions = (user) => ({
                     createdBy: user._id
                 });
                 await newTask.save();
-                
+
                 cronService.scheduleTask(newTask);
-                
+
                 return { success: true, message: "تم إنشاء المهمة وجدولتها بنجاح.", taskId: newTask._id };
             }
 
@@ -1589,7 +1590,7 @@ const createFunctions = (user) => ({
                 let valToSave = value;
                 if (value === 'true' || value === true) valToSave = true;
                 if (value === 'false' || value === false) valToSave = false;
-                
+
                 const updated = await SystemSetting.findOneAndUpdate(
                     { key },
                     { value: valToSave, updatedAt: new Date() },
@@ -1612,9 +1613,9 @@ const createFunctions = (user) => ({
                 .sort({ createdTime: -1 })
                 .limit(limit)
                 .lean();
-            
+
             if (!posts.length) return { message: "لا توجد بوستات مزامنة من فيسبوك." };
-            
+
             return {
                 postsCount: posts.length,
                 posts: posts.map(p => ({
@@ -1635,8 +1636,7 @@ const createFunctions = (user) => ({
     manage_dynamic_tools: async ({ action, name, description, script, args }) => {
         try {
             if (user.role !== 'admin') return { error: "صلاحية إدارة الأدوات الديناميكية للمدير العام فقط." };
-            const DynamicTool = require('../models/DynamicTool');
-            
+
             if (action === 'list') {
                 const tools = await DynamicTool.find().select('-script').lean();
                 return { total: tools.length, tools };
@@ -1646,7 +1646,7 @@ const createFunctions = (user) => ({
                 if (!name || !description || !script) return { error: "name, description, and script are required." };
                 const existing = await DynamicTool.findOne({ name });
                 if (existing) return { error: "أداة بهذا الاسم موجودة مسبقاً." };
-                
+
                 const newTool = await DynamicTool.create({ name, description, script, createdBy: user._id });
                 return { success: true, message: "تم حفظ الأداة بنجاح.", toolId: newTool._id };
             }
@@ -1670,17 +1670,21 @@ const createFunctions = (user) => ({
                     Advance: require('../models/Advance'),
                     Deduction: require('../models/Deduction'),
                     Package: require('../models/Package'),
-                    Service: require('../models/Service')
+                    Service: require('../models/Service'),
+                    ActivityLog: require('../models/ActivityLog'),
+                    AfrakoushPage: require('../models/AfrakoushPage'),
+                    SystemSetting: require('../models/SystemSetting'),
+                    DynamicTool: require('../models/DynamicTool')
                 };
 
                 let parsedArgs = {};
                 if (args) {
-                    try { parsedArgs = JSON.parse(args); } catch(e) { return { error: "فشل في تمرير args (JSON Error)." }; }
+                    try { parsedArgs = JSON.parse(args); } catch (e) { return { error: "فشل في تمرير args (JSON Error)." }; }
                 }
 
-                const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+                const AsyncFunction = Object.getPrototypeOf(async function () { }).constructor;
                 const dynamicFn = new AsyncFunction('models', 'args', tool.script);
-                
+
                 tool.runCount += 1;
                 tool.lastRun = new Date();
                 await tool.save();
@@ -1691,7 +1695,7 @@ const createFunctions = (user) => ({
 
             return { error: "إجراء غير معروف." };
         } catch (err) {
-            console.error('[AdminAI] manage_dynamic_tools error:', err.message);
+            console.error('[AdminAI] manage_dynamic_tools error:', err);
             return { error: err.message };
         }
     },
@@ -1700,9 +1704,9 @@ const createFunctions = (user) => ({
             const root = path.resolve(process.cwd());
             const target = path.resolve(root, dirPath);
             if (!target.startsWith(root)) return { error: "مسار خارج بيئة المشروع المسموح بها." };
-            
+
             if (!fs.existsSync(target)) return { error: "المسار غير موجود." };
-            
+
             const entries = fs.readdirSync(target, { withFileTypes: true });
             const files = entries.filter(e => e.isFile()).map(e => e.name);
             const dirs = entries.filter(e => e.isDirectory() && e.name !== 'node_modules' && e.name !== '.git').map(e => e.name + '/');
@@ -1716,7 +1720,7 @@ const createFunctions = (user) => ({
             const root = path.resolve(process.cwd());
             const target = path.resolve(root, filePath);
             if (!target.startsWith(root)) return { error: "مسار خارج بيئة المشروع المسموح بها." };
-            
+
             if (!fs.existsSync(target)) return { error: "الملف غير موجود." };
             const stat = fs.statSync(target);
             if (stat.size > 100 * 1024) return { error: "الملف ضخم جداً (> 100KB)." };
