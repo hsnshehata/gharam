@@ -453,6 +453,20 @@ function CompareTab({
                                         )}
                                     </div>
 
+                                    {/* Tools Called */}
+                                    {!data.loading && !data.error && data.toolsCalled?.length > 0 && (
+                                        <div style={S.toolsCalledSection}>
+                                            <div style={S.toolsCalledTitle}>🔧 الأدوات المستخدمة ({data.toolsCalled.length})</div>
+                                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                                {data.toolsCalled.map((tc, i) => (
+                                                    <span key={i} style={S.toolCalledBadge} title={`Args: ${tc.args?.join(', ') || 'none'}`}>
+                                                        ⚙️ {tc.name}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Attribution Footer */}
                                     {!data.loading && !data.error && (
                                         <div style={{ ...S.resultFooter, borderTopColor: providerMeta.color + '20' }}>
@@ -738,7 +752,11 @@ const S = {
     addModelBtn: { background: 'var(--card, #fff)', border: '1px dashed #028090', borderRadius: 10, padding: '10px 18px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#028090', fontFamily: 'inherit', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 6 },
     disabledBadge: { fontSize: 12, padding: '4px 12px', borderRadius: 8, background: '#ffebee', color: '#c62828', fontWeight: 500, fontFamily: 'monospace' },
     saveConfigBtn: { width: '100%', background: 'linear-gradient(135deg, #028090, #0f2736)', color: '#fff', border: 'none', borderRadius: 14, padding: '14px 0', cursor: 'pointer', fontSize: 16, fontWeight: 700, fontFamily: 'inherit', boxShadow: '0 6px 18px rgba(2,128,144,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.2s' },
-    toast: { padding: '12px 20px', borderRadius: 12, fontSize: 14, fontWeight: 600, textAlign: 'center' }
+    toast: { padding: '12px 20px', borderRadius: 12, fontSize: 14, fontWeight: 600, textAlign: 'center' },
+
+    toolsCalledSection: { padding: '10px 18px', borderTop: '1px dashed #e0e0e0', background: 'rgba(2,128,144,0.02)' },
+    toolsCalledTitle: { fontSize: 12, fontWeight: 700, color: '#028090', marginBottom: 6 },
+    toolCalledBadge: { fontSize: 11, padding: '3px 10px', borderRadius: 8, background: '#e0f2f1', color: '#00695c', fontWeight: 600, fontFamily: 'monospace', cursor: 'help' }
 };
 
 export default ModelComparison;
