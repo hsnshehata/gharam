@@ -61,7 +61,7 @@ const warmUp = async () => {
       Deduction.find({}).populate('userId createdBy', 'username remainingSalary').lean(),
       User.find({}).select('-password').lean(),
       Package.find({}).lean(),
-      Service.find({}).lean(),
+      Service.find({}).populate('packageId', 'name').lean(),
       ActivityLog.find({
         createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
       }).populate('performedBy', 'username').lean()
@@ -800,7 +800,7 @@ const onPackageChanged = async () => {
 // --- SERVICES ---
 const onServiceChanged = async () => {
   try {
-    store.services = await Service.find({}).lean();
+    store.services = await Service.find({}).populate('packageId', 'name').lean();
   } catch (e) { console.error('[DataStore] onServiceChanged error:', e.message); }
 };
 
