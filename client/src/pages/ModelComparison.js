@@ -45,6 +45,8 @@ function ModelComparison() {
     const [dragItem, setDragItem] = useState(null);
     const [chainOrder, setChainOrder] = useState([]);
     const [disabledModels, setDisabledModels] = useState([]);
+    const [adminFastChain, setAdminFastChain] = useState([]);
+    const [adminProChain, setAdminProChain] = useState([]);
     const inputRef = useRef(null);
     const resultsRef = useRef(null);
 
@@ -57,6 +59,8 @@ function ModelComparison() {
                 setConfig(res.data.data);
                 setChainOrder(res.data.data.currentChain);
                 setDisabledModels(res.data.data.disabledModels);
+                setAdminFastChain(res.data.data.adminFastChain || []);
+                setAdminProChain(res.data.data.adminProChain || []);
             }
         } catch (err) {
             console.error('Error fetching model config:', err);
@@ -136,17 +140,22 @@ function ModelComparison() {
         }
     };
 
-    // ===== Drag & Drop for Chain Reorder =====
-    const handleDragStart = (idx) => setDragItem(idx);
-    const handleDragOver = (e) => e.preventDefault();
-    const handleDrop = (targetIdx) => {
-        if (dragItem === null || dragItem === targetIdx) return;
-        const newChain = [...chainOrder];
-        const [removed] = newChain.splice(dragItem, 1);
-        newChain.splice(targetIdx, 0, removed);
-        setChainOrder(newChain);
-        setDragItem(null);
+    // ===== Generic chain helpers =====
+    const moveItem = (setter) => (idx, dir) => {
+        setter(prev => {
+            const arr = [...prev];
+            const target = idx + dir;
+            if (target < 0 || target >= arr.length) return arr;
+            [arr[idx], arr[target]] = [arr[target], arr[idx]];
+            return arr;
+        });
     };
+    const addItem = (setter) => (modelId) => setter(prev => prev.includes(modelId) ? prev : [...prev, modelId]);
+    const removeItem = (setter) => (modelId) => setter(prev => prev.filter(m => m !== modelId));
+
+    const moveChainItem = moveItem(setChainOrder);
+    const addToChain = addItem(setChainOrder);
+    const removeFromChain = removeItem(setChainOrder);
 
     const toggleDisabled = (modelId) => {
         setDisabledModels(prev =>
@@ -154,30 +163,22 @@ function ModelComparison() {
         );
     };
 
-    const moveChainItem = (idx, dir) => {
-        const newChain = [...chainOrder];
-        const targetIdx = idx + dir;
-        if (targetIdx < 0 || targetIdx >= newChain.length) return;
-        [newChain[idx], newChain[targetIdx]] = [newChain[targetIdx], newChain[idx]];
-        setChainOrder(newChain);
-    };
+    const moveAdminFastItem = moveItem(setAdminFastChain);
+    const addToAdminFast = addItem(setAdminFastChain);
+    const removeFromAdminFast = removeItem(setAdminFastChain);
 
-    const addToChain = (modelId) => {
-        if (!chainOrder.includes(modelId)) {
-            setChainOrder([...chainOrder, modelId]);
-        }
-    };
-
-    const removeFromChain = (modelId) => {
-        setChainOrder(chainOrder.filter(m => m !== modelId));
-    };
+    const moveAdminProItem = moveItem(setAdminProChain);
+    const addToAdminPro = addItem(setAdminProChain);
+    const removeFromAdminPro = removeItem(setAdminProChain);
 
     const saveConfig = async () => {
         setSavingConfig(true);
         try {
             await axios.post(`${API_BASE}/api/admin-ai/model-config`, {
                 chain: chainOrder,
-                disabledModels
+                disabledModels,
+                adminFastChain,
+                adminProChain
             }, authHeaders);
             setConfigMessage('✅ تم حفظ الإعدادات بنجاح');
             setTimeout(() => setConfigMessage(''), 4000);
@@ -281,9 +282,14 @@ function ModelComparison() {
                         moveChainItem={moveChainItem}
                         addToChain={addToChain}
                         removeFromChain={removeFromChain}
-                        handleDragStart={handleDragStart}
-                        handleDragOver={handleDragOver}
-                        handleDrop={handleDrop}
+                        adminFastChain={adminFastChain}
+                        moveAdminFastItem={moveAdminFastItem}
+                        addToAdminFast={addToAdminFast}
+                        removeFromAdminFast={removeFromAdminFast}
+                        adminProChain={adminProChain}
+                        moveAdminProItem={moveAdminProItem}
+                        addToAdminPro={addToAdminPro}
+                        removeFromAdminPro={removeFromAdminPro}
                         saveConfig={saveConfig}
                         savingConfig={savingConfig}
                         configMessage={configMessage}
@@ -547,15 +553,87 @@ function SpeedComparisonBar({ results, getModelMeta }) {
 }
 
 // ============================================================
+//  Reusable Chain Section Component
+// ============================================================
+function ChainSection({ title, icon, description, chain, moveItem, addItem, removeItem, config, getModelMeta, borderColor, disabledModels, toggleDisabled }) {
+    const modelsNotInChain = config?.allModels?.filter(m => !chain.includes(m.id)) || [];
+
+    return (
+        <div style={S.card}>
+            <div style={S.cardHeader}>
+                <span style={{ fontSize: 18 }}>{icon}</span>
+                <span style={S.cardTitle}>{title}</span>
+                {borderColor && <div style={{ width: 30, height: 4, borderRadius: 2, background: borderColor, marginRight: 8 }} />}
+            </div>
+            <p style={S.configDesc}>{description}</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {chain.map((modelId, idx) => {
+                    const meta = getModelMeta(modelId);
+                    if (!meta) return null;
+                    const prov = PROVIDER_META[meta.provider];
+                    const tier = TIER_BADGES[meta.tier];
+                    const isDisabled = disabledModels?.includes(modelId);
+                    return (
+                        <div key={modelId} className="chain-item"
+                            style={{ ...S.chainItem, opacity: isDisabled ? 0.5 : 1, borderRightColor: prov.color }}>
+                            <div style={S.chainPriority}>{idx + 1}</div>
+                            <span style={{ fontSize: 18 }}>{prov.icon}</span>
+                            <div style={{ flex: 1 }}>
+                                <div style={S.chainModelName}>{meta.label}</div>
+                                <div style={S.chainModelId}>{modelId}</div>
+                            </div>
+                            <span style={{ ...S.tierBadge, background: tier.bg, color: tier.color, fontSize: 11 }}>{tier.label}</span>
+                            {toggleDisabled && (
+                                <button style={{ ...S.chainToggle, background: isDisabled ? '#ffebee' : '#e8f5e9', color: isDisabled ? '#c62828' : '#2e7d32' }}
+                                    onClick={() => toggleDisabled(modelId)} title={isDisabled ? 'تفعيل' : 'إيقاف مؤقت'}>
+                                    {isDisabled ? '⏸️' : '✅'}
+                                </button>
+                            )}
+                            <div style={S.chainArrows}>
+                                <button style={S.arrowBtn} onClick={() => moveItem(idx, -1)} disabled={idx === 0}>▲</button>
+                                <button style={S.arrowBtn} onClick={() => moveItem(idx, 1)} disabled={idx === chain.length - 1}>▼</button>
+                            </div>
+                            <button style={S.chainRemove} onClick={() => removeItem(modelId)} title="إزالة">✕</button>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {chain.length === 0 && (
+                <div style={S.emptyChain}>
+                    <span style={{ fontSize: 32 }}>📭</span>
+                    <span>لا توجد نماذج — أضف من القائمة أدناه</span>
+                </div>
+            )}
+
+            {modelsNotInChain.length > 0 && (
+                <div style={{ marginTop: 14, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {modelsNotInChain.map(model => {
+                        const prov = PROVIDER_META[model.provider];
+                        return (
+                            <button key={model.id} style={S.addModelBtn} onClick={() => addItem(model.id)}>
+                                {prov.icon} {model.label}
+                                <span style={{ opacity: 0.5, marginRight: 4 }}>+</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ============================================================
 //  Config Tab
 // ============================================================
 function ConfigTab({
     config, chainOrder, disabledModels, toggleDisabled, moveChainItem,
-    addToChain, removeFromChain, handleDragStart, handleDragOver, handleDrop,
+    addToChain, removeFromChain,
+    adminFastChain, moveAdminFastItem, addToAdminFast, removeFromAdminFast,
+    adminProChain, moveAdminProItem, addToAdminPro, removeFromAdminPro,
     saveConfig, savingConfig, configMessage, getModelMeta
 }) {
-    const modelsNotInChain = config?.allModels?.filter(m => !chainOrder.includes(m.id)) || [];
-
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {configMessage && (
@@ -564,81 +642,49 @@ function ConfigTab({
                 </div>
             )}
 
-            {/* Active Chain */}
-            <div style={S.card}>
-                <div style={S.cardHeader}>
-                    <span style={{ fontSize: 18 }}>🔗</span>
-                    <span style={S.cardTitle}>ترتيب النماذج لبوت الجمهور</span>
-                </div>
-                <p style={S.configDesc}>
-                    عند استقبال رسالة من العميل، يحاول النظام النماذج بالترتيب التالي. إذا فشل نموذج أو تأخر (أكثر من 10 ثواني)، ينتقل للنموذج التالي تلقائياً.
-                    اسحب النماذج لإعادة ترتيبها أو استخدم الأسهم.
-                </p>
+            {/* Public Bot Chain */}
+            <ChainSection
+                title="💬 ترتيب نماذج بوت الجمهور"
+                icon="🔗"
+                description="عند استقبال رسالة من العميل، يحاول النظام النماذج بالترتيب. إذا فشل نموذج أو تأخر (أكثر من 10 ثواني)، ينتقل للتالي."
+                chain={chainOrder}
+                moveItem={moveChainItem}
+                addItem={addToChain}
+                removeItem={removeFromChain}
+                config={config}
+                getModelMeta={getModelMeta}
+                borderColor="#4285f4"
+                disabledModels={disabledModels}
+                toggleDisabled={toggleDisabled}
+            />
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {chainOrder.map((modelId, idx) => {
-                        const meta = getModelMeta(modelId);
-                        if (!meta) return null;
-                        const prov = PROVIDER_META[meta.provider];
-                        const tier = TIER_BADGES[meta.tier];
-                        const isDisabled = disabledModels.includes(modelId);
-                        return (
-                            <div key={modelId} className="chain-item"
-                                draggable
-                                onDragStart={() => handleDragStart(idx)}
-                                onDragOver={handleDragOver}
-                                onDrop={() => handleDrop(idx)}
-                                style={{ ...S.chainItem, opacity: isDisabled ? 0.5 : 1, borderRightColor: prov.color }}>
-                                <div style={S.chainDragHandle}>⠿</div>
-                                <div style={S.chainPriority}>{idx + 1}</div>
-                                <span style={{ fontSize: 18 }}>{prov.icon}</span>
-                                <div style={{ flex: 1 }}>
-                                    <div style={S.chainModelName}>{meta.label}</div>
-                                    <div style={S.chainModelId}>{modelId}</div>
-                                </div>
-                                <span style={{ ...S.tierBadge, background: tier.bg, color: tier.color, fontSize: 11 }}>{tier.label}</span>
-                                <button style={{ ...S.chainToggle, background: isDisabled ? '#ffebee' : '#e8f5e9', color: isDisabled ? '#c62828' : '#2e7d32' }}
-                                    onClick={() => toggleDisabled(modelId)} title={isDisabled ? 'تفعيل' : 'إيقاف مؤقت'}>
-                                    {isDisabled ? '⏸️' : '✅'}
-                                </button>
-                                <div style={S.chainArrows}>
-                                    <button style={S.arrowBtn} onClick={() => moveChainItem(idx, -1)} disabled={idx === 0}>▲</button>
-                                    <button style={S.arrowBtn} onClick={() => moveChainItem(idx, 1)} disabled={idx === chainOrder.length - 1}>▼</button>
-                                </div>
-                                <button style={S.chainRemove} onClick={() => removeFromChain(modelId)} title="إزالة">✕</button>
-                            </div>
-                        );
-                    })}
-                </div>
+            {/* Admin Fast Chain */}
+            <ChainSection
+                title="⚡ المساعد الإداري — الوضع السريع"
+                icon="⚡"
+                description="النماذج المستخدمة في الوضع السريع للمساعد الإداري (الاستفسارات البسيطة والسريعة). يستخدم في وضع أوتو."
+                chain={adminFastChain}
+                moveItem={moveAdminFastItem}
+                addItem={addToAdminFast}
+                removeItem={removeFromAdminFast}
+                config={config}
+                getModelMeta={getModelMeta}
+                borderColor="#f9a825"
+            />
 
-                {chainOrder.length === 0 && (
-                    <div style={S.emptyChain}>
-                        <span style={{ fontSize: 32 }}>📭</span>
-                        <span>لا توجد نماذج في السلسلة — أضف نماذج من القائمة أدناه</span>
-                    </div>
-                )}
-            </div>
-
-            {/* Available to add */}
-            {modelsNotInChain.length > 0 && (
-                <div style={S.card}>
-                    <div style={S.cardHeader}>
-                        <span style={{ fontSize: 18 }}>➕</span>
-                        <span style={S.cardTitle}>نماذج متاحة للإضافة</span>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        {modelsNotInChain.map(model => {
-                            const prov = PROVIDER_META[model.provider];
-                            return (
-                                <button key={model.id} style={S.addModelBtn} onClick={() => addToChain(model.id)}>
-                                    {prov.icon} {model.label}
-                                    <span style={{ opacity: 0.5, marginRight: 4 }}>+</span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
+            {/* Admin Pro Chain */}
+            <ChainSection
+                title="🧠 المساعد الإداري — الوضع المتقدم"
+                icon="🧠"
+                description="النماذج المستخدمة في الوضع المتقدم للمساعد الإداري (تقارير معقدة، تحليل عميق، بناء واجهات). يستخدم في وضع أوتو."
+                chain={adminProChain}
+                moveItem={moveAdminProItem}
+                addItem={addToAdminPro}
+                removeItem={removeFromAdminPro}
+                config={config}
+                getModelMeta={getModelMeta}
+                borderColor="#e65100"
+            />
 
             {/* Disabled Models Info */}
             {disabledModels.length > 0 && (
@@ -647,7 +693,7 @@ function ConfigTab({
                         <span style={{ fontSize: 18 }}>⏸️</span>
                         <span style={S.cardTitle}>نماذج متوقفة مؤقتاً ({disabledModels.length})</span>
                     </div>
-                    <p style={S.configDesc}>هذه النماذج موجودة في السلسلة لكن النظام يتخطاها تلقائياً.</p>
+                    <p style={S.configDesc}>هذه النماذج موجودة في سلسلة الجمهور لكن النظام يتخطاها تلقائياً.</p>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         {disabledModels.map(m => (
                             <span key={m} style={S.disabledBadge}>{m}</span>
@@ -658,7 +704,7 @@ function ConfigTab({
 
             {/* Save Button */}
             <button style={{ ...S.saveConfigBtn, opacity: savingConfig ? 0.6 : 1 }} onClick={saveConfig} disabled={savingConfig}>
-                {savingConfig ? <><Spinner animation="border" size="sm" style={{ marginLeft: 8 }} /> جارٍ الحفظ...</> : <>💾 حفظ ترتيب النماذج</>}
+                {savingConfig ? <><Spinner animation="border" size="sm" style={{ marginLeft: 8 }} /> جارٍ الحفظ...</> : <>💾 حفظ جميع الإعدادات</>}
             </button>
         </div>
     );
