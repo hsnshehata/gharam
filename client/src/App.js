@@ -20,9 +20,11 @@ import Gallery from './pages/Gallery';
 import GalleryAdmin from './pages/GalleryAdmin';
 import AISettings from './pages/AISettings';
 import PointsAdmin from './pages/PointsAdmin';
+import SystemSettings from './pages/admin/SystemSettings';
 import NotFound from './pages/NotFound';
 import AfrakoushToolViewer from './pages/AfrakoushToolViewer';
 import AfrakoushToolsRegistry from './pages/AfrakoushToolsRegistry';
+import GlobalAdminWidget from './components/GlobalAdminWidget';
 import Navbar from './components/Navbar';
 import AdminAIChat from './components/AdminAIChat';
 import { ToastProvider } from './components/ToastProvider';
@@ -128,6 +130,7 @@ function AppContent() {
         ) : (
           <>
             {user && !isPublicPage && <Navbar user={user} setUser={setUser} />}
+            {user && !isPublicPage && <GlobalAdminWidget />}
             <Routes>
               <Route path="/login" element={<Login setUser={setUser} />} />
               <Route path="/landing" element={<Landing />} />
