@@ -20,7 +20,6 @@ import Gallery from './pages/Gallery';
 import GalleryAdmin from './pages/GalleryAdmin';
 import AISettings from './pages/AISettings';
 import PointsAdmin from './pages/PointsAdmin';
-import SystemSettings from './pages/admin/SystemSettings';
 import NotFound from './pages/NotFound';
 import AfrakoushToolViewer from './pages/AfrakoushToolViewer';
 import AfrakoushToolsRegistry from './pages/AfrakoushToolsRegistry';
