@@ -18,7 +18,7 @@ export default function AITeamsManager({ isNested = false }) {
 
   const fetchAgents = async () => {
     try {
-      const res = await axios.get('/api/admin/agents');
+      const res = await axios.get('/api/admin/agents', { headers: { 'x-auth-token': localStorage.getItem('token') } });
       if (res.data.success) {
         setAgents(res.data.agents);
         if(res.data.agents.length > 0 && !formData.leader) {
@@ -33,7 +33,7 @@ export default function AITeamsManager({ isNested = false }) {
   const fetchTeams = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('/api/admin/teams');
+      const res = await axios.get('/api/admin/teams', { headers: { 'x-auth-token': localStorage.getItem('token') } });
       if (res.data.success) setTeams(res.data.teams);
     } catch (err) {
       toast.error('فشل جلب الفرق');
@@ -63,10 +63,10 @@ export default function AITeamsManager({ isNested = false }) {
 
     try {
       if (editingId) {
-        const res = await axios.put(`/api/admin/teams/${editingId}`, formData);
+        const res = await axios.put(`/api/admin/teams/${editingId}`, formData, { headers: { 'x-auth-token': localStorage.getItem('token') } });
         if (res.data.success) toast.success('تم التحديث بنجاح');
       } else {
-        const res = await axios.post('/api/admin/teams', formData);
+        const res = await axios.post('/api/admin/teams', formData, { headers: { 'x-auth-token': localStorage.getItem('token') } });
         if (res.data.success) toast.success('تم إنشاء الفريق بنجاح');
       }
       setFormData({ name: '', description: '', leader: agents[0]?._id || '', members: [] });
@@ -90,7 +90,7 @@ export default function AITeamsManager({ isNested = false }) {
   const handleDelete = async (id) => {
     if (!window.confirm('هل أنت متأكد من حذف هذا الفريق؟')) return;
     try {
-      const res = await axios.delete(`/api/admin/teams/${id}`);
+      const res = await axios.delete(`/api/admin/teams/${id}`, { headers: { 'x-auth-token': localStorage.getItem('token') } });
       if (res.data.success) {
         toast.success('تم الحذف بنجاح');
         fetchTeams();

@@ -24,7 +24,7 @@ export default function DynamicTeamAI({ isNested = false }) {
 
   const fetchTeams = async () => {
     try {
-      const res = await axios.get('/api/admin/teams');
+      const res = await axios.get('/api/admin/teams', { headers: { 'x-auth-token': localStorage.getItem('token') } });
       if (res.data.success) {
         setTeams(res.data.teams);
         if (res.data.teams.length > 0) {
@@ -56,7 +56,7 @@ export default function DynamicTeamAI({ isNested = false }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'x-auth-token': token
         },
         body: JSON.stringify({ teamId: selectedTeam._id, task })
       });

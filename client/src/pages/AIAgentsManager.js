@@ -18,7 +18,7 @@ export default function AIAgentsManager({ isNested = false }) {
 
   const fetchMeta = async () => {
     try {
-      const res = await axios.get('/api/admin/agents/meta');
+      const res = await axios.get('/api/admin/agents/meta', { headers: { 'x-auth-token': localStorage.getItem('token') } });
       if (res.data.success) {
         setMeta(res.data);
         if (res.data.models.length > 0) {
@@ -33,7 +33,7 @@ export default function AIAgentsManager({ isNested = false }) {
   const fetchAgents = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('/api/admin/agents');
+      const res = await axios.get('/api/admin/agents', { headers: { 'x-auth-token': localStorage.getItem('token') } });
       if (res.data.success) setAgents(res.data.agents);
     } catch (err) {
       toast.error('فشل في جلب الموظفين');
@@ -67,10 +67,10 @@ export default function AIAgentsManager({ isNested = false }) {
     e.preventDefault();
     try {
       if (editingId) {
-        const res = await axios.put(`/api/admin/agents/${editingId}`, formData);
+        const res = await axios.put(`/api/admin/agents/${editingId}`, formData, { headers: { 'x-auth-token': localStorage.getItem('token') } });
         if (res.data.success) toast.success('تم التحديث بنجاح');
       } else {
-        const res = await axios.post('/api/admin/agents', formData);
+        const res = await axios.post('/api/admin/agents', formData, { headers: { 'x-auth-token': localStorage.getItem('token') } });
         if (res.data.success) toast.success('تم إضافة الموظف بنجاح');
       }
       setFormData({ name: '', role: '', emoji: '🤖', color: 'gray', modelName: meta.models[0]?.id || '', systemInstruction: '' });
@@ -96,7 +96,7 @@ export default function AIAgentsManager({ isNested = false }) {
   const handleDelete = async (id) => {
     if (!window.confirm('هل أنت متأكد من حذف هذا الموظف؟')) return;
     try {
-      const res = await axios.delete(`/api/admin/agents/${id}`);
+      const res = await axios.delete(`/api/admin/agents/${id}`, { headers: { 'x-auth-token': localStorage.getItem('token') } });
       if (res.data.success) {
         toast.success('تم الحذف بنجاح');
         fetchAgents();
