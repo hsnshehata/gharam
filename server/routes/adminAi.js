@@ -103,6 +103,7 @@ router.get('/model-config', authenticate, isAdmin, async (req, res) => {
             { id: 'gpt-4o-mini', provider: 'openai', label: 'GPT-4o Mini', tier: 'fast' },
             { id: 'o4-mini', provider: 'openai', label: 'O4 Mini (Reasoning)', tier: 'pro' },
             { id: 'o3-mini', provider: 'openai', label: 'O3 Mini (Reasoning)', tier: 'pro' },
+            { id: 'gpt-5.4-mini', provider: 'openai', label: 'GPT-5.4 Mini', tier: 'pro' },
             { id: 'gpt-5-mini', provider: 'openai', label: 'GPT-5 Mini', tier: 'pro' },
             { id: 'gpt-5.4', provider: 'openai', label: 'GPT-5.4', tier: 'pro' },
         ];
@@ -110,7 +111,7 @@ router.get('/model-config', authenticate, isAdmin, async (req, res) => {
         // Default chains
         const defaultPublicChain = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-3.1-flash-lite-preview', 'gpt-4o-mini'];
         const defaultAdminFastChain = ['gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-3.1-flash-lite-preview', 'gpt-4o-mini'];
-        const defaultAdminProChain = ['gemini-3.1-pro-preview', 'gemini-2.5-pro', 'o4-mini', 'o3-mini'];
+        const defaultAdminProChain = ['gemini-3.1-pro-preview', 'gemini-2.5-pro', 'o4-mini', 'o3-mini', 'gpt-5.4-mini', 'gpt-5-mini'];
 
         const currentChain = setting ? JSON.parse(setting.value) : defaultPublicChain;
         const disabledModels = disabledSetting ? JSON.parse(disabledSetting.value) : [];
@@ -266,11 +267,16 @@ router.post('/test-model', authenticate, isAdmin, async (req, res) => {
                     if (modelId.startsWith('o4-') || modelId.startsWith('o3-') || modelId.startsWith('o1-')) {
                         completionParams.reasoning_effort = 'high';
                         completionParams.max_completion_tokens = 25000;
+                    } else if (modelId === 'gpt-5.4-mini' || modelId === 'gpt-5.4') {
+                        if (modelId === 'gpt-5.4-mini') {
+                            completionParams.reasoning_effort = 'medium';
+                            completionParams.max_completion_tokens = 16000;
+                        } else {
+                            completionParams.max_completion_tokens = 4096;
+                        }
                     } else if (modelId === 'gpt-5-mini') {
                         completionParams.reasoning_effort = 'high';
                         completionParams.max_completion_tokens = 16000;
-                    } else if (modelId === 'gpt-5.4') {
-                        completionParams.max_completion_tokens = 4096;
                     } else {
                         completionParams.max_tokens = 1200;
                     }
