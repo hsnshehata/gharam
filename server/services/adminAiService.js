@@ -762,6 +762,18 @@ const adminTools = [
                     },
                     required: ["filePath"]
                 }
+            },
+            {
+                name: "generate_image",
+                description: "يولد صور إبداعية باستخدام نموذج (Nano Banana / Gemini 3.1 Flash Image Preview) بناءً على وصف نصي مفصل (prompt). يُستخدم عند طلب تصميم جرافيك، صور للمنتجات، أو مقترحات بصرية.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        prompt: { type: "STRING", description: "وصف الصورة المطلوب تفصيلياً (يُفضل باللغة الإنجليزية لأفضل نتيجة)." },
+                        aspectRatio: { type: "STRING", description: "نسبة الأبعاد (مثال: 1:1, 16:9, 9:16, 4:3, 5:4) الافتراضي 16:9." }
+                    },
+                    required: ["prompt"]
+                }
             }
         ]
     }
@@ -1428,6 +1440,50 @@ const createFunctions = (user) => ({
         } catch (err) {
             console.error('[AdminAI] get_past_clients error:', err.message);
             return { error: "فشل استخراج العميلات: " + err.message };
+        }
+    },
+    generate_image: async ({ prompt, aspectRatio }) => {
+        try {
+            const apiKey = process.env.GEMINI_API_KEY;
+            if (!apiKey) return { error: "GEMINI_API_KEY غير متوفر لمعالجة طلب الصورة." };
+            
+            const axios = require('axios');
+            const data = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseModalities: ["IMAGE"],
+                    imageConfig: {
+                        aspectRatio: aspectRatio || "16:9",
+                        imageSize: "1K"
+                    }
+                }
+            };
+            
+            const res = await axios.post(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${apiKey}`,
+                data,
+                { headers: { "Content-Type": "application/json" } }
+            );
+            
+            let base64Image = null;
+            if (res.data?.candidates?.[0]?.content?.parts) {
+                for (let part of res.data.candidates[0].content.parts) {
+                    if (part.inlineData && part.inlineData.data) {
+                        base64Image = part.inlineData.data;
+                        break;
+                    }
+                }
+            }
+            
+            if (base64Image) {
+                const dataUrl = `data:image/png;base64,${base64Image}`;
+                return { success: true, imageResult: `تم توليد الصورة بنجاح. لفيفها للعميل، استخدم كود الماركدون التالي بدون أي تغيير:\n\n![Generated Graphic by NanoBanana](${dataUrl})` };
+            } else {
+                return { error: "الرد من جوجل لم يحتوي على بيانات صورة." };
+            }
+        } catch (error) {
+            console.error('[AdminAI] generate_image error:', error.message);
+            return { error: "فشل إنشاء الصورة: " + (error.response?.data?.error?.message || error.message) };
         }
     },
     predictive_scheduling: async ({ targetDate }) => {
