@@ -789,14 +789,29 @@ const createFunctions = (user) => ({
                 else return { message: `لم يتم العثور على موظف باسم ${employeeName}` };
             }
 
-            // Bookings: field is eventDate, services are in packageServices, executedBy is the employee
-            const bQuery = { eventDate: { $gte: start, $lte: end } };
+            // Bookings: check all related dates (eventDate, hennaDate, hairStraighteningDate, hairDyeDate)
+            let bQuery = {
+                $or: [
+                    { eventDate: { $gte: start, $lte: end } },
+                    { hennaDate: { $gte: start, $lte: end } },
+                    { hairStraighteningDate: { $gte: start, $lte: end } },
+                    { hairDyeDate: { $gte: start, $lte: end } }
+                ]
+            };
             if (empIds.length > 0) {
-                bQuery.$or = [
-                    { 'packageServices.executedBy': { $in: empIds } },
-                    { 'hairStraighteningExecutedBy': { $in: empIds } },
-                    { 'hairDyeExecutedBy': { $in: empIds } }
-                ];
+                bQuery = {
+                    $and: [
+                        bQuery,
+                        {
+                            $or: [
+                                { 'packageServices.executedBy': { $in: empIds } },
+                                { 'hairStraighteningExecutedBy': { $in: empIds } },
+                                { 'hairDyeExecutedBy': { $in: empIds } },
+                                { 'photographyExecutedBy': { $in: empIds } }
+                            ]
+                        }
+                    ]
+                };
             }
             const bookingsDB = await Booking.find(bQuery)
                 .populate('packageServices.executedBy', 'username')
@@ -813,6 +828,9 @@ const createFunctions = (user) => ({
                 client: b.clientName,
                 phone: b.clientPhone,
                 eventDate: b.eventDate?.toISOString().split('T')[0],
+                hennaDate: b.hennaDate?.toISOString().split('T')[0],
+                hairStraighteningDate: b.hairStraighteningDate?.toISOString().split('T')[0],
+                hairDyeDate: b.hairDyeDate?.toISOString().split('T')[0],
                 total: b.total,
                 remaining: b.remaining,
                 packageName: b.package?.name || 'غير محدد',
@@ -1032,22 +1050,32 @@ const createFunctions = (user) => ({
                 ];
             }
             if (startDate || endDate) {
-                searchQuery.eventDate = {};
+                let dateQuery = {};
                 if (startDate) {
                     let start = new Date(startDate);
                     if (!isNaN(start.getTime())) {
                         start.setHours(0, 0, 0, 0);
-                        searchQuery.eventDate.$gte = start;
+                        dateQuery.$gte = start;
                     }
                 }
                 if (endDate) {
                     let end = new Date(endDate);
                     if (!isNaN(end.getTime())) {
                         end.setHours(23, 59, 59, 999);
-                        searchQuery.eventDate.$lte = end;
+                        dateQuery.$lte = end;
                     }
                 }
-                if (Object.keys(searchQuery.eventDate).length === 0) delete searchQuery.eventDate;
+                if (Object.keys(dateQuery).length > 0) {
+                    if (!searchQuery.$and) searchQuery.$and = [];
+                    searchQuery.$and.push({
+                        $or: [
+                            { eventDate: dateQuery },
+                            { hennaDate: dateQuery },
+                            { hairStraighteningDate: dateQuery },
+                            { hairDyeDate: dateQuery }
+                        ]
+                    });
+                }
             }
 
             const resultsDb = await Booking.find(searchQuery)
@@ -1089,6 +1117,9 @@ const createFunctions = (user) => ({
                     clientName: b.clientName,
                     clientPhone: b.clientPhone,
                     eventDate: b.eventDate?.toISOString().split('T')[0],
+                    hennaDate: b.hennaDate?.toISOString().split('T')[0],
+                    hairStraighteningDate: b.hairStraighteningDate?.toISOString().split('T')[0],
+                    hairDyeDate: b.hairDyeDate?.toISOString().split('T')[0],
                     packageName: b.package?.name || 'غير محدد',
                     photographyPackage: b.photographyPackage?.name || null,
                     hennaPackage: b.hennaPackage?.name || null,
@@ -1231,11 +1262,19 @@ const createFunctions = (user) => ({
 
             const results = await Promise.all(users.map(async u => {
                 const bCount = await Booking.countDocuments({
-                    eventDate: { $gte: start, $lte: end },
-                    $or: [
-                        { 'packageServices.executedBy': u._id },
-                        { 'hairStraighteningExecutedBy': u._id },
-                        { 'hairDyeExecutedBy': u._id }
+                    $and: [
+                        { $or: [
+                            { eventDate: { $gte: start, $lte: end } },
+                            { hennaDate: { $gte: start, $lte: end } },
+                            { hairStraighteningDate: { $gte: start, $lte: end } },
+                            { hairDyeDate: { $gte: start, $lte: end } }
+                        ] },
+                        { $or: [
+                            { 'packageServices.executedBy': u._id },
+                            { 'hairStraighteningExecutedBy': u._id },
+                            { 'hairDyeExecutedBy': u._id },
+                            { 'photographyExecutedBy': u._id }
+                        ] }
                     ]
                 });
 
@@ -1294,9 +1333,14 @@ const createFunctions = (user) => ({
             let today = new Date(); today.setHours(0, 0, 0, 0);
 
             const debts = await Booking.find({
-                eventDate: { $gte: limitDate, $lt: today },
+                $or: [
+                    { eventDate: { $gte: limitDate, $lt: today } },
+                    { hennaDate: { $gte: limitDate, $lt: today } },
+                    { hairStraighteningDate: { $gte: limitDate, $lt: today } },
+                    { hairDyeDate: { $gte: limitDate, $lt: today } }
+                ],
                 remaining: { $gt: 0 }
-            }).select('receiptNumber clientName clientPhone remaining eventDate total').lean();
+            }).select('receiptNumber clientName clientPhone remaining eventDate hennaDate hairStraighteningDate hairDyeDate total').lean();
 
             const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
             const users = await User.find({}).lean();
@@ -1342,8 +1386,13 @@ const createFunctions = (user) => ({
             end.setMonth(end.getMonth() + 1);
 
             const pastBookings = await Booking.find({
-                eventDate: { $gte: start, $lte: end }
-            }).populate('package', 'name').populate('extraServices', 'name').select('clientName clientPhone eventDate package extraServices').lean();
+                $or: [
+                    { eventDate: { $gte: start, $lte: end } },
+                    { hennaDate: { $gte: start, $lte: end } },
+                    { hairStraighteningDate: { $gte: start, $lte: end } },
+                    { hairDyeDate: { $gte: start, $lte: end } }
+                ]
+            }).populate('package', 'name').populate('extraServices', 'name').select('clientName clientPhone eventDate hennaDate hairStraighteningDate hairDyeDate package extraServices').lean();
 
             const uniqueClients = [];
             const seenPhones = new Set();
@@ -1381,7 +1430,14 @@ const createFunctions = (user) => ({
             let end = new Date(start);
             end.setHours(23, 59, 59, 999);
 
-            const bookings = await Booking.find({ eventDate: { $gte: start, $lte: end } })
+            const bookings = await Booking.find({
+                $or: [
+                    { eventDate: { $gte: start, $lte: end } },
+                    { hennaDate: { $gte: start, $lte: end } },
+                    { hairStraighteningDate: { $gte: start, $lte: end } },
+                    { hairDyeDate: { $gte: start, $lte: end } }
+                ]
+            })
                 .populate('package', 'name').populate('photographyPackage', 'name').populate('hennaPackage', 'name').populate('extraServices', 'name').lean();
 
             const activeStaff = await User.find({ role: { $in: ['employee', 'supervisor'] } }).select('username role').lean();
@@ -1405,6 +1461,10 @@ const createFunctions = (user) => ({
 
                 summary.bookingsDetails.push({
                     client: b.clientName,
+                    eventDate: b.eventDate?.toISOString().split('T')[0],
+                    hennaDate: b.hennaDate?.toISOString().split('T')[0],
+                    hairStraighteningDate: b.hairStraighteningDate?.toISOString().split('T')[0],
+                    hairDyeDate: b.hairDyeDate?.toISOString().split('T')[0],
                     package: b.package?.name,
                     photographyPackage: b.photographyPackage?.name || null,
                     hennaPackage: b.hennaPackage?.name || null,
