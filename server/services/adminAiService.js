@@ -1898,6 +1898,10 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
                     // o-series reasoning models: enable high reasoning
                     if (modelName.startsWith('o4-') || modelName.startsWith('o3-') || modelName.startsWith('o1-')) {
                         completionParams.reasoning_effort = 'high';
+                    } else if (modelName === 'gpt-5-mini') {
+                        completionParams.reasoning_effort = 'high';
+                    } else if (modelName === 'gpt-5.4') {
+                        completionParams.reasoning_effort = 'medium';
                     } else {
                         completionParams.max_tokens = 4096;
                     }
