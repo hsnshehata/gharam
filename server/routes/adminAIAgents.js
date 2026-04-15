@@ -32,10 +32,31 @@ const TEMPLATES = [
 
 // GET /api/admin/agents/meta
 // جلب الموديلات والنماذج الجاهزة لإنشاء وكلاء
-router.get('/meta', protect, adminOnly, (req, res) => {
+router.get('/meta', protect, adminOnly, async (req, res) => {
+  let openRouterModels = OPENROUTER_MODELS;
+  
+  try {
+    if (process.env.OPENROUTER_API_KEY) {
+      const axios = require('axios');
+      const response = await axios.get('https://openrouter.ai/api/v1/models', {
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`
+        }
+      });
+      // نعرض جميع النماذج القادمة من OpenRouter
+      openRouterModels = response.data.data.map(m => ({
+        id: m.id,
+        name: m.name,
+        desc: `${m.context_length} ctx | ${m.pricing.prompt !== "0" || m.pricing.completion !== "0" ? 'Paid' : 'Free'}`
+      }));
+    }
+  } catch (error) {
+    console.error('Error fetching OpenRouter models:', error.message);
+  }
+
   res.json({
     success: true,
-    models: OPENROUTER_MODELS,
+    models: openRouterModels,
     templates: TEMPLATES
   });
 });
