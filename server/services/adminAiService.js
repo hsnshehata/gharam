@@ -1899,13 +1899,11 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
                     if (modelName.startsWith('o4-') || modelName.startsWith('o3-') || modelName.startsWith('o1-')) {
                         completionParams.reasoning_effort = 'high';
                         completionParams.max_completion_tokens = 25000;
-                        if (openaiToolDefs.length > 0) completionParams.parallel_tool_calls = false;
                     } else if (modelName === 'gpt-5-mini') {
                         completionParams.reasoning_effort = 'high';
-                        completionParams.max_completion_tokens = 25000;
+                        completionParams.max_completion_tokens = 16000;
                     } else if (modelName === 'gpt-5.4') {
-                        completionParams.reasoning_effort = 'medium';
-                        completionParams.max_completion_tokens = 25000;
+                        completionParams.max_tokens = 4096;
                     } else {
                         completionParams.max_tokens = 4096;
                     }
