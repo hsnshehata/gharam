@@ -440,7 +440,9 @@ const MODEL_CANDIDATES = [
     'gemini-3.1-pro-preview',
     'gemini-2.5-pro',
     'o4-mini',
-    'o3-mini'
+    'o3-mini',
+    'gpt-5.4-mini',
+    'gpt-5-mini'
 ];
 
 // Fast/cheap models for simple tasks (e.g. generating chat titles)
@@ -1899,11 +1901,16 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
                     if (modelName.startsWith('o4-') || modelName.startsWith('o3-') || modelName.startsWith('o1-')) {
                         completionParams.reasoning_effort = 'high';
                         completionParams.max_completion_tokens = 25000;
+                    } else if (modelName === 'gpt-5.4-mini' || modelName === 'gpt-5.4') {
+                        if (modelName === 'gpt-5.4-mini') {
+                            completionParams.reasoning_effort = 'medium';
+                            completionParams.max_completion_tokens = 16000;
+                        } else {
+                            completionParams.max_completion_tokens = 4096;
+                        }
                     } else if (modelName === 'gpt-5-mini') {
                         completionParams.reasoning_effort = 'high';
                         completionParams.max_completion_tokens = 16000;
-                    } else if (modelName === 'gpt-5.4') {
-                        completionParams.max_completion_tokens = 4096;
                     } else {
                         completionParams.max_tokens = 4096;
                     }
