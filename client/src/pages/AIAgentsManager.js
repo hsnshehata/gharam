@@ -108,8 +108,8 @@ export default function AIAgentsManager({ isNested = false }) {
   };
 
   return (
-    <div className={`p-3 ${isNested ? '' : 'bg-light min-vh-100'}`} dir="rtl">
-      {!isNested && <h1 className="h3 fw-bold mb-4">إدارة فريق المساعدين (Agents)</h1>}
+    <div className={`p-3 ai-premium-container ${isNested ? '' : 'min-vh-100'}`} dir="rtl">
+      {!isNested && <h1 className="h3 fw-bold mb-4 premium-title">إدارة فريق المساعدين (Agents)</h1>}
       
       <Card className="shadow-sm mb-4 border-0">
         <Card.Body className="p-4">
@@ -165,14 +165,23 @@ export default function AIAgentsManager({ isNested = false }) {
             
             <Form.Group className="mb-3">
               <Form.Label>نموذج الذكاء الاصطناعي (OpenRouter Model)</Form.Label>
-              <Form.Select name="modelName" value={formData.modelName} onChange={handleChange} required className="font-monospace font-sm">
-                <option value="" disabled>-- اختر الموديل --</option>
+              <Form.Control 
+                  type="text" 
+                  name="modelName" 
+                  value={formData.modelName} 
+                  onChange={handleChange} 
+                  required 
+                  list="openRouterModelsList"
+                  className="font-monospace font-sm"
+                  placeholder="اختر الموديل أو اكتب الاسم يدوياً" 
+              />
+              <datalist id="openRouterModelsList">
                 {meta.models.map(m => (
-                  <option key={m.id} value={m.id}>{m.id} - {m.name} ({m.desc})</option>
+                  <option key={m.id} value={m.id}>{m.name} ({m.desc})</option>
                 ))}
-              </Form.Select>
+              </datalist>
               <Form.Text className="text-muted">
-                يتم استهلاك رصيد OpenRouter الخاص بك حسب النموذج المختار. النماذج المجانية (free) لا تستهلك رصيد.
+                يمكنك اختيار نموذج من القائمة أو كتابة اسم نموذج آخر متوفر على OpenRouter (مثلاً google/gemini-pro).
               </Form.Text>
             </Form.Group>
 

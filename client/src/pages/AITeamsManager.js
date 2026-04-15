@@ -102,8 +102,8 @@ export default function AITeamsManager({ isNested = false }) {
   };
 
   return (
-    <div className={`p-3 ${isNested ? '' : 'bg-light min-vh-100'}`} dir="rtl">
-      {!isNested && <h1 className="h3 fw-bold mb-4">إدارة فرق المساعدين (Teams)</h1>}
+    <div className={`p-3 ai-premium-container ${isNested ? '' : 'min-vh-100'}`} dir="rtl">
+      {!isNested && <h1 className="h3 fw-bold mb-4 premium-title">إدارة فرق المساعدين (Teams)</h1>}
       
       <Card className="shadow-sm mb-4 border-0">
         <Card.Body className="p-4">

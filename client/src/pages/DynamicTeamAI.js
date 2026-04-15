@@ -150,12 +150,12 @@ export default function DynamicTeamAI({ isNested = false }) {
   const percent = currentAgents.length > 0 ? Math.round((completedAgentIds.length / currentAgents.length) * 100) : 0;
 
   return (
-    <div className={`${isNested ? '' : 'min-vh-100 bg-light py-4'} w-100`} dir="rtl">
+    <div className={`ai-premium-container ${isNested ? '' : 'min-vh-100 py-4'} w-100`} dir="rtl">
       {!isNested && (
         <Container className="mb-4">
           <div className="d-flex align-items-center justify-content-between p-4 bg-white shadow-sm rounded">
             <div>
-              <h1 className="h4 fw-bold d-flex align-items-center gap-2 mb-1">
+              <h1 className="h4 fw-bold d-flex align-items-center gap-2 mb-1 premium-title">
                 👥 محادثات الفرق (Multi-Agent Teams)
               </h1>
               <p className="text-muted small mb-0">تفاعل حي مع فرقك التي أنشأتها</p>

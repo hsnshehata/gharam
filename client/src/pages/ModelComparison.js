@@ -7,7 +7,8 @@ import remarkGfm from 'remark-gfm';
 
 const PROVIDER_META = {
     google: { icon: '🔷', color: '#4285f4', label: 'Google Gemini' },
-    openai: { icon: '🟢', color: '#10a37f', label: 'OpenAI' }
+    openai: { icon: '🟢', color: '#10a37f', label: 'OpenAI' },
+    openrouter: { icon: '🌌', color: '#8a2be2', label: 'OpenRouter' }
 };
 
 const TIER_BADGES = {
@@ -233,6 +234,7 @@ function ModelComparison() {
                     <div style={{ display: 'flex', gap: 8 }}>
                         {config?.hasGeminiBackup && <span style={S.keyBadge}>🔑 مفتاح Gemini احتياطي</span>}
                         {config?.hasOpenAI && <span style={{ ...S.keyBadge, background: '#e8f5e9', color: '#2e7d32' }}>🟢 OpenAI متصل</span>}
+                        {config?.hasOpenRouter && <span style={{ ...S.keyBadge, background: '#f3e5f5', color: '#8a2be2' }}>🌌 OpenRouter متصل</span>}
                     </div>
                 </div>
             </div>
