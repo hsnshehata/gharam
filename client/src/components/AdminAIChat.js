@@ -24,6 +24,7 @@ function AdminAIChat({ user }) {
   const PRO_MODELS = [
     { id: null, label: '🔄 أوتو', desc: 'اختيار تلقائي' },
     { id: 'gpt-5-mini', label: 'GPT-5 Mini', desc: 'تفكير عالي' },
+    { id: 'gpt-5.4-mini', label: 'GPT-5.4 Mini', desc: 'تفكير متوسط' },
     { id: 'gpt-5.4', label: 'GPT-5.4', desc: 'تفكير متوسط' },
     { id: 'o4-mini', label: 'O4 Mini', desc: 'تفكير عالي' },
     { id: 'o3-mini', label: 'O3 Mini', desc: 'تفكير عالي' },
