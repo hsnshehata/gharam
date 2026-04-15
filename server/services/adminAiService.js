@@ -588,6 +588,17 @@ const adminTools = [
                 }
             },
             {
+                name: "get_today_work",
+                description: "يجلب تفاصيل شغل اليوم أو يوم محدد بدقة، مقسماً إلى حجوزات الميك آب، الحنة، فرد الشعر، صبغة الشعر، والتصوير. استخدم هذه الأداة دوماً عند السؤال عن شغل اليوم أو عرايس اليوم.",
+                parameters: {
+                    type: "OBJECT",
+                    properties: {
+                        date: { type: "STRING", description: "التاريخ المطلوب (YYYY-MM-DD)." }
+                    },
+                    required: ["date"]
+                }
+            },
+            {
                 name: "get_activity_log",
                 description: "يجلب سجل النشاط والعمليات (إنشاء/تعديل/حذف حجوزات وخدمات ومصروفات) مع اسم الموظف المنفذ وتفاصيل التغييرات. يمكن الفلترة بالتاريخ ونوع الكيان.",
                 parameters: {
@@ -1569,6 +1580,54 @@ const createFunctions = (user) => ({
         } catch (err) {
             console.error('[AdminAI] build_afrakoush_page error:', err.message);
             return { error: "فشل بناء الأداة: " + err.message };
+        }
+    },
+    get_today_work: async ({ date }) => {
+        try {
+            let startDate = date ? new Date(date) : new Date();
+            startDate.setHours(0, 0, 0, 0);
+            let endDate = new Date(startDate);
+            endDate.setHours(23, 59, 59, 999);
+
+            const bookings = await Booking.find({
+                $or: [
+                    { eventDate: { $gte: startDate, $lte: endDate } },
+                    { hennaDate: { $gte: startDate, $lte: endDate } },
+                    { hairStraighteningDate: { $gte: startDate, $lte: endDate } },
+                    { hairDyeDate: { $gte: startDate, $lte: endDate } }
+                ]
+            }).populate('package', 'name type').populate('hennaPackage', 'name').populate('photographyPackage', 'name').lean();
+
+            const makeupBookings = bookings.filter(
+                b => (b.package?.type === 'makeup' && b.eventDate && new Date(b.eventDate).toDateString() === startDate.toDateString())
+            ).map(b => ({ receiptNumber: b.receiptNumber, client: b.clientName, phone: b.clientPhone, package: b.package?.name, deposit: b.deposit, remaining: b.remaining }));
+
+            const hennaBookings = bookings.filter(
+                b => (b.hennaPackage && b.hennaDate && new Date(b.hennaDate).toDateString() === startDate.toDateString())
+            ).map(b => ({ receiptNumber: b.receiptNumber, client: b.clientName, phone: b.clientPhone, package: b.hennaPackage?.name, deposit: b.deposit, remaining: b.remaining }));
+
+            const hairStraighteningBookings = bookings.filter(
+                b => (b.hairStraightening && b.hairStraighteningDate && new Date(b.hairStraighteningDate).toDateString() === startDate.toDateString())
+            ).map(b => ({ receiptNumber: b.receiptNumber, client: b.clientName, phone: b.clientPhone, price: b.hairStraighteningPrice, executed: b.hairStraighteningExecuted }));
+
+            const hairDyeBookings = bookings.filter(
+                b => (b.hairDye && b.hairDyeDate && new Date(b.hairDyeDate).toDateString() === startDate.toDateString())
+            ).map(b => ({ receiptNumber: b.receiptNumber, client: b.clientName, phone: b.clientPhone, price: b.hairDyePrice, executed: b.hairDyeExecuted }));
+
+            const photographyBookings = bookings.filter(
+                b => (b.photographyPackage && b.eventDate && new Date(b.eventDate).toDateString() === startDate.toDateString())
+            ).map(b => ({ receiptNumber: b.receiptNumber, client: b.clientName, phone: b.clientPhone, package: b.photographyPackage?.name }));
+
+            return {
+                makeupBookings,
+                hennaBookings,
+                hairStraighteningBookings,
+                hairDyeBookings,
+                photographyBookings
+            };
+        } catch (err) {
+            console.error('[AdminAI] get_today_work error:', err.message);
+            return { error: err.message };
         }
     },
     get_afrakoush_page: async ({ name }) => {
