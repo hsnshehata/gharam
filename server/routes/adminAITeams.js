@@ -4,7 +4,7 @@ const AITeam = require('../models/AITeam');
 const AIAgent = require('../models/AIAgent');
 const AITeamSession = require('../models/AITeamSession');
 const { runAgent } = require('../services/teamAiService');
-const { protect, adminOnly } = require('../middleware/auth');
+const { protect, adminOnly } = require('../middleware/authenticate');
 
 // GET /api/admin/teams
 router.get('/', protect, adminOnly, async (req, res) => {

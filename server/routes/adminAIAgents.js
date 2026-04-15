@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const AIAgent = require('../models/AIAgent');
-const { protect, adminOnly } = require('../middleware/auth');
+const { protect, adminOnly } = require('../middleware/authenticate');
 
 // --- الموديلات الافتراضية (Models) ---
 const OPENROUTER_MODELS = [
