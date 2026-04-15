@@ -3,6 +3,15 @@ const TelegramAccount = require('../models/TelegramAccount');
 const AdminConversation = require('../models/AdminConversation');
 const { processAdminChat, generateChatTitle } = require('./adminAiService');
 
+const MODEL_CANDIDATES = [
+    'gemini-3.1-pro-preview',
+    'gemini-2.5-pro',
+    'o4-mini',
+    'o3-mini',
+    'gpt-5.4-mini',
+    'gpt-5-mini'
+];
+
 let bot;
 
 const initTelegramBot = () => {
@@ -42,6 +51,31 @@ const initTelegramBot = () => {
             // Display typing action
             bot.sendChatAction(chatId, 'typing');
 
+            if (text === '⚙️ إعدادات الذكاء الاصطناعي') {
+                return bot.sendMessage(chatId, 'اختر وضع المحرك الذكي:', {
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: (account.aiMode === 'auto' ? '✅ ' : '') + 'متقدم وتلقائي', callback_data: 'mode_auto' }],
+                            [{ text: (account.aiMode === 'fast' ? '✅ ' : '') + 'سريع (للمهام البسيطة)', callback_data: 'mode_fast' }],
+                            [{ text: (account.aiMode === 'specific' ? '✅ ' : '') + 'متقدم (اختيار مودل)', callback_data: 'mode_specific' }]
+                        ]
+                    }
+                });
+            }
+
+            if (text === '🔄 محادثة جديدة') {
+                await AdminConversation.create({ telegramAccountId: account._id, messages: [] });
+                return bot.sendMessage(chatId, 'تم بدء محادثة جديدة. تفضل بطرح سؤالك!', {
+                    reply_markup: {
+                        keyboard: [
+                            ['⚙️ إعدادات الذكاء الاصطناعي', '🔄 محادثة جديدة']
+                        ],
+                        resize_keyboard: true,
+                        persistent: true
+                    }
+                });
+            }
+
             // Find or create conversation
             let conv = await AdminConversation.findOne({ telegramAccountId: account._id }).sort({ lastActivity: -1 });
             let isNew = false;
@@ -73,8 +107,10 @@ const initTelegramBot = () => {
             // Call AI module
             let replyText = 'حدث خطأ غير متوقع.';
             try {
-                // Here we don't pass audio fileBuffer for simplicity unless we download it from telegram
-                replyText = await processAdminChat(msgsForAi, dummyUser, null, null);
+                let fastMode = account.aiMode === 'fast';
+                let specificModel = account.aiMode === 'specific' ? account.specificModel : null;
+                // arguments: msgsForAi, fullUser, fileBuffer, fileMimeType, additionalPrompt, onToolCall, fastMode, specificModel
+                replyText = await processAdminChat(msgsForAi, dummyUser, null, null, null, null, fastMode, specificModel);
             } catch (aiErr) {
                 console.error('[Telegram Bot] AI Error:', aiErr);
                 replyText = 'أعتذر، حدث خطأ في معالجة طلبك بالمحرك الذكي.';
@@ -107,10 +143,66 @@ const initTelegramBot = () => {
 
     // Also handle /start
     bot.onText(/\/start/, (msg) => {
-        // Just send a welcome, the general message handler will catch it too, but we can prevent double reply
-        // Well, the general message handler WILL capture it, so we don't need a separate /start handler unless we want specific text.
-        // let's do nothing on /start so 'message' handler does its thing.
+        const chatId = msg.chat.id;
+        bot.sendMessage(chatId, 'أهلاً بك في المساعد الذكي لإدارة غرام سلطان بيوتي سنتر.\nيمكنك البدء بطرح أسئلتك أو تغيير الإعدادات من القائمة السفلية.', {
+            reply_markup: {
+                keyboard: [
+                    ['⚙️ إعدادات الذكاء الاصطناعي', '🔄 محادثة جديدة']
+                ],
+                resize_keyboard: true,
+                persistent: true
+            }
+        });
     });
+
+    bot.on('callback_query', async (query) => {
+        const data = query.data;
+        const chatId = query.message.chat.id;
+        const account = await TelegramAccount.findOne({ telegramId: chatId.toString() });
+        if (!account) return;
+
+        try {
+            if (data === 'mode_auto') {
+                account.aiMode = 'auto';
+                account.specificModel = null;
+                await account.save();
+                bot.answerCallbackQuery(query.id, { text: 'تم التغيير للوضع التلقائي المتقدم' });
+                bot.editMessageText('تم اختيار الوضع التلقائي المتقدم بنجاح ✅', { chat_id: chatId, message_id: query.message.message_id });
+            } else if (data === 'mode_fast') {
+                account.aiMode = 'fast';
+                account.specificModel = null;
+                await account.save();
+                bot.answerCallbackQuery(query.id, { text: 'تم التغيير للوضع السريع' });
+                bot.editMessageText('تم اختيار الوضع السريع بنجاح ⚡', { chat_id: chatId, message_id: query.message.message_id });
+            } else if (data === 'mode_specific') {
+                const inline_keyboard = [];
+                let currentRow = [];
+                for(let i = 0; i < MODEL_CANDIDATES.length; i++) {
+                    const m = MODEL_CANDIDATES[i];
+                    currentRow.push({ text: (account.specificModel === m ? '✅ ' : '') + m, callback_data: 'model_' + m });
+                    if(currentRow.length === 2 || i === MODEL_CANDIDATES.length - 1) {
+                        inline_keyboard.push(currentRow);
+                        currentRow = [];
+                    }
+                }
+                bot.editMessageText('اختر المودل الذي تريده:', {
+                    chat_id: chatId, 
+                    message_id: query.message.message_id,
+                    reply_markup: { inline_keyboard }
+                });
+            } else if (data.startsWith('model_')) {
+                const modelName = data.replace('model_', '');
+                account.aiMode = 'specific';
+                account.specificModel = modelName;
+                await account.save();
+                bot.answerCallbackQuery(query.id, { text: 'تم تفعيل المودل: ' + modelName });
+                bot.editMessageText('تم تفعيل مودل: ' + modelName + ' ✅', { chat_id: chatId, message_id: query.message.message_id });
+            }
+        } catch(err) {
+            console.error('[Telegram Bot] Callback query error:', err);
+        }
+    });
+
 };
 
 const sendTelegramMessageWithFallback = async (chatId, text) => {
@@ -140,7 +232,16 @@ const sendTelegramMessageWithFallback = async (chatId, text) => {
 
     for (const chunk of chunks) {
         try {
-            await bot.sendMessage(chatId, chunk, { parse_mode: 'Markdown' });
+            await bot.sendMessage(chatId, chunk, { 
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    keyboard: [
+                        ['⚙️ إعدادات الذكاء الاصطناعي', '🔄 محادثة جديدة']
+                    ],
+                    resize_keyboard: true,
+                    persistent: true
+                }
+            });
         } catch (err) {
             // If markdown parsing fails, fallback to plain text
             console.warn(`[Telegram Bot] Markdown parse failed for chat ${chatId}, falling back to plain text. Error: ${err.message}`);
