@@ -85,6 +85,8 @@ app.use('/api/public/facebook', require('./server/routes/facebook'));
 app.use('/api/facebook', require('./server/routes/facebookAdmin'));
 app.use('/api/ai', require('./server/routes/ai'));
 app.use('/api/admin-ai', require('./server/routes/adminAi'));
+app.use('/api/admin/agents', require('./server/routes/adminAIAgents'));
+app.use('/api/admin/teams', require('./server/routes/adminAITeams'));
 app.use('/api/telegram', require('./server/routes/telegramRoutes'));
 app.use('/api/afrakoush', require('./server/routes/afrakoushRoutes'));
 app.use('/api/sync', require('./server/routes/sync'));
