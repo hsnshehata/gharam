@@ -717,7 +717,7 @@ function AdminAIChat({ user }) {
                 {/* Model Picker Dropdown */}
                 {showModelPicker && !fastMode && (
                   <div style={{
-                    position: 'absolute', bottom: '110%', left: 0,
+                    position: 'absolute', bottom: '110%', right: 0,
                     background: '#fff', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
                     border: '1px solid #e0e0e0', overflow: 'hidden', zIndex: 100,
                     minWidth: 180, direction: 'rtl'
