@@ -24,6 +24,7 @@ import NotFound from './pages/NotFound';
 import AfrakoushToolViewer from './pages/AfrakoushToolViewer';
 import AfrakoushToolsRegistry from './pages/AfrakoushToolsRegistry';
 import ModelComparison from './pages/ModelComparison';
+import AITeamsDashboard from './pages/AITeamsDashboard';
 import GlobalAdminWidget from './components/GlobalAdminWidget';
 import Navbar from './components/Navbar';
 import AdminAIChat from './components/AdminAIChat';
@@ -206,6 +207,11 @@ function AppContent() {
               <Route
                 path="/admin/afrakoush-registry"
                 element={user && user.role === 'admin' ? <AfrakoushToolsRegistry /> : <Navigate to="/login" />}
+              />
+              {/* Unified AI Team Dashboard Route */}
+              <Route
+                path="/admin/ai-team-dashboard"
+                element={user && user.role === 'admin' ? <AITeamsDashboard /> : <Navigate to="/login" />}
               />
               <Route path="/" element={<Navigate to={getHomePath(user)} replace />} />
               <Route path="*" element={<NotFound />} />

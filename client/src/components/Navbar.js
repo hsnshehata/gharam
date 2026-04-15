@@ -63,6 +63,8 @@ function Navbar({ user, setUser }) {
                 <NavDropdown.Item as={Link} to="/ai-settings" onClick={closeMenu}>الذكاء الاصطناعي</NavDropdown.Item>
                 <NavDropdown.Item as={Link} to="/model-comparison" onClick={closeMenu}>⚖️ مقارنة النماذج</NavDropdown.Item>
                 <NavDropdown.Divider />
+                <NavDropdown.Item as={Link} to="/admin/ai-team-dashboard" onClick={closeMenu}>👥 فريق الموظفين AI</NavDropdown.Item>
+                <NavDropdown.Divider />
                 <NavDropdown.Item as={Link} to="/admin/afrakoush-registry" onClick={closeMenu}>أدوات عفركوش (الجديد)</NavDropdown.Item>
               </NavDropdown>
               <Nav.Link as={Link} to="/users" onClick={closeMenu}>الموظفين</Nav.Link>
