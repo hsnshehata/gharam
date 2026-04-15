@@ -91,6 +91,12 @@ const initTelegramBot = () => {
                 userText = 'رسالة صوتية (تليجرام)';
             }
             conv.messages.push({ role: 'user', text: userText });
+            
+            // تحديد سقف للرسائل لمنع تضخم قاعدة البيانات
+            if (conv.messages.length > 50) {
+                conv.messages = conv.messages.slice(-50);
+            }
+            
             conv.lastActivity = Date.now();
             await conv.save();
 
@@ -106,6 +112,7 @@ const initTelegramBot = () => {
 
             // Call AI module
             let replyText = 'حدث خطأ غير متوقع.';
+            let aiSuccess = true;
             try {
                 let fastMode = account.aiMode === 'fast';
                 let specificModel = account.aiMode === 'specific' ? account.specificModel : null;
@@ -114,12 +121,16 @@ const initTelegramBot = () => {
             } catch (aiErr) {
                 console.error('[Telegram Bot] AI Error:', aiErr);
                 replyText = 'أعتذر، حدث خطأ في معالجة طلبك بالمحرك الذكي.';
+                aiSuccess = false;
             }
 
             // Save bot reply
-            conv.messages.push({ role: 'model', text: replyText });
-            conv.lastActivity = Date.now();
-            await conv.save();
+            if (aiSuccess) {
+                conv.messages.push({ role: 'model', text: replyText });
+                if (conv.messages.length > 50) conv.messages = conv.messages.slice(-50);
+                conv.lastActivity = Date.now();
+                await conv.save();
+            }
 
             // Send reply back to Telegram
             await sendTelegramMessageWithFallback(chatId, replyText);
@@ -163,18 +174,19 @@ const initTelegramBot = () => {
 
         try {
             if (data === 'mode_auto') {
-                account.aiMode = 'auto';
-                account.specificModel = null;
-                await account.save();
                 bot.answerCallbackQuery(query.id, { text: 'تم التغيير للوضع التلقائي المتقدم' });
                 bot.editMessageText('تم اختيار الوضع التلقائي المتقدم بنجاح ✅', { chat_id: chatId, message_id: query.message.message_id });
-            } else if (data === 'mode_fast') {
-                account.aiMode = 'fast';
+                account.aiMode = 'auto';
                 account.specificModel = null;
-                await account.save();
+                account.save().catch(e => console.error("Error saving mode_auto:", e));
+            } else if (data === 'mode_fast') {
                 bot.answerCallbackQuery(query.id, { text: 'تم التغيير للوضع السريع' });
                 bot.editMessageText('تم اختيار الوضع السريع بنجاح ⚡', { chat_id: chatId, message_id: query.message.message_id });
+                account.aiMode = 'fast';
+                account.specificModel = null;
+                account.save().catch(e => console.error("Error saving mode_fast:", e));
             } else if (data === 'mode_specific') {
+                bot.answerCallbackQuery(query.id);
                 const inline_keyboard = [];
                 let currentRow = [];
                 for(let i = 0; i < MODEL_CANDIDATES.length; i++) {
@@ -192,11 +204,11 @@ const initTelegramBot = () => {
                 });
             } else if (data.startsWith('model_')) {
                 const modelName = data.replace('model_', '');
-                account.aiMode = 'specific';
-                account.specificModel = modelName;
-                await account.save();
                 bot.answerCallbackQuery(query.id, { text: 'تم تفعيل المودل: ' + modelName });
                 bot.editMessageText('تم تفعيل مودل: ' + modelName + ' ✅', { chat_id: chatId, message_id: query.message.message_id });
+                account.aiMode = 'specific';
+                account.specificModel = modelName;
+                account.save().catch(e => console.error("Error saving specific mode:", e));
             }
         } catch(err) {
             console.error('[Telegram Bot] Callback query error:', err);
