@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import { Card, Form, Button, Row, Col, Badge } from 'react-bootstrap';
 
 export default function AITeamsManager({ isNested = false }) {
   const [teams, setTeams] = useState([]);
@@ -101,113 +102,137 @@ export default function AITeamsManager({ isNested = false }) {
   };
 
   return (
-    <div className={`p-6 ${isNested ? '' : 'bg-gray-50 min-h-screen'}`} dir="rtl">
-      {!isNested && <h1 className="text-3xl font-bold mb-6 text-gray-800">إدارة فرق المساعدين (Teams)</h1>}
+    <div className={`p-3 ${isNested ? '' : 'bg-light min-vh-100'}`} dir="rtl">
+      {!isNested && <h1 className="h3 fw-bold mb-4">إدارة فرق المساعدين (Teams)</h1>}
       
-      <div className="bg-white rounded-xl shadow-md p-6 mb-8 border border-gray-100">
-        <h2 className="text-xl font-semibold mb-4">{editingId ? 'تعديل الفريق' : 'إنشاء فريق جديد'}</h2>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">اسم الفريق</label>
-              <input type="text" name="name" value={formData.name} onChange={handleChange} required placeholder="مثال: الفريق البرمجي" className="w-full p-2 border border-gray-300 rounded-lg" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">وصف الفريق (اختياري)</label>
-              <input type="text" name="description" value={formData.description} onChange={handleChange} placeholder="مثال: يختص بالبرمجة والتطوير" className="w-full p-2 border border-gray-300 rounded-lg" />
-            </div>
-          </div>
-
-          <div>
-             <label className="block text-sm font-medium text-gray-700 mb-2">قائد الفريق 👑</label>
-             <select name="leader" value={formData.leader} onChange={handleChange} required className="w-full md:w-1/2 p-2 border border-gray-300 rounded-lg bg-yellow-50">
-                <option value="" disabled>-- اختر قائداً --</option>
-                {agents.map(a => (
-                    <option key={a._id} value={a._id}>{a.emoji} {a.name} ({a.role})</option>
-                ))}
-             </select>
-          </div>
+      <Card className="shadow-sm mb-4 border-0">
+        <Card.Body className="p-4">
+          <h2 className="h5 fw-bold mb-4">{editingId ? 'تعديل الفريق' : 'إنشاء فريق جديد'}</h2>
           
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">أعضاء الفريق المساعدين 👥 (يمكنك اختيار متعدد)</label>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
-              {agents.map(a => {
-                if (a._id === formData.leader) return null; // القائد لا يجب أن يكون ضمن الأعضاء العاديين في نفس الوقت هنا
-                const isSelected = formData.members.includes(a._id);
-                return (
-                  <label key={a._id} className={`flex items-center gap-2 p-2 px-3 rounded-lg border cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200 hover:bg-gray-100'}`}>
-                    <input type="checkbox" checked={isSelected} onChange={() => handleMemberToggle(a._id)} className="w-4 h-4 text-blue-600 rounded border-gray-300" />
-                    <span className="text-sm font-medium">{a.emoji} {a.name}</span>
-                  </label>
-                );
-              })}
-              {agents.length === 0 && <span className="text-gray-500 text-sm">لا يوجد موظفين متاحين. قم بإنشاء موظفين أولاً.</span>}
-            </div>
-          </div>
+          <Form onSubmit={handleSubmit}>
+            <Row className="g-3 mb-3">
+              <Col xs={12} md={6}>
+                <Form.Group>
+                  <Form.Label>اسم الفريق</Form.Label>
+                  <Form.Control type="text" name="name" value={formData.name} onChange={handleChange} required placeholder="مثال: الفريق البرمجي" />
+                </Form.Group>
+              </Col>
+              <Col xs={12} md={6}>
+                <Form.Group>
+                  <Form.Label>وصف الفريق (اختياري)</Form.Label>
+                  <Form.Control type="text" name="description" value={formData.description} onChange={handleChange} placeholder="مثال: يختص بالبرمجة والتطوير" />
+                </Form.Group>
+              </Col>
+            </Row>
 
-          <div className="flex gap-2 pt-4">
-            <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors">
-              {editingId ? 'حفظ تعديلات الفريق' : 'إنشاء الفريق'}
-            </button>
-            {editingId && (
-              <button type="button" onClick={() => { setEditingId(null); setFormData({ name: '', description: '', leader: agents[0]?._id || '', members: [] }); }} className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-6 rounded-lg transition-colors">
-                إلغاء التعديل
-              </button>
-            )}
-          </div>
-        </form>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {loading ? <p className="text-gray-500">جاري التحميل...</p> : teams.map(team => (
-          <div key={team._id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all">
-            <div className="p-5">
-              <div className="flex items-start justify-between mb-4 border-b pb-4">
-                <div>
-                  <h3 className="font-bold text-xl text-gray-800">{team.name}</h3>
-                  {team.description && <p className="text-sm text-gray-500 mt-1">{team.description}</p>}
-                </div>
-                <div className="flex gap-1">
-                  <button onClick={() => handleEdit(team)} className="text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded text-sm transition-colors">تعديل</button>
-                  <button onClick={() => handleDelete(team._id)} className="text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1 rounded text-sm transition-colors">حذف</button>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                 <div>
-                    <span className="text-xs font-bold text-gray-400 uppercase block mb-2">القائد 👑</span>
-                    {team.leader ? (
-                        <div className="flex items-center gap-3 bg-yellow-50/50 p-2 rounded-lg border border-yellow-100 w-max">
-                            <div className="text-2xl">{team.leader.emoji}</div>
-                            <div>
-                                <div className="font-bold text-sm">{team.leader.name}</div>
-                                <div className="text-xs text-gray-500">{team.leader.role}</div>
-                            </div>
+            <Form.Group className="mb-4">
+               <Form.Label>قائد الفريق 👑</Form.Label>
+               <Form.Select name="leader" value={formData.leader} onChange={handleChange} required className="w-50 bg-warning bg-opacity-10">
+                  <option value="" disabled>-- اختر قائداً --</option>
+                  {agents.map(a => (
+                      <option key={a._id} value={a._id}>{a.emoji} {a.name} ({a.role})</option>
+                  ))}
+               </Form.Select>
+            </Form.Group>
+            
+            <Form.Group className="mb-4">
+              <Form.Label>أعضاء الفريق المساعدين 👥 (يمكنك اختيار متعدد)</Form.Label>
+              <div className="bg-light p-4 rounded border">
+                <Row className="g-3">
+                  {agents.map(a => {
+                    if (a._id === formData.leader) return null; // القائد لا يجب أن يكون ضمن الأعضاء العاديين في نفس الوقت هنا
+                    const isSelected = formData.members.includes(a._id);
+                    return (
+                      <Col xs={6} md={4} lg={3} key={a._id}>
+                        <div 
+                          className={`d-flex align-items-center gap-2 p-2 rounded border cursor-pointer ${isSelected ? 'bg-info bg-opacity-10 border-info' : 'bg-white'}`}
+                          onClick={() => handleMemberToggle(a._id)}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          <Form.Check 
+                            type="checkbox" 
+                            checked={isSelected} 
+                            onChange={() => handleMemberToggle(a._id)} 
+                            onClick={(e) => e.stopPropagation()}
+                            id={`member-${a._id}`}
+                          />
+                          <Form.Check.Label className="mb-0" htmlFor={`member-${a._id}`} style={{ cursor: 'pointer' }}>
+                            {a.emoji} {a.name}
+                          </Form.Check.Label>
                         </div>
-                    ) : (
-                        <span className="text-red-400 text-xs">لا يوجد قائد محدد</span>
-                    )}
-                 </div>
-
-                 {team.members && team.members.length > 0 && (
-                 <div>
-                    <span className="text-xs font-bold text-gray-400 uppercase block mb-2">المساعدين 👥 ({team.members.length})</span>
-                    <div className="flex flex-wrap gap-2">
-                        {team.members.map(member => (
-                            <div key={member._id} className="flex items-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200 text-sm">
-                                <span>{member.emoji}</span>
-                                <span className="font-medium text-gray-700">{member.name}</span>
-                            </div>
-                        ))}
-                    </div>
-                 </div>
-                 )}
+                      </Col>
+                    );
+                  })}
+                  {agents.length === 0 && <span className="text-muted small">لا يوجد موظفين متاحين. قم بإنشاء موظفين أولاً.</span>}
+                </Row>
               </div>
+            </Form.Group>
+
+            <div className="d-flex gap-2">
+              <Button type="submit" variant="primary" className="px-4">
+                {editingId ? 'حفظ تعديلات الفريق' : 'إنشاء الفريق'}
+              </Button>
+              {editingId && (
+                <Button variant="secondary" className="px-4" onClick={() => { setEditingId(null); setFormData({ name: '', description: '', leader: agents[0]?._id || '', members: [] }); }}>
+                  إلغاء التعديل
+                </Button>
+              )}
             </div>
-          </div>
+          </Form>
+        </Card.Body>
+      </Card>
+
+      <Row className="g-4">
+        {loading ? <Col><p className="text-muted">جاري التحميل...</p></Col> : teams.map(team => (
+          <Col xs={12} md={6} key={team._id}>
+            <Card className="h-100 shadow-sm border-0">
+              <Card.Body className="p-4">
+                <div className="d-flex justify-content-between align-items-start mb-3 border-bottom pb-3">
+                  <div>
+                    <h5 className="fw-bold mb-1">{team.name}</h5>
+                    {team.description && <p className="text-muted small mb-0">{team.description}</p>}
+                  </div>
+                  <div className="d-flex gap-1">
+                    <Button variant="outline-primary" size="sm" onClick={() => handleEdit(team)}>تعديل</Button>
+                    <Button variant="outline-danger" size="sm" onClick={() => handleDelete(team._id)}>حذف</Button>
+                  </div>
+                </div>
+
+                <div className="d-flex flex-column gap-3">
+                   <div>
+                      <span className="text-muted small fw-bold text-uppercase d-block mb-2">القائد 👑</span>
+                      {team.leader ? (
+                          <div className="d-inline-flex align-items-center gap-3 bg-warning bg-opacity-10 p-2 rounded border border-warning">
+                              <div className="fs-3">{team.leader.emoji}</div>
+                              <div>
+                                  <div className="fw-bold small">{team.leader.name}</div>
+                                  <div className="text-muted" style={{ fontSize: '0.75rem' }}>{team.leader.role}</div>
+                              </div>
+                          </div>
+                      ) : (
+                          <span className="text-danger small">لا يوجد قائد محدد</span>
+                      )}
+                   </div>
+
+                   {team.members && team.members.length > 0 && (
+                   <div>
+                      <span className="text-muted small fw-bold text-uppercase d-block mb-2">المساعدين 👥 ({team.members.length})</span>
+                      <div className="d-flex flex-wrap gap-2">
+                          {team.members.map(member => (
+                              <Badge bg="light" text="dark" className="border d-flex align-items-center gap-1 p-2 fw-normal" key={member._id}>
+                                  <span>{member.emoji}</span>
+                                  <span>{member.name}</span>
+                              </Badge>
+                          ))}
+                      </div>
+                   </div>
+                   )}
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
         ))}
-      </div>
+      </Row>
     </div>
   );
 }

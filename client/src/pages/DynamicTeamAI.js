@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'react-hot-toast';
+import { Container, Card, Form, Button, Row, Col, ProgressBar, Badge } from 'react-bootstrap';
 
 export default function DynamicTeamAI({ isNested = false }) {
   const [teams, setTeams] = useState([]);
@@ -149,113 +150,116 @@ export default function DynamicTeamAI({ isNested = false }) {
   const percent = currentAgents.length > 0 ? Math.round((completedAgentIds.length / currentAgents.length) * 100) : 0;
 
   return (
-    <div className={`${isNested ? '' : 'min-h-screen bg-gray-950 text-white'} w-full`} dir="rtl">
+    <div className={`${isNested ? '' : 'min-vh-100 bg-light py-4'} w-100`} dir="rtl">
       {!isNested && (
-        <div className="bg-gray-900 border-b border-gray-800 px-6 py-4">
-          <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <Container className="mb-4">
+          <div className="d-flex align-items-center justify-content-between p-4 bg-white shadow-sm rounded">
             <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
+              <h1 className="h4 fw-bold d-flex align-items-center gap-2 mb-1">
                 👥 محادثات الفرق (Multi-Agent Teams)
               </h1>
-              <p className="text-gray-400 text-sm mt-1">تفاعل حي مع فرقك التي أنشأتها</p>
+              <p className="text-muted small mb-0">تفاعل حي مع فرقك التي أنشأتها</p>
             </div>
             <div>
               {teams.length > 0 ? (
-                  <select 
+                  <Form.Select 
                       value={selectedTeam?._id || ''} 
                       onChange={handleTeamChange}
                       disabled={isRunning}
-                      className="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5"
                   >
                       {teams.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
-                  </select>
+                  </Form.Select>
               ) : (
-                  <span className="text-sm text-yellow-500">يرجى إنشاء فريق أولاً</span>
+                  <span className="small text-warning fw-bold">يرجى إنشاء فريق أولاً</span>
               )}
             </div>
           </div>
-        </div>
+        </Container>
       )}
 
       {isNested && (
-        <div className="px-6 py-4 flex items-center justify-between bg-gray-900/50 border-b border-gray-800">
-           <span className="text-gray-300 font-bold text-sm">التيم النشط:</span>
+        <div className="px-4 py-3 d-flex align-items-center justify-content-between bg-light border-bottom mb-4 rounded">
+           <span className="fw-bold small">التيم النشط:</span>
            {teams.length > 0 ? (
-                <select 
+                <Form.Select 
                     value={selectedTeam?._id || ''} 
                     onChange={handleTeamChange}
                     disabled={isRunning}
-                    className="bg-gray-800 border border-gray-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5"
+                    className="w-auto"
                 >
                     {teams.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
-                </select>
+                </Form.Select>
             ) : (
-                <span className="text-sm text-yellow-500">يرجى إنشاء فريق من تبويب بناء الفرق</span>
+                <span className="small text-warning fw-bold">يرجى إنشاء فريق من تبويب بناء الفرق</span>
             )}
         </div>
       )}
 
-      <div className="max-w-6xl mx-auto px-6 py-6 space-y-6">
+      <Container>
         {selectedTeam && (
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-4">
-            <h3 className="text-lg font-bold mb-4 border-b border-gray-800 pb-2">تشكيل الفريق: {selectedTeam.name}</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-              {currentAgents.map((agent) => {
-                const isActive = activeAgentId === agent._id;
-                const isDone = completedAgentIds.includes(agent._id);
-                return (
-                  <div key={agent._id} className={`
-                    rounded-xl border p-3 items-center text-center transition-all duration-300
-                    ${isActive ? 'border-blue-500 bg-blue-500/10 scale-105 shadow-lg shadow-blue-500/20' : 'border-gray-700 bg-gray-800/50 hover:bg-gray-800'}
-                    ${isDone ? 'opacity-50 border-green-500/30' : ''}
-                  `}>
-                    <div className={`text-3xl mb-2 ${isActive ? 'animate-bounce' : ''}`}>{agent.emoji}</div>
-                    <div className="font-bold text-sm truncate">{agent.name}</div>
-                    <div className="text-xs text-gray-400 truncate mt-1">{agent.role}</div>
-                    {agent._id === selectedTeam.leader?._id && <div className="text-[10px] bg-yellow-500/20 text-yellow-500 mt-2 rounded-full py-0.5 px-2 w-max mx-auto border border-yellow-500/30">القائد</div>}
+          <Card className="shadow-sm border-0 mb-4">
+            <Card.Body>
+              <h3 className="h6 fw-bold mb-3 pb-2 border-bottom">تشكيل الفريق: {selectedTeam.name}</h3>
+              <Row className="g-3">
+                {currentAgents.map((agent) => {
+                  const isActive = activeAgentId === agent._id;
+                  const isDone = completedAgentIds.includes(agent._id);
+                  return (
+                    <Col xs={6} md={3} lg={2} key={agent._id}>
+                      <Card className={`h-100 text-center transition-all ${isActive ? 'border-primary bg-primary bg-opacity-10 shadow' : ''} ${isDone ? 'opacity-50 border-success' : ''}`}>
+                        <Card.Body className="p-3">
+                            <div className={`fs-1 mb-2 ${isActive ? 'spinner-grow spinner-grow-sm text-primary mx-auto d-block' : ''}`}>
+                                {isActive ? '' : agent.emoji}
+                            </div>
+                            <div className="fw-bold small text-truncate">{agent.name}</div>
+                            <div className="text-muted" style={{ fontSize: '0.7rem' }}>{agent.role}</div>
+                            {agent._id === selectedTeam.leader?._id && <Badge bg="warning" text="dark" className="mt-2">القائد</Badge>}
+                        </Card.Body>
+                      </Card>
+                    </Col>
+                  );
+                })}
+              </Row>
+              {isRunning && (
+                  <div className="mt-4">
+                      <div className="d-flex align-items-center justify-content-between mb-2 small">
+                          <span className="text-muted">تقدم الفريق</span>
+                          <span className="fw-bold">{percent}%</span>
+                      </div>
+                      <ProgressBar now={percent} />
                   </div>
-                );
-              })}
-            </div>
-            {isRunning && (
-                <div className="mt-6">
-                    <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-400">تقدم الفريق</span>
-                        <span className="text-sm font-bold">{percent}%</span>
-                    </div>
-                    <div className="w-full bg-gray-800 rounded-full h-2">
-                        <div className="bg-blue-500 h-2 rounded-full transition-all duration-500" style={{ width: `${percent}%` }} />
-                    </div>
-                </div>
-            )}
-          </div>
+              )}
+            </Card.Body>
+          </Card>
         )}
 
-        <div className="bg-gray-900 rounded-2xl border border-gray-800 flex flex-col" style={{height: '60vh'}}>
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <Card className="shadow-sm border-0 d-flex flex-column" style={{height: '60vh'}}>
+          <Card.Body className="overflow-auto d-flex flex-column p-4" style={{ gap: '1rem' }}>
              {messages.length === 0 && (
-                <div className="flex items-center justify-center h-full text-gray-500 flex-col gap-3">
-                  <div className="text-6xl text-gray-700">✍️</div>
+                <div className="d-flex align-items-center justify-content-center h-100 flex-column gap-3 text-muted">
+                  <div className="display-1">✍️</div>
                   <p>اكتب مهمتك للفريق للبدء...</p>
                 </div>
              )}
              {messages.map((msg, idx) => (
-                <div key={idx}>
-                    {msg.type === 'system' && <div className="text-center text-gray-500 text-xs my-4">{msg.content}</div>}
-                    {msg.type === 'error' && <div className="bg-red-500/10 border border-red-500/30 p-3 rounded-lg text-red-400 text-sm">❌ {msg.content}</div>}
+                <div key={idx} className="w-100">
+                    {msg.type === 'system' && <div className="text-center text-muted small my-3">{msg.content}</div>}
+                    {msg.type === 'error' && <Alert variant="danger" className="py-2 mb-0">❌ {msg.content}</Alert>}
                     {msg.type === 'agent' && (
-                        <div className="bg-gray-800/60 border border-gray-700 rounded-xl p-4">
-                            <div className="flex items-center gap-3 mb-3 border-b border-gray-700 pb-3">
-                                <div className="text-2xl bg-gray-700 rounded-full w-10 h-10 flex items-center justify-center">{msg.agentEmoji}</div>
-                                <div>
-                                    <div className="font-bold text-sm text-blue-100">{msg.agentName}</div>
-                                    <div className="text-xs text-gray-400">{msg.agentRole}</div>
+                        <div className="bg-light border rounded p-3 w-100">
+                            <div className="d-flex align-items-center gap-3 mb-3 border-bottom pb-2">
+                                <div className="fs-3 bg-secondary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style={{ width: '45px', height: '45px' }}>
+                                    {msg.agentEmoji}
                                 </div>
-                                <div className="mr-auto">
-                                   {msg.status === 'working' ? <span className="flex items-center gap-2 text-xs text-blue-400">⚡ يعمل...</span> : <span className="text-xs text-green-400">✓ 완료 {(msg.duration/1000).toFixed(1)}s</span>}
+                                <div>
+                                    <div className="fw-bold text-primary mb-0">{msg.agentName}</div>
+                                    <div className="text-muted" style={{ fontSize: '0.75rem' }}>{msg.agentRole}</div>
+                                </div>
+                                <div className="me-auto">
+                                   {msg.status === 'working' ? <span className="small text-primary d-flex align-items-center gap-2"><span className="spinner-border spinner-border-sm" /> يعمل...</span> : <span className="small text-success fw-bold">✓ 완료 {(msg.duration/1000).toFixed(1)}s</span>}
                                 </div>
                             </div>
-                            <div className="text-gray-300 text-sm prose prose-invert max-w-none">
+                            <div className="text-dark small overflow-hidden" dir="auto">
                                 <ReactMarkdown>{msg.content}</ReactMarkdown>
                             </div>
                         </div>
@@ -263,30 +267,32 @@ export default function DynamicTeamAI({ isNested = false }) {
                 </div>
              ))}
              <div ref={messagesEndRef} />
-          </div>
+          </Card.Body>
 
-          <div className="p-4 border-t border-gray-800 bg-gray-900/50">
-             <div className="flex gap-2">
-                 <textarea
+          <Card.Footer className="p-3 bg-white">
+             <div className="d-flex gap-2">
+                 <Form.Control
+                    as="textarea"
                     value={task}
                     onChange={e => setTask(e.target.value)}
                     disabled={isRunning || !selectedTeam}
-                    rows="2"
+                    rows={2}
                     placeholder="اكتب المهمة المطلوبة للفريق..."
-                    className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm resize-none focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                    style={{ resize: 'none' }}
                  />
-                 <button
+                 <Button
+                    variant="primary"
                     disabled={!task.trim() || isRunning || !selectedTeam}
                     onClick={handleRun}
-                    className="bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 text-white px-6 rounded-xl font-bold transition-colors"
+                    className="px-4 fw-bold"
                  >
                     إرسال
-                 </button>
+                 </Button>
              </div>
-          </div>
-        </div>
+          </Card.Footer>
+        </Card>
 
-      </div>
+      </Container>
     </div>
   );
 }
