@@ -1895,13 +1895,17 @@ const processAdminChat = async (messages, user, fileBuffer = null, fileMimeType 
                         tools: openaiToolDefs
                     };
 
-                    // o-series reasoning models: enable high reasoning
+                    // reasoning models: enable high reasoning & max_completion_tokens
                     if (modelName.startsWith('o4-') || modelName.startsWith('o3-') || modelName.startsWith('o1-')) {
                         completionParams.reasoning_effort = 'high';
+                        completionParams.max_completion_tokens = 25000;
+                        if (openaiToolDefs.length > 0) completionParams.parallel_tool_calls = false;
                     } else if (modelName === 'gpt-5-mini') {
                         completionParams.reasoning_effort = 'high';
+                        completionParams.max_completion_tokens = 25000;
                     } else if (modelName === 'gpt-5.4') {
                         completionParams.reasoning_effort = 'medium';
+                        completionParams.max_completion_tokens = 25000;
                     } else {
                         completionParams.max_tokens = 4096;
                     }
