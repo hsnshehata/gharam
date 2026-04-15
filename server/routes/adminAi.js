@@ -103,6 +103,8 @@ router.get('/model-config', authenticate, isAdmin, async (req, res) => {
             { id: 'gpt-4o-mini', provider: 'openai', label: 'GPT-4o Mini', tier: 'fast' },
             { id: 'o4-mini', provider: 'openai', label: 'O4 Mini (Reasoning)', tier: 'pro' },
             { id: 'o3-mini', provider: 'openai', label: 'O3 Mini (Reasoning)', tier: 'pro' },
+            { id: 'gpt-5-mini', provider: 'openai', label: 'GPT-5 Mini', tier: 'pro' },
+            { id: 'gpt-5.4', provider: 'openai', label: 'GPT-5.4', tier: 'pro' },
         ];
 
         // Default chains
@@ -240,7 +242,7 @@ router.post('/test-model', authenticate, isAdmin, async (req, res) => {
         let tokens = null;
 
         // Determine provider
-        const isOpenAI = modelId.startsWith('gpt-');
+        const isOpenAI = modelId.startsWith('gpt-') || modelId.startsWith('o4-') || modelId.startsWith('o3-') || modelId.startsWith('o1-');
 
         if (isOpenAI) {
             if (!process.env.OPENAI_API_KEY) {
@@ -258,9 +260,19 @@ router.post('/test-model', authenticate, isAdmin, async (req, res) => {
                 while (callCount < 5) {
                     const completionParams = {
                         model: modelId,
-                        messages,
-                        max_tokens: 1200
+                        messages
                     };
+
+                    if (modelId.startsWith('o4-') || modelId.startsWith('o3-') || modelId.startsWith('o1-')) {
+                        completionParams.reasoning_effort = 'high';
+                    } else if (modelId === 'gpt-5-mini') {
+                        completionParams.reasoning_effort = 'high';
+                    } else if (modelId === 'gpt-5.4') {
+                        completionParams.reasoning_effort = 'medium';
+                    } else {
+                        completionParams.max_tokens = 1200;
+                    }
+
                     if (openaiToolDefs.length > 0) {
                         completionParams.tools = openaiToolDefs;
                     }
