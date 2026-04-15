@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'react-hot-toast';
-import { Container, Card, Form, Button, Row, Col, ProgressBar, Badge } from 'react-bootstrap';
+import { Container, Card, Form, Button, Row, Col, ProgressBar, Badge, Alert } from 'react-bootstrap';
 
 export default function DynamicTeamAI({ isNested = false }) {
   const [teams, setTeams] = useState([]);
