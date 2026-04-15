@@ -268,19 +268,15 @@ router.post('/test-model', authenticate, isAdmin, async (req, res) => {
                         completionParams.max_completion_tokens = 25000;
                     } else if (modelId === 'gpt-5-mini') {
                         completionParams.reasoning_effort = 'high';
-                        completionParams.max_completion_tokens = 25000;
+                        completionParams.max_completion_tokens = 16000;
                     } else if (modelId === 'gpt-5.4') {
-                        completionParams.reasoning_effort = 'medium';
-                        completionParams.max_completion_tokens = 25000;
+                        completionParams.max_tokens = 4096;
                     } else {
                         completionParams.max_tokens = 1200;
                     }
 
                     if (openaiToolDefs.length > 0) {
                         completionParams.tools = openaiToolDefs;
-                        if (modelId.startsWith('o4-') || modelId.startsWith('o3-') || modelId.startsWith('o1-')) {
-                            completionParams.parallel_tool_calls = false;
-                        }
                     }
 
                     const completion = await openai.chat.completions.create(completionParams);
