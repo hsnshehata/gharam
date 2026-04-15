@@ -1,7 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const AIAgent = require('../models/AIAgent');
-const { protect, adminOnly } = require('../middleware/authenticate');
+const protect = require('../middleware/authenticate');
+const adminOnly = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') next();
+    else res.status(403).json({ error: 'الصلاحية غير متوفرة' });
+};
 
 // --- الموديلات الافتراضية (Models) ---
 const OPENROUTER_MODELS = [

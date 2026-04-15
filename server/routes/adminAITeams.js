@@ -4,7 +4,11 @@ const AITeam = require('../models/AITeam');
 const AIAgent = require('../models/AIAgent');
 const AITeamSession = require('../models/AITeamSession');
 const { runAgent } = require('../services/teamAiService');
-const { protect, adminOnly } = require('../middleware/authenticate');
+const protect = require('../middleware/authenticate');
+const adminOnly = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') next();
+    else res.status(403).json({ error: 'الصلاحية غير متوفرة' });
+};
 
 // GET /api/admin/teams
 router.get('/', protect, adminOnly, async (req, res) => {
