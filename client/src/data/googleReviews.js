@@ -1,0 +1,4373 @@
+// مجموعة مقتطفات من تقييمات جوجل — يمكن إضافة المزيد لاحقاً بنفس البنية
+export const googleReviews = [
+  {
+    author: 'Heba M7md',
+    relativeTime: 'قبل 3 أيام',
+    text: 'الخدمه تحفه حدا '
+  },
+  {
+    author: 'دودو السيد',
+    relativeTime: 'قبل 3 أيام',
+    text: 'كلهم زوق مشاء الله احسن مكان ف دسوق '
+  },
+  {
+    author: 'Amany Marey',
+    relativeTime: 'قبل 3 أيام',
+    text: 'اشطر واحده ف مجالك بجد من نجاح لنجاح دايما يارب 🥰♥️♥️  '
+  },
+  {
+    author: 'Rahma Elshazly',
+    relativeTime: 'قبل 3 أيام',
+    text: 'تحفه بجد تسلم ايدك يا مدام غرام علي الميكب القمر وكنت عروسه سكر '
+  },
+  {
+    author: 'Omiama Mohamed',
+    relativeTime: 'قبل 3 أيام',
+    text: 'بيوتي سنتر تحفه من حيث كل حاجه والله تحفه ونضيف والاستاف زي القمر ومدام غرام عسوله جدا وكنت طالعه ملكه بجد من تحت ايديها '
+  },
+  {
+    author: 'ميرنا القرضاوي',
+    relativeTime: 'قبل 4 أيام',
+    text: 'جميل جدا '
+  },
+  {
+    author: 'Fatma Mohamed',
+    relativeTime: 'قبل 4 أيام',
+    text: 'اجمل وانضف بيوتي سنتر ف دسوق غرام سلطان رقم واحد '
+  },
+  {
+    author: 'Kh Kh',
+    relativeTime: 'قبل 4 أيام',
+    text: 'المكان تحفه بجد اللهم بارك والميكب جميل جدا تسلم ايدك يا مدام غرام بجد ♥️ '
+  },
+  {
+    author: 'Loka Taha',
+    relativeTime: 'قبل أسبوع',
+    text: 'مكان تحفه وخطير بجد والخدمه روعهههههه '
+  },
+  {
+    author: 'Aml Reda',
+    relativeTime: 'قبل أسبوع',
+    text: 'الخدمه حلوة أوي والمكان جميل والله♥♥♥♥ '
+  },
+  {
+    author: 'جهاد الشرقاوي',
+    relativeTime: 'قبل أسبوع',
+    text: 'جميل جدا والخدمه روعههه '
+  },
+  {
+    author: 'Shaimaa Maher',
+    relativeTime: 'قبل أسبوع',
+    text: 'تحفه تحفه تحفه خدمه روعهههههه '
+  },
+  {
+    author: 'Sasoo Pesaa',
+    relativeTime: 'قبل أسبوعين',
+    text: 'مكان تحفه وخطير ماشاء الله بجد تسلم ايدك يا مدام غرام الميكب تحفههههه '
+  },
+  {
+    author: 'Donia Almezaien',
+    relativeTime: 'قبل أسبوعين',
+    text: 'مكان تحفه بجد ماشاء الله وكل حاجة خطيرة خدمه ومكان ونظام بجد ♥️♥️♥️ '
+  },
+  {
+    author: 'Yasmeen Nagatty',
+    relativeTime: 'قبل أسبوعين',
+    text: 'المكان تحفه وخطير بجد تسلم ايدك ي ام غزل بجد الميكب تحفه والخدمه كمان😍😍😍😍  '
+  },
+  {
+    author: 'Mahmoud Elsayed',
+    relativeTime: 'قبل شهر',
+    text: 'مكان تحفه والله ماشاء الله بجد خطير اللهم بارك '
+  },
+  {
+    author: 'نرمين مصطفى',
+    relativeTime: 'قبل شهر',
+    text: 'الصراحه مكان تحفه ومريح وبجد كل اللي طلبته اتعمل بجد بصراحه تحفه مش برتاح غير في السنتر بجد وان شاء الله يفضل رقم واحد في دسوق ديما '
+  },
+  {
+    author: 'Hamada Sherirf',
+    relativeTime: 'قبل شهر',
+    text: 'المكان جميل جدل ماشاء الله والخدمه تحفهههه '
+  },
+  {
+    author: 'Basmala ElHosary',
+    relativeTime: 'قبل شهر',
+    text: 'خدمه تحفه وكل حاجه زي العسل ♥♥♥♥♥ '
+  },
+  {
+    author: 'Maryam Ghourab',
+    relativeTime: 'قبل شهر',
+    text: 'تحفهه كل حاجه تحفهه بجد وكلهم ذوق اوي ف مكان واستقبال تحفه كل حاجه تحفههه اوي حقيقي '
+  },
+  {
+    author: 'Eman Ramadan',
+    relativeTime: 'قبل شهر',
+    text: 'مكان تحفه وخطير والخدمه جميله جدااااا '
+  },
+  {
+    author: 'zekra Mustafa',
+    relativeTime: 'قبل شهر',
+    text: 'ببوتي سنتر جمبل جدا انا من اسكندريه وجيت عند غرام سلطان عشان ابقا عروسه عسوله وكنت ونعمه الاختيار فعلا تسلم ايدك يا غرام علي الميكب القمر ده '
+  },
+  {
+    author: 'Sally sobh',
+    relativeTime: 'قبل شهر',
+    text: 'الميكب تحفه جداً تسلميلي ياحلي غرام '
+  },
+  {
+    author: 'Doaa Shawkey',
+    relativeTime: 'قبل شهر',
+    text: 'جميل جدا بيوتي سنتر جميل جدا تسلم ايدك يا مدام غرام علي ميكب فرحي حقيقي كنت ملكه والخدمات عندك مشاء الله بجد '
+  },
+  {
+    author: 'Hasnaa Mansour',
+    relativeTime: 'قبل شهر',
+    text: 'الميكب جميل جدا تسلم ابدا باجمل غرام '
+  },
+  {
+    author: 'رضا كمال',
+    relativeTime: 'قبل شهر',
+    text: 'معاملتهم جميله واستقبال جميل وزوق اووي وشغلهم تحفه وعن ثقه ومصداقيه ف الشغل '
+  },
+  {
+    author: 'Apdo Temariy',
+    relativeTime: 'قبل شهر',
+    text: 'الميكب تحفه والمكان جميل اوى كنت مبسوطه اوي وكنت عروسة عسوله كل الي شافني كان فرحان بالميكب وسالوني مين عاملي الميكب قولتلهم طبعا التوب غرام سلطان '
+  },
+  {
+    author: 'Amaar Amaar',
+    relativeTime: 'قبل شهر',
+    text: 'الميكب تحفه والاسلوب جميل اوي ولا غلطه فكل حاجه '
+  },
+  {
+    author: 'ريهام عماد غنيم',
+    relativeTime: 'قبل شهر',
+    text: 'كنت عروسه عندك وكنت بجد ملكه تسلم ايدك يا مدام غرام '
+  },
+  {
+    author: 'Sara Sara',
+    relativeTime: 'قبل شهر',
+    text: 'كل حاجه تحفه مشاء الله والميكب والتسربحه كانت جميله اوي '
+  },
+  {
+    author: 'On Line',
+    relativeTime: 'قبل شهر',
+    text: 'المكان تحفه والمعامله جميله وكنت عروسه قمر بجد '
+  },
+  {
+    author: 'Asmaa Qurish',
+    relativeTime: 'قبل شهر',
+    text: 'تسلم ايدك يا مدام غرام علي الميكب التحفه كنتي جزء كبير ف يوم وكنت مبسوطه جدا '
+  },
+  {
+    author: 'Soma Kames',
+    relativeTime: 'قبل شهر',
+    text: 'الميكب والتسربحه تحفه والمعاملة جميله جدا ❤️ '
+  },
+  {
+    author: 'عطيه سعد',
+    relativeTime: 'قبل شهر',
+    text: 'اجمل سنتر ف دسوق كلها ومدام غرام زي السكر بجد ومعاملتها عسل ❤❤ '
+  },
+  {
+    author: 'Shahd khairy',
+    relativeTime: 'قبل شهر',
+    text: 'احسن معامله واحسن اسلوب واحسن واجدع طاقم عمل بجد🫡❤️❤️  '
+  },
+  {
+    author: 'Arwa',
+    relativeTime: 'قبل شهر',
+    text: 'المكان تحفففففه بجد والبنات إلى بيساعدونا طريقتهم لطيفه جداا بصراحه المكان بروفيشنال  جدااا وانصح بيه اى حد والميكب تحفه والثبات تحفه  جداااا '
+  },
+  {
+    author: 'Nada Ghanem',
+    relativeTime: 'قبل شهر',
+    text: 'المكان جميل اووى بجد وشكرا جدا لفريق العمل ومبسوطه اووى أن انا اخترت المكان دا بجد وشكرا ليكى ي مدام غرام وشكرا لفريق العمل '
+  },
+  {
+    author: 'Engy Ali',
+    relativeTime: 'قبل شهرين',
+    text: 'مشاء الله زؤق جدا وفوق الجمال تسلم ايدك يا مدام غرام ع الميكب '
+  },
+  {
+    author: 'Ahmed Mohamed',
+    relativeTime: 'قبل شهرين',
+    text: 'السنتر فوق الوصف والمعاملة جميله جدا '
+  },
+  {
+    author: 'Mo As',
+    relativeTime: 'قبل شهرين',
+    text: 'بيوت سنتر جميل جدا والمكيب حميله انا كنت عروسه عندك وكنت قمر '
+  },
+  {
+    author: 'Amany Khatab',
+    relativeTime: 'قبل شهرين',
+    text: 'الميكب تحفه والمكان جميله جدا والمعامله زؤق '
+  },
+  {
+    author: 'حنان ربيع القصاص',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان تحفه وتسلم ايدك يا هبه ع المعامله الكويسة وشغلك تحفه '
+  },
+  {
+    author: 'rano om',
+    relativeTime: 'قبل شهرين',
+    text: 'ميكب جميل معامله اجمل كل حاجه تحفه بجد ♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Fawzya Shehab',
+    relativeTime: 'قبل شهرين',
+    text: 'ما شاء الله خدمة ممتازة وتيم معاملته جميلة اووي أفضل مكان فى مصر والله ومش ندمانه أبدا على اختياري ليهم  وأنا عروسه والله '
+  },
+  {
+    author: 'Huawel Prime',
+    relativeTime: 'قبل شهرين',
+    text: 'بصراحه كل حاجه  تحفه بجد وكلهم  والصبغه جميله جدا '
+  },
+  {
+    author: 'Norhan Elshzly',
+    relativeTime: 'قبل شهرين',
+    text: 'احلى مدام غرام واشطر واحده فمجالها وشكرا ع الميكب التحفه الي عملتهولي اختارتك وكنتي ونعمه الاختيار '
+  },
+  {
+    author: 'Hc Fh',
+    relativeTime: 'قبل شهرين',
+    text: 'ممتاز جدا والناس والتعامل محترمين جداا شغل فوق الوصف تسلم ايد الكل صراحه تعامل فوق الواو '
+  },
+  {
+    author: 'يااسو حمو',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه بجد كنت عروسه وكنت زي القمر واختياري للمكان كان اجمل اختيار بصراحه ❤❤ '
+  },
+  {
+    author: 'Actbx Mjfdd',
+    relativeTime: 'قبل شهرين',
+    text: 'انضف بيوتي سنتر والخدمه مشاء الله عليها والاستف كله زؤق ❤❤ '
+  },
+  {
+    author: 'Hager Khalil',
+    relativeTime: 'قبل شهرين',
+    text: 'بجد المكان تحفه والخدمه تحفه وناس زوق اوووي في التعامل والخدمه كمان '
+  },
+  {
+    author: 'Shimaa Essam',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان تحفه وخطير ماشاء الله  وش الخدمه روعهههه بجد ♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Mohamed Ashraf',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان تحفه في كل حاجة والاستاف جميل جدا والمعامله حلوة♥️ '
+  },
+  {
+    author: 'محمود البستاوي',
+    relativeTime: 'قبل شهرين',
+    text: 'جميل بسم لله ما شاء الله بجد احسن معامله وبيتعملو معانا احن خوات مش حاجه تانيه وحاجه جميله جدا واللهي '
+  },
+  {
+    author: 'ناديه شهاوي',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان تحفه والخدمه روعههههه❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Rasha Rasmy Rezk',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه اول مرة اجي بس مش اخر مرة أن شاء الله❤️❤️❤️❤️❤️🤗  '
+  },
+  {
+    author: 'Mob Sa',
+    relativeTime: 'قبل شهرين',
+    text: 'تسلم ايد ام غزل والمكان تحفه والمعمله والتيم ماشاء الله 😍  '
+  },
+  {
+    author: 'Osama Amer',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان تحفه والله خالص والمعامله كويسه خالص '
+  },
+  {
+    author: 'مريم مبارك مبارك',
+    relativeTime: 'قبل شهرين',
+    text: 'هدية ♥♥♥♥💋'
+  },
+  {
+    author: 'منه ايمن',
+    relativeTime: 'قبل شهرين',
+    text: 'تحفههههه والخدمه روعههه♥️♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Asmaa 164',
+    relativeTime: 'قبل شهرين',
+    text: 'اجمل واحسن بيوتي سنتر ف الدنيا بجد ناس زوق فوق الوصف ومدام غرام من احسن واجمل الناس اللي شوفتها وشغلهم جميل جدا '
+  },
+  {
+    author: 'Grg Kyt',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل جدا شغل ولا غلطه استاف مشاءالله عليهم بجد '
+  },
+  {
+    author: 'Rawan Khelad',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل وشغلهم تحفه اللهم بارك بجد '
+  },
+  {
+    author: 'عبير ابراهيم',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل وشغلهم جميل '
+  },
+  {
+    author: 'donia Elkawass11',
+    relativeTime: 'قبل شهرين',
+    text: 'الخدمة روعة والتيم كلهم ماشاء الله تبارك الرحمن ربنا يحفظهم يارب اجمل مكان حقيقى ❤️❤️ '
+  },
+  {
+    author: 'Mohamed Mohammed',
+    relativeTime: 'قبل شهرين',
+    text: 'تسلم خدمه ممتازه ١٠٠×١٠٠ '
+  },
+  {
+    author: 'العبد لله',
+    relativeTime: 'قبل شهرين',
+    text: 'أجمل بيوتي سنتر بجد والخدمه تحفه والاستف كله زؤق '
+  },
+  {
+    author: 'Gawhara Magdi',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان تحفه والخدمه روعععععه '
+  },
+  {
+    author: 'Eman El Daly',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل ماشاء الله '
+  },
+  {
+    author: 'Merna Elsalhy',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان حلو والله والخدمه تحفه ماشاء الله،❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Eman Slamh baz',
+    relativeTime: 'قبل شهرين',
+    text: 'الماكن جميل وتحفه  مش اول تعامل وتحفه والخدمه اجمل من كل مرة❤❤❤❤ '
+  },
+  {
+    author: 'Mariam Gamal',
+    relativeTime: 'قبل شهرين',
+    text: 'جميل والله ♥️♥️♥️♥️ والخدمه تحفهه '
+  },
+  {
+    author: 'Mona Ali',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان جميل ماشاء الله والخدمه تحفههه ومنه عسوله خالص ❤️❤️ '
+  },
+  {
+    author: 'نور الرحمن زهرة البستان',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان تحفهه وخطير ماشاء الله '
+  },
+  {
+    author: 'Omnya Omnya',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان جميل ماشاء الله '
+  },
+  {
+    author: 'Soha Mahmoud',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل جدا ومنه تسلم ايديها في تنضيف البشرة والخدمه ولا غلطه والله '
+  },
+  {
+    author: 'عابد قدادة',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفههه♥️♥️♥️♥️♥️♥️♥️وخدم روعه '
+  },
+  {
+    author: 'Nody Abdallah',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان ممتاز جدا والخدمه ممتازة ومريح جدا بجد '
+  },
+  {
+    author: 'Shimaa Mesallam',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان تحفه بجد والخدمه ممتازة '
+  },
+  {
+    author: 'Emy Hassan',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل جدا والخدمات تحفههه '
+  },
+  {
+    author: 'Salma Qamr',
+    relativeTime: 'قبل شهرين',
+    text: 'جميل  جدا '
+  },
+  {
+    author: 'Eman N Elshazly',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان جميل جدا والتيم عسل '
+  },
+  {
+    author: 'سعد محمد الكومى',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه وخطير بجد ❤️❤️❤️✨ '
+  },
+  {
+    author: 'ايمان السيد',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان ممتاز ولا غلطه ♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Menna Mohamed',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان عسول خالص واماني جميله جداااااا وسندس تسلم ايدها في تنضيف البشره حلوة اوي بجد♥️🥹  '
+  },
+  {
+    author: 'FARHA RAMADAN',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان تحفه والبنات سكر وسما سكر اوي وتسلم أيدها ❤️❤️❤️❤️ '
+  },
+  {
+    author: 'هاجر حسانين',
+    relativeTime: 'قبل شهرين',
+    text: 'الملكن تحفه وجميل جدا واماني قنديل اللي عملتي الخدمه اللي محتجاها عسوله جميله وعملتلي اللي عايزاه بجد تسلم ايدها والبنات كلهم  عسولين♥♥♥♥♥♥🦋  '
+  },
+  {
+    author: 'Yara Ammar',
+    relativeTime: 'قبل شهرين',
+    text: 'اجمل بيوتي سنتر في دسوق كلها من حيث المعامله و التيم و الأونر مدام غرام ذوق جداً '
+  },
+  {
+    author: 'Shahneda Salah',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل جدا والتيم جميل جداا '
+  },
+  {
+    author: 'هاجر محمد',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل والخدمه مفيش اجمل منها والله والتيم عسل '
+  },
+  {
+    author: 'On Line',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان جميل جدا والخدمه روعه '
+  },
+  {
+    author: 'aya abo sefe',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه ماشاء الله '
+  },
+  {
+    author: 'Mohamed Fawzy',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل والله بجد '
+  },
+  {
+    author: 'يوسف عاشور',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه وخطير ماشاء اللله '
+  },
+  {
+    author: 'Sally Algawesh',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان تحفه وخطير ماشاء الله ♥ '
+  },
+  {
+    author: 'dodaa Farag',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه والله وعسول ❤️❤️❤️ '
+  },
+  {
+    author: 'الله اكبر',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان بسم الله ماشاء الله♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Aliaa Diab',
+    relativeTime: 'قبل شهرين',
+    text: 'جميل ماشاء الله مش اول تعامل ولا اخر تعامل ان شاء الله ♥ '
+  },
+  {
+    author: 'جهاد يونس',
+    relativeTime: 'قبل شهرين',
+    text: 'تحفه 🔥  '
+  },
+  {
+    author: 'shaymaa mohamed',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل والخدمه ممتازه والبنات لطاف وزوق حقيقي وخصوصا سندس وأماني سوشيال ميديا '
+  },
+  {
+    author: 'amera Kamra',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان ممتاز جدااا '
+  },
+  {
+    author: 'denaa Ashraf',
+    relativeTime: 'قبل شهرين',
+    text: 'ممتاز جدا والبنات شاطرة جدا بجد انا باجي لمدام غرام مشوار 3ساعات والله والتيم  كله تحفه من كل حاجة بجد ومدام غرام عسل اوي بجد محترمه وذوق🤍🤍🤍🤍🤍  '
+  },
+  {
+    author: 'Doaa Elreefy',
+    relativeTime: 'قبل شهرين',
+    text: 'مركز تجميل غرام من اجمل المراكز في التعامل والماتيريال شكرا لفريق العمل ❤❤ '
+  },
+  {
+    author: 'سهيله شعبان',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان حلو اوي ماشاء الله 💚💚💚💚  '
+  },
+  {
+    author: 'ام احمد ابونعيم',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان حلو ♥️♥️♥️🙈  '
+  },
+  {
+    author: 'بسمه عيسي',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان جميل جدا ♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Maram',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان حلو اوي جدااا❤❤❤❤ '
+  },
+  {
+    author: 'hanaa oraby',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل جدا والله وتحفه وخطير ماشاء الله '
+  },
+  {
+    author: 'Asmaa Abo fuad',
+    relativeTime: 'قبل شهرين',
+    text: 'جميله جدااا♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Alaa Hamada',
+    relativeTime: 'قبل شهرين',
+    text: 'جميله والمكان خطير خاللص❤❤❤❤ '
+  },
+  {
+    author: 'ندا عبد اللطيف',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه وخدمه روعههه❤❤❤❤❤❤❤❤ '
+  },
+  {
+    author: 'mo.ka te.to',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان جميل جدا ماشاء الله😍😍😍😍  '
+  },
+  {
+    author: 'أم آدم مرادن',
+    relativeTime: 'قبل شهرين',
+    text: 'جميله خالص 😍😍  '
+  },
+  {
+    author: 'Nody Mkrmm',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه عشرةعلي عشرة🥰🥰  '
+  },
+  {
+    author: 'Sapah Gomaa',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفههه وخطير بجد '
+  },
+  {
+    author: 'Yaso Elraiy',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان تحفه بجد جميل خالص ماشاء الله '
+  },
+  {
+    author: 'حمدي ابو راون',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه والله اعلي جودة في كل حاجة 😍😍😍🌹  '
+  },
+  {
+    author: 'حنين شعلان',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل خالص وخدمه روعههه '
+  },
+  {
+    author: 'Gehad Ganady',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل خالص 😍😍😍  '
+  },
+  {
+    author: 'Rehab Morad',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه وجميل خالص '
+  },
+  {
+    author: 'Shaymaa Youssef',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل خالص وتحفههههه '
+  },
+  {
+    author: 'عدى راغب',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل خالص بجد وغرام مش مجرد تعامل شغل لاء دي عشرة عمر بجد اجمل مكان في الدنيا♥️♥️♥️❤️ '
+  },
+  {
+    author: 'Nourhan Basuony',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان تحفهههه وخطير بجد ماشاء الله❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Shahd Shosho',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان  تحفه والله واجمل ام غزل في الدنيا  تسلم  ايدها في الميكب وكل حاجة ربنا يباركلها '
+  },
+  {
+    author: 'Hanann Mohmed',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه ونضافه وغيره خطيرة بجد وتعامل ❤️❤️❤️ '
+  },
+  {
+    author: 'Ana Elzamn',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان تحفههه وجميل❤️❤️❤️❤️💋  '
+  },
+  {
+    author: 'مرمر مرمر',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفهه وماشاء الله الخدمه  جميله جداااا '
+  },
+  {
+    author: 'Malak Elshemy',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان. تحفه وخطير بجد والنيلز تحفهههه '
+  },
+  {
+    author: 'remas mohamed',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان تحفه وخطير بجد ماشاء الله ♥ '
+  },
+  {
+    author: 'samar mahmoud',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه ومش بروح غيروبجد تحفههههههههه 💗💗💗💗🫶  '
+  },
+  {
+    author: 'Mhmhoud',
+    relativeTime: 'قبل شهرين',
+    text: 'تحفه ههههه♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Habiba Ramadan',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان خطير جميل جدا من حيث النضافه وألبنات  وكل حاجة '
+  },
+  {
+    author: 'ام اميره',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل جدا واول مرة بس ان شاء الله مش اخر مرة بجد😍😍😍  '
+  },
+  {
+    author: 'Abeer Ahmed',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان خطيرجدااااا والخدمه وشعري تحفههههههه بجد تسلم ايد هبه💜💜💜💜💜  '
+  },
+  {
+    author: 'Menna elmasry',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل والله والخدمه ويستاهل مليون نجمه 🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟🌟  '
+  },
+  {
+    author: 'Amira Haroun',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفهه بحد خدمه وتعامل مفيش زيه😍😍😍  '
+  },
+  {
+    author: 'نور عبده',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان خطير جدا من حيث التعامل والخدمه بجد♥♥♥ '
+  },
+  {
+    author: 'فارس جاويش',
+    relativeTime: 'قبل شهرين',
+    text: 'الخدمه جميله وتنضيف البشرة جميل جدااا♥️♥️ '
+  },
+  {
+    author: 'Asmaa',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان فوق فوق الروعععه بجد والتعامل لطيف خالص ♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Engy Aboshehata',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل  جدا والخدمه روعهه بجد '
+  },
+  {
+    author: 'حمدي عنيصر',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان جميل جدا💗  '
+  },
+  {
+    author: 'محمد احمد الشورى الشورى',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان خطير والخدمة جميله جدا '
+  },
+  {
+    author: 'Manar wafy',
+    relativeTime: 'قبل شهرين',
+    text: 'السنتر جميل جدا وهادي بجد ومفيهوش غلطه♥️ '
+  },
+  {
+    author: 'رحمه ياسر',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه والخدمه جميله '
+  },
+  {
+    author: 'نبيله صلاح',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه والله وخطير والتعامل تحفهعع♥️♥️♥️♥️♥️♥️♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Safaa Mostafa',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان جميل والله جدا ❤️ '
+  },
+  {
+    author: 'نسرين براغيت',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان حلو اوي ♥♥♥♥ '
+  },
+  {
+    author: 'Nermeen Elnapt',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان جميل جدا والخدمه روعهههه '
+  },
+  {
+    author: 'Hagar Rageh',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفههههه والخدمات خطيرة ♥️♥️♥️ '
+  },
+  {
+    author: 'Huda Sahwan',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل جداااا '
+  },
+  {
+    author: 'Nada Younes',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه والتنضيف البشرة حلو اوي '
+  },
+  {
+    author: 'Bassant Elkafas',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جامد جوميدة♥️🫶😂  '
+  },
+  {
+    author: 'Kholoud Abd Alazuz',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان حلو اوى  والنيلز خطيرة ❤❤❤🤗  '
+  },
+  {
+    author: 'محمد',
+    relativeTime: 'قبل شهرين',
+    text: 'مكلن تحفه بجد وجلسه الترطيب و المعالجه جميله جدا ♥️♥️♥️♥️♥️🌼  '
+  },
+  {
+    author: 'Shrouk Aziz',
+    relativeTime: 'قبل شهرين',
+    text: 'ماشاء الله جميل والله ❤❤❤❤ '
+  },
+  {
+    author: 'Asmaa Essa',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفهه♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Noor Haggag',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه والميكب عسول خالص '
+  },
+  {
+    author: 'Shaimaa Ahmed',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان لذيذ خالص ومحترم وكلهم زوق❤️ '
+  },
+  {
+    author: 'ندى وجيه',
+    relativeTime: 'قبل شهرين',
+    text: '❤️❤️❤️❤️❤️مكان تحفهههههههههه '
+  },
+  {
+    author: 'حمدي محمد',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان خطير ماشاء الله '
+  },
+  {
+    author: 'Hosam Ellakany',
+    relativeTime: 'قبل شهرين',
+    text: 'عشرة علي عشرة '
+  },
+  {
+    author: 'Rewida Elouny',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل جداااا '
+  },
+  {
+    author: 'Nada Abo elyazed',
+    relativeTime: 'قبل شهرين',
+    text: 'المكان تحفهه وجميل جدااااا '
+  },
+  {
+    author: 'جمال العمر وسي',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه والميكب زي ما كنت عايزة واحسن كمان ♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Hanan Elkolaly',
+    relativeTime: 'قبل شهرين',
+    text: 'مكلن تحفه والله والنظام خطير غير الأول وغير أي حد تاني بجد احلي مكان تلاقو فيه خدمات ♥♥♥♥♥♥ '
+  },
+  {
+    author: 'Yara Hashad',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه وخطير ماشاء الله بجد والمكيب مفيهوش غلطه❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️😚  '
+  },
+  {
+    author: 'Aya Saed',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفهه والله وخدمه عشرة علي عشرة♥️ '
+  },
+  {
+    author: 'Siwar Elmallah',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل جدا ومش اول مرة وكل مرة احسن من الاول خدمه تاخد مليون الميهه '
+  },
+  {
+    author: 'Eman El shnawy',
+    relativeTime: 'قبل شهرين',
+    text: 'خدمه ممتازه ماشاءالله '
+  },
+  {
+    author: 'Mayada ÀSHRAF',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه وخطير والشعر تحفهههه⁦❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'جنا سامي',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان  تحفههه وخطير يجد ماشاءالله ♥ '
+  },
+  {
+    author: 'جنا وليد سمور',
+    relativeTime: 'قبل شهرين',
+    text: 'Wooowوالشعر ولا غلطه❤️❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Semon Maged',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه يستاهل 1000000الميه بجد🥹  '
+  },
+  {
+    author: 'Faiza Mohmed',
+    relativeTime: 'قبل شهرين',
+    text: 'حلوة جداااا♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Nada Gdog',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان جميل جدا جدا '
+  },
+  {
+    author: 'Menaa Salama',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه وروعههه ♥️♥️♥️♥️ '
+  },
+  {
+    author: 'دنيا رمضان',
+    relativeTime: 'قبل شهرين',
+    text: 'مكان تحفه والنيلز خطير زي الصورة بالظبط🤍🤍🤍🤍🫶🏻  '
+  },
+  {
+    author: 'شهد حماده عبد الكريم عبد المعطئ',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان 10÷10بجد ماشاء الله❤️ '
+  },
+  {
+    author: 'Nejar Ali',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفهههوخطير وشعري تحفهههه بجد ماشاء الله❤❤❤❤❤❤ '
+  },
+  {
+    author: 'Mohmed Alsayd',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفه وخطير بجد والتيم كله جميل جدا ومختلف عن أي مكان بجد تجربه احب اكررها تاني لمدي الحياه 😍😍😍😍😍  '
+  },
+  {
+    author: 'Naira Salem',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفههه وخطير مختلف عن باقي الأماكن ❤️❤️❤️❤️❤️❤️❤️👌  '
+  },
+  {
+    author: 'El Saidy',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'غرام سلطان رقم واحد  والمكان تحفهههه🫶🏻🫶🏻🫶🏻🫶🏻  '
+  },
+  {
+    author: 'Amal El Saidy',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'ماشا الله تبارك الرحمن المكان تحفه والخدمة روعه '
+  },
+  {
+    author: 'Nancu Elshenawy',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفة وخطير والخدمه كمان خطيرة والبنات عسولات '
+  },
+  {
+    author: 'Ðina Abdel hady',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه خطير والشعر عملته خطييير '
+  },
+  {
+    author: 'May Mohamed',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'كويسه جدا ♥️♥️♥️♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Mohmed Gmail',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفه وخطير والميكب كمان 10÷10والله♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Alaa Ramadan',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه وللميكب كمان تحفههههه♥️♥️♥️♥️💋  '
+  },
+  {
+    author: 'Arwaa elshazlly',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان خطير وتحفه والخدمه تحفه وشعري بقي خطير🤍🤍🤍🤍🤍🎀  '
+  },
+  {
+    author: 'رنا مصطفي رنا مصطفي',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تخفه وخطير ماشاء الله ❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Ashgan khaled',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'تحفه بجد مكان يستاهل 10/10❤️❤️❤️❤️❤️😍  '
+  },
+  {
+    author: 'Yasmine Diab',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفهه والميكب تحفههههه بجد ❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Leen Hasan',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه وخطير ماشاء الله المكيب تحفههههه '
+  },
+  {
+    author: 'Amira Etman',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان من حيث الخدمه والشغل والنضافه والتعامل جميل جدا بصراحه اول مرة ادخل بجد وان شاء الله مش اخر مرة ولا اخر تعامل استاف زي القمر وشغل جميل جدا ومعاملتهم تحفه '
+  },
+  {
+    author: 'Bv Vc',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه بجد وتنضيف البشرة تسلم ايد منونهه بجد♥️♥️♥️ '
+  },
+  {
+    author: 'Nour Mosbah',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان ممتاز جدا واللن والخدمه تحفه '
+  },
+  {
+    author: 'Smsm Smeir',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'اجمل مكان تعمله في خدمات بجد♥♥♥ '
+  },
+  {
+    author: 'Noor Mohamed',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان ممتاز جدا و الخدمه تحفهه وجسله الترطيب لشعري والنانو تحفهههه بجد ماشاء الله ♥️♥️♥️♥️♥️♥️♥️♥️♥️♥️♥️🥳  '
+  },
+  {
+    author: 'Ahlam',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'ممتاز جدا والله '
+  },
+  {
+    author: 'اماني مفرح',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان جميل وتحفهه وتنضيف البشرة جميل جدا دنيا تسلم اديها '
+  },
+  {
+    author: 'Sara Salem',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه والخدمه ومنه اللي عملتلي تنضيف بشرة عسوله خالص ❤️ '
+  },
+  {
+    author: 'Sara Kamal',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'الخدمه جميله جدا والضوافر تحفه سيبت ليها ايدي وأماني عملتلي حاجة تحفه 🍉❤️❤️❤️  '
+  },
+  {
+    author: 'ايمان كامل',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفهه وخطير وعملت شعري تحفه واتظروني عروسه قريب ♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Menna Elkassas',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفههه وخدمة روعهههه💗💗💗  '
+  },
+  {
+    author: 'Sara Elbouhy',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان خطير والخدمة جميله وعملت شعري فرد بصراحه جميل جدا ♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'dodo Khalaf',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مش عارفه اقول اي بجد  غير ان المكان تحفهههه بجد والخدمات روعههه💗💗💗💗💗💗🤍  '
+  },
+  {
+    author: 'Hfdy Jutr',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفهههه وخطير ماشاء الله والخدمه فوق فوق الروعه عروسه منتظرة❤️ '
+  },
+  {
+    author: 'بنت السقا',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفهه وخطير و واثقه جدا اني هبقي عروسه قمر من تحت ايدهم والمعامله تحفهههه❤❤❤❤ '
+  },
+  {
+    author: 'Aya El Nagar',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفهه وخطير والشعر تحفههه والقصه كمان زي ما طلبت♥️♥️♥️♥️♥️♥️♥️♥️🥹✌🏼  '
+  },
+  {
+    author: 'Ghada elsotary elsotary',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'خدمه روعه ومكان تحفههه بجد ماشاء الله ♥️♥️♥️♥️♥️متأكدة ١٠٠%اني هبقي عروسه تحفه وان خارجه من المكان♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Zainab Ebrahim',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه ماشاء الله وتنضيف البشره تحفهههه بجد '
+  },
+  {
+    author: 'Hager Hamdy',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفههه وخطيب ماشاء الله '
+  },
+  {
+    author: 'Ahmed Hdufhc',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'جميله جدا والمكان تحفه '
+  },
+  {
+    author: 'Hagar Ahmed',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفهه وخطير♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Ashrakat Deraz',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان ممتاز وخطير♥♥♥♥ '
+  },
+  {
+    author: 'Reda',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفهه وخطير ماشاء الله '
+  },
+  {
+    author: 'شاهر المعزاوي',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفههه وخطير '
+  },
+  {
+    author: 'Heba Adel',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفهههه وخطير  والخدمهههه والاستقبال  بردو حاجة راقيه جدااااا❤️❤️❤️❤️❤️❤️❤️😍  '
+  },
+  {
+    author: 'Adam Amr',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفهههه وخدمه روعععععه '
+  },
+  {
+    author: 'Menna Amr',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'هدية 😍😍😍'
+  },
+  {
+    author: 'شريف احمد',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان جميل جدا من حيث النضافه والمكان والمعامله والشغل بجد مشاء الله عليهم '
+  },
+  {
+    author: 'Mohamad hasan',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان جميل وخطيرررر❤️❤️❤️❤️🤩  '
+  },
+  {
+    author: 'yasmeen elyan',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه والمعامله بجد جميله والميكب تحفه وكل حاجه ماشاءلله بجد '
+  },
+  {
+    author: 'Rania Afify',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'خدمه ومكان تحفه ميكب خطير بجد اجمل ام غزل ❤️❤️❤️ '
+  },
+  {
+    author: 'اميرة فتحي',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'ممتازة جداااااا♥♥♥♥🫶🏻  '
+  },
+  {
+    author: 'Ola Badr',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'ممتاز جدا '
+  },
+  {
+    author: 'محمد عصام',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفه وخطير ماشاء الله '
+  },
+  {
+    author: 'ياسمين سلهوب',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'خدمه ومكان تخفههه '
+  },
+  {
+    author: 'Yoyo Marwan',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفه وخطير '
+  },
+  {
+    author: 'Taghreed Elsaidy',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه وخطير ♥♥♥ '
+  },
+  {
+    author: 'Nrmeen',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفهههه والميكب خطير ماشاء االه ❤❤❤❤❤❤😍  '
+  },
+  {
+    author: 'SoSo',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان خطير بصراحه بجد والخدمه روعه والميكب '
+  },
+  {
+    author: 'asmaa somaa',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه والخدمة جميله جدااا👍❤️❤️❤️❤️❤️  '
+  },
+  {
+    author: 'Rawda Kadira',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفهههه وخطير ماشاء والله وخدمه روعهههه❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Mohamed Badr',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه وخطير ماشاءء الله '
+  },
+  {
+    author: 'Mai Masoud',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفههه وخطير ماشاء الله ❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Shahd Sayed',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفه وخطير جدااااا '
+  },
+  {
+    author: 'Nermeen Hamzawy',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفههههه وخطير بجد تحفهههههه♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Nada Ebrahem',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفهه وخطير❤❤❤❤❤🥹  '
+  },
+  {
+    author: 'Sama Elbhirey',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'تحفه كدة كدة ♥️♥️♥️♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Bahya Mohamed',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان خطير وتحفهههه ماشاء الله♥♥♥♥♥♥🥺  '
+  },
+  {
+    author: 'اسماء الدمرداش',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان جميل وخدمه روعهههه♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Marem Basha',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفه وخطيرررر❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Maryam Maryambasha5567',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'بجد مكان تحفه والبنات عسولات خالص '
+  },
+  {
+    author: 'Roka Basha',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه وخدمه روعههه❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Rokaiya Mostafa',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه وجميل♥♥ '
+  },
+  {
+    author: 'ملك محمد',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفهههه وخدمه روعههه بجد🤩🤩🤩🤩  '
+  },
+  {
+    author: 'Nadia Mohammed',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان خطير تحفههههه❤❤❤❤❤ '
+  },
+  {
+    author: 'Aya Ghanem',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفهه وخطير '
+  },
+  {
+    author: 'Nora Ali',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'واو❣️❣️❣️❣'
+  },
+  {
+    author: 'Basm Raegb',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفههه وخطيررر '
+  },
+  {
+    author: 'محمد احمد',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'خدمه ومكان ياخدو10/10🥰🥰🥰🥰  '
+  },
+  {
+    author: 'شهد علي',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفه وخطيررررر ماشاء الله ❤❤❤❤ '
+  },
+  {
+    author: 'Yasmeen Ali',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'تحفه‍ه وخطيرة ❤❤🥺  '
+  },
+  {
+    author: 'Samar Ali',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفهههه بجد وخدمه روعهههه '
+  },
+  {
+    author: 'بودي مرسال',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفهه وخطير 😘  '
+  },
+  {
+    author: 'Aya Zayan El salhy',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان خطير وتحفههههه '
+  },
+  {
+    author: 'Nada Zayan',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفه بجد والبنوته دي لذيذة خالص ♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Yasmin elsayd المشد',
+    relativeTime: 'قبل 3 أشهر',
+    text: '10 من 10 '
+  },
+  {
+    author: 'Hanan Ahmad Diwd',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان خطير وتحفههههه وخدمه بجد جميله جدا والبنات لذاذ جدا💓💓💓😇  '
+  },
+  {
+    author: 'احلام على',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان خطير وتحفههههه '
+  },
+  {
+    author: 'Aya Halousa',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفه وخطير بجد ماشاء الله '
+  },
+  {
+    author: 'محمد داود',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفهههه وخطير بجد ماشاء الله بجد ميكب وخدمات تحفهههه ❤️❤️ '
+  },
+  {
+    author: 'Basma Elgharabawy',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفه وخطير بجد ❤️❤️❤️❤️❤️❤️✨ '
+  },
+  {
+    author: 'Esraa Elhashash',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'واو🤩🤩'
+  },
+  {
+    author: 'Amany Alshehawy',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان خطير وتحفهههه '
+  },
+  {
+    author: 'Sherouk Sharf',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان جميل والبنات زوق جدا والشغل تحفه '
+  },
+  {
+    author: 'nasr Allah',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'تحفهههه المكان هادي وجميل '
+  },
+  {
+    author: 'سلمي محمد',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان خطير وتحفههههه '
+  },
+  {
+    author: 'Ebtsamgomaa',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'سنتر غرام بجد سنتر مفيهوش غلطه وتحفهههه يجد '
+  },
+  {
+    author: 'مها الاحول',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفه وخطير ماشاء الله '
+  },
+  {
+    author: 'Mai Elkbany',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه بجد وخدمه wooooow,♥️♥️♥️ '
+  },
+  {
+    author: 'Sahar Khtab',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفههه وخطير ماشاء الله ومش اول  مرة تعامل ❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️😍😍  '
+  },
+  {
+    author: 'Asmaa Deraz',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان جميل جدا وهادي وتعامل تحفههه❤️❤️ '
+  },
+  {
+    author: 'Ola Saad',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفهههه وخطيررر♥♥♥♥♥ '
+  },
+  {
+    author: 'Eslam Farg',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفه وخدمههه روعهههه '
+  },
+  {
+    author: 'eman samy',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان خطير وتحفههههه '
+  },
+  {
+    author: 'Louka Mahmoud',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفهه وخطير❤️❤️❤️🫶  '
+  },
+  {
+    author: 'Marwa Mohamed',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفههه وخطير ❤️❤️❤️❤️❤️🥹  '
+  },
+  {
+    author: 'كيان فؤاد',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفه وخطير ماشاء الله 😍😍❤  '
+  },
+  {
+    author: 'Shaimaa Ayman',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'خدمه تحفه ومكان خطيررر❤️❤️ '
+  },
+  {
+    author: 'Aya Ali',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان خطير  وتحفههههه '
+  },
+  {
+    author: 'Nasraa Mareey',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان خطير وتحفهه وخدمه روعه بجد ومعامله مفيش اجمل منها😘😘😘  '
+  },
+  {
+    author: 'بسمه حماده',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان وخدمه تحفههنهه بجد '
+  },
+  {
+    author: 'Judy El hadad',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان راقي جدا وشغلهم جميل وهما تحفه '
+  },
+  {
+    author: 'Fhvv Tjvh',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان ف منتهي الجمال استاف ولا اروع ،شغلهم جميل جداا مكان توب بصراحه '
+  },
+  {
+    author: 'Haneen Ali',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان جميل وتحفه اوي وشغلهم جميل اوي وحاجه ف منتهي الجمال '
+  },
+  {
+    author: 'ساره السوداني',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان راقي اوي وبنات ف منتهي الجمال وشغلهم تحفه ومدام غرام جميله اوي مشاء الله عليها وشغلها فوق الوصف بصراحه '
+  },
+  {
+    author: 'Hanan Abdo',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان جميل والبنات مشاء الله عليهم ومدام غرام من احسن واجمل الناس اللي اتعاملت معاها '
+  },
+  {
+    author: 'Alaa',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان خطيررررر ماشاءالله🙊♥  '
+  },
+  {
+    author: 'Basma Mohamed',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان حلو والمعاملة كويسه جداااا♥️♥️😍  '
+  },
+  {
+    author: 'Alaa Khalifa',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفهههههه '
+  },
+  {
+    author: 'محمد المصري',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفههه وخطير ومش اول مرة اصلا ♥♥♥♥ '
+  },
+  {
+    author: 'Warda Aboras',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان خطير وتحفههه '
+  },
+  {
+    author: 'Eslam mohamed Selim',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان خطير بجد ماشاء والله '
+  },
+  {
+    author: 'Rahma Mosad',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان هادي وجميل  وخدمه فوق الروعه بجد♥♥♥♥ '
+  },
+  {
+    author: 'Shar Gml',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه وخطير بجد والبنات كلهم ذوق بجد❤️❤️❤️ '
+  },
+  {
+    author: '3laa abdou',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه وخطير ماشاء الله مش اخر تعامل بإذن الله 🩷🩷🩷🩷🫶🏻  '
+  },
+  {
+    author: 'Malak Eltrawy',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان جميل جدا ماشاء الله تحفههههه💙💙💙💙  '
+  },
+  {
+    author: 'DODO Elsayed',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه والخدمه كمان والتعامل ذوق جدا♥️♥️ '
+  },
+  {
+    author: 'Sara Bazena',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه وخطير ماشاء الله ❤️❤️❤️🫶🏻  '
+  },
+  {
+    author: 'Kholod Alaa',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان خطير وجميل جدااا❤❤ '
+  },
+  {
+    author: 'Rana Mohamed',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان خطير وتحفه ❤️❤️ '
+  },
+  {
+    author: 'Roro Roro',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان خطير وتحفهههههه '
+  },
+  {
+    author: 'S Elgendy',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'بجد الكان تحفة والخدمة ممتازة جدا  والاستف 🫰🫰❤️🌷قمرات كلهم يارب دايما فى تقدم  '
+  },
+  {
+    author: 'BASSANT MORSY',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان خطير وتحفه '
+  },
+  {
+    author: 'Noga Zayed',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه وخطير ماشاء الله ♥️♥️♥️♥️♥️♥️♥️♥️♥️👌  '
+  },
+  {
+    author: 'نادر احمد',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفهههه وخطير بجد مش ٱڅڑ تعامل ولا مرة بأذن الله '
+  },
+  {
+    author: 'شيماء محمود السنوسي',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه  وخطير ومش اخر مرة باذن الله ♥ '
+  },
+  {
+    author: 'Sera Saied',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفههه وخطير ماشاء الله وتجربه رائعهه '
+  },
+  {
+    author: 'Habiba Amer',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان خطير وتحفهههههه '
+  },
+  {
+    author: 'Sh Ry',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه وخطير ماشاء الله 😍  '
+  },
+  {
+    author: 'عمر هانى',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان خطير ماشاء  الله تحفه والخدمهه خطيرةةة🤩🤩🤩  '
+  },
+  {
+    author: 'Reem Elnshar',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه وخطير ماشاء الله💗💗💗💗💗  '
+  },
+  {
+    author: 'Nour Arafah',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'غرام سلطان رقم واحد بجد مكان  وخدمههه وكل حاجة😍😍😍😍😍  '
+  },
+  {
+    author: 'yasmeen salim',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان خطير وتحفه ماشاء الله بجد وخدمه روعه '
+  },
+  {
+    author: 'Shosha Apozed',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفهه وخطير '
+  },
+  {
+    author: 'خالد خالد',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفههه وخدمه خطيرة بجد والله ماشاء الله '
+  },
+  {
+    author: 'زينب محمد',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفههه وخطير ما شاءلله 😍  '
+  },
+  {
+    author: 'ولاء علي',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفهه وخطيرر '
+  },
+  {
+    author: 'Dina Saad',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفههه وخطير ماشاء الله ♥️♥️♥️♥️♥️♥️✨ '
+  },
+  {
+    author: 'Bassent mohamed',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفهه وخطير والخدمهه خطيرةة '
+  },
+  {
+    author: 'Habiba Ibrahim',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان خطير وتحفظها ماشاء الله '
+  },
+  {
+    author: '232082 232082',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه وخطير بجد ❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Shahed El-trawey',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه وخطير ماشاء الله '
+  },
+  {
+    author: 'hadeer donia',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان خطير وتحفهههه '
+  },
+  {
+    author: 'نوره فراج',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه وخطير ماشاء الله '
+  },
+  {
+    author: 'Samia Farhat',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان خطير وتحفهه ماشاء ♥ '
+  },
+  {
+    author: 'راجيه الجنه',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه والله وخطير وعن تجربه ميكب تحفه وخدمه جميله جدا♥️♥️♥️ '
+  },
+  {
+    author: 'Marwa Tamer',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه وخطير 🤩🤩🤩🤩  '
+  },
+  {
+    author: 'Asmaa Said',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'خدمه جميله جدا وتجربه رائعه بجدددد❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Mahmoud Elngoly',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفهه وخطيررماشاء الله '
+  },
+  {
+    author: 'Aya wahid Wahid',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'خدمههههههwoowwww وخطيرة ماشاء الله '
+  },
+  {
+    author: 'اسماء غنيم',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه وخطير ماشاء الله '
+  },
+  {
+    author: 'هبه شرابي',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفهههه وخطير ماشاء الله تجربه ممتازة بجد المكان رقم واحد '
+  },
+  {
+    author: 'هايدى هشام',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'مكان تحفه وخطير '
+  },
+  {
+    author: 'Sara Eladly',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'الخدمه تحفهههه والمكان جميل❤️❤️❤️❤️ '
+  },
+  {
+    author: 'ريهام رزق منصور العادلى',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه وخطيييير ♥️♥️♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Heba Hassan',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'الخدمهwooooowوالمكان كمان '
+  },
+  {
+    author: 'Hanen Elhashash',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه والخدمه كمان '
+  },
+  {
+    author: 'حنين محمدالزعيم',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكاف تحفز والبنات سكر خالص '
+  },
+  {
+    author: 'Rehab Gad',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفهههه خطير ماشاء اللله '
+  },
+  {
+    author: 'Nada Mabrouk',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'خدمة wow ومكان خطير بجد '
+  },
+  {
+    author: 'Hala Zomara',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'الخدمه تحفه والمكان خطير ماشاء الله '
+  },
+  {
+    author: 'Mayada Gadaly',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفه وخطير '
+  },
+  {
+    author: 'دنيا محمد',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'المكان تحفههههه وخطير ماشاء الله وان شاء الله مش اخر مرة تعامل بجد ♥️♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Smasimo Smasimo',
+    relativeTime: 'قبل 3 أشهر',
+    text: 'خدمه تحفه ومكان روعههههه '
+  },
+  {
+    author: 'Yara Elsaed',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان تحفهههههه وخطير ماشاء الله '
+  },
+  {
+    author: 'ذياد عطوان',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان تحفه وخطير والتعامل ذوق جدا♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Shahd Mohammed',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'الخدمه تحفه وخطيرة والبنات حميله '
+  },
+  {
+    author: 'Shimaa Samer',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'سنتر غرام سلطان التوب كدا كدا '
+  },
+  {
+    author: 'Yasmine yasser',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان والشغل والمعامله كل حاجه ف طريقتهم وشغلهم بيرفكت بجد احسن بيوتي سنتر غرام سلطان بجد '
+  },
+  {
+    author: 'حبوب حبوب',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان تحفه اوي من حيث الخدمه والمعامله والشغل شغلهم فوق الوصف مشاء الله عليهم '
+  },
+  {
+    author: 'Roqaa Roqaa',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان تحفههههههوالخدمه تحفهههههههه بجد '
+  },
+  {
+    author: 'Kholoud Elshahat',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'اجمل واحسن مكان ورقم واحد غرام سلطان التوب اصلا '
+  },
+  {
+    author: 'Sohaila Elbanna',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'الخدمه تحفه جدا واحلي حاجه نظافه المكان '
+  },
+  {
+    author: 'Hager Mahed',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'غرام سلطان التوب طبعا بجد '
+  },
+  {
+    author: 'Soma Gabr',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'اجمل واحسن مكان هو بيوتي سنتر غرام سلطان رقم واحد '
+  },
+  {
+    author: 'seham El Shiekh',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'اللهم بارك المكان جميل اوى والتعامل احلا بكتير وكل التيم حلو اوى النظافه جميله حاجه كدا فوق الوصف '
+  },
+  {
+    author: 'شيماء جلال',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'حقيقي بجد اجمل بيوتي سنتر ق دسوق غرام سلطان واجمل خدمات والنظافه وبيراعو ربنا ف شغلهم والاستف مشاء الله عليه احترام فوق الوصف وانشاء الله مش هتكون اخر مره ❤️ '
+  },
+  {
+    author: 'Hala Mahemod',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'الخدمه في الأماكن فوق الروعه 😍  '
+  },
+  {
+    author: 'أبو أحمد',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان تحفه وخطير ماشاء الله والبنات عسولات جداااااا والخدمه تحفههههههه '
+  },
+  {
+    author: 'اسماء قنعر',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'الخدمه تحفه وبنات الاستاف جمال اوي ومدام غرام سكرة موت '
+  },
+  {
+    author: 'عبير عبير',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'مكان جميل وهادي جدا '
+  },
+  {
+    author: 'Yasmen Abdo',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'مكان جميل اوي والتجربة تحفه اوي '
+  },
+  {
+    author: 'مصطفي عاشور',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'مكان تحفه جدا ومدام غرام جميله جدا والبنات ه‍ناك زي السكر ؤالخدمه ف منتهي الجمال '
+  },
+  {
+    author: 'امنيه حنور',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'wooooooowخدمه تحفه بحد '
+  },
+  {
+    author: 'Shahd Emad',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان تحفهههههه والخدمه روعهههه ماشاء الله '
+  },
+  {
+    author: 'منه الصياد',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان تحفه والخدمة روعهههههه بجد بجد والله '
+  },
+  {
+    author: 'حماده حسون',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'الخدمه تحفهههههه '
+  },
+  {
+    author: 'Rahma Elsaidy',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'تحفهههههه والخدمه جميله جداااا  والله♥♥♥♥♥♥♥ '
+  },
+  {
+    author: 'Nada Mohamed',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان  اكتر من رائع وتحفههه والخدمه روعهههه❤️❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'سماح سمير',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان تحفه وخطير والخدمه جميلهة جدااااا '
+  },
+  {
+    author: 'Elham Shbl',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'حلوة جدا وبنات ذوق اوووى بجد '
+  },
+  {
+    author: 'Eman Hamdy',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'بجد تيم فوق الروعة ❤️❤️ ومعاملة كويسة جدا ❤️❤️❤️🫣 بجد تيم ولا روعة تسلم ايديهم  '
+  },
+  {
+    author: 'Alaa KAFAGY',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان جميل ماشاءالله  والناس اللي موجودين كويسين والمعامله كويسه والميكب جميل جداً جداً 😍😍😍🎀🎀🎀🌸🌸  '
+  },
+  {
+    author: 'الفت',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'عظظظظظمة ع عظظظظمة '
+  },
+  {
+    author: 'Asmaa Ragab',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'افضل مكان بجد واسلوب التيم كويس جدا '
+  },
+  {
+    author: 'aya ragab',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'أشطر و أحسن غرام🩷🩷🩷🩷🎀  '
+  },
+  {
+    author: 'Hams Saad',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'الخدمههههwowwwwwwe♥️♥️♥️💋  '
+  },
+  {
+    author: 'Nisreen',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'هدية هههههههههههه'
+  },
+  {
+    author: 'Manar Arafa',
+    relativeTime: 'قبل 4 أشهر',
+    text: '❤❤❤❤❤المكان تحفه وخطير والخدمه روعه '
+  },
+  {
+    author: 'Mohamed Ahmed',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'واوو'
+  },
+  {
+    author: 'Jhg Dhh',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان جميل  والخدمه تحفههه '
+  },
+  {
+    author: 'Donia Samy',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'الخدمه تحفه والمعامله جميله جدا '
+  },
+  {
+    author: 'Yasmin Elsaidy',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان جميل اوي  وكل حاجه حلوه اوي '
+  },
+  {
+    author: 'Nancy Badr',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'هدية هههههه'
+  },
+  {
+    author: 'Alaa Hassan',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'خدمه ولا أروع ومدام غرام لذيذه موت ومريحه '
+  },
+  {
+    author: 'Asmaa Darwesh',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'حاجه ولا اروع كرسي المساج تحفه الاستف حقيقي في منتهي الزوق '
+  },
+  {
+    author: 'Alyaa Doma',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'تجربتي ف المكان جميله جدا والإستاف جميل اوي والمعامله ولا أروع حقيقي '
+  },
+  {
+    author: 'mm hh',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'مكان جميل جدا ومريح والمعامله حقيقي تحفه جدا ومدام غرام حبتها اوي وبجد ذوق جدا '
+  },
+  {
+    author: 'ندى محمد',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'تجربه تحفه ومكانن جميل '
+  },
+  {
+    author: 'Sa Ily',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'الخدمهه قمرررررر والمكان  قمرينننن '
+  },
+  {
+    author: 'youssef Hanour',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان تحفههه وخطير والخدمه تحفهههههه❣️❣️❣️❣️❣️ '
+  },
+  {
+    author: 'زياد محمد',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'واوووووو😍😍😍😍😍🫶🏻'
+  },
+  {
+    author: 'Nour',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان تحفه والخدمه. كمان بردو ❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Wafaa Ahmed',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'نها الغنام       قبل 4 أشهر'
+  },
+  {
+    author: 'نور غريب',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان تحفه وخطير والخدمه روعههه '
+  },
+  {
+    author: 'سعاد غباشى',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'الخدمه كويسه كدا والمكان جميل '
+  },
+  {
+    author: 'Norhan Shalaby',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان جميل جداا وتحفه وبنات الاستاف لذاذ جدا '
+  },
+  {
+    author: 'Amira Gaber',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'خدمة ممتازه والمكان جميل '
+  },
+  {
+    author: 'بسمة محمد',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'واوووو🤩🤩'
+  },
+  {
+    author: 'Yara Helal',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'الخدمه تحفه وخطيرة والمكان تحفههههه '
+  },
+  {
+    author: 'ابراهيم شخيخ',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان حلو جدا والمعامله خطيرة ماشاء الله '
+  },
+  {
+    author: 'aml b7r',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'كانت تجربة رائعة. أشعر براحة كبيرة في مركز غرام للتجميل، فهو بيتي الثاني.  المزيد'
+  },
+  {
+    author: 'Shahd Ganh',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان محترم خدمه كويسه مكان ذوق جدا بجد '
+  },
+  {
+    author: 'فرح علاء',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان جميل وهادي والاستاف لطيف والمعاملة كويسه جدااا '
+  },
+  {
+    author: 'Ma Ma',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان خطير وتجربه تحفهههه واجمل حاجة البنات عسولات خالص '
+  },
+  {
+    author: 'Nour Mohamed',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان تحفه والخدمه كويسه جدا '
+  },
+  {
+    author: 'موكا احمد',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان جميل جدا والخدمه كويسه '
+  },
+  {
+    author: 'Esraa Oln',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان جميل جدا والاستلام محترم و زوق جدا '
+  },
+  {
+    author: 'Rehab Ghoneim',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'مكان جميل اوى والخدمات تحفه واستاف محترم اوى '
+  },
+  {
+    author: 'سلمي جابر',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان خطير وتحفهه ماشاء الله والخدمههه تحفهههه '
+  },
+  {
+    author: 'lobna Fasil',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'آلَمـ❤ـكـآنـ❤ـ خـ❤ـطـ❤ـ يـ❤ـر جـ❤ـدآآآ مـ❤ـآشـ❤ـآء آلَلهّ '
+  },
+  {
+    author: 'Enas Nagy Abdelaty Ghaly',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'الخدمه تحفه والمكان رائع '
+  },
+  {
+    author: 'Aml Elbana',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان خطير وتحفههههه '
+  },
+  {
+    author: 'Basma hamdy',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان تحفه والخدمة خطيرة '
+  },
+  {
+    author: 'Bosy Ali',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'زي الفل والمكان تحفه والخدمه خطيرةةة '
+  },
+  {
+    author: 'Nada Ali',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان خطير جدا والخدمه تحفهههههه '
+  },
+  {
+    author: 'نانسي الطوخي',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان خطير وتحفهههه بجد اللهم بارك والخدمه فوق الروعه '
+  },
+  {
+    author: 'رانيا شوقي ابو زيد',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'بصراحه الخدمات تحفه '
+  },
+  {
+    author: 'Arwa Elsehmawy',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان تحفه وخطير هي أول مرة بس مش اخر مرة باذن الله ♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Reham Kamel',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان تحفه والمعاملة جميله ماشاء الله والبنات سكر خالص '
+  },
+  {
+    author: 'Nøurhän Møhämed',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'جميله ماشاء الله والمكان تحفه مش اخر مرة إن شاء الله '
+  },
+  {
+    author: 'Noor ghanam',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان تحفه وخطير ومريح جدا '
+  },
+  {
+    author: 'Samia Mansour',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان حلو والخدمه فل والبنات عسل وام غزل سكرة '
+  },
+  {
+    author: 'Habiba Elmasry',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'الخدمه تحفه ماشاء الله والمكان  خطير  والبنات سكر '
+  },
+  {
+    author: 'تاليه القران',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'الخدمه تحفهه والمكان مريح جدا والبنات جميله وزوق '
+  },
+  {
+    author: 'آميره يوليو',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان تحفه وخطير جدا ماشاء الله '
+  },
+  {
+    author: 'Amany_ Kandil',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'المكان تحفه جدا والخدمات والتيم رائع '
+  },
+  {
+    author: 'Wesam Mohamed',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'مكان ممتاز جدا وتحفه '
+  },
+  {
+    author: 'Nahed Seif',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'مميز'
+  },
+  {
+    author: 'Fawzia M',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'مكان ممتاز جدا '
+  },
+  {
+    author: 'Norhan Mohammed',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'مكان ممتاز وتحفه '
+  },
+  {
+    author: 'Rawda Elkazaz',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'مكان ممتاز وتحفه '
+  },
+  {
+    author: 'Samar Mansour',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'ممتاز '
+  },
+  {
+    author: 'Marwa Farghly',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'ممتاز '
+  },
+  {
+    author: 'Fatma Elrahmany',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'رقم واحد غرام سلطان وبس احسن حد ف السوق بجد واحسن مكان عند غرام '
+  },
+  {
+    author: 'دنيا زاهر',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'احسن سنتر ف دسوق كلها غرام سلطان '
+  },
+  {
+    author: 'Ahmed',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'تجربه تحفه اوي واتمناا تتكرر كتيرر بجد وفعلا من احسن الامكان اللي جيتهاا ومن احسن الناس اللي اتعاملت معاها '
+  },
+  {
+    author: 'نور قنديل',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'مكان جميل جدا ومبسوطه اني كنت مع مدام غرام وفعلا مش كلام مدام غرام معاملتها جميله جدا والميكب خطيررر '
+  },
+  {
+    author: 'Fatma Shaker',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'ميكب ولا غلطه حقيقي وطلعت تحفه اكتر م كنت بجد ومكان هادي وتحفه اوي اوي وتسلم ايدك بجد ع الميكب الجميل والسيمبل دخ '
+  },
+  {
+    author: 'Asmaa Asmaa',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'غرام سلطان رقم واحد وبس واجمل حد يعمل ميكب واجمل حد ممكن تتعامل معاه '
+  },
+  {
+    author: 'بسمله محمد',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'اشطر ميكب ارتست ف دسوق غرام سلطان وبس '
+  },
+  {
+    author: 'nada nabil',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'مكان نضيف جدا ومعاملتهم جميله جدا ومدام غرام مبسوطه بيهاا وب الميكب جدا والمكان تحفه بجد '
+  },
+  {
+    author: 'Menna samir',
+    relativeTime: 'قبل 4 أشهر',
+    text: 'الميكب تحفه بنات الاستاف معاملتهم تحفه اوي '
+  },
+  {
+    author: 'Esraa Abd Ibrahim',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'مكان كتير كتير نضيف وميكب قمر واستضاف قمرين انا اردنيه وتجربه عجبتني كتير '
+  },
+  {
+    author: 'esraa M',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'انضف مكان ف دسوق كلها بجد '
+  },
+  {
+    author: 'Afaf Elsayed',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'عشرة من عشرة للمكان كله '
+  },
+  {
+    author: 'كيداهم شوشو',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'احلي روما ف الدنيا تسلم ايدك بجد '
+  },
+  {
+    author: 'Toka Sliem',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'خدمات تحفه وميكب تحفه '
+  },
+  {
+    author: 'الاء لطفي',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'اجمل بيوتي سنتر واجمل خدمه ومشاء الله علي العرايس الي بتبقا موجوده بجد زي القمر ❤ '
+  },
+  {
+    author: 'Amina elsaid Maraden',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'تسلم ايديهم كل خدامتهم تحفه '
+  },
+  {
+    author: 'محمد سليمان',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'شغل عظمه يا جماعه بجد يستاهلوا خمس نجوم واكتر '
+  },
+  {
+    author: 'Shahd Alqadi',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'احلي بنات استاف ف الدنيا واحلي غرام '
+  },
+  {
+    author: 'Malaak Mahmoud',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'احلي غرام سلطان واحلي استاف '
+  },
+  {
+    author: 'Ahlam Badr',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'سنتر شغلهم قمر كلهم بجد '
+  },
+  {
+    author: 'محمد',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'ريهام الله ينور بجد تسلم  ايدك كل زوق ♥♥المكان ف منتهي الروعه❤❤🥰  '
+  },
+  {
+    author: 'Basma Alzuhairy',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'والله احسن سنتر ف دسوق بجد '
+  },
+  {
+    author: 'Yasmeen Zakadan',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'احلي مكان ف دسوق واخلي شغل '
+  },
+  {
+    author: 'Aya Mohammed',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'احلي سنتر وشغلهم تحفه احلي استاف واحلي غرام سلطان ف الدنيا '
+  },
+  {
+    author: 'ميرو دى انا',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'ميكب ولا غلطه بجد '
+  },
+  {
+    author: 'Aye Elghropy',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'بجد سنتر تحفه نضافه وذوق ومعامله كل حاجه قمر والله '
+  },
+  {
+    author: 'Sm Sm',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'تسلم ايد الاستاف علي الشغل والشعر والماده بتاعتهم نضيفه جدا كنت عامله قبل كده وشعري اتبهدل خالص بس دلوقتي الوضع اختلف بعد ماعملت عندهم فلر شكرا جدا ليهم كلهم '
+  },
+  {
+    author: 'Khlood Ibrahim',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'رقم واحد ❤❤❤❤ '
+  },
+  {
+    author: 'دينا عابد المسيري',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'تسلم ايد كل الي ف السنتر بجد ربنا يباركلهم يارب ويحسن مابين أيديهم تيم قمر والله '
+  },
+  {
+    author: 'فايزه على',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'حبيبتي يا ام غزل تسلم ايدك بجد والله علي الميكب قمر '
+  },
+  {
+    author: 'Menna Turki',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'مركز أحسن وموظفوه متعاونون للغاية.'
+  },
+  {
+    author: 'ابراهيم عسران',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'اشطر غروما بجد '
+  },
+  {
+    author: 'Tomy Tomy',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'ماشاء الله المكان والخدمه تحفه '
+  },
+  {
+    author: 'hnan Ahmed',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'ميكب قمر وشغل قمرين ومعامله سكر '
+  },
+  {
+    author: 'حبيبه الطوخي',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'تجربه ممتازة بجد مش ندمانه عليها شغل روعه '
+  },
+  {
+    author: 'dodo salem',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'اشطر ميكب ارتست ف دسوق والله '
+  },
+  {
+    author: 'Lamia Ramadan',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'اجمل مكان واجمل شغل فعلا بجد تسلم ايديهم كلهم '
+  },
+  {
+    author: 'Eman Gawish',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'احسن معامله بجد وانضف سنتر ف دسوق وميكب قمر فعلا '
+  },
+  {
+    author: 'Abeer',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'مكان محترم واستاف محترم وشاطرين جدااا وشغلهم قمر بجد '
+  },
+  {
+    author: 'EMAN Hassan',
+    relativeTime: 'قبل 5 أشهر',
+    text: '(Original) رقم واحد فعلا '
+  },
+  {
+    author: 'Asmaa Elhawary',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'اشطر ميكب ارتست ف دسوق وانضف سنتر بجد '
+  },
+  {
+    author: 'رشا الدفراوي',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'كل شغلهم تحفه بجد ميكب شعر تنضيف بشره كل حاجه قمر '
+  },
+  {
+    author: 'Ahmed Shaban',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'تجربه ممتازة '
+  },
+  {
+    author: 'حنين الشريف',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'مكان قمر بجد ونضيف جداا وشغلهم ومعاملتهم قمر '
+  },
+  {
+    author: 'Malak Elshafaie',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'احسن ميكب ارتست ف دسوق كلها '
+  },
+  {
+    author: 'Maiosh Ahmed',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'احسن معامله وذوق جداا وشغلهم تجقه '
+  },
+  {
+    author: 'basma Mohamed',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'تسلم ايد مدام غرام ميكب ولا غلطه '
+  },
+  {
+    author: 'هيثم عباده',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'تجربه فوق الممتازة بجد '
+  },
+  {
+    author: 'Nada Elnagar',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'انضف واجمل مكان ف دسوق شغلهم تحفه '
+  },
+  {
+    author: 'Menna Elhabshy',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'اشطر ميكب ارتست حرفيا والمكان نضيف وشغلهم جميل '
+  },
+  {
+    author: 'Sho Sho',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'اجمل واشطر ميكب ارتست غرام سلطان التوب فعلا '
+  },
+  {
+    author: 'Hager Almisry',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'اشطر ميكب ارتست '
+  },
+  {
+    author: 'Sara Mansour',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'احلي ميكب ارتست ف دسوق '
+  },
+  {
+    author: 'Ghada Hamada',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'احلي مدام غرام ف الدنيا تسلم ايديها '
+  },
+  {
+    author: 'Haidy Sherif',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'شغل روعه ومعامله قمر بجد '
+  },
+  {
+    author: 'Alaa Elhmrawy',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'مكان ياخد عشره من عشره ف كل حاجه بجد '
+  },
+  {
+    author: 'حسين ابراهيم',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'اجمل وانضف مكان فعلا '
+  },
+  {
+    author: 'رضا طلعت القاضي',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'رقم واحد ف دسوق '
+  },
+  {
+    author: 'Shahd Elkholy',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'مدام غرام السكر شكرا جدا علي الشغل والمعامله والميكب القمر '
+  },
+  {
+    author: 'Alye Mostafa',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'احلى ام غزل ف الدنيا واحلى سنتر وانضف شغل '
+  },
+  {
+    author: 'هاجر رضا الخابيه',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'شغل ولا كلمه وانضف واشيك سنتر ف دسوق بجد '
+  },
+  {
+    author: 'abdallah salem',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'السنتر فوق الممتاز فعلا '
+  },
+  {
+    author: 'Alaa Elsayd Matre',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'مدام غرام شغلها تحفه تسلم ايديها بجد والمكان كمان جميل جدااا '
+  },
+  {
+    author: 'محمد علي',
+    relativeTime: 'قبل 5 أشهر',
+    text: 'مكان جميل ونضيف جدااا وشغلهم انضف بجد '
+  },
+  {
+    author: 'eman Doma',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مكان جميل جداااا '
+  },
+  {
+    author: 'Nagham Kadry0o',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'عملت نيلز عندهم بجد بجد ماكنتش اتوقع تبقي كده تسلم ايديهم '
+  },
+  {
+    author: 'Merna Khattab',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'احلي مدام غرام ف الدنيا واحلي استاف وانضف شغل بجد '
+  },
+  {
+    author: 'Yooka Wahed',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مكان نضيف وشغل أنصف بجد رقم واحد كدا كدا وشكرا علي المعامله بجد '
+  },
+  {
+    author: 'yasmen Fayed',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'عروسه عندهم وكنت عروسه ف الحنه وكنت قمر والميكب ثابت جدا وكل الي شافني انبهر بشكلي فعلا كنت جميله وراضيه اوى عن التجربه دى واني اخترت المكان وبجد مش ندمانه شكرا جدا لمدام غرام ولكل الاستاف القمر '
+  },
+  {
+    author: 'Ghada Saber',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'سنتر ياخد 10نجوم مش 5 بس تسلم أيديهم بجد '
+  },
+  {
+    author: 'Fatma Ali',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مكان جميل وتيم اجمل ومدام غرام زى السكر ربنا يسعدها ويحفظها يارب '
+  },
+  {
+    author: 'Amira Mohamed',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'رقم واحد ف كل حاجة فعلا '
+  },
+  {
+    author: 'Nadaa M.Elsayed',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'تسلم ايد مدام غرام كنت قمر والميكب ثبات مفيش كده وماتريال روعه اقسم بالله ربنا يحسن مابين ايديها يارب '
+  },
+  {
+    author: 'اسماعيل عبدين',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'احسن سنتر عملت شغل فيه واجمل ميكب وكل حاجه تحفه بجد '
+  },
+  {
+    author: 'Asmaa Yasser',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'المكان جميل والشغل تحفه تسلم ايديهم '
+  },
+  {
+    author: 'ضوء القمر',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'تجربه مش ندمانه عليها حرفيا تسلم ايديهم والله '
+  },
+  {
+    author: 'فتحى',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مكان راقي ونضيف جداااا وشغلهم كله قمر '
+  },
+  {
+    author: 'Ali Ahmad',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مدام غرام دى حته سكره والله ومكانها احلي وانضف مكان حرفيا وبنات الاستاف كلهم شاطرين وذوق بصراحه وشغلهم حلو جداا '
+  },
+  {
+    author: 'Fatma Shaban',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'خدمة ممتازه وناس قمة فى الذوق بجد ♥️♥️♥️ وشكرا لمدام هبه على تعبها معايا ♥️ '
+  },
+  {
+    author: 'Habiba Abu Ahmad',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'احلي بيوتي سنتر ف دسوق كلها والله ربنا يوفقهم '
+  },
+  {
+    author: 'Shaimaa Ahmed',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'شغل فوق التحفه بصراحه والله '
+  },
+  {
+    author: 'Asmaa Ebrahim',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'ماشاء الله تبارك الله كل حاجه حلو والله فخمه الفخامه بجد 🫵😙♥️  '
+  },
+  {
+    author: 'Nada Drag',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مدام غرام والتيم كلهم زوق كويسين جدا وميكب مدام غرام بيبقا جميل دائما فخوره بي الميكب وزوق مدام غرام بالتوفيق دائما '
+  },
+  {
+    author: 'Mayada Ahmad',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'احلي ميكب واحلي شغل حرفيا '
+  },
+  {
+    author: 'Ab Cd',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'بسم الله ماشاء الله تحفه تحفه اوووي والتيم تحفه بصراحه بالتوفيق يارب '
+  },
+  {
+    author: 'نورهان محمد',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'رقم واحد حرفيااا '
+  },
+  {
+    author: 'Nagham badr',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'حقيقي مبروحش غير عندهم مكان نضيف وشغل انضف بجد '
+  },
+  {
+    author: 'Nora Eljohary',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'شغلهم تحفه بجد المغربي عندهم قمر وتنضيف البشره وكل  حاجه والمكان تحفه بجد ومدام غرام قمه الذوق والله '
+  },
+  {
+    author: 'Dvvdbb Vdvbfxbg',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'احلي ميكب وانضف شغل حرفيا ومدام غرام العسل ربنا يباركلها بجد '
+  },
+  {
+    author: 'محمد البياع',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'ماشاء الله شغلهم جميل ومعملتهم جميله احسن كوافير فى دسوق بجد مش كلام '
+  },
+  {
+    author: 'Hanan Elshaer',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'اجمل مكان ف دسوق كلها حرفيا وشغلهم قمر '
+  },
+  {
+    author: 'منه محمد',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'كنت عروسه قمر عندهم وزي السكر كنت مبهورة بنفسي وكل شغلهم جميل والمكان تحفه بعد التجديد ماشاء الله والاستاف كلهم قمر '
+  },
+  {
+    author: 'BoSsy Ragab',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'انا من القاهره  ومتجوزة ف دسوق وجربت المكان تحفه وهاجي علي طول ان شاء الله '
+  },
+  {
+    author: 'Lulu Khair',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'عملت شعري فلر عندهم وطلع تحفه وتنضيف بشره بجد انضف شغل عندهم واحسن معامله حرفيا '
+  },
+  {
+    author: 'Abdo Amged',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'كنت عروسه زى القمر بجد وثبات الميكب تحفه واحسن شغل واحلي معامله بجد ربنا يباركلهم والله '
+  },
+  {
+    author: 'Passant rashed',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'تجربه مش ندمانه عليها استاف قمه الذوق وشغلهم جميل والمكان نضيف وجميل '
+  },
+  {
+    author: 'Hamoda Link',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مكان تحفه ومعامله تحفه بجد '
+  },
+  {
+    author: 'Yoka sharaf',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مكان جميل اوووي والمعامله كويسه جدا وكفايه زوقهم  وطبعاً احلا واجمل غرام ❤️🥰 ربنا يباركلك في شغلك ي حبيبتي ويرزقك ويوفقك بحياتك يارب ❤️   2 '
+  },
+  {
+    author: 'Fatma',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'كنت عروسه قمر من عندهم حرفيا وبجد كل حاجه عندهم تحفه '
+  },
+  {
+    author: 'ندى صبرى زيدان',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'احسن معامله  الاستاف محترمين جداا ومدام غرام قمه ف الاخلاق وشغلها تحفه وثبات الميكب ولا غلطه تسلم ايديهم بجد بالتوفيق '
+  },
+  {
+    author: 'Randa Gawish',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'تجربه جميله بجد احسن وانضف مكان دخلته ف دسوق وحجزت عروسه عندهم وكنت قمر تسلم ايد مدام غرام بجد '
+  },
+  {
+    author: 'Amr Elhadad',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'احلي وانضف واجمل سنتر واجمل استاف بجد '
+  },
+  {
+    author: 'مي السيد',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'شغل تحفه ومعامله جميله بجد مندمتش علي اختياري للمكان حرفيا '
+  },
+  {
+    author: 'Hgqhgs Hrheh',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'حبيت المكان جدا واحسن كوافير بجد مشاء الله يعني وبأذن الله واثقه ان هطلع جميله💗💗💗  '
+  },
+  {
+    author: 'بسمله عبده',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'عملت شغل ف المكان شغلهم جميل بجد ان شاءلله مش اخر مره وانا عروسه هحجز عندهم اكيد '
+  },
+  {
+    author: 'Amira Elshnawy',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'اجمل مكان بجد حجزت عروسه وكل حاجه طلعت اجمل ماكنت اتخيل بجدبشكر مدام غرام وكل الاستاف بتاعها شغلهم تحفه وبنات قمرات ربنا يوفقهم يارب '
+  },
+  {
+    author: 'mahmed algnde',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مكان فوق التحفه بجد '
+  },
+  {
+    author: 'Yara Mahmoud',
+    relativeTime: 'قبل 6 أشهر',
+    text: '❤❤❤❤ '
+  },
+  {
+    author: 'NOoR',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'غرام سلطان رقم واحد ف دسوق زى ماكنت بسمع مسالتش حد غير لما شكر ف المكان وف الشغل حقيقي كوافير جميل وبشكر ريهام علي الوش وشغلها تحفه كنت جايه خايفه اصلا وكمان اماني عملتلي تنضيف بجد خطير تسلم ايديهم '
+  },
+  {
+    author: 'Nada Ghanim',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'احسن سنتر حرفيا بجد نضافه ومعامله وذوق واستاف قمر وكل حاجه عندهم حلوة ميكب وشغل وكل حاجه بجد وان شاء الله هكون عروسه عندهم وبحد تجربه مش ندمانه عليها 👍  '
+  },
+  {
+    author: 'Sara Sara',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'بيوتي سنتر تحفه ونضيف جدا ومعامله بجد قمر ومدام غرام محترمه وذوق جدا وهبه عملالي الشعر، تحفه وتنضيف البشره كمان قمر وبجد تسلم ايديهم وربنا يوفقهم يارب بجد مكان محترم اوى ❤ '
+  },
+  {
+    author: 'غاده رجب',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'اجمل والطف معامله غرام سلطان '
+  },
+  {
+    author: 'قصص الملكة',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'احسن وانضف بيوتي سنتر ف دسوق حرفيا ومعاملته ذوق جدا من الاستاذ كله تنضيف بشره تحفه وكل حاجه جميله انا عروسه ومندمتش ابدا علي اختياري للمكان ومدام غرام قمه ف الذوق والاحترام فعلا بالتوفيق '
+  },
+  {
+    author: 'Ashrakat Anwar',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'تنضيف مش حلو ومعفن ومعمليش اي فرق ف بشرتي متستاهلوش صفر حت من عشره '
+  },
+  {
+    author: 'حودا علي',
+    relativeTime: 'قبل 6 أشهر',
+    text: '♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Khloud hoballa',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'كوافير حلو اوى وشكله جميل والاستاف ناس محترمه '
+  },
+  {
+    author: 'وفاء محمد',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'الشعر جميل تسلم ايدك يامراد هبه '
+  },
+  {
+    author: 'مني عبدالله',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'غرام سلطان التوب احلى مكيب '
+  },
+  {
+    author: 'سيما عبده',
+    relativeTime: 'قبل 6 أشهر',
+    text: '❤️❤️❤️بجد مكان حلو اوى متكامل من كل حاجه بجد وخدمات جميله '
+  },
+  {
+    author: 'Eman Samir',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'افضل مكان شوفته واحلى خدمه ❤️❤️ '
+  },
+  {
+    author: 'فاطمة خير',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'انضف واحسن بيوتي سنتر غرام سلطان♥️ '
+  },
+  {
+    author: 'Eman Mahmoud',
+    relativeTime: 'قبل 6 أشهر',
+    text: '🥰🥰🥰 احلي غرااام🥰🥰🥰  '
+  },
+  {
+    author: 'Esraa Mahmoud',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'اجمل بيوتي سنتر كدا كدا 🥰❤️  '
+  },
+  {
+    author: 'Farah Omar',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'انضف واريح بيوتي سنتر ف دسوق كلها والله🫶❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️  '
+  },
+  {
+    author: 'Reem Dar',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'المكان حلو جدا بعد التجديد والاستاف جميل جدا '
+  },
+  {
+    author: 'Bilal Mohamed',
+    relativeTime: 'قبل 6 أشهر',
+    text: '❤️❤️❤️ '
+  },
+  {
+    author: 'احمد العربي',
+    relativeTime: 'قبل 6 أشهر',
+    text: '❤❤❤ '
+  },
+  {
+    author: 'Najlaa alaa',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'انا مش عارفه اكتب ايه من حلاوه كل حاجه عندكم احلى واشيك بيوتي سنار غرام سلطان '
+  },
+  {
+    author: 'شروق عبدالمطلب',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مكان جميل والأسلوب زوق جدا شكرا ليكى يا مدام دنيا الشعر ولا غلطه '
+  },
+  {
+    author: 'آيه إبراهيم ا',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مكان جميل والائتلاف ممتاز '
+  },
+  {
+    author: 'Hanan Hany',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'احلى تنضيف بشره '
+  },
+  {
+    author: 'روان عبده',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'المكان تحفه ما شاء الله '
+  },
+  {
+    author: 'Amol Dabas',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مكان جميل '
+  },
+  {
+    author: 'فرحه فرحات',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'المكان تحفه جدا♥️♥️ '
+  },
+  {
+    author: 'Rewan Reda',
+    relativeTime: 'قبل 6 أشهر',
+    text: '♥️♥️♥️ '
+  },
+  {
+    author: 'Asmaa Magdy',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مشاء الله مكان حلو '
+  },
+  {
+    author: 'Sara Mohamed',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مكان جميل يستاهل ١٠من ١٠ '
+  },
+  {
+    author: 'Mona hassan Mohammed yosef Hassan mohamed yosef',
+    relativeTime: 'قبل 6 أشهر',
+    text: '❤❤❤ '
+  },
+  {
+    author: 'Up Mn',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مكان ممتاز وكل حاجه فيه حلوة وجميله وممتازة '
+  },
+  {
+    author: 'Aya Nabil',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'المكان حلو اووي والشغل احلي بكتير '
+  },
+  {
+    author: 'السعيد حبلص',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'تنضيف بشره جميل '
+  },
+  {
+    author: 'Shorouk Mohamed',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'الشغل حلو والمكيب تحفه '
+  },
+  {
+    author: 'Amira Midhat',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مشاء الله مكان جميل '
+  },
+  {
+    author: 'Misr Phone',
+    relativeTime: 'قبل 6 أشهر',
+    text: '❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Mohamed Alkhawaga',
+    relativeTime: 'قبل 6 أشهر',
+    text: '❤❤❤❤ '
+  },
+  {
+    author: 'محمد احمد',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'كنت عروسه عندكم وبجد كنت قمر ودلوقتى رجعت بعمل شعرى '
+  },
+  {
+    author: 'aya matter',
+    relativeTime: 'قبل 6 أشهر',
+    text: '❤️❤️❤️ '
+  },
+  {
+    author: 'أسماء نصر',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'معمله كويسه جدا واحلي سنتر  بجد ❤❤ '
+  },
+  {
+    author: 'Nada Amr',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مكان حلو اوى وكل حاجه فيه جميله وتسلم ايدك ياامانى '
+  },
+  {
+    author: 'Mero Mero',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'جميله جدا واسعارهم ممتازه والصراحه كفايه زوقهم ،❤️❤️❤️❤️ '
+  },
+  {
+    author: 'سالم حجر',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مكان جميل والشغل تحفه والأستاذ ممتاز  والشعر طلع جميل اوى '
+  },
+  {
+    author: 'Habiba Walied',
+    relativeTime: 'قبل 6 أشهر',
+    text: '💗💗💗  '
+  },
+  {
+    author: 'aaddio',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'الشعر جميل تسلم ايدك يا ريمو وعقبال كل مره '
+  },
+  {
+    author: 'أحيا بذكر الله',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'المكان حلو اوى وانا جايه على كلام الناس الصراحه كله بيشكر فيهم ولام جيت فعلا شوفت دا بعينى البنات كويسين جدا وشغلهم تحفه وبجد عملتى شعرى وتنظيف بشره ووشى مفيش ولا غلطه شكرا ليكم كلكم ❤️❤️ '
+  },
+  {
+    author: 'may Ebrahim',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مشاء الله مكان جميل واستاف ناس محترمه وزوق واحلى تنضيف بشره '
+  },
+  {
+    author: 'Sa Sa',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مكان جميل جدا '
+  },
+  {
+    author: 'Safaa Basuony',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'اشيك فيك نيلز تسلم ايدك ياسما بجد شطوره اوى ♥️♥️ '
+  },
+  {
+    author: 'Yosr Mohamed',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'الشعر تحفه تسلم ايدك يا مدام هبه بجد ولا غلطه إن شاء الله مش اخر مره '
+  },
+  {
+    author: 'Hassan Roshdy',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'الشعر جميل تسلم ايدك وعقبال المكيب يبقا تحفه هو كمان كده '
+  },
+  {
+    author: 'Rehad Gawish',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'ريفيو فى حق بيوتي سنتر محترم غرام سلطان اجمل مكان فعلا فى محافظه كفر الشيخ كلها ونتكلم ع رقه شغلها وأسلوبها الجميل بجد مش ندمانه انى اختارتك وهتفضل شهادتي فيها مجروحه جدا واحب اشكر كل الاستف اللي حرفياً التعامل معاه ف منتهي الزوق والأخلاق  المزيد '
+  },
+  {
+    author: 'Hanan Hassan Ali Gadallaa',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'اجمل مكان في دسوق غرام سلطان واجمل تنضيف بشره عملته فحياتي تسلم ايدك يا اماني بجد شغلك تحفه💗  '
+  },
+  {
+    author: 'zaid Mahzya',
+    relativeTime: 'قبل 6 أشهر',
+    text: '♥️♥️♥️ '
+  },
+  {
+    author: 'Deiy',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مكان جميل وناس زوق '
+  },
+  {
+    author: 'انغام مرجان',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'تسلم ايدك يامدام هبه على الشعر جميل اوى '
+  },
+  {
+    author: 'Saif Eldien',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'سنتر جميل المعامله تحفه '
+  },
+  {
+    author: 'دينا السيد',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مكان قمر اوي اوي بصراحه ماشاء الله بقا توب التوب فدس ق   كلهااااا ومن اجمل الاماكن وانشاء الله من تقدم لتقدم  طبعا مدام غرام ماشاء الله عليها ربنا يبارك فيها ويحفظها ♥️♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Nadia Mohamed',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'بجد تنظيف البشرة عند مس غرام حاجة تحفة بجد 💥💥 🎉❤️❤️  '
+  },
+  {
+    author: 'عدل',
+    relativeTime: 'قبل 6 أشهر',
+    text: '♥️♥️♥️♥️ '
+  },
+  {
+    author: 'سلمي حسن',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'احلى بيوتى سنتر والشغل جميل اوى '
+  },
+  {
+    author: 'Nada Hegazy',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'تسلم ايدك ع تنضيف البشره ❤️❤️ '
+  },
+  {
+    author: 'Nesma Fouad',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مكان راقي و جميل جدا ماشاء الله بالتوفيق دايما ي رب 🥰🥰❤️❤️  '
+  },
+  {
+    author: 'يوسف ابو يوسف',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'تسلم ايدك يا ريمو وطبعا أمانة احلى تنضيف بشره ♥️♥️♥️ '
+  },
+  {
+    author: 'HamD 122',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'بجد احسن سنتر غرام سلطان عل التعامل وعل الاحترام وبجد حاجه جميله خالص تنظيف بشره جميل ❤️ '
+  },
+  {
+    author: 'Em An',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'تسلم ايدك يا دنيا الشعر جميل مكنتش اتخيل ابدا أنه هيكون بحلاوه دى وناعم وبيلمع زى بتاع الممثلين 😍♥️  '
+  },
+  {
+    author: 'عبده الملاح',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مكان كويس اوى وكل اللى شغالين فيه ناس زوق جدا وشكرا يامدام هبه تسلم ايدك الشعر ولا غلطه '
+  },
+  {
+    author: 'Waleed Waleed',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'تسلم ايدك بأمانة احلى تنظيف بشره '
+  },
+  {
+    author: 'Arwa Fathy',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'من احسن تنظيف البشره الي عملته ف حياتي بجد تسلم ايدك ياماني بجد علي زؤقك معايا ♥️♥️ '
+  },
+  {
+    author: 'Alaa Fathy',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'احلا واجمل اماني بجد من احسن حد يعملي تنظيف بشره واحن ايد علي الوش بجد من احلا الناس😘  '
+  },
+  {
+    author: 'Asasas Asasasa',
+    relativeTime: 'قبل 6 أشهر',
+    text: '❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'رتاج جمعه',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'تسلم ايدك يامانى على تنظيف البشره وان شاء الله مش اخر مره '
+  },
+  {
+    author: 'Sara Atwan',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'حقيقى اكتر مكان جميل وحلو اوي من حيث كل شيء الشغل النظافة حتى الناس اللي موجوده فيه معاملة ف قمة الجمال حقيقى ياخد ١٠/١٠ '
+  },
+  {
+    author: 'Omnia Elbhery',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'حقيقي مش عارفه اوصف حلاوه الميكب ولا ثباته بجد غرام سلطان واحده بس اشطر وأحمد ميكب ارتيست بجد تسلم ايدك يا غرام♥️ '
+  },
+  {
+    author: 'Yara Mohammed',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مش عارفه ابدا الكلام منين بجد  سنتر غرام سلطان من احسن الاماكن الي دخلتها الخدمه زي القمر بجد اجمل تنضيف بشره عملته ف حياتي بجد تسلم ايدك يا اماني علي زؤقك معايا انتي وريهام القمر ❤️ '
+  },
+  {
+    author: 'famrtma ahvjhc',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'مشاء الله المكان حلو اوى والبنات اللى فى السنتر كلهم شاطرين اوى وكل واحده مخصيصه فى حاجه ودى اكتر حاجه عجبتنى فى المكان ويارب دايما فى نجاح '
+  },
+  {
+    author: 'سعد هاني',
+    relativeTime: 'قبل 6 أشهر',
+    text: 'احسن وانضف بيوتي سنتر غرام سلطان تجربتي في فيلم الشعر كانت تحفه وتسلم ايد ليلي مشاء الله عليها مش اول ولا اخر مره ❤️ '
+  },
+  {
+    author: 'Hasah Ali',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'تسلم ايدك على تنضيف البشره ❤️❤️❤️💋  '
+  },
+  {
+    author: 'إيمان الخولي',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'حقيقي م عارفه اقول اي بجد  اول مره اعمل تنظيف بشره وابقا مرتاحه ومبسوطه من النتيجه بجد تسلم ايدك يا اماني بجد زي القمر وشغلك تحفه واجمل بيوتي سنتر غرام سلطان♥️♥️♥️ '
+  },
+  {
+    author: 'Talia Amr',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'من اكتر الصالونات اللى بحب اعمل شعرى عندهم ♥️♥️ '
+  },
+  {
+    author: 'Dff Ggg',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'مكان مميز جدا وكل حته فيه بجد جميله وشغلهم حلو اوي '
+  },
+  {
+    author: 'dina elsaidy',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'ما شاء الله اجمل و اشطر بيوتي سنتر في دسوق '
+  },
+  {
+    author: 'ام عبدالرحمن',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'الكرسى المساج دا اختراع بجد ظهرى كان واجعنى اوى ولا الشعر تسلم ايدك ياهبه بجد انتى زوق اوووى '
+  },
+  {
+    author: 'Rewan Mohsean',
+    relativeTime: 'قبل 7 أشهر',
+    text: '♥♥♥♥♥ '
+  },
+  {
+    author: 'ميار احمد',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'أجمل تنضيف بشره تسلم ايدك يامانى '
+  },
+  {
+    author: 'Mona Ayad',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'ريفيو لاول مره عن تنضيف البشره اللى عملته وعجبنى بجد اول مره ابقى راضيه عن تنضيف البشره كده حقيقى ولا غلطه ونضافه فوق الواو تحفه بجد وخصوصا البنوته السكر اللى عملتلى تسلم ايدك ي أمانى وعلى المعامله الذوق بجد ♥️♥️ '
+  },
+  {
+    author: 'Shahd عبد الرحيم',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'احلى تنضيف بشره والمكان فعلا بقا جميل اوى❤️❤️ '
+  },
+  {
+    author: 'Yassmin Bltagy',
+    relativeTime: 'قبل 7 أشهر',
+    text: '❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Shahd Emad',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'مشاء الله اجمل بيوتي سنتر واجمل استف يارب دايما تكونو ف نجاح ♥️ '
+  },
+  {
+    author: 'Nema Mohamed',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'المكان جميل والاستاف ناس زوق اوى شكرا ليكم ومش اخر مره '
+  },
+  {
+    author: 'الطير،الحزين',
+    relativeTime: 'قبل 7 أشهر',
+    text: '❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Hamoda Link',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'الناس الجميله وأصحاب الزوق العالي والشغل الجامد بصراحه ميرسي ليكم بجد ولزوقكم وتعبكم معايا وفعلا اول مره اتعامل معاكم بس انشاء الله مش هتكون اخر مره ميرسي كتير😍😘❤️  '
+  },
+  {
+    author: 'Elsaied Alnwasany',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'تسلم ايدكى على المكيب بجد جميل '
+  },
+  {
+    author: 'kh kh',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'ميك اب احوطه فى حياتى والله ✨💞🫶  '
+  },
+  {
+    author: 'salwa Zidan',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'مشاء الله كوافير جميل '
+  },
+  {
+    author: 'youma youma',
+    relativeTime: 'قبل 7 أشهر',
+    text: '🥰🥰🥰🥰  '
+  },
+  {
+    author: 'Aya Abd El fatah',
+    relativeTime: 'قبل 7 أشهر',
+    text: '♥️♥️♥️♥️ '
+  },
+  {
+    author: 'mamar eissa',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'احلى بيوتى سنتر فى دسوق '
+  },
+  {
+    author: 'Nada Yousef',
+    relativeTime: 'قبل 7 أشهر',
+    text: '♥️♥️♥️ '
+  },
+  {
+    author: 'سهام طلبه فضيله',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'المكان بقا جامد '
+  },
+  {
+    author: 'عيو شة',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'تسلم ايدكى على المكيب '
+  },
+  {
+    author: 'Samah hegazy',
+    relativeTime: 'قبل 7 أشهر',
+    text: '❤️❤️❤️❤️ '
+  },
+  {
+    author: 'aya Fahmy',
+    relativeTime: 'قبل 7 أشهر',
+    text: '❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Nada Ahmed',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'احلى مكيب '
+  },
+  {
+    author: 'Basmala El-kholy',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'بسم الله مشاء الله المكان بقا جميل اوى '
+  },
+  {
+    author: 'Yara Mohammed',
+    relativeTime: 'قبل 7 أشهر',
+    text: '❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Khloud Neem',
+    relativeTime: 'قبل 7 أشهر',
+    text: '♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Oum Haneen',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'احلى تنضيف بشره بجد تسلم ايدك ياقمر وان شاء الله مش اخر مره '
+  },
+  {
+    author: 'Nahla Elashry',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'مكان جميل وكل حاجه فيه جميله '
+  },
+  {
+    author: 'Mohamed Mondor',
+    relativeTime: 'قبل 7 أشهر',
+    text: '❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Manar Eid',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'اجمل واحلي بيوتي سنتر حقيقي ومدام غرام زؤق جدا ربنا يباركلها ودايما تكون ف نجاح 😍  '
+  },
+  {
+    author: 'Ghada Ghorap',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'اجمل مكيب واحسن تعامل بجد تسلم ايدكم '
+  },
+  {
+    author: 'Nermeen mohamed saif',
+    relativeTime: 'قبل 7 أشهر',
+    text: '♥♥♥♥ '
+  },
+  {
+    author: 'شاكر حموده',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'احلى تنظيف بشره '
+  },
+  {
+    author: 'Nesren Khadr',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'اجمل مكان '
+  },
+  {
+    author: 'Omnia Elsheikh',
+    relativeTime: 'قبل 7 أشهر',
+    text: '♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'ياسمين فتحى',
+    relativeTime: 'قبل 7 أشهر',
+    text: '❤❤❤❤ '
+  },
+  {
+    author: 'Manar Mohamed',
+    relativeTime: 'قبل 7 أشهر',
+    text: '❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'الشحات',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'احلى ميكب '
+  },
+  {
+    author: 'Yrj Hfih',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'ممان جميل اول مره انبسط فى نمان كدخ '
+  },
+  {
+    author: 'MSh2005 F',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'تسلم ايدك ع التنظيف حميل '
+  },
+  {
+    author: 'ريم خميس',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'احلى مكان فى الشغل وفى المعامله وفى كل حاجه '
+  },
+  {
+    author: 'Sara Salah',
+    relativeTime: 'قبل 7 أشهر',
+    text: '♥️♥️♥️ '
+  },
+  {
+    author: 'منه ثروت مصباح',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'مكان جميل واحلى مكيب '
+  },
+  {
+    author: 'Sobhi Shlaby',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'اجمل مكان '
+  },
+  {
+    author: 'Aya ElBisy',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'المكان جميل اوى وكل حاجه فيه جميله تسلم ايدكى ع الشعر '
+  },
+  {
+    author: 'SALH SALH',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'احلي كوافير '
+  },
+  {
+    author: 'دنيا غلاب',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'احلى كوافير '
+  },
+  {
+    author: 'احمد',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'تسلم ايدكى '
+  },
+  {
+    author: 'Haneen Ayman',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'احلي كوافير😍♥️  '
+  },
+  {
+    author: 'حبيبه حسن',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'مكان جميل '
+  },
+  {
+    author: 'Mero Mohamed',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'بصراحه المكان حلو وانا كنت عندك من خمس سنين '
+  },
+  {
+    author: 'Manar Mahmoud',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'تسلم ايدك ف تنظيف البشره '
+  },
+  {
+    author: 'Wafaa Mosad',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'ماشاء الله بجد مكان تحفه والعاملين فيه معاملتهم جميله اوووووي وتسلم أيديهم بجد وبجد ببقي مفيش غلطه فيه من ناحيه كل حاجه ❤️❤️❤️ '
+  },
+  {
+    author: 'Omnia Mohamed',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'مكان جميل '
+  },
+  {
+    author: 'Alyaa',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'احلى مكان '
+  },
+  {
+    author: 'حنان صابر',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'احلى تنظيف بشره عملته فى حياتى تسلم ايدكى '
+  },
+  {
+    author: 'Nayira Mohamed',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'الصبغه تحفه '
+  },
+  {
+    author: 'Dalia Awady',
+    relativeTime: 'قبل 7 أشهر',
+    text: '❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Rasha Gamal',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'المكان جميل واستاف شاطر جدا '
+  },
+  {
+    author: 'Mai Hamdy',
+    relativeTime: 'قبل 7 أشهر',
+    text: 'احلى واشيك بيوتى سنتر ف كفر الشيخ '
+  },
+  {
+    author: 'Habiba Musa',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى غرام سلطان '
+  },
+  {
+    author: 'eman mohamed',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى ميكب واحلى تيم '
+  },
+  {
+    author: 'امينه فؤاد',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'المكان جميل جدا وتسلم ايدك يا ليلى '
+  },
+  {
+    author: 'Samar akl',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'المكان جميل والناس اللى فيه كلهم كويسين  وتسلم ايدك ع الشعر '
+  },
+  {
+    author: 'Amany Kamal',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'بجد مش مجامله احلى معامله واحلى بنات الواحد بيتعامل معاهم منتهى الذوق والامانه🥰❤️❤️❤️❤️  '
+  },
+  {
+    author: 'ورده السيد مسعود',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'اجمل كوافير فى دسوق '
+  },
+  {
+    author: 'Rabab Mohamed',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Aya Ali',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'المكان تحفه وكل حاجه جميله اوى '
+  },
+  {
+    author: 'Kholoud Mohammad',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى ميكب ف دسوق فعلا واحلى عرايس بتتطلع من سنتر غرام سلطان '
+  },
+  {
+    author: 'مني سالم',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'المكان جميل اوى '
+  },
+  {
+    author: 'So Sor',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'المكان جميل '
+  },
+  {
+    author: 'Eman Mithad',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Jdj Bghd',
+    relativeTime: 'قبل 8 أشهر',
+    text: '♥️♥️ '
+  },
+  {
+    author: 'Nourhan hamada',
+    relativeTime: 'قبل 8 أشهر',
+    text: '💗💗💗💗  '
+  },
+  {
+    author: 'Smah Elsud',
+    relativeTime: 'قبل 8 أشهر',
+    text: '♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'رحاب مراد',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'تسلم ايدك تنظيف البشره جميل '
+  },
+  {
+    author: 'Ghada Attia',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى ام غزل '
+  },
+  {
+    author: 'Alaa Ashraf',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'المكان جميل ♥️♥️ '
+  },
+  {
+    author: 'Koko Alaa',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤️❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Hager Saad',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'أحلي ميكب ارتست مشهوره 🥹❤️  '
+  },
+  {
+    author: 'Merooomerooo37 Salah',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤❤❤❤❤ '
+  },
+  {
+    author: 'Roo dawod',
+    relativeTime: 'قبل 8 أشهر',
+    text: '♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Asmaa Hassan',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'المكان تحفه '
+  },
+  {
+    author: 'Loly Hani',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'الشعر جميل تسلم ايدك واحلى مكان '
+  },
+  {
+    author: 'فوزيه احمد',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'اشيك مكان فى كفر الشيخ '
+  },
+  {
+    author: 'Rana Ezz',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلا ميكب شوفتو حرفيا❤ '
+  },
+  {
+    author: 'Rere Ezz',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى ميكب فى دسوق كلها '
+  },
+  {
+    author: 'شيرين الجيوشي مصطفي',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤️ '
+  },
+  {
+    author: 'Doaa Doaa',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى تنظيف بشره واحلى مكان فى دسوق '
+  },
+  {
+    author: 'Hala mahmoud',
+    relativeTime: 'قبل 8 أشهر',
+    text: '♥️♥️♥️♥️ '
+  },
+  {
+    author: 'هاجر الروبي',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'مكان ولا اروع♥️ '
+  },
+  {
+    author: 'Habiba',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'المكان  جميل والخدمه كويسه وتسلم ايدك يادنيا '
+  },
+  {
+    author: 'xxAxxx xxxk',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'حرفيا اجمل مكان تجميل واهتمام وعنايه شخصيه 🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷  '
+  },
+  {
+    author: 'Rog Ganady',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى مكان عملت فيه ميكب الميكب تحفه والتيم كلهم جمال اوى بجد 💗💗💗  '
+  },
+  {
+    author: 'Omnia Mohamed',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احسن مكان بيعمل ميكب فى دسوق بجد المكان تحفه والتيم كلهم لذاذ وتعاملهم جميل اوى 😘❤️❤️  '
+  },
+  {
+    author: 'Basmala Mohamed',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤❤❤❤❤ '
+  },
+  {
+    author: 'Magda Ganady',
+    relativeTime: 'قبل 8 أشهر',
+    text: '♥️♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'سعيد ابراهيم',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى مدام غرام '
+  },
+  {
+    author: 'Dgh Dgj',
+    relativeTime: 'قبل 8 أشهر',
+    text: '🥰🥰🥰🥰🥰  '
+  },
+  {
+    author: 'Amira Abdo',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤❤❤❤ '
+  },
+  {
+    author: 'اميره ابراهيم',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى مدام غرام واچمل مكان فى دسوق كلها '
+  },
+  {
+    author: 'سهيلة عبدالهادي',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤❤❤❤ '
+  },
+  {
+    author: 'Hager Saad',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى تنظيف بشره عند مدام غرام❤️❤️❤️ '
+  },
+  {
+    author: 'Hanan Samy',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'الخدمه ماشاء الله تحفه ♥️♥️ وعملت فيك نيلز مع دنيا كان قمر اوي وهي اصلا قمر ♥️ '
+  },
+  {
+    author: 'Malak Mohamed',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'HANEN Khaer',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'تسلم ايدك الميكب تحفه '
+  },
+  {
+    author: 'Hoda Ziyada',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'تسلم ايدك ع الشعر تحفه بجد '
+  },
+  {
+    author: 'انجي السيد',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'اشطر ميكيب ف دسوق كلها بجد بتعمل عظمه '
+  },
+  {
+    author: 'دينا ابراهيم طعيمة',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى تنظيف بشره تسلم ايدك🥰🥰🥰  '
+  },
+  {
+    author: 'shahd khaled',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى كوافير واحسن معامله والمكان بقا تحفه اوى تسلم ايدكى '
+  },
+  {
+    author: 'aya eltabakh',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'شغالكم عظمه اللهم بارك '
+  },
+  {
+    author: 'Aya',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Mhaer Khedr',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى كوافير انا خامس عروسه عندك من نفس البيت ❤❤❤ '
+  },
+  {
+    author: 'Mohamed Ahmed',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤❤❤❤❤❤ '
+  },
+  {
+    author: 'داليا سالم',
+    relativeTime: 'قبل 8 أشهر',
+    text: '♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Ft hh Ghj',
+    relativeTime: 'قبل 8 أشهر',
+    text: '♥♥♥♥♥♥ '
+  },
+  {
+    author: 'رجية رحمت الباري رجية',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Mona Essa',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'اجمل كوافير فى دسوق '
+  },
+  {
+    author: 'Alaa Mo',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤️❤️❤️ '
+  },
+  {
+    author: 'Mohamed El amer',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى بيوتى سنتر دا ولا ايه '
+  },
+  {
+    author: 'السيد شلبي',
+    relativeTime: 'قبل 8 أشهر',
+    text: '🥰🥰🥰🥰🥰🥰🥰  '
+  },
+  {
+    author: 'ادم الانه',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤❤❤❤❤❤❤ '
+  },
+  {
+    author: 'دعاء عجوه',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى ام غزل ف الدنيا '
+  },
+  {
+    author: 'روان نصر',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤❤❤❤❤❤ '
+  },
+  {
+    author: 'ام عيون عسليه',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'بجد من احسن الكوافيرات اللى دخلتها مكان مميز جدا والتيم اللى فيه محترم اوى وبجد ام غزل دى حته سكره ودايما من نجاح لنجاح '
+  },
+  {
+    author: 'Asmaa Mohamed',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'مكان مميز جدا والبنات ذوق أوى بجد كلهم ماشاء الله على مستوى كبير ومدام غرام بجد من الناس المميزه جدا في المجال ده '
+  },
+  {
+    author: 'AsMaa Wajih',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'اشطر ام غزل تسلم ايدك '
+  },
+  {
+    author: 'Safaa Bakr',
+    relativeTime: 'قبل 8 أشهر',
+    text: '♥️♥️♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Rana Hussies',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'يالهوى على الحلاوة دى كلهاااا تسلم ايدك يا دنيا احلا ام غزل واجمل تيم فى دسوق كلهاااااا '
+  },
+  {
+    author: 'Rewan Hussien',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'اي الحلاوة والجمال ده بجد تسلم ايدك احلا تيم فى الدنيا كلها '
+  },
+  {
+    author: 'Eman Darag',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤❤❤❤❤❤❤ '
+  },
+  {
+    author: 'Haidy Muhamad',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'افضل مكان '
+  },
+  {
+    author: 'البشمهندسه عزالدين',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤️❤️❤️❤️ '
+  },
+  {
+    author: 'ام محمود محمود',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'asmaa samir',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤️❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Hemat Shawky',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'ام غزل احلى ميكب واحلى شخصيه بجد انسانه جميله اووووى '
+  },
+  {
+    author: 'Shahd fared',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'اشطر ميكب ارتست❤️❤️❤️❤️ '
+  },
+  {
+    author: 'ورده البستان',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'المكان بقا جميل اوى '
+  },
+  {
+    author: 'Shemo Zawe',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى غرام سلطان واحلى ام غزل واشطر استاف واشطر حد يعمل ميكاب مش ف دسوق بس دا ف كفر الشيخ عامتاا، يارب ديما من نجاح ل نجاح 💘  '
+  },
+  {
+    author: 'Osama atya',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'تسلم ايدك♥️♥️ '
+  },
+  {
+    author: 'لبنى مصطفي',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'افضل بيوتى سنتر فى دسوق '
+  },
+  {
+    author: 'لوما زكريا',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'الميكب بتاعك تحفه تسلم ايدك '
+  },
+  {
+    author: 'Shrook Sophey',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'المكان تحفه اوووي بجد التجديد بالتوفيق انشاء الله احلي مدام غرااام واحلي استاف ف دنيا كلهاا♥♥♥ '
+  },
+  {
+    author: 'Om Sief',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'المكان جامد عن الاول واووو غير طبعا المعامله متغيرتش لانكم زوق اوي اوي كل حاجه تحفه انا هتجنن عل الفواحه الالكترونيه '
+  },
+  {
+    author: 'Wafaa Mohamed',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'تحفه بجد ❤ بجد ذوق اووى ف التعامل ❤ '
+  },
+  {
+    author: 'اسماء الحداد',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'تسلم ايدك شغلك جميل والله '
+  },
+  {
+    author: 'Mena Fathy',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى مكيب فى دسوق كلها كل اخواتى كانو عندك '
+  },
+  {
+    author: 'Mai Mai Mai',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'المكان جميل اوى '
+  },
+  {
+    author: 'nada ali',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'المكان في منتهى الجمال والرقي حقيقي الشغل والخدمات  جميله والمعامله كويسه من الاستاف افضل بيوتي سنتر ف دسوق مش اول تعامل لينا ديما في تقدم وديما من نجاح لنجاح ❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Ay a',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'انجح واشطر ميكب فى دسوق كلها بجد مفيش احلى منك '
+  },
+  {
+    author: 'mayada Elshrief',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'تسلم ايدك يام غزل '
+  },
+  {
+    author: 'على عزت حمد',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى ام غزل '
+  },
+  {
+    author: 'شهد احمد سعد الحداد الحداد',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'تسلم ايدك شعرى جميل '
+  },
+  {
+    author: 'انا حبيبة محمود',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'جميله '
+  },
+  {
+    author: 'منه سليمان',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'غرام سلطان حقيقي كشخصية جميلة جدا قبل ما تكون صاحبة مكان ،وحقيقي المكان تحفه وبعد التحديد بقا جميل جداً وبقا متاح خدمات جديدة ومميزة ف السنتر ♥️ '
+  },
+  {
+    author: 'Fayza Ahmed',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'مكان جميل وهادي وغرام انسانه طيبه ورقيقه ربنا يبارك لها ويرزقها الخير كله والبنات زي السكر '
+  },
+  {
+    author: 'Mody Yousif',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Om Gana',
+    relativeTime: 'قبل 8 أشهر',
+    text: '♥️♥️♥️♥️ '
+  },
+  {
+    author: 'محمد منصور',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤❤❤❤❤❤❤ '
+  },
+  {
+    author: 'شهد شهد',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'تسلم ايدك يام غزل بجد خلتينى احلى عروسه '
+  },
+  {
+    author: 'دعاء ابرهيم',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى كوافير واحلى خامات وبجد ناس عندها ضمير '
+  },
+  {
+    author: 'عباد الرحمن',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'المحل شكله جميل اوي '
+  },
+  {
+    author: 'فارس مهني',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'عملت تنظيف بشره جميل '
+  },
+  {
+    author: 'Rahma Taha',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤️❤️❤️ '
+  },
+  {
+    author: 'ابراهيم نافع',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'بجد مكان محترم اوى وناس كلها زوق '
+  },
+  {
+    author: 'Basmaa Elsawy',
+    relativeTime: 'قبل 8 أشهر',
+    text: '♥♥♥♥♥ '
+  },
+  {
+    author: 'رنا كامل',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى كوافير ف دسوق '
+  },
+  {
+    author: 'Shourk Abdo',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'شعرى حلو اوى تسلم ايدك '
+  },
+  {
+    author: 'Enoo Tayel',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'اختى كانت عندك كانت قمر 14, '
+  },
+  {
+    author: 'amany mohmed',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'المكان كويس جدا والناس محترمه جدا ماشاء الله ومدام غرام كويسه جدا كتعامل وكل حاجه ماشاء الله '
+  },
+  {
+    author: 'Mai Mohamed',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'تسلم ايدك ع المكيب كنت قمر♥️♥️♥️ '
+  },
+  {
+    author: 'Walaa Khafagy',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى ميكب إرنست ف دسوق كنت عندك عروسه ومش ندمانه انى اختارتك بجد تسلم ايدك '
+  },
+  {
+    author: 'Aya Mamdouh',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى غرومه♥️♥️♥️ '
+  },
+  {
+    author: 'Hiam Ramdan',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'بجد وبمصداقيه غرام سلطان  اروع وافخم  ميكب ارتست في دسوق والاماكن المجاوره كلها '
+  },
+  {
+    author: 'Raghda Mohammed',
+    relativeTime: 'قبل 8 أشهر',
+    text: '♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'ملك ابوطالب',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'انا عروسه عندك من مطروح '
+  },
+  {
+    author: 'Ahsan ghzalaa',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى ام غزل '
+  },
+  {
+    author: 'ناصر رضا',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'المكياج جميل يام غزل وثابت اوى لآخر الفرح '
+  },
+  {
+    author: 'عبدالناصر الصافي',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'استاذه غرام حقيقي انتي بتعملي عظمه '
+  },
+  {
+    author: 'Bayan Abdelkreem',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤️❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Amal Mohammed',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'المكان بقا حلو اووووى والبنات اللى موجودين في زى العسل بجد كل حاجه حلوه '
+  },
+  {
+    author: 'Rahma Sharaby',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى واجمل ميكيب فى دسوق كلها اللهم بارك '
+  },
+  {
+    author: 'Shimaa E Atallah',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'مكان حلو اوى '
+  },
+  {
+    author: 'Be Good',
+    relativeTime: 'قبل 8 أشهر',
+    text: '♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Heba Mohamed',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'اول مره اروح والمكان عجبنى اووووى '
+  },
+  {
+    author: 'Kholoud Elmalah',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'بجد المكان والخدمه تحفهه وناس زوق جدا بجد والله  احسن واحلي مكان في دسوق '
+  },
+  {
+    author: 'Nadoda Elbhr',
+    relativeTime: 'قبل 8 أشهر',
+    text: '❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Sohailla Faheem',
+    relativeTime: 'قبل 8 أشهر',
+    text: '♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Hanan Adel',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'المكان جميل اوى بعد التجديدات وبجد تسلم الاستطف كله 🤍🤍🤍🥺  '
+  },
+  {
+    author: 'Nourhan Hamza',
+    relativeTime: 'قبل 8 أشهر',
+    text: '🥰🥰🥰🥰🥰🥰  '
+  },
+  {
+    author: 'Asmaa Samsoma',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'الشعر تحفه تسلم ايدك يام غزل '
+  },
+  {
+    author: 'Mahasen Mohamed',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'ناس زوق جدا شكرا للمتخصصين الشعر '
+  },
+  {
+    author: 'Ayman Elseidy',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى واجمل غرام سلطان واحلى واجمل اسطف بجد '
+  },
+  {
+    author: 'محمد',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى تنظيف بشره🥰🥰🥰🥰  '
+  },
+  {
+    author: 'سلامه باز',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'شغلهم حلو اوى '
+  },
+  {
+    author: 'Shimaa Sapry',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'مكان حلووووووووووو اووووووى😍😍😍😍😍  '
+  },
+  {
+    author: 'Shereen Ahmed',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى مكان فى دسوق ايه بجد المكان الجميل دا 😍انا انبهرت بمكان بعد التحديث بجد حاجه حلوه اوى🥰🥰  '
+  },
+  {
+    author: 'nabila12 badr',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'مكان جميل والمعاملة فيه جميله وذوق وعندها استاف محترم بجد مش اخر مره 🥰  '
+  },
+  {
+    author: 'Adam Badr',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'احلى تنظيف بشرة عملته ف حياتى بجد تسلم ايد البنوته اللى عملتلى 🥰 وشكر لمدام غرام ع المكان الجميل دا❤️❤️  '
+  },
+  {
+    author: 'ياسمين محمد',
+    relativeTime: 'قبل 8 أشهر',
+    text: 'شغلهم حلو اوى ❤️❤️❤️❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'يحيي رمضان',
+    relativeTime: 'قبل 9 أشهر',
+    text: '♥ اجمل بيوتي سنتر فى دسوق كلها 😍  '
+  },
+  {
+    author: 'Nada Eissa',
+    relativeTime: 'قبل 9 أشهر',
+    text: 'بصراحه انا مااتعملتش معها لاكن شوفت شغل ليها حلو اووي وثابت كل مره بقول لنفسي لازم اكون عند غرام سلطان علشان كده تاني يوم رمضان ريحه احجز ميكب جنتي وفرحي عندها ووثقه اني هطلع احلي مما اتخيل أن شاء الله '
+  },
+  {
+    author: 'Martha Maher',
+    relativeTime: 'قبل 9 أشهر',
+    text: 'من احلي الكوافيرات اللي دخلتها بجد معامله حلوه وشغل تحفه وميكب خطير وناس جميله كده ربنا يوفقكم توب دسوق ♥️♥️♥️♥️😍  '
+  },
+  {
+    author: 'شيماء عرفه',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'مكان فوق ممتازه.  كست العمل  محترمين.  غرام ذات نفسه محترمه جدا تحسي انك في بيت . الشغل روعه روعه.  جزاك الله خيراً '
+  },
+  {
+    author: 'منار المدبولى',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'مكان جميل ومميز واحسن معامله واحلي شغل ربنا يباركلهم كنت عندك من ٤سنين وكنت طالعه قمر وكان احسن اختيار '
+  },
+  {
+    author: 'جنا الحيطاوي',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'مشاء اللة المكان مميز والميكب تحفة والمعاملة مشاء اللة  ال عايز يحس بالفرق في تنظيف البشرة يبقا عندك مشاء اللة بيبقا نضارة ومراحل كتير كل حاجة مشاء اللة عندك اللهم بارك '
+  },
+  {
+    author: 'الا لل',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'اجمل مكان في دسوق حرفيا '
+  },
+  {
+    author: 'Ali Ali',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'بجدد بجد كنت عندك من 7شهور كانت مطلعاني ملكهه حرفياا محدش شافني ال وكان مبهورر من حلاوه الميكب بجدد وثابتهه تحفهه بجدد قولتلها عمري فحياتي مطلعت حلوه عند ايي حد ف ميكب خالث وهي طلعت قد الثقهه وخلتني ملكهه❤🥺👌🏻  '
+  },
+  {
+    author: 'دنيا دراز',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'بجد اجمل ميكب واحسن مكان بسم الله ماشاء الله بجد شغل تحفه ودائما مميزه عن ايه حد رقم واحد في دسوق بجد معامله سكر خالص وذوق اوي اخواتي كانو عندها حنه وفرح وخطوبه وعيال عمي حقيقي تحفه واي حد يشوفهم يشكر في الميكب تسلم ايدك بجد يمدام غرام وبرشح اي حد فعلا انو يروح عندك لانو مش هيندام على اختيارو ليك دايما في توفيق يارب وأن شاء الله الجاي احسن ❤️❤️❤️❤️ '
+  },
+  {
+    author: 'Donia Mostafa',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'اشطر واجمل ميكب ارتيست بجد وذوق والطف تعامل كل عروسه بطلعها أجمل من اللي قبلها وحقيقي بتعمل حاجه فوق العظمه كدا انا عرفت هروح لمين ف فرحي كل الدعم ودايما كدا ف نجاح وتقدم❤️❤️❤️❤️❤️ '
+  },
+  {
+    author: 'احمد الصياد',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'مكان ممتاز جدا ومدام غرام انسانه ذوق اوي ف شغلها وف كل معاملتها بجد كل حاجه عندها تحفه عظمه بجد بالتوفيق 🦅⭐⭐⭐⭐⭐  '
+  },
+  {
+    author: 'Alaa Hany',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'بجد مشوفتش بعد شغلك كنت عندك من 5شهور وكنت جيالك من اسكندريه مخصوص ومندمتش ان جتلك بجد  تسلم ايدك🥰✨  '
+  },
+  {
+    author: 'Malak Refate Abo Ahmed',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'احلي واشطر ميكب ارتست ف دسوق حرفيا بابا المجال👌  '
+  },
+  {
+    author: 'Manora Sharaby',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'اجمل مكان بجد واحسن معاملة واحلا ميكب بجد مدام غرام ماشاء الله تسلم ايديها كانت مخلياني ف فرحي ملكةةة بجد♥️♥️♥️♥️♥️♥️ '
+  },
+  {
+    author: 'Sara Hesham',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'بجد اشطر واحسن غرام انا فعلا اختارت صح وطلعتيني فعلا اقول ملكه والله والميكب من الثبات مش بيتمسح بحبك اوي '
+  },
+  {
+    author: 'Faiza Farg',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'ما شاء الله شغلها. تحفه بجد اللهم بارك بتطلع ملكات من عندها مش مجرد عرايس بجد ملكات😍🥰دايما ف تقدم  '
+  },
+  {
+    author: 'mero mero',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'اجمل ميكب ارتست في دسوق اصلا ربنا يرزقكك دايما ويباركلك في اولاادك يااارب وتشوفيهم اسعد الناس وتفرحي بيهم يارب 🤲❤️  '
+  },
+  {
+    author: 'Menna Reda',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'احلي واجمل مكان في دسوق واجمل ميكب ارتست حرفيا حاجه فوق الخيال والرقه كل العرايس بيطلعو ملكه جمال من عندك والميكب ثابت وجميل ومش بيتمسح بسهوله ربنا يفرحك زاي مابتفرحي كل العرايس '
+  },
+  {
+    author: 'Amira Nasr',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'شغلك ما شاء الله جميل💙 وربنا يوفقك في اللى جاى 😍  '
+  },
+  {
+    author: 'Amany Ali nasr',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'شغلك بجد تحفه والعرايس قمر ♡ وبالتوفيق دايما وان شاءالله يكون عندك اكتر من بيوتى سنتر قريب♡ '
+  },
+  {
+    author: 'دنيا عيسي',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'مرات اخويا كانت عندك وبسم الله ماشاء الله علي شغلك والله تسلم ايدك احلي غرام واحلي شغل ف دسوق والله 💓💓💓  '
+  },
+  {
+    author: 'Nehal Alhety',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'هدية'
+  },
+  {
+    author: 'Omnia Elshahawy',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'اللهم بارك مفيش كلام يتقال بجد في المكان ده. ولا يوصف قد ايه زوق في التعامل وتجربتى معاهم عمري مهندم عليها. ❤❤😘 تسلم مدام ام غزل.  '
+  },
+  {
+    author: 'Maleka Elhndy',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'احسن غرام سلطان ربنا يوفقك يارب ديمان من نجاح الى نجاح وربنا يحبب فيك جمهورك وأمه محمد فعلنا انتى عظمه وبتعملى تحف فنيه رائعه '
+  },
+  {
+    author: 'Hdghds Gfr',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'اللهم بارك احلي واجمل ميكب ارتيست واجمد بيوتي سنتر♥️♥️♥️ '
+  },
+  {
+    author: 'Malk Amr',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'احل واجمل ميكب ارتست '
+  },
+  {
+    author: 'Hager Newar',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'بجد احلى  بيوتي سنتر غرام سلطان وكل عرايسك جمال ♥️♥️ Ilove you 💓  '
+  },
+  {
+    author: 'zezo zezo',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'مقابله وذؤق من الصغير للكبير حاجه كده منتهى الذؤق '
+  },
+  {
+    author: 'Safy Ahmed',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'بجد كل الميك اب بتاعك يجنن وكل حاجه عندك تحفه وان شاء الله في فرحي هكون عندك اكيد '
+  },
+  {
+    author: 'Shrouq Shtat',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'جميل اوى اوى بجد لو فصلت اشكرها مش كفايه أنا بقول للى كل البنت على. المكان بجد شغل مفيش منو جامد وبجد تسلم وكفايه بتطلع ناس قمر وهى اصلا حته سكره وتعمل معها حلو جدا ❤️❤️ '
+  },
+  {
+    author: 'asmaa mohamed',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'غرام حقيقي جميله وشغلها وتعاملها قمر خاالص🥺♥♥♥  '
+  },
+  {
+    author: 'اميره',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'احلي ميكب ارتيست بجد والتيم ذوق جدا من نجاح ل نجاح ي ام غزل وتفضلي التوب دايما '
+  },
+  {
+    author: 'Shaimaa Fathy',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'كنت عروسه ع مدام غرام م ٧سنين مشاء الله احسن معامله واحسن ميكب  محدش شافو الا وشكر فيه '
+  },
+  {
+    author: 'Asmaa Wael',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'تحفه بجد تسلم ايديها شغلها جميل اوي ماشاء الله والميكب بيفضل ثابت والله شوفته ف الحقيقه كتيرر اوي ومش هروح  ف فرحي غير ليكي بجد عشان كل مره بنبهر اكتر من المره اللي قبلها من جمال شغلها ربنا يحسن مابين ايديها يارب  ♥️♥️♥️ '
+  },
+  {
+    author: 'علياء حسن',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'بجد احلي ام غزل في الدنيا كفايا زوقك ربنا يباركلك يارب ومن نجاح لنجاح دايما ميكب الخمس نجوم فعلا ♥ '
+  },
+  {
+    author: 'خالد عمر',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'مفيش بعدك ولا قبلك '
+  },
+  {
+    author: 'Aya Ashour',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'بجد من احسن بيوتي سنتر ف دسوق دا غير المعامله قمرر بجد ربنا يوفقكم ومن نجاح لنجاح دائما يارب '
+  },
+  {
+    author: 'shrouk Mohamed',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'مجربتش لسه بس متبعاكى من زمان ومعجبه جدا بالميكب ال بتعملوه 🥰🥰🥰🥰  '
+  },
+  {
+    author: 'Yasmeen Mousa',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'حقيقي ميكب تحفه تحفه وكل اصحابي عاملين عندك وكانوا طالعين قمرات ولو كنت اعرفك قبل ما اتجوز مكنتش اترددت لحظه اني اجيلك🥺😍😍  '
+  },
+  {
+    author: 'ابراهيم عبدالرازق',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'احسن ميكب ارتست بجد فى دسوق زوق تعامل سعر كل حاجه فيهم مميزه وجميله جدا بجد والله مشاء الله عليهم♥ '
+  },
+  {
+    author: 'Walaa Khlil',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'اجمد بيوتي سنتر بجد '
+  },
+  {
+    author: 'حبيبه السيد',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'غرام سلطان اجمل ميكب واجمل معامله بجد ❤️❤️ '
+  },
+  {
+    author: 'Samar Nasser',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'بسم الله ماشاءالله احسن بيوتى سنتر فى المحافظة كلها ناس سكرة وناس فى قمة الاحترام والذوق الله واكبر عليهم '
+  },
+  {
+    author: 'sara khalifa',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'احلى ميكب ارتست بجد '
+  },
+  {
+    author: 'NOURHAN Gamal',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'مكان تحفه وهما تحفه وان شاء الله اكون عروسه عندهم ف شهر ٨ 😚♥️♥️♥️♥️♥️♥️♥️♥️♥️  '
+  },
+  {
+    author: 'Nada Elnorag',
+    relativeTime: 'قبل 10 أشهر',
+    text: 'اجمل بيوتي سنتر في دسوق والمكان جميل جدا كنت عندكو من اربع سنين وكنت عروسه قمر ♥️ '
+  },
+  {
+    author: 'Malak Diab',
+    relativeTime: 'قبل سنة',
+    text: 'عملت ميكب عندك كان تحفه بجد تسلم ايدك '
+  },
+  {
+    author: 'Hanen Wael',
+    relativeTime: 'قبل سنة',
+    text: '🌸غرام سلطان اجمل بيوتي سنتر فى دسوق كلها بجد 🌸  '
+  },
+  {
+    author: 'محمد فراج',
+    relativeTime: 'قبل سنة',
+    text: '❤اجمل بيوتي سنتر فى دسوق كلها 😍  '
+  }
+  ];

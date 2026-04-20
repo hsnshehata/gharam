@@ -1,0 +1,218 @@
+/* ============================================
+   Live Voice Mode — Gharam Brand Theme
+   Used inside AIChatPopup voice mode view
+   Colors: #1fb6a6 (teal), #168a7d (dark teal)
+   ============================================ */
+
+/* ---- Voice Mode Container (inside chat popup) ---- */
+.voice-mode-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(165deg, #0a1e1c 0%, #0d2926 35%, #0a201d 70%, #081a18 100%);
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  gap: 16px;
+}
+
+.voice-mode-container::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(ellipse at 50% 50%, rgba(31, 182, 166, 0.06) 0%, transparent 60%);
+  animation: ambientRotate 20s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes ambientRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ---- Hang-Up Button ---- */
+.hangup-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  box-shadow: 0 6px 24px rgba(231, 76, 60, 0.5), 0 0 0 4px rgba(231, 76, 60, 0.15);
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  margin-top: 10px;
+  flex-shrink: 0;
+  /* NO transition on transform — it was causing flicker */
+  transition: box-shadow 0.25s;
+}
+
+.hangup-btn:hover {
+  box-shadow: 0 8px 32px rgba(231, 76, 60, 0.7), 0 0 0 6px rgba(231, 76, 60, 0.2);
+}
+
+/* ---- AI Orb Container ---- */
+.ai-orb-container {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ---- Outer Ring ---- */
+.ai-orb-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid rgba(31, 182, 166, 0.15);
+  animation: ringPulse 3s ease-in-out infinite;
+}
+
+.ai-orb-ring:nth-child(2) {
+  animation-delay: 0.5s;
+  width: 110%;
+  height: 110%;
+  border-color: rgba(31, 182, 166, 0.08);
+}
+
+.ai-orb-ring:nth-child(3) {
+  animation-delay: 1s;
+  width: 120%;
+  height: 120%;
+  border-color: rgba(31, 182, 166, 0.04);
+}
+
+@keyframes ringPulse {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+/* ---- The Orb ---- */
+.ai-orb {
+  --mic-glow: 0;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #26d4c1, #1fb6a6 40%, #168a7d 80%);
+  box-shadow: 
+    0 0 50px rgba(31, 182, 166, 0.4),
+    0 0 100px rgba(31, 182, 166, 0.15),
+    inset 0 0 30px rgba(255, 255, 255, 0.08);
+  /* NO transform transition — avoids flicker with CSS animations */
+  transition: box-shadow 0.3s ease-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  will-change: box-shadow;
+}
+
+/* Logo inside orb */
+.ai-orb .orb-logo {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  opacity: 0.9;
+  filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+  pointer-events: none;
+}
+
+/* ---- Recording State ---- */
+/* Uses --mic-glow CSS variable (set via JS) for reactive glow  */
+.ai-orb.recording {
+  animation: orbBreath 2.5s ease-in-out infinite;
+  box-shadow: 
+    0 0 calc(50px + var(--mic-glow) * 40px) rgba(31, 182, 166, calc(0.4 + var(--mic-glow) * 0.3)),
+    0 0 calc(100px + var(--mic-glow) * 60px) rgba(31, 182, 166, calc(0.15 + var(--mic-glow) * 0.2)),
+    inset 0 0 30px rgba(255, 255, 255, 0.08);
+}
+
+@keyframes orbBreath {
+  0%, 100% { 
+    box-shadow: 
+      0 0 50px rgba(31, 182, 166, 0.4),
+      0 0 100px rgba(31, 182, 166, 0.15),
+      inset 0 0 30px rgba(255, 255, 255, 0.08);
+  }
+  50% { 
+    box-shadow: 
+      0 0 65px rgba(31, 182, 166, 0.55),
+      0 0 130px rgba(31, 182, 166, 0.22),
+      inset 0 0 35px rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* ---- Speaking State (AI talking) ---- */
+/* Uses ONLY box-shadow and filter — NO transform to avoid layout shifts */
+.ai-orb.speaking {
+  animation: orbSpeak 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes orbSpeak {
+  0% { 
+    box-shadow: 
+      0 0 55px rgba(31, 182, 166, 0.5),
+      0 0 110px rgba(31, 182, 166, 0.2),
+      inset 0 0 30px rgba(255, 255, 255, 0.08);
+    filter: brightness(1);
+  }
+  100% { 
+    box-shadow: 
+      0 0 85px rgba(31, 182, 166, 0.7),
+      0 0 160px rgba(31, 182, 166, 0.35),
+      inset 0 0 40px rgba(255, 255, 255, 0.12);
+    filter: brightness(1.15) hue-rotate(8deg);
+  }
+}
+
+/* ---- Status Text ---- */
+.voice-status-text {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  font-family: 'Tajawal', sans-serif;
+  text-align: center;
+  z-index: 2;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 480px) {
+  .ai-orb-container {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .ai-orb {
+    width: 110px;
+    height: 110px;
+  }
+  
+  .ai-orb .orb-logo {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .hangup-btn {
+    width: 54px;
+    height: 54px;
+  }
+  
+  .voice-status-text {
+    font-size: 14px;
+  }
+}
