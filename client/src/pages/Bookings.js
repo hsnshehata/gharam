@@ -521,6 +521,7 @@ function Bookings({ user }) {
                   تاريخ المناسبة: {formatDate(booking.eventDate)}<br />
                   العربون: {booking.deposit} جنيه<br />
                   المتبقي: {booking.remaining} جنيه
+                  {booking.notes && <><br /><span className="text-secondary opacity-75"><small>ملاحظة: {booking.notes}</small></span></>}
                 </Card.Text>
                 <Button variant="primary" className="me-2" onClick={() => {
                   setCurrentReceipt(booking);
@@ -951,8 +952,11 @@ function Bookings({ user }) {
               {currentDetails.returnedServices.length > 0 && (
                 <p>المرتجع: {currentDetails.returnedServices.map(srv => srv.name).join(', ')}</p>
               )}
-              {currentDetails.extraServices.length > 0 && (
+              {currentDetails.extraServices?.length > 0 && (
                 <p>الخدمات الإضافية: {currentDetails.extraServices.map(srv => srv.name).join(', ')}</p>
+              )}
+              {currentDetails.customExtraServices?.length > 0 && (
+                <p>خدمات حرة (إدخال يدوي): {currentDetails.customExtraServices.map(srv => `${srv.name} (${srv.price})`).join('، ')}</p>
               )}
               {currentDetails.hairStraightening && (
                 <>

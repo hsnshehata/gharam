@@ -40,7 +40,7 @@ function EmployeeDashboard({ user }) {
   const qrCodeScanner = useRef(null);
   const { showToast } = useToast();
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'supervisor';
   const activeUserId = impersonatedUserId || user?._id || user?.id;
   const asUserParam = impersonatedUserId ? `&asUser=${impersonatedUserId}` : '';
   const asUserParamFirst = impersonatedUserId ? `?asUser=${impersonatedUserId}` : '';
@@ -501,7 +501,7 @@ function EmployeeDashboard({ user }) {
                     fontWeight: 'bold'
                   }}
                 >
-                  <option value="">— حسابي (الأدمن) —</option>
+                  <option value="">— حسابي الأساسي —</option>
                   {allUsers.filter(u => u._id !== user?._id && u._id !== user?.id).map(u => (
                     <option key={u._id || u.id} value={u._id || u.id}>
                       {u.username} ({u.role === 'admin' ? 'مدير' : u.role === 'supervisor' ? 'مشرف' : u.role === 'hallSupervisor' ? 'مشرف صالة' : 'موظف'})

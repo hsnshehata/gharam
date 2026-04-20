@@ -857,6 +857,7 @@ function Dashboard({ user }) {
                   رقم الهاتف: {booking.clientPhone}<br />
                   المدفوع: {booking.deposit} جنيه<br />
                   المتبقي: {booking.remaining} جنيه
+                  {booking.notes && <><br /><span className="text-secondary opacity-75"><small>ملاحظة: {booking.notes}</small></span></>}
                 </Card.Text>
                 <Button variant="primary" className="me-2" onClick={() => handlePrint(booking)}>
                   <FontAwesomeIcon icon={faPrint} />
@@ -902,6 +903,7 @@ function Dashboard({ user }) {
                   رقم الهاتف: {booking.clientPhone}<br />
                   المدفوع: {booking.deposit} جنيه<br />
                   المتبقي: {booking.remaining} جنيه
+                  {booking.notes && <><br /><span className="text-secondary opacity-75"><small>ملاحظة: {booking.notes}</small></span></>}
                 </Card.Text>
                 <Button variant="primary" className="me-2" onClick={() => handlePrint(booking)}>
                   <FontAwesomeIcon icon={faPrint} />
@@ -948,6 +950,7 @@ function Dashboard({ user }) {
                   تاريخ الصبغة: {booking.hairDyeDate ? formatDate(booking.hairDyeDate) : 'غير متوفر'}<br />
                   المدفوع: {booking.deposit} جنيه<br />
                   المتبقي: {booking.remaining} جنيه
+                  {booking.notes && <><br /><span className="text-secondary opacity-75"><small>ملاحظة: {booking.notes}</small></span></>}
                 </Card.Text>
                 <Button variant="primary" className="me-2" onClick={() => handlePrint(booking)}>
                   <FontAwesomeIcon icon={faPrint} />
@@ -993,6 +996,7 @@ function Dashboard({ user }) {
                   رقم الهاتف: {booking.clientPhone}<br />
                   المدفوع: {booking.deposit} جنيه<br />
                   المتبقي: {booking.remaining} جنيه
+                  {booking.notes && <><br /><span className="text-secondary opacity-75"><small>ملاحظة: {booking.notes}</small></span></>}
                 </Card.Text>
                 <Button variant="primary" className="me-2" onClick={() => handlePrint(booking)}>
                   <FontAwesomeIcon icon={faPrint} />
@@ -1952,6 +1956,7 @@ function Dashboard({ user }) {
               <p>اسم العميل: {currentDetails.clientName}</p>
               <p>رقم الهاتف: {currentDetails.clientPhone}</p>
               <p>المدينة: {currentDetails.city || 'غير متوفر'}</p>
+              {currentDetails.notes && <p><strong>ملاحظات:</strong> {currentDetails.notes}</p>}
               <p>تاريخ المناسبة: {formatDate(currentDetails.eventDate)}</p>
               {currentDetails.hennaDate && <p>تاريخ الحنة: {formatDate(currentDetails.hennaDate)}</p>}
               <p>الباكدج: {currentDetails.package?.name || 'غير محدد'}</p>
@@ -1960,8 +1965,11 @@ function Dashboard({ user }) {
               {currentDetails.returnedServices.length > 0 && (
                 <p>الخدمات المرتجعة: {currentDetails.returnedServices.map(srv => srv.name).join(', ')}</p>
               )}
-              {currentDetails.extraServices.length > 0 && (
+              {currentDetails.extraServices?.length > 0 && (
                 <p>الخدمات الإضافية: {currentDetails.extraServices.map(srv => srv.name).join(', ')}</p>
+              )}
+              {currentDetails.customExtraServices?.length > 0 && (
+                <p>خدمات حرة (إدخال يدوي): {currentDetails.customExtraServices.map(srv => `${srv.name} (${srv.price})`).join('، ')}</p>
               )}
               {currentDetails.hairStraightening && (
                 <>

@@ -360,7 +360,7 @@ exports.giftPointsBulk = async (req, res) => {
 
 exports.listPendingGifts = async (req, res) => {
   try {
-    const userId = (req.user.role === 'admin' && req.query.asUser) ? req.query.asUser : req.user.id;
+    const userId = ((req.user.role === 'admin' || req.user.role === 'supervisor') && req.query.asUser) ? req.query.asUser : req.user.id;
     const key = `user:${userId}:gifts:pending`;
     const payload = await cacheAside({
       key,
@@ -382,7 +382,7 @@ exports.listPendingGifts = async (req, res) => {
 
 exports.listTodayGifts = async (req, res) => {
   try {
-    const userId = (req.user.role === 'admin' && req.query.asUser) ? req.query.asUser : req.user.id;
+    const userId = ((req.user.role === 'admin' || req.user.role === 'supervisor') && req.query.asUser) ? req.query.asUser : req.user.id;
     const key = `user:${userId}:gifts:today`;
     const payload = await cacheAside({
       key,
@@ -534,7 +534,7 @@ exports.addPoints = async (req, res) => {
 
 exports.getPointsSummary = async (req, res) => {
   try {
-    const userId = (req.user.role === 'admin' && req.query.asUser) ? req.query.asUser : req.user.id;
+    const userId = ((req.user.role === 'admin' || req.user.role === 'supervisor') && req.query.asUser) ? req.query.asUser : req.user.id;
     const key = `user:${userId}:summary`;
     const payload = await cacheAside({
       key,
@@ -868,7 +868,7 @@ exports.redeemCoins = async (req, res) => {
 // جلب كل الخدمات اللي نفذها الموظف في تاريخ محدد (حسب وقت التنفيذ الفعلي)
 exports.getExecutedServices = async (req, res) => {
   const { date } = req.query;
-  const employeeId = (req.user.role === 'admin' && req.query.asUser) ? req.query.asUser : req.user.id;
+  const employeeId = ((req.user.role === 'admin' || req.user.role === 'supervisor') && req.query.asUser) ? req.query.asUser : req.user.id;
 
   const isSameEmployee = (val) => {
     if (!val) return false;
